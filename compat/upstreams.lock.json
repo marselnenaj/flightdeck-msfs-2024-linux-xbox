@@ -1,0 +1,34 @@
+{
+  "format": 1,
+  "winegdk": {
+    "repository": "https://github.com/Sightem/WineGDK.git",
+    "revision": "b5d23b074cfd5e28e79acceaaefaf41a26ce6272",
+    "archive_url": "https://codeload.github.com/Sightem/WineGDK/tar.gz/b5d23b074cfd5e28e79acceaaefaf41a26ce6272",
+    "archive_sha256": "a99999b2ef792e4c579ac96dcf9cfb4631eb8993db701e94f4bab35f868e5373",
+    "patch": "compat/patches/winegdk-runtime.patch",
+    "patch_sha256": "779175a1f0fba38a9b58add19be39a282d3151fc5c66ae875327ced2f90cb351",
+    "license": "LGPL-2.1-or-later"
+  },
+  "xodus": {
+    "repository": "https://github.com/xodus-gaming/xodus.git",
+    "revision": "0670e25aeb0e0e9f800f8f2f4968ae3b681842a7",
+    "patch": "compat/patches/xodus-broker.patch",
+    "patch_sha256": "2d757a6f82502411085e807c36eb6ab9e96c65cbf5bc4bb58ff3b8566d17cb36",
+    "license": "GPL-3.0-only"
+  },
+  "store_idl": {
+    "repository": "https://github.com/xodus-gaming/xgameruntime.git",
+    "revision": "64aebcabb8c66121eae25d3bf0ace4b582ebb0da",
+    "source": "xstore.idl",
+    "sha256": "a7d02e5e9bbedb2f36824e5f9e52fca60378fc06dfcf77488ef830bb7b02dc17",
+    "license": "LGPL-2.1-or-later"
+  },
+  "runner": {
+    "repository": "https://github.com/xodus-gaming/Proton.git",
+    "revision": "7c0b435495814349735c913fde78da906aecea52",
+    "wine_revision": "b1dd32734a34472a28eb5be9922df06e07ac0834",
+    "xgameruntime_revision": "64aebcabb8c66121eae25d3bf0ace4b582ebb0da",
+    "original_runtime_sha256": "02dc24d6dfc7f7807a5ae3081ad2ae6ca550ce42f35c46197676da3c63b9e6d0",
+    "supplied_by_user": true
+  }
+}

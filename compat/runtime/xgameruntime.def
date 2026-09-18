@@ -1,0 +1,10 @@
+LIBRARY xgameruntime
+EXPORTS
+DllCanUnloadNow @1
+InitializeApiImpl @2
+InitializeApiImplEx @3
+InitializeApiImplEx2 @4
+QueryApiImpl @5
+UninitializeApiImpl @6
+XErrorReport @7
+XodusPublishTitleEndpointPolicy

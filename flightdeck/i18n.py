@@ -1,0 +1,377 @@
+# SPDX-License-Identifier: MIT
+"""Request-scoped translations, with no global mutable language.
+
+German source messages remain the internal compatibility representation. Only
+known human-readable response fields are translated. Formatted messages retain
+an explicit template and typed parameters, so paths and IDs are never searched
+or rewritten. A running job can therefore be rendered in either language.
+"""
+from __future__ import annotations
+
+import re
+
+
+# Source messages also serve as stable catalog keys; additions must include EN.
+CATALOG = {
+    'Die vorherige Spielsitzung wurde unerwartet unterbrochen. Bitte Linux neu starten, bevor Flightdeck die Spielstände erneut verwendet.': 'The previous game session ended unexpectedly. Restart Linux before Flightdeck uses the saves again.',
+    'Die Runtime unterstützt den gesperrten Spielstart nicht.': 'The runtime does not support launching under the session lock.',
+    'Die Runtime ist nicht für diesen Spielstart reserviert.': 'The runtime is not reserved for this game launch.',
+    'Cloud-Spielstände werden geladen. Der Simulator startet anschließend automatisch.': 'Loading cloud saves. The simulator will start automatically afterwards.',
+    'Deine Spielstände werden in der Xbox-Cloud gespeichert. Eine lokale Sicherung bleibt erhalten.': 'Saving your progress to Xbox cloud saves. A local backup is kept.',
+    'Cloud-Spielstände geladen. Änderungen werden nach dem Beenden synchronisiert.': 'Cloud saves loaded. Changes will sync after you quit.',
+    'Deine Spielstände sind mit der Xbox-Cloud synchronisiert.': 'Your saves are synced with Xbox cloud saves.',
+    'Auf diesem Rechner und in der Cloud gibt es unterschiedliche Änderungen. Welchen Stand möchtest du verwenden?': 'Saves on this computer and in the cloud have different changes. Which would you like to use?',
+    'Die Xbox-Anmeldung ist noch nicht verfügbar. Versuche es erneut oder starte das Spiel zur Anmeldung mit lokalen Spielständen.': 'Xbox sign-in is not available yet. Try again or start the game with local saves to sign in.',
+    'Der Cloud-Abgleich konnte nicht abgeschlossen werden. Versuche es erneut oder spiele mit dem gesicherten lokalen Stand.': 'Cloud sync could not finish. Try again or play with the backed-up local saves.',
+    'Deine Spielstände sind lokal gesichert. Der Cloud-Upload ist noch nicht abgeschlossen; Flightdeck prüft ihn vor dem nächsten Start erneut.': 'Your saves are backed up locally. Cloud upload has not finished; Flightdeck will check it again before the next launch.',
+    'Diese Sitzung verwendet lokale Spielstände. Der Cloud-Abgleich wird beim nächsten Start erneut versucht.': 'This session uses local saves. Cloud sync will be retried at the next launch.',
+    'Der Start wurde abgebrochen. Gesicherte Spielstände bleiben erhalten.': 'Launch cancelled. Backed-up saves are kept.',
+    'Die Spielstände wurden synchronisiert. Die Verbindung konnte nicht vollständig geschlossen werden.': 'Saves synced. The connection could not be fully closed.',
+    'Cloud-Spielstände werden vor dem Start und nach dem Beenden automatisch abgeglichen.': 'Cloud saves sync automatically before launch and after you quit.',
+    'Dieser Cloud-Vorgang ist nicht mehr aktuell. Bitte den Status neu laden.': 'This cloud request is no longer current. Reload the status.',
+    'Der Spielstandvergleich ist abgelaufen. Bitte erneut versuchen.': 'The save comparison has expired. Try again.',
+    'Diese lokale Sitzung kann nicht gestartet werden.': 'This local session cannot be started.',
+    'Die Runtime ist nicht startbereit oder das Spiel läuft bereits.': 'The runtime is not ready to launch or the game is already running.',
+    'Spielstände wiederhergestellt. Die Verbindung konnte nicht vollständig geschlossen werden.': 'Saves restored. The connection could not be fully closed.',
+    'Die Spielstände haben sich seit dem Vergleich geändert. Bitte erneut vergleichen.': 'The saves changed since the comparison. Compare them again.',
+    'Die Cloud-Spielstände haben sich seit dem Vergleich geändert. Bitte erneut vergleichen.': 'Cloud saves changed since the comparison. Compare them again.',
+    'Die lokalen Spielstände haben sich seit dem Vergleich geändert. Bitte erneut vergleichen.': 'Local saves changed since the comparison. Compare them again.',
+    'Die Xbox-Cloud wird auf einem anderen Gerät verwendet oder die Sperre ist abgelaufen. Bitte später erneut vergleichen.': 'Xbox cloud saves are in use on another device or the lock expired. Compare again later.',
+    'Für diese Spielstände reicht der verfügbare Xbox-Cloud-Speicher nicht aus.': 'These saves exceed the available Xbox cloud storage.',
+    'Der Upload wurde abgebrochen, bevor ein Cloud-Spielstand ersetzt wurde.': 'The upload was cancelled before any cloud save was replaced.',
+    'Diese Spielstandsicherung ist nicht mehr für eine Rücknahme verfügbar.': 'This save backup is no longer available for undoing the import.',
+    'Lokale Spielstände wiederhergestellt.': 'Local saves restored.',
+    'Lokale Spielstände hochgeladen und in der Xbox-Cloud geprüft.': 'Local saves uploaded and verified in the Xbox cloud.',
+    'Die lokalen Spielstände stimmen bereits mit der Cloud überein.': 'Local saves already match the cloud.',
+    'Der Upload wurde durch erneutes Lesen bestätigt. Das Speichern des Vergleichsstands oder die Freigabe der Verbindung konnte nicht bestätigt werden. Bitte vor weiteren Änderungen erneut vergleichen.': 'The upload was verified by reading it back. Saving the comparison baseline or releasing the connection could not be confirmed. Compare again before making further changes.',
+    'Upload geprüft. Die Verbindung konnte nicht vollständig geschlossen werden.': 'Upload verified. The connection could not be fully closed.',
+    'Der Upload wurde nicht vollständig bestätigt. Teile der Cloud können bereits aktualisiert sein. Vergleiche die Spielstände erneut; die heruntergeladenen Kopien bleiben erhalten.': 'The upload was not fully confirmed. Some cloud saves may already have been updated. Compare saves again; downloaded copies are kept.',
+    'Der Upload konnte nicht gestartet oder bestätigt werden. Bitte erneut vergleichen.': 'The upload could not be started or verified. Compare saves again.',
+    'Das Xbox-Spielprofil hat sich geändert. Bitte den Vergleich erneut erstellen.': 'The Xbox game profile changed. Compare saves again.',
+    'Die Cloud-Kopie ist ungültig. Bitte erneut herunterladen.': 'The cloud copy is invalid. Download it again.',
+    'Dieser Spielstandvergleich ist nicht mehr gültig. Bitte erneut vergleichen.': 'This save comparison is no longer valid. Compare saves again.',
+    'Die Spielstandübernahme konnte nicht exklusiv gesperrt werden. Bitte erneut versuchen.': 'The save import could not acquire its exclusive lock. Try again.',
+    'Die Spielstände werden gerade verwendet. Bitte den Simulator beenden.': 'The saves are in use. Close the simulator first.',
+    'Die Spielstände unterscheiden sich. Bitte ausdrücklich einen Stand auswählen.': 'The saves differ. Select which version to use.',
+    'Die Spielstandsicherung oder Übernahme konnte nicht sicher abgeschlossen werden.': 'The save backup or import could not complete safely.',
+    'Für die Übernahme müssen lokale Spielstände in dieser Runtime aktiviert sein.': 'Enable local saves for this runtime before importing cloud saves.',
+    'Cloud-Spielstände übernommen. Der vorherige lokale Stand wurde gesichert.': 'Cloud saves imported. The previous local version was backed up.',
+    'Spielstände verglichen. Wähle den Stand aus, den MSFS verwenden soll.': 'Saves compared. Choose the version MSFS should use.',
+    'Die Cloud-Spielstände wurden übernommen. Die endgültige Speicherung konnte nicht bestätigt werden; die Sicherung bleibt erhalten.': 'Cloud saves were imported. Final disk persistence could not be confirmed; the backup is retained.',
+    'Spielstandübernahme abgeschlossen. Die Verbindung konnte nicht vollständig geschlossen werden.': 'Save import completed. The connection could not be fully closed.',
+    'Der Xbox-Spielstandsdienst hat die Anmeldung abgelehnt. Bitte erneut im Spiel anmelden.': 'The Xbox save service rejected sign-in. Please sign in again in the game.',
+    'Bitte zuerst mit deinem Xbox-Spielprofil anmelden und die Cloud-Abfrage erneut starten.': 'Sign in with your Xbox game profile first, then try the cloud request again.',
+    'Der Xbox-Spielstandsdienst erlaubt diesem Spielprofil keinen Zugriff.': 'The Xbox save service does not allow access for this game profile.',
+    'Die Cloud-Spielstände haben sich während des Downloads geändert. Bitte erneut prüfen.': 'Cloud saves changed during the download. Please check again.',
+    'Die Cloud-Abfrage wurde abgebrochen.': 'The cloud request was cancelled.',
+    'Dieser Cloud-Datenbestand wird noch nicht unterstützt. Es wurde nichts übernommen.': 'This cloud save format is not supported yet. Nothing was imported.',
+    'Dieser Cloud-Datenbestand benötigt eine noch nicht unterstützte Abfrage. Es wurde nichts übernommen.': 'These cloud saves require a request that is not supported yet. Nothing was imported.',
+    'Der Xbox-Spielstandsdienst konnte diesen Datenbestand nicht bestätigen. Bitte erneut versuchen.': 'The Xbox save service could not confirm these saves. Please try again.',
+    'Die Cloud-Abfrage konnte nicht abgeschlossen werden. Deine Spielstände wurden nicht verändert.': 'The cloud request could not complete. Your saves were not changed.',
+    'Diese Cloud-Aktion ist nicht verfügbar.': 'This cloud action is unavailable.',
+    'Eine Cloud-Abfrage läuft bereits.': 'A cloud request is already running.',
+    'Die Cloud-Komponente fehlt. Bitte das aktuelle vollständige Flightdeck-Paket installieren.': 'The cloud component is missing. Please install the current full Flightdeck package.',
+    'Cloud-Spielstände werden abgefragt …': 'Checking cloud saves…',
+    'Cloud-Kopie heruntergeladen. Lokale Spielstände wurden nicht ersetzt.': 'Cloud copy downloaded. Local saves were not replaced.',
+    'Cloud-Spielstände wurden gefunden.': 'Cloud saves were found.',
+    'Für dieses Spielprofil sind keine Cloud-Spielstände vorhanden.': 'There are no cloud saves for this game profile.',
+    'Cloud-Kopie gespeichert. Die Verbindung konnte nicht vollständig geschlossen werden.': 'Cloud copy saved. The connection could not be fully closed.',
+    'Diese Cloud-Abfrage läuft nicht mehr.': 'This cloud request is no longer running.',
+    "Für diese ältere Runtime fehlt eine eindeutige Store-Region. Bitte die Runtimekonfiguration prüfen.": "This older runtime has no unambiguous Store region. Check the runtime configuration.",
+    "Für eine vollständige Reparatur mit Prüfnachweis bitte das aktuelle Flightdeck-Paket installieren.": "Install the current Flightdeck package for a full repair with a verification record.",
+    "Für diese Installation fehlt ein vollständiger Download-Prüfnachweis. Eine vollständige Reparatur erstellt ihn; vorhandene Dateien werden nicht als fehlerfreie Vorlage übernommen.": "This installation has no complete download verification record. A full repair creates one; existing files are never assumed to be a known-good baseline.",
+    "Installierte Dateien werden mit den ursprünglichen Download-Prüfsummen verglichen …": "Comparing installed files with their original download checksums …",
+    "Dateiprüfung abgeschlossen. Alle geprüften Dateien stimmen überein.": "File verification complete. All checked files match.",
+    "Dateiprüfung abgeschlossen. Fehlende, veränderte oder unlesbare Dateien wurden gefunden.": "File verification complete. Missing, changed or unreadable files were found.",
+    "Die vollständige Reparatur ist vorbereitet. Das Store-Basispaket wird nach Bestätigung neu heruntergeladen.": "Full repair is ready. The Store base package will be downloaded again after confirmation.",
+    "Reparatur abgeschlossen. Das neu heruntergeladene Basispaket ist aktiv; der vorherige Stand bleibt erhalten.": "Repair complete. The newly downloaded base package is active; the previous files are retained.",
+    "Der vollständige Download-Prüfnachweis fehlt oder ist ungültig. Das Paket wurde nicht aktiviert.": "The complete download verification record is missing or invalid. The package was not activated.",
+
+    "Der geprüfte Update-Downloader fehlt. Bitte das vollständige aktuelle Flightdeck-Paket installieren.": "The verified update downloader is missing. Install the full current Flightdeck package.",
+    "Die Spielversion ist nicht eindeutig lesbar. Das vorhandene Paket wurde nicht verändert.": "The game version cannot be read reliably. The existing package has not been changed.",
+    "Der Updateordner muss ein eigener, nicht gemeinsam beschreibbarer Ordner sein.": "The update directory must belong to you and must not be writable by other users.",
+    "Dieses Linux unterstützt den atomaren Spielwechsel nicht. Die bisherige Version bleibt aktiv.": "This Linux system does not support an atomic game switch. The existing version remains active.",
+    "Der atomare Spielwechsel ist fehlgeschlagen. Die bisherige Version bleibt aktiv.": "The atomic game switch failed. The existing version remains active.",
+    "Diese Flightdeck-Komponenten unterstützen noch keine sicheren Spielupdates. Bitte Flightdeck aktualisieren.": "These Flightdeck components do not yet support safe game updates. Update Flightdeck first.",
+    "Community- oder Benutzerpakete liegen im Spielpaket. Diese bitte zuerst im Spiel in einen separaten Paketordner verschieben.": "Community or user packages are inside the game package. First move them to a separate packages folder using the game settings.",
+    "Die konfigurierte Store-Region ist ungültig.": "The configured Store region is invalid.",
+    "Ungültige Updateanfrage.": "Invalid update request.",
+    "Installierte Spielversion und aktuelle Store-Paketversion werden geprüft …": "Checking the installed game version and current Store package version …",
+    "Der Store liefert eine ältere Spielversion. Es wird kein Downgrade durchgeführt.": "The Store returned an older game version. No downgrade will be performed.",
+    "Die heruntergeladene Spielversion wird vor dem Wechsel geprüft …": "Verifying the downloaded game version before switching …",
+    "Die vorherige Spielversion wurde wieder aktiviert. Spielstände und Add-ons wurden nicht verändert.": "The previous game version is active again. Saves and add-ons have not been changed.",
+    "Für diese Installation fehlen eindeutige MSFS-Store-Identität und Spielversion. Ein Update wird nicht geraten.": "This installation lacks an unambiguous MSFS Store identity and game version. An update cannot be selected safely.",
+    "Die Paketantwort enthält keine gültige, eindeutige Updateversion.": "The package response does not contain a valid, unambiguous update version.",
+    "Das installierte Spiel hat sich geändert. Bitte Updates erneut prüfen.": "The installed game has changed. Check for updates again.",
+    "Für die neue Spielversion und die erhaltene Rückfallversion fehlt freier Speicherplatz.": "There is not enough free space for the new game version while retaining the previous version.",
+    "Das heruntergeladene Paket passt nicht zur geprüften Spielidentität und Version. Die bisherige Version bleibt aktiv.": "The downloaded package does not match the checked game identity and version. The existing version remains active.",
+    "Die vorherige Spielversion ist nicht eindeutig verfügbar. Es wurde nichts gelöscht.": "The previous game version cannot be identified reliably. Nothing has been deleted.",
+    "Die Updatekonfiguration ist unvollständig. Bitte Flightdeck und die Runtime prüfen.": "The update configuration is incomplete. Check Flightdeck and the runtime.",
+    "Für die Updateprüfung ist eine erneute Microsoft-Anmeldung erforderlich.": "Sign in to Microsoft again to check for game updates.",
+    "Die Updateprüfung konnte nicht abgeschlossen werden. Verbindung prüfen und erneut versuchen.": "The update check could not complete. Check your connection and try again.",
+    "Die Microsoft-Anmeldung wurde nicht abgeschlossen. Bitte ausdrücklich erneut anmelden.": "Microsoft sign-in did not complete. Select sign in again to retry.",
+    "Im Store ist inzwischen eine andere Paketrevision verfügbar. Bitte das Update erneut prüfen; die bisherige Installation bleibt erhalten.": "The Store now offers a different package revision. Check for updates again; the existing installation is retained.",
+    "Eine neue Spielversion ist verfügbar. Das Update kann gestartet werden.": "A new game version is available. You can start the update.",
+    "Die installierte Spielversion ist aktuell.": "The installed game version is up to date.",
+    "Die geprüfte Spielversion wird atomar aktiviert …": "Atomically activating the verified game version …",
+    "Spielupdate abgeschlossen. Die vorherige Version bleibt für eine Rückkehr erhalten.": "Game update complete. The previous version is retained for rollback.",
+    "Der atomare Spielwechsel wird gerade abgeschlossen. Bitte kurz warten.": "The atomic game switch is finishing. Please wait a moment.",
+    "Bitte Updates zuerst erneut prüfen.": "Check for game updates again first.",
+
+    "Zuerst eine Runtime einrichten oder auswählen.": "Set up or select a runtime first.",
+    "Mehrere oder zu viele Spielkonfigurationen gefunden. Den Community-Pfad bitte im Spiel prüfen.": "Multiple or too many game configurations were found. Check the Community path in the game.",
+    "Der Community-Ordner ist noch nicht bekannt. MSFS einmal starten und den Paketordner im Spiel einrichten.": "The Community folder is not known yet. Start MSFS once and configure its packages folder.",
+    "Der konfigurierte Community-Ordner existiert noch nicht. Den Paketordner bitte im Spiel prüfen.": "The configured Community folder does not exist yet. Check the packages folder in the game.",
+    "Community-Ordner erkannt. Die Liste zeigt lokale Pakete, keine Kompatibilitätsprüfung.": "Community folder found. This list shows local packages; it does not verify compatibility.",
+    "Die Mod-Konfiguration konnte nicht sicher gelesen werden. Dateirechte und den Paketordner im Spiel prüfen.": "The mod configuration could not be read safely. Check file permissions and the packages folder in the game.",
+    "Kein Linux-Ordneröffner verfügbar. Bitte xdg-utils installieren und Flightdeck in der grafischen Sitzung öffnen.": "No Linux folder opener is available. Install xdg-utils and open Flightdeck in your desktop session.",
+    "Die Runtime hat sich geändert. Bitte die Mod-Liste neu laden.": "The runtime has changed. Reload the mod list.",
+    "Der Community-Ordner konnte nicht geöffnet werden. Bitte den angezeigten Pfad im Dateimanager öffnen.": "The Community folder could not be opened. Open the displayed path in your file manager.",
+    "Der Community-Ordner wurde an den Dateimanager übergeben.": "The Community folder was passed to your file manager.",
+    "Die Anmeldung ist abgelaufen. Bitte erneut bei Microsoft anmelden; vollständige Downloads bleiben erhalten.": "Sign-in has expired. Sign in to Microsoft again; completed downloads are retained.",
+    "Dieser Download kann gerade nicht pausiert werden.": "This download cannot be paused right now.",
+    "Es gibt keinen pausierten Download zum Fortsetzen.": "There is no paused download to resume.",
+    "Der Download wird mit frischen Zugängen fortgesetzt. Vollständige Dateien werden erneut geprüft …": "Resuming with fresh download access. Completed files are being verified again …",
+    "Download wird pausiert. Der laufende Teil wird sicher beendet …": "Pausing the download. Stopping the current transfer safely …",
+    "Download pausiert. Flightdeck geöffnet lassen. Vollständige Dateien bleiben erhalten; die unvollständige Datei beginnt beim Fortsetzen erneut.": "Download paused. Keep Flightdeck open. Completed files are retained; the incomplete file will restart when you resume.",
+    "Der Download wird fortgesetzt …": "Resuming the download …",
+    "Einrichtung wird abgebrochen. Bereits heruntergeladene Installationsdateien bleiben im privaten Arbeitsordner erhalten.": "Cancelling setup. Downloaded installation files will remain in the private workspace.",
+    "Videowiedergabe (MP4/H.264)": "Video playback (MP4/H.264)",
+    "Für die Videoprüfung fehlt gst-inspect-1.0. Bitte die GStreamer-Werkzeuge über die Softwareverwaltung installieren.": "gst-inspect-1.0 is missing for the video check. Install the GStreamer tools through your software manager.",
+    "Für die Videowiedergabe fehlen GStreamer-Module: {names}. Bitte GStreamer Good, Bad und Libav über die Softwareverwaltung installieren.": "GStreamer modules required for video playback are missing: {names}. Install GStreamer Good, Bad and Libav through your software manager.",
+    "Ein Launcher-Update ist bereit. Bitte Spiel oder Einrichtung abschließen und Flightdeck erneut öffnen. Die aktuelle Sitzung läuft weiter.": "A launcher update is ready. Finish the game or setup, then open Flightdeck again. The current session remains running.",
+    "Der Launcher wird für ein Update neu gestartet. Bitte gleich erneut versuchen.": "The launcher is restarting for an update. Try again in a moment.",
+    "Für die Erstinstallation werden mindestens 100 GiB freier Speicherplatz benötigt. Bitte einen anderen Speicherort wählen.": "The first installation needs at least 100 GiB of free space. Choose another location.",
+    "Flightdeck bitte aus der grafischen Linux-Sitzung starten, damit die Microsoft-Anmeldung und der Schlüsselbund verfügbar sind.": "Start Flightdeck from your graphical Linux session so Microsoft sign-in and the keyring are available.",
+    "Für den Komponentendownload fehlt eine gültige Prüfsumme.": "A valid checksum is missing for the component download.",
+    "Die neue Spielumgebung existiert bereits und wird nicht überschrieben.": "The new game environment already exists and will not be overwritten.",
+    "Der Komponentenordner muss ein privater Ordner des aktuellen Benutzers sein.": "The component folder must be a private folder owned by the current user.",
+    "Linux-Komponenten werden vorbereitet …": "Preparing Linux components …",
+    "Der geprüfte Proton-Runner wird heruntergeladen …": "Downloading the verified Proton runner …",
+    "Proton wird entpackt und die Grafik eingerichtet …": "Extracting Proton and configuring graphics …",
+    "Die automatische Installation unterstützt derzeit Linux auf x86-64.": "Automatic installation currently supports Linux on x86-64.",
+    "Bitte das vollständige Flightdeck-Linux-Paket installieren. In diesem Quellpaket fehlen die geprüften Laufzeitkomponenten.": "Install the complete Flightdeck Linux package. This source package does not include the verified runtime components.",
+    "Für sichere Downloads wird Python 3.10.12 oder neuer benötigt.": "Python 3.10.12 or newer is required for safe downloads.",
+    "Dieses Laufzeitpaket benötigt glibc {version} oder neuer. Bitte ein passendes Linux-System verwenden.": "This runtime package requires glibc {version} or newer. Use a compatible Linux system.",
+    "Für die Anmeldung oder Grafik fehlen Linux-Bibliotheken: {names}. Bitte über die Softwareverwaltung installieren.": "Linux libraries required for sign-in or graphics are missing: {names}. Install them through your software manager.",
+    "Xodus kann auf diesem Linux nicht starten. Bitte die GTK-, WebKitGTK- und OpenSSL-Laufzeitbibliotheken prüfen.": "Xodus cannot start on this Linux system. Check the GTK, WebKitGTK and OpenSSL runtime libraries.",
+    "Linux und Anmeldefenster": "Linux and sign-in window",
+    "Mindestens 100 GiB freier Speicher": "At least 100 GiB of free space",
+    "Geprüfte Installationskomponenten": "Verified installation components",
+    "Die Prüfsumme der Laufzeitkomponenten stimmt nicht. Flightdeck bitte erneut installieren.": "The runtime component checksum does not match. Reinstall Flightdeck.",
+    "Die Laufzeitkomponenten sind nicht ausführbar. Flightdeck bitte erneut installieren.": "The runtime components are not executable. Reinstall Flightdeck.",
+    "Der Komponentendownload wurde auf eine unsichere Adresse umgeleitet.": "The component download was redirected to an insecure address.",
+    "Die Prüfsumme des Downloads stimmt nicht. Die Datei wurde nicht ausgeführt.": "The download checksum does not match. The file was not executed.",
+    "Die Laufzeitkomponenten konnten nicht heruntergeladen werden. Verbindung prüfen oder das vollständige Flightdeck-Paket verwenden.": "The runtime components could not be downloaded. Check your connection or use the complete Flightdeck package.",
+    "Das Komponentenarchiv überschreitet die erwartete Größe.": "The component archive exceeds the expected size.",
+    "Die Linux-Spielumgebung konnte nicht eingerichtet werden. Bitte die Grafiktreiber und Wine-Abhängigkeiten prüfen.": "The Linux game environment could not be prepared. Check the graphics drivers and Wine dependencies.",
+    "Die neue Spielumgebung wurde nicht vollständig eingerichtet.": "The new game environment was not prepared completely.",
+    "Die Komponentensperre ist ungültig.": "The component lock is invalid.",
+    "Der entpackte Proton-Runner passt nicht zur geprüften Runtime.": "The extracted Proton runner does not match the verified runtime.",
+    "Die Beschreibung der Installationskomponenten fehlt. Flightdeck bitte erneut installieren.": "The installation component specification is missing. Reinstall Flightdeck.",
+    "Das Komponentenarchiv enthält unzulässige Dateien.": "The component archive contains unsupported files.",
+    "Die Linux-Spielumgebung konnte nicht rechtzeitig eingerichtet werden. Bitte erneut versuchen.": "Preparing the Linux game environment timed out. Try again.",
+    "Die neue Spielumgebung enthält ungültige Systemordner.": "The new game environment contains invalid system folders.",
+    "Das Runner-Archiv enthält keine eindeutige Installation.": "The runner archive does not contain one identifiable installation.",
+    "Der Komponentendownload ist unerwartet groß.": "The component download is unexpectedly large.",
+    "Die Prüfsumme des Proton-Runners stimmt nicht.": "The Proton runner checksum does not match.",
+    "Die automatische Installation ist in diesem Quellstand noch nicht verfügbar.": "Automatic installation is not available in this source version yet.",
+    "Die Laufzeitkomponenten werden automatisch vorbereitet …": "Preparing the runtime components automatically …",
+    "Das heruntergeladene Spiel wird für den Start eingerichtet …": "Preparing the downloaded game for launch …",
+    "Der verifizierte Xodus-Installer fehlt. Bitte zuerst die Laufzeitkomponenten vorbereiten.": "The verified Xodus installer is missing. Prepare the runtime components first.",
+    "Für den Xodus-Installer fehlt eine gültige Build-Prüfsumme.": "A valid build checksum is missing for the Xodus installer.",
+    "Die Prüfsumme des Xodus-Installers stimmt nicht. Bitte die Laufzeitkomponenten erneut vorbereiten.": "The Xodus installer checksum does not match. Prepare the runtime components again.",
+    "Die Microsoft-Anmeldung hat zu lange gedauert. Bitte erneut versuchen.": "Microsoft sign-in timed out. Try again.",
+    "Der Spieldownload wurde nicht vollständig abgeschlossen. Bitte Anmeldung, Kaufberechtigung, Speicherplatz und Verbindung prüfen.": "The game download did not complete. Check sign-in, game ownership, disk space and your connection.",
+    "Der Spieldownload enthält noch unvollständige Daten. Bitte erneut versuchen.": "The game download still contains incomplete data. Try again.",
+    "Die heruntergeladene Spieldatei ist ungültig. Bitte erneut versuchen.": "The downloaded game file is invalid. Try again.",
+    "Die heruntergeladene Spielkonfiguration ist ungültig.": "The downloaded game configuration is invalid.",
+    "Der private Downloadordner ist noch nicht vorbereitet.": "The private download folder has not been prepared yet.",
+    "Der Downloadordner existiert bereits und wird nicht überschrieben.": "The download folder already exists and will not be overwritten.",
+    "Bitte im Microsoft-Fenster mit dem Konto anmelden, das MSFS besitzt.": "Sign in through the Microsoft window using the account that owns MSFS.",
+    "Die Microsoft-Anmeldung wurde nicht abgeschlossen (Code {code}). Bitte erneut versuchen.": "Microsoft sign-in did not complete (code {code}). Try again.",
+    "MSFS wird über Xodus angefordert, die Lizenz geprüft und das Spiel heruntergeladen. Das kann längere Zeit dauern …": "Xodus is requesting MSFS, checking its license and downloading the game. This may take some time …",
+    "Der Spieldownload wurde nicht abgeschlossen (Code {code}). Bitte Kaufberechtigung, Speicherplatz und Verbindung prüfen.": "The game download did not complete (code {code}). Check game ownership, disk space and your connection.",
+    "Ungültiger Speicherpfad.": "Invalid save path.",
+    "Der Einstellungsordner gehört einem anderen Benutzer.": "The settings folder belongs to another user.",
+    "Bitte einen vorbereiteten Runtimeordner auswählen.": "Select a prepared runtime folder.",
+    "Der Runtimepfad muss absolut sein.": "The runtime path must be absolute.",
+    "Hier fehlt tools/play-msfs.sh. Bitte zuerst die Runtime vorbereiten.": "tools/play-msfs.sh is missing here. Prepare the runtime first.",
+    "Bitte eine Runtime im eigenen Benutzerkonto auswählen.": "Select a runtime owned by your user account.",
+    "Zuerst eine Runtime auswählen.": "Select a runtime first.",
+    "Der private Runtimeordner fehlt oder ist ungültig.": "The runtime's private folder is missing or invalid.",
+    "Die Runtime-Sperrdatei ist keine reguläre Datei.": "The runtime lock is not a regular file.",
+    "Das Spiel oder ein anderer Runtimevorgang läuft bereits.": "The game or another runtime operation is already running.",
+    "Bitte die laufende Einrichtung abschließen oder abbrechen.": "Finish or cancel the current setup first.",
+    "Die Runtime kann während eines Spielstarts nicht gewechselt werden.": "The runtime cannot be changed while the game is starting or running.",
+    "Die Einrichtung benötigt ein beendetes Spiel und darf nur einmal laufen.": "Close the game before setup. Only one setup can run at a time.",
+    "Startprogramm": "Launcher",
+    "Eigenes MSFS-PC-Spielpaket": "Your MSFS PC game package",
+    "Wine-Umgebung": "Wine prefix",
+    "Kompatibilitätsbibliothek": "Compatibility library",
+    "Vorhanden": "Present",
+    "Runtime vorbereiten oder Pfad prüfen": "Prepare the runtime or check the path",
+    "Privater Datenordner": "Private data folder",
+    "Privater Datenordner fehlt": "Private data folder missing",
+    "Die Runtime ist nicht startbereit oder das Spiel läuft bereits.": "The runtime is not ready, or the game is already running.",
+    "Das Startprogramm konnte nicht ausgeführt werden.": "The launcher could not be started.",
+    "Es läuft kein von Flightdeck gestartetes Spiel.": "No game started by Flightdeck is running.",
+    "Ein Backup benötigt vorhandene lokale Spielstände und ein beendetes Spiel.": "A backup requires existing local saves and a closed game.",
+    "Der Backupordner darf kein symbolischer Link sein.": "The backup folder must not be a symbolic link.",
+    "Unerwartete Datei im Speicherordner.": "Unexpected file in the save folder.",
+    "Es sind noch keine lokalen Spielstände vorhanden.": "There are no local saves yet.",
+    "Einrichtung abgebrochen.": "Setup cancelled.",
+    "Bitte den Pfad für {label} angeben.": "Enter the path for {label}.",
+    "Der Pfad für {label} enthält von Wine nicht unterstützte Zeichen.": "The path for {label} contains characters unsupported by Wine.",
+    "Der Pfad für {label} muss absolut sein.": "The path for {label} must be absolute.",
+    "Der Zielordner existiert bereits. Bitte einen neuen Ordner wählen.": "The destination already exists. Choose a new folder.",
+    "Der Pfad für {label} wurde nicht gefunden oder ist nicht lesbar.": "The path for {label} was not found or is not readable.",
+    "Bitte für {label} einen Ordner auswählen.": "Select a folder for {label}.",
+    "{label} fehlt oder ist nicht lesbar.": "{label} is missing or is not readable.",
+    "{label} ist nicht ausführbar. Bitte die Dateirechte prüfen.": "{label} is not executable. Check its permissions.",
+    "Die Windows-Systemordner im Prefix müssen echte Ordner sein, keine Verknüpfungen.": "The Windows system directories in the prefix must be real folders, not links.",
+    "Die Wine-Umgebung enthält einen nicht lesbaren Ordner.": "The Wine prefix contains an unreadable folder.",
+    "{label}: Dateien oder Zugriffsrechte prüfen.": "{label}: check the files and access permissions.",
+    "Geprüft": "Checked",
+    "Ungültige Einrichtungseinstellungen.": "Invalid setup settings.",
+    "Eingabeordner": "Input folders",
+    "Build-Artefakte": "Build artifacts",
+    "Spielpaket": "Game package",
+    "Proton-Runner": "Proton runner",
+    "Neuer Zielordner": "New destination folder",
+    "Zielordner": "Destination folder",
+    "Der Zielordner darf nicht innerhalb eines Eingabeordners liegen.": "The destination must not be inside an input folder.",
+    "Bitte einen Ländercode mit zwei Großbuchstaben wählen, zum Beispiel AT.": "Choose a two-letter uppercase country code, such as AT.",
+    "Die Auswahl für lokale Spielstände muss Ja oder Nein sein.": "The local saves option must be yes or no.",
+    "Mitgeliefertes Startskript: {name}": "Bundled launch script: {name}",
+    "Mitgelieferte Runner-Beschreibung": "Bundled runner specification",
+    "Die Runner-Beschreibung ist ungültig. Flightdeck bitte erneut installieren.": "The runner specification is invalid. Reinstall Flightdeck.",
+    "Flightdeck-Installationsdateien": "Flightdeck installation files",
+    "Die Runner-Beschreibung ist unvollständig. Flightdeck bitte erneut installieren.": "The runner specification is incomplete. Reinstall Flightdeck.",
+    "Spielpaket: {name}": "Game package: {name}",
+    "MicrosoftGame.Config im Spielpaket": "MicrosoftGame.Config in the game package",
+    "Eigenes Xbox-PC-Spielpaket": "Your Xbox PC game package",
+    "Wine im Proton-Runner": "Wine in the Proton runner",
+    "Original-Runtime im Proton-Runner": "Original runtime in the Proton runner",
+    "Dieser Proton-Runner passt nicht zur geprüften Runtime. Bitte die in Flightdeck dokumentierte Runner-Version verwenden.": "This Proton runner does not match the tested runtime. Use the runner version documented by Flightdeck.",
+    "Kompatibler Proton-Runner": "Compatible Proton runner",
+    "Vorbereitete Wine-Umgebung: {name}": "Prepared Wine prefix: {name}",
+    "Vorbereitete Wine-Umgebung": "Prepared Wine prefix",
+    "manifest.json der Build-Artefakte": "Build artifacts manifest.json",
+    "Das Build-Manifest ist ungewöhnlich groß oder ungültig.": "The build manifest is unusually large or invalid.",
+    "Das Build-Manifest enthält keine gültige Dateiliste.": "The build manifest does not contain a valid file list.",
+    "Build-Artefakt: {name}": "Build artifact: {name}",
+    "Prüfsumme stimmt nicht: {name}. Bitte die Artefakte erneut bauen oder vollständig kopieren.": "Checksum mismatch: {name}. Rebuild the artifacts or copy them completely.",
+    "Build-Manifest und Prüfsummen": "Build manifest and checksums",
+    "Zusätzliche Medienmodule": "Additional media plugins",
+    "Medienmodule": "Media plugins",
+    "Speicherbedarf der Wine-Kopie wird ermittelt …": "Calculating space needed for the Wine prefix copy …",
+    "Der Zielordner kann hier nicht angelegt werden. Bitte Schreibrechte oder Speicherort ändern.": "The destination cannot be created here. Check write permissions or choose another location.",
+    "Am Ziel fehlt Speicherplatz. Für eine vollständige Kopie werden ungefähr {gib} GiB benötigt.": "Not enough space at the destination. A full copy needs approximately {gib} GiB.",
+    "Freier Speicherplatz für eine unabhängige Kopie": "Free space for an independent copy",
+    "Die Kopierfunktion cp ist nicht verfügbar.": "The cp copy tool is not available.",
+    "Die Wine-Umgebung konnte nicht vollständig kopiert werden. Bitte Leserechte und Speicherplatz prüfen.": "The Wine prefix could not be copied completely. Check read permissions and free space.",
+    "Dieses Linux stellt die sichere Ordnerübernahme renameat2 nicht bereit.": "This Linux system does not provide renameat2 for safe folder publication.",
+    "Der Zielordner wurde inzwischen angelegt. Er wurde nicht verändert.": "The destination was created by another operation. It has not been changed.",
+    "Der Zielordner existiert bereits und wird nicht überschrieben.": "The destination already exists and will not be overwritten.",
+    "Privater Runtimeordner wird vorbereitet …": "Preparing a private runtime folder …",
+    "Wine-Umgebung wird unabhängig kopiert. Das kann einige Minuten dauern …": "Creating an independent copy of the Wine prefix. This may take a few minutes …",
+    "Geprüfte Kompatibilitätsdateien werden eingesetzt …": "Installing verified compatibility files …",
+    "Ein Build-Artefakt wurde während der Kopie verändert. Die Einrichtung wurde verworfen.": "A build artifact changed during copying. Setup has been discarded.",
+    "Der Proton-Runner wurde während der Einrichtung verändert.": "The Proton runner changed during setup.",
+    "Vollständige Runtime wird übernommen …": "Publishing the complete runtime …",
+    "Die Installationsdateien fehlen. Bitte Flightdeck vollständig installieren oder eine vorbereitete Runtime auswählen.": "Installation files are missing. Install Flightdeck completely or select a prepared runtime.",
+    "Dieses Verzeichnisfeld wird nicht unterstützt.": "This folder field is not supported.",
+    "Kein Verzeichnisdialog verfügbar. Bitte den Pfad direkt eingeben.": "No folder picker is available. Enter the path manually.",
+    "Bitte die laufende Einrichtung zuerst abschließen oder abbrechen.": "Finish or cancel the current setup first.",
+    "Ein Verzeichnisdialog ist bereits geöffnet.": "A folder picker is already open.",
+    "Der Ausgangspfad ist ungültig.": "The initial path is invalid.",
+    "Der Ausgangspfad muss absolut sein.": "The initial path must be absolute.",
+    "Flightdeck – Ordner auswählen": "Flightdeck – Select folder",
+    "Eine Einrichtung läuft bereits. Bitte abschließen oder abbrechen.": "Setup is already in progress. Finish or cancel it first.",
+    "Bitte vorhandene Runtime oder neue Einrichtung wählen.": "Choose an existing runtime or a new setup.",
+    "Ausgewählte Dateien werden geprüft …": "Checking the selected files …",
+    "Der private Datenordner der Runtime fehlt oder ist ungültig.": "The runtime's private data folder is missing or invalid.",
+    "Die Runtime-Sperrdatei ist ungültig.": "The runtime lock file is invalid.",
+    "Runtime-Sperrdatei": "Runtime lock file",
+    "Prüfung abgeschlossen. Die Einrichtung kann gestartet werden.": "Checks complete. Setup can now start.",
+    "Die Einrichtung ist fehlgeschlagen. Bitte Dateien, Zugriffsrechte und freien Speicher prüfen.": "Setup failed. Check the files, access permissions and free space.",
+    "Bitte die ausgewählten Dateien zuerst erneut prüfen.": "Check the selected files again first.",
+    "Eingaben werden vor der Übernahme erneut geprüft …": "Rechecking the inputs before installation …",
+    "Runtime eingerichtet und im Launcher ausgewählt.": "Runtime prepared and selected in the launcher.",
+    "Es gibt keine passende laufende Einrichtung.": "There is no matching setup in progress.",
+    "Einrichtung wird abgebrochen und der temporäre Ordner entfernt …": "Cancelling setup and removing its temporary folder …",
+    "Nur lokaler Zugriff ist erlaubt.": "Only local access is allowed.",
+    "Diese Anfrage kommt nicht von Flightdeck.": "This request did not originate from Flightdeck.",
+    "Zugriff von einer anderen Website ist gesperrt.": "Access from another website is blocked.",
+    "Nicht gefunden.": "Not found.",
+    "Lokale Daten konnten nicht gelesen werden. Bitte die Runtime prüfen.": "Local data could not be read. Check the runtime.",
+    "Die Sitzung ist ungültig. Bitte die Seite neu laden.": "The session is invalid. Reload the page.",
+    "Eine JSON-Anfrage ist erforderlich.": "A JSON request is required.",
+    "Die Anfrage ist zu groß oder unvollständig.": "The request is too large or incomplete.",
+    "Die Anfrage enthält kein gültiges JSON-Objekt.": "The request does not contain a valid JSON object.",
+    "Der lokale Vorgang ist fehlgeschlagen. Bitte Pfad und Schreibrechte prüfen.": "The local operation failed. Check the path and write permissions.",
+}
+
+TEXT_FIELDS = frozenset({"label", "detail", "message", "error", "prepare_unavailable_reason", "install_unavailable_reason", "unavailable_reason"})
+
+
+def language(header=None):
+    """Resolve DE/EN, including regional tags and HTTP quality preferences."""
+    if not header or not header.strip():
+        return "de"
+    choices = []
+    for index, entry in enumerate(header[:8192].split(",")):
+        parts = entry.strip().split(";")
+        tag = parts[0].lower().split("-", 1)[0]
+        quality = 1.0
+        valid = True
+        for parameter in parts[1:]:
+            if not re.fullmatch(r"\s*q=(?:0(?:\.\d{0,3})?|1(?:\.0{0,3})?)\s*", parameter):
+                valid = False
+                break
+            quality = float(parameter.strip()[2:])
+        if valid and quality > 0 and tag in {"de", "en"}:
+            choices.append((quality, -index, tag))
+    return max(choices)[2] if choices else "en"
+
+
+class Message(str):
+    """String-compatible German message retaining explicit format metadata."""
+    def __new__(cls, template, **parameters):
+        value = str.__new__(cls, template.format(**parameters))
+        value.template = template
+        value.parameters = parameters
+        return value
+
+    def __getnewargs_ex__(self):
+        return (self.template,), self.parameters
+
+
+def message(template, **parameters):
+    if isinstance(template, Message) and not parameters:
+        return template
+    return Message(template, **parameters)
+
+
+def error_message(error):
+    """Preserve typed parameters when an exception becomes an async job error."""
+    return error.args[0] if error.args and isinstance(error.args[0], str) else str(error)
+
+
+def translate_message(value, locale="de"):
+    if isinstance(value, Message):
+        template = CATALOG.get(value.template, value.template) if locale == "en" else value.template
+        values = {key: translate_message(item, locale) if isinstance(item, Message) else item for key, item in value.parameters.items()}
+        return template.format(**values)
+    return CATALOG.get(value, value) if locale == "en" and isinstance(value, str) else value
+
+
+def localize(value, locale):
+    """Translate allowlisted UI fields only; leave all machine data intact."""
+    if isinstance(value, dict):
+        return {key: translate_message(item, locale) if key in TEXT_FIELDS and isinstance(item, str)
+                else localize(item, locale) for key, item in value.items()}
+    if isinstance(value, list):
+        return [localize(item, locale) for item in value]
+    return value

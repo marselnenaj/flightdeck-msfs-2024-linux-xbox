@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Install Flightdeck
+Name[de]=Flightdeck installieren
+Comment=Install the launcher for your user
+Comment[de]=Launcher für deinen Benutzer installieren
+Exec=python3 -c "import pathlib,runpy,sys;from urllib.parse import urlsplit,unquote;raw=sys.argv[1];u=urlsplit(raw);local=not raw.startswith('file:') or (u.scheme=='file' and u.netloc in ('','localhost') and not u.query and not u.fragment);p=pathlib.Path(unquote(u.path) if raw.startswith('file:') else raw);(local and p.is_absolute()) or sys.exit('Installer location must be a local file');script=p.resolve(strict=True).parent/'scripts'/'install-launcher.py';sys.argv=[str(script),'--gui'];runpy.run_path(str(script),run_name='__main__')" %k
+Icon=applications-games
+Terminal=false
+Categories=Game;Simulation;
+StartupNotify=false

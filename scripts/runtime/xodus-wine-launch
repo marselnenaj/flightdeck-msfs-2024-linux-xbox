@@ -1,0 +1,113 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+"""Bridge Xodus' NT entry-point argument to the tested Wine memfd loader.
+
+The game remains encrypted on disk. A temporary sibling PE containing only
+headers lets Wine choose the architecture; its image is supplied by Xodus' fd.
+This wrapper does not obtain licenses or decrypt any content.
+"""
+import os
+from pathlib import Path
+import signal
+import struct
+import subprocess
+import sys
+import tempfile
+import time
+
+BASE = Path(__file__).resolve().parent
+DEFAULT_WINE = BASE.parent / "runner/files/bin/wine"
+
+def fail(message):
+    raise RuntimeError(message)
+
+def nt_path(path):
+    return "\\??\\Z:" + str(path).replace("/", "\\")
+
+def main():
+    if len(sys.argv) < 2:
+        fail("Expected the executable path supplied by xodus-cli run")
+    argument = sys.argv[1]
+    if argument.startswith("\\??\\Z:\\"):
+        source = Path(argument[6:].replace("\\", "/"))
+    else:
+        source = Path(argument)
+    source = source.resolve(strict=True)
+    game_root = (BASE.parent / "games/MSFS2024").resolve(strict=True)
+    if not source.is_relative_to(game_root):
+        fail("The entry point is outside the configured game directory")
+
+    map_value = os.environ.get("WINE_DLL_FILE_MAP", "")
+    mappings = []
+    payload_fd = None
+    for item in map_value.split("|"):
+        number, separator, name = item.partition(":")
+        if not separator or not number.isdecimal():
+            fail("Missing or invalid WINE_DLL_FILE_MAP")
+        fd = int(number)
+        os.fstat(fd)
+        mappings.append((fd, name))
+        if name.casefold() == nt_path(source).casefold():
+            payload_fd = fd
+    if payload_fd is None:
+        fail("The entry point is not present in Xodus' inherited fd map")
+
+    dos = os.pread(payload_fd, 64, 0)
+    if len(dos) != 64 or dos[:2] != b"MZ":
+        fail("Mapped entry point is not a PE executable")
+    offset = struct.unpack_from("<I", dos, 0x3c)[0]
+    if offset > 1024 * 1024:
+        fail("Invalid PE header offset")
+    pe = os.pread(payload_fd, 88, offset)
+    if len(pe) != 88 or pe[:4] != b"PE\0\0":
+        fail("Invalid PE signature")
+    header_size = struct.unpack_from("<I", pe, 24 + 60)[0]
+    file_size = os.fstat(payload_fd).st_size
+    if not offset + 88 <= header_size <= min(file_size, 1024 * 1024):
+        fail("Invalid PE header length")
+    headers = os.pread(payload_fd, header_size, 0)
+    if len(headers) != header_size:
+        fail("Incomplete PE headers in inherited fd")
+
+    stub_fd, stub_name = tempfile.mkstemp(prefix=source.name + ".xodus-launch-", suffix=".exe", dir=source.parent)
+    stub = Path(stub_name)
+    try:
+        with os.fdopen(stub_fd, "wb") as stream:
+            stream.write(headers)
+            stream.truncate(file_size)
+        child_env = dict(os.environ)
+        child_env.setdefault("WINEPREFIX", str(BASE.parent / "local/msfs-prefix"))
+        prefix = Path(child_env["WINEPREFIX"]).resolve()
+        if prefix != (BASE.parent / "local/msfs-prefix").resolve():
+            fail("The Wine prefix differs from this runtime configuration")
+        child_env["WINEPREFIX"] = str(prefix)
+        child_env["WINE_DLL_FILE_MAP"] = map_value + f"|{payload_fd}:{nt_path(stub)}"
+        wine = Path(child_env.get("XODUS_WINE_RUNNER", str(DEFAULT_WINE))).resolve(strict=True)
+        started = time.monotonic()
+        process = subprocess.Popen([str(wine), str(stub), *sys.argv[2:]],
+                                   cwd=source.parent, env=child_env,
+                                   pass_fds=tuple(sorted({fd for fd, _ in mappings})))
+        def forward_signal(number, _frame):
+            if process.poll() is None:
+                process.send_signal(number)
+        previous = {number: signal.signal(number, forward_signal)
+                    for number in (signal.SIGINT, signal.SIGTERM)}
+        try:
+            status = process.wait()
+            exit_code = status if status >= 0 else 128 - status
+            result = f"exit_code={status}" if status >= 0 else f"signal={-status} shell_exit_code={exit_code}"
+            print(f"xodus-wine-launch: wine_pid={process.pid} {result} elapsed_seconds={time.monotonic() - started:.3f}",
+                  file=sys.stderr, flush=True)
+            return exit_code
+        finally:
+            for number, handler in previous.items():
+                signal.signal(number, handler)
+    finally:
+        stub.unlink(missing_ok=True)
+
+if __name__ == "__main__":
+    try:
+        raise SystemExit(main())
+    except (RuntimeError, OSError, ValueError) as error:
+        print(f"xodus-wine-launch: {error}", file=sys.stderr)
+        raise SystemExit(1)

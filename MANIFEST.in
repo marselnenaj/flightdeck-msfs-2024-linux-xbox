@@ -1,0 +1,9 @@
+include build_support.py
+include LICENSE
+include compat/upstreams.lock.json
+include compat/bootstrap.lock.json
+include scripts/runtime/*.sh
+include scripts/runtime/xodus-wine-launch
+include ui/flight-panorama.png
+include ui/manrope-variable.woff2
+include ui/OFL-Manrope.txt

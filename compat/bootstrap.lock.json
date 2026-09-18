@@ -1,0 +1,35 @@
+{
+  "format": 1,
+  "native": {
+    "archive_url": "https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/download/v0.1.0/flightdeck-compat-0.1.0-linux-x86_64.tar.gz",
+    "archive_sha256": "fcf46942e64028eb10ecf1247b9ea6b76b880fb8baa45125cdadbde97f742fb8",
+    "minimum_glibc": "2.39",
+    "files": {
+      "bin/flightdeck-connected-storage.exe": "660d276f8f9fb41ff17a80a51666542ee0f2ba23b54ef1da31275f817e6f5f24",
+      "bin/xodus-cli": "33ee4a798ca9b33ccd80bbceb650186118e4d9cfb982358df5bb6af7e71f9fd6",
+      "bin/xodus-service": "860a6581fff577b9e102acfdbb6298b2e3a0d1b58e91d83c29311356ab50d4cd",
+      "builtin/x86_64-unix/xodus_store_test.so": "1d40f99aefab727e67f32eb4cd7aeee56d7685fa4e4fecde72d18dbd2881dc64",
+      "builtin/x86_64-windows/xodus_store_test.dll": "22476ca050d322d7729ca54991f2a8cfef1d4ee5d52712a2da0398f1b6d62263",
+      "runtime/xgameruntime.dll": "cbb836c71eeab2e234e8a26654091b980cc8dbe613701c6d1bed8635af378a30"
+    },
+    "notice_sha256": "d4863b2fd0484eea13d2ab6186d0fc47987d1cf82ea8e0302a9b14568087abc0",
+    "cli_features": [
+      "streaming-resume-files-v1",
+      "package-info-json-v1",
+      "streaming-integrity-index-v1",
+      "streaming-progress-v1"
+    ],
+    "features": [
+      "connected-storage-read-v1",
+      "connected-storage-sync-v1"
+    ]
+  },
+  "runner": {
+    "url": "https://nightly.link/xodus-gaming/Proton/suites/84702581477/artifacts/9008475181",
+    "zip_sha256": "3cae31d88671b2cb57a721f24777e8a4f01fc4acb18d773aa8e98c50fda6b9db",
+    "archive_sha256": "78a232dd5dc963045a316f59e13e01ec1b1fa35e30bc2a14cf9bb4a7b9609ca1",
+    "directory": "proton-xodus-bleeding-edge-11.0-20260803-3-g7c0b4354-x86_64",
+    "original_runtime_sha256": "02dc24d6dfc7f7807a5ae3081ad2ae6ca550ce42f35c46197676da3c63b9e6d0",
+    "artifact_expires_at": "2026-11-05T19:52:05Z"
+  }
+}
