@@ -97,7 +97,7 @@ Installing missing Linux system packages may require administrator rights.
 
 ![Flightdeck launcher overview](docs/images/launcher-overview.png)
 
-<sub>Flightdeck launcher shown with example installation data.</sub>
+<sub>Flightdeck 0.1.2 overview with simulator selection, shown in English.</sub>
 
 | Area | What you can do |
 | :--- | :--- |

@@ -18,7 +18,7 @@ EXTENSIONS = {".py", ".sh", ".md", ".txt", ".json", ".toml", ".lock", ".patch",
 NAMES = {"LICENSE", "COPYING", "COPYING.LIB", ".gitignore", "Makefile", "xodus-wine-launch"}
 # Permit only individually reviewed binary assets, never arbitrary local files.
 ASSETS = {
-    "docs/images/launcher-overview.png": "1c59eecd1cebab38c03665026b363abbcf4c16189daf5ff4d69f971560fff39b",
+    "docs/images/launcher-overview.png": "092c0ea836b6450470346cd397d42e045a06d2f48c0e15c4940b2f05415e308c",
     "ui/flight-panorama.png": "f64fc375e0aaa806c4de91cd91ec8f18994a06ff64aa80d8b6d95f7c463c9304",
     "ui/flight-panorama-2020.png": "cd81013284d468fe6d306438e66d9a0d7ee35d6bda02ec2b44dea010f8cf8344",
     "ui/manrope-variable.woff2": "30b83738add8c9edd9e3450b98036a9a8fb5668d0cbd4eb0ce5fe6761197f21f",

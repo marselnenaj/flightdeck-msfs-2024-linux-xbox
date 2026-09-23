@@ -105,7 +105,7 @@ Die Installation fehlender Linux-Systempakete kann Administratorrechte benötige
 
 ![Flightdeck-Übersicht](images/launcher-overview.png)
 
-<sub>Der Launcher mit Beispieldaten einer Installation.</sub>
+<sub>Flightdeck 0.1.2 mit Simulatorauswahl, hier in der englischen Oberfläche.</sub>
 
 | Bereich | Funktion |
 | :--- | :--- |
