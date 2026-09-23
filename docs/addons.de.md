@@ -146,10 +146,7 @@ vollständiges natives Paket gilt weiterhin glibc 2.39+. Andere Wine-/Proton-Bui
 Steam-Prefixe und MSFS 2020 werden von diesem ersten Patch nicht unterstützt.
 Der Fensterhelfer läuft mit dem Simulator und blendet passende Fenix-Dienst-/
 Anzeigefenster aus. Die Fenix-Hauptanwendung bleibt für die Anmeldung zugänglich.
-Manuelles Öffnen von Fenix startet den Helfer nicht. Falls eine frühere manuelle
-Hyprland-Einrichtung Fenix trotzdem versteckt, die alten bedingungslosen
-Fenix-Regeln für spezielle Arbeitsbereiche aus der Desktop-Konfiguration
-entfernen. Der Flightdeck-Installer ändert keine Fenstermanager-Regeln.
+Manuelles Öffnen von Fenix startet den Helfer nicht.
 
 **Vorhandener lokaler Fenix-Patch** bezeichnet eine frühere Entwickler-Einrichtung.
 Sie bleibt aktiv; der neue Installationsknopf ist dann gesperrt. Eine automatische

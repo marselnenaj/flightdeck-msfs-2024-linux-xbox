@@ -11,10 +11,6 @@
   active. Setup and game launch stay reserved until shutdown completes. A running
   simulator or installer disables this action; other profiles and applications
   are excluded.
-- Fenix window troubleshooting now covers old local Hyprland rules that hide
-  manually opened Fenix windows. Flightdeck's helper-window guard runs with the
-  simulator; manual sign-in windows remain accessible. Existing desktop rules
-  are user configuration and are not changed by the installer.
 
 Validation includes process tests for graceful close, stuck helpers, profile
 isolation and a running simulator; runtime-reservation tests; and German/English

@@ -143,10 +143,7 @@ requires x86_64 Linux and glibc 2.38+; Flightdeck's full native package still re
 glibc 2.39+. Other Wine/Proton builds, Steam prefixes and MSFS 2020 are outside this
 first patch's scope. The optional window guard runs with the simulator and hides
 matching service/display windows; the main Fenix application remains accessible.
-Opening Fenix manually does not start that guard. If an earlier manual Hyprland
-setup still hides Fenix, remove the old unconditional Fenix special-workspace
-rules from your desktop configuration. The Flightdeck installer does not edit
-your window-manager rules.
+Opening Fenix manually does not start that guard.
 
 **Existing local Fenix patch** means a previous development setup is detected.
 That setup stays active and the new install button is disabled. There is no
