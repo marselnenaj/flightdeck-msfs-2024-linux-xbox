@@ -6,6 +6,8 @@ import threading
 import unittest
 import zipfile
 import shutil
+import subprocess
+import sys
 from unittest.mock import patch
 from flightdeck import fenix
 from flightdeck.backend import LauncherError
@@ -29,6 +31,101 @@ class FakeLauncher:
 
 
 class FenixTests(unittest.TestCase):
+    def test_stop_keeps_interactive_reservation_until_all_helpers_are_closed(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            launcher = FakeLauncher(root)
+            manager = fenix.FenixManager(launcher)
+            entered, cleaning, finish = threading.Event(), threading.Event(), threading.Event()
+            children = []
+            def app(runtime, executable, progress, *, manager, wait):
+                child = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(30)"])
+                children.append(child)
+                entered.set()
+                return wait(child)
+            def stop(runtime, progress):
+                self.assertEqual(runtime, root)
+                cleaning.set()
+                self.assertTrue(finish.wait(3))
+            with patch.object(fenix.core, "windows_app", side_effect=app), \
+                 patch.object(fenix.core, "snapshot", return_value={"state": "installed", "idle": False}), \
+                 patch.object(fenix.fenix_processes, "status", return_value=(True, False)), \
+                 patch.object(fenix.fenix_processes, "stop", side_effect=stop), \
+                 patch.object(launcher, "_external", side_effect=lambda **_: launcher.setup_busy):
+                try:
+                    started = manager.start("open", {})
+                    self.assertTrue(entered.wait(2))
+                    self.assertTrue(manager.snapshot()["can_stop"])
+                    self.assertEqual(manager.start("stop", {}), started)
+                    self.assertTrue(cleaning.wait(2))
+                    self.assertTrue(launcher.setup_busy)
+                    self.assertFalse(manager.snapshot()["can_stop"])
+                    with self.assertRaises(LauncherError): manager.start("configure", {})
+                    finish.set()
+                    manager.worker.join(3)
+                    self.assertFalse(manager.worker.is_alive())
+                    self.assertFalse(launcher.setup_busy)
+                    self.assertEqual(manager.job["state"], "complete")
+                    self.assertEqual(manager.job["message"], "Fenix wurde beendet.")
+                    self.assertIsNotNone(children[0].poll())
+                finally:
+                    finish.set()
+                    for child in children:
+                        if child.poll() is None: child.kill()
+                        child.wait(timeout=3)
+                    manager.worker.join(3)
+
+    def test_stop_is_blocked_during_game_installer_and_other_jobs(self):
+        with tempfile.TemporaryDirectory() as directory:
+            launcher = FakeLauncher(Path(directory))
+            manager = fenix.FenixManager(launcher)
+            with patch.object(fenix.core, "snapshot", return_value={"state": "installed"}), \
+                 patch.object(fenix.fenix_processes, "status", return_value=(True, False)):
+                launcher.process = object()
+                with self.assertRaises(LauncherError): manager.stop()
+                launcher.process = None
+                launcher.setup_busy = True
+                for operation in ("installer", "configure", "install", "restore"):
+                    manager.job = {"operation": operation, "state": "running"}
+                    manager.job_runtime = launcher.runtime
+                    with self.subTest(operation=operation), self.assertRaises(LauncherError): manager.stop()
+                manager.job = {"operation": "open", "state": "running", "app_exited": True}
+                with self.assertRaises(LauncherError): manager.stop()
+                # The waiter may finish after snapshot has reported can_stop.
+                with patch.object(manager, "snapshot", return_value={"can_stop": True}):
+                    with self.assertRaises(LauncherError): manager.stop()
+                self.assertFalse(manager.stop_requested.is_set())
+                manager.job = {"operation": "open", "state": "running"}
+                with patch.object(fenix.fenix_processes, "status", return_value=(True, True)):
+                    with self.assertRaises(LauncherError): manager.stop()
+
+    def test_background_fenix_stop_reserves_setup_and_runtime_lock(self):
+        from contextlib import contextmanager
+        with tempfile.TemporaryDirectory() as directory:
+            launcher = FakeLauncher(Path(directory))
+            manager = fenix.FenixManager(launcher)
+            lease = []
+            @contextmanager
+            def locked(root, *, idle, recovery):
+                self.assertTrue(launcher.setup_busy)
+                self.assertFalse(idle)
+                self.assertTrue(recovery)
+                lease.append(root)
+                try: yield root
+                finally: lease.pop()
+            def stop(root, progress):
+                self.assertEqual(lease, [root])
+                self.assertTrue(launcher.setup_busy)
+            with patch.object(fenix.core, "snapshot", return_value={"state": "installed", "idle": False}), \
+                 patch.object(fenix.core, "locked", side_effect=locked), \
+                 patch.object(fenix.fenix_processes, "status", return_value=(True, False)), \
+                 patch.object(fenix.fenix_processes, "stop", side_effect=stop):
+                self.assertTrue(manager.stop()["ok"])
+                manager.worker.join(3)
+                self.assertFalse(launcher.setup_busy)
+                self.assertEqual(manager.job["state"], "complete")
+                self.assertEqual(lease, [])
+
     def test_release_extraction_uses_only_verified_fixed_payload(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

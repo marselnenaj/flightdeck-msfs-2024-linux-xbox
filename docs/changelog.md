@@ -1,5 +1,26 @@
 # Changes and release status
 
+## 0.1.2 — 23 September 2026
+
+[Download Flightdeck 0.1.2](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.2).
+
+- **Mods → Fenix A320 → Stop Fenix** closes the main Fenix application, its
+  helpers and the official manager in the selected Wine profile. It first
+  requests a normal close and uses a bounded fallback for stuck processes.
+- The button works while Flightdeck's **Open Fenix** or livery-manager job is
+  active. Setup and game launch stay reserved until shutdown completes. A running
+  simulator or installer disables this action; other profiles and applications
+  are excluded.
+- Fenix window troubleshooting now covers old local Hyprland rules that hide
+  manually opened Fenix windows. Flightdeck's helper-window guard runs with the
+  simulator; manual sign-in windows remain accessible. Existing desktop rules
+  are user configuration and are not changed by the installer.
+
+Validation includes process tests for graceful close, stuck helpers, profile
+isolation and a running simulator; runtime-reservation tests; and German/English
+desktop/mobile browser flows. Native components and patch **0.1.0-preview.1**
+are unchanged. Install the new full package to update the launcher.
+
 ## 0.1.1 — 23 September 2026
 
 [Download Flightdeck 0.1.1](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.1).

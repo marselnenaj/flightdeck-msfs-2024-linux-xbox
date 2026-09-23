@@ -48,7 +48,7 @@ let discovered=[{name:'Microsoft Flight Simulator 2024',path:'/synthetic/path wi
 let setup = {available:true,install_available:false,prepare_available:true,state:'idle',job:null,defaults:{mode:'existing',runtime_path:status.runtime.path,market:'AT',local_saves:true,destination_path:'/synthetic/new-msfs'}};
 let mods={state:'ready',message:'',folder_path:'/synthetic/Community',can_open:true,mods:[],count:0,scanned_count:0,limited:false};
 let modsUnavailable=false;
-let fenix={state:'available',installed:false,configured:false,settings_ready:false,idle:true,fenix_installed:false,manager_installed:false,can_restore:false,can_change:true,job:null};
+let fenix={state:'available',installed:false,configured:false,settings_ready:false,idle:true,fenix_installed:false,manager_installed:false,can_restore:false,can_change:true,fenix_running:false,can_stop:false,job:null};
 let gameUpdate={integrity:{available:true,can_check:true,result:null},can_repair:true,available:true,installed_version:'1.8.16.0',latest_version:null,update_available:null,can_check:true,can_start:false,can_rollback:false,auth_required:false};
 let updateUnavailable=false,updateDelay=0,updateReplies=0,updateWaiting=false,updateBarrier=null,releaseUpdate=null;
 let cloudData={available:true,mode:'download_and_import',sync_supported:false,can_check:true,can_download:true,can_prepare_import:true,can_import:false,can_cancel:false,plan:null,job:null};
@@ -76,6 +76,7 @@ const server = createServer(async (req,res) => {
       if (failNext) {failNext = false;res.writeHead(400);res.end(JSON.stringify({ok:false,error:'<img src=x onerror="window.injected=1"> Backend-Fehler'}));return;}
       if (url.pathname === '/api/fenix/install') {assert.deepEqual(JSON.parse(body),{bundle_path:''});fenix={...fenix,can_change:false,job:{state:'running',message:'Synthetic Fenix setup'}};res.end(JSON.stringify({ok:true,job_id:'fenix-fixture'}));return;}
       if (url.pathname === '/api/fenix/configure') {assert.deepEqual(JSON.parse(body),{});fenix={...fenix,configured:true,job:{state:'complete',operation:'configure',message:'Synthetic displays configured'}};res.end(JSON.stringify({ok:true,job_id:'fenix-configure-fixture'}));return;}
+      if (url.pathname === '/api/fenix/stop') {assert.deepEqual(JSON.parse(body),{});fenix={...fenix,fenix_running:false,can_stop:false,idle:true,can_change:true,job:{state:'complete',operation:'open',message:'Fenix wurde beendet.'}};status.game={...status.game,state:'stopped'};res.end(JSON.stringify({ok:true,job_id:'fenix-open-fixture'}));return;}
       if (url.pathname === '/api/game/select') {
         if (switchDelay) await sleep(switchDelay);
         const gameId=JSON.parse(body).game_id;
@@ -814,9 +815,18 @@ try {
   await click('fenix-refresh');await until(()=>evaluate(`!document.getElementById('fenix-busy').hidden`),'Open Fenix window explanation missing');
   await check('An exited installer with an open app is not complete and explains disabled controls',`document.getElementById('fenix-state').textContent==='Einrichtung noch nicht abgeschlossen' && document.getElementById('fenix-next').textContent.includes('Schritt 3 von 4') && document.getElementById('fenix-configure').disabled && document.getElementById('fenix-busy').textContent.includes('Windows-Anwendung')`);
   await evaluate(`document.getElementById('fenix-card').scrollIntoView({block:'start'})`);await screenshot('fenix-waiting-desktop.png');
-  fenix={...fenix,idle:true,can_change:true,settings_ready:true};await click('fenix-refresh');
+  fenix={...fenix,settings_ready:true,fenix_running:true,can_stop:true,job:{state:'running',operation:'open',message:'Synthetic Fenix sign-in window'}};
+  status.game={...status.game,state:'external'};await refresh(`document.getElementById('game-state').textContent.length>0`);await click('fenix-refresh');
+  await until(()=>evaluate(`!document.getElementById('fenix-stop').disabled`),'Stop Fenix is blocked by its own runtime lease');
+  await check('Open Fenix can be stopped while setup remains reserved and the simulator is not reported as running',`!document.getElementById('fenix-app-controls').hidden && document.getElementById('fenix-stop').textContent==='Fenix beenden' && document.getElementById('fenix-configure').disabled && !document.getElementById('fenix-busy').textContent.includes('MSFS läuft')`);
+  await evaluate(`document.getElementById('fenix-card').scrollIntoView({block:'start'})`);await screenshot('fenix-stop-desktop.png');
+  await language('en');await call('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
+  await evaluate(`document.getElementById('fenix-app-controls').scrollIntoView({block:'center'})`);
+  await check('Stop Fenix is translated and usable on mobile',`document.documentElement.scrollWidth<=innerWidth && document.getElementById('fenix-stop').textContent==='Stop Fenix' && !document.getElementById('fenix-stop').disabled && document.getElementById('fenix-stop').getBoundingClientRect().right<=innerWidth`);await screenshot('fenix-stop-mobile.png');
+  await click('fenix-stop');await until(()=>posts.at(-1)?.path==='/api/fenix/stop','Fenix stop request missing');
+  await language('de');await call('Emulation.setDeviceMetricsOverride',{width:1536,height:1024,deviceScaleFactor:1,mobile:false});
   await until(()=>evaluate(`!document.getElementById('fenix-configure').disabled`),'Final Fenix setup step unavailable');
-  await check('Fenix points to finish setup after initial settings exist',`document.getElementById('fenix-next').textContent.includes('Schritt 4 von 4') && document.getElementById('fenix-step-4').getAttribute('aria-current')==='step' && document.getElementById('fenix-busy').hidden`);
+  await check('Stopping Fenix unlocks finish setup and removes the stop control',`document.getElementById('fenix-next').textContent.includes('Schritt 4 von 4') && document.getElementById('fenix-step-4').getAttribute('aria-current')==='step' && document.getElementById('fenix-busy').hidden && document.getElementById('fenix-app-controls').hidden`);
   await click('fenix-configure');await until(()=>evaluate(`document.getElementById('fenix-state').textContent==='Fenix ist startbereit'`),'Fenix ready confirmation missing');
   await check('Completed Fenix setup confirms startup and shutdown without claiming account activation',`document.getElementById('fenix-next').textContent.includes('automatisch mit dem Spiel') && document.getElementById('fenix-next').textContent.includes('beim Beenden') && document.querySelectorAll('#fenix-steps [data-status=done]').length===4 && document.getElementById('fenix-step-3').textContent.includes('Lizenz prüft Fenix selbst')`);
   await evaluate(`document.getElementById('fenix-card').scrollIntoView({block:'start'})`);await screenshot('fenix-ready-desktop.png');
@@ -828,9 +838,10 @@ try {
   fenix={...fenix,state:'legacy',manager_installed:true,job:null};await click('fenix-refresh');
   await until(()=>evaluate(`!document.getElementById('fenix-manager').disabled && !document.getElementById('fenix-legacy').hidden`),'Legacy livery manager inaccessible');
   await check('Legacy local patch offers its manager without replacement',`document.getElementById('fenix-install').disabled && !document.getElementById('fenix-legacy').hidden`);
-  status.game={...status.game,state:'running'};await refresh(`document.getElementById('game-state').textContent.length>0`);await click('fenix-refresh');
+  status.game={...status.game,state:'running'};fenix={...fenix,fenix_running:true,can_stop:false};await refresh(`document.getElementById('game-state').textContent.length>0`);await click('fenix-refresh');
   await until(()=>evaluate(`document.getElementById('fenix-manager').disabled`),'Running simulator must block manager');
-  status.game={...status.game,state:'stopped'};fenix={...fenix,state:'available',installed:false,configured:false,settings_ready:false,fenix_installed:false,manager_installed:false};await refresh(`document.getElementById('game-state').textContent.length>0`);await click('fenix-refresh');
+  await check('Running simulator also blocks the dedicated Fenix stop button',`!document.getElementById('fenix-app-controls').hidden && document.getElementById('fenix-stop').disabled`);
+  status.game={...status.game,state:'stopped'};fenix={...fenix,state:'available',installed:false,configured:false,settings_ready:false,fenix_installed:false,manager_installed:false,fenix_running:false};await refresh(`document.getElementById('game-state').textContent.length>0`);await click('fenix-refresh');
   await language('en');await call('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
   await evaluate(`document.getElementById('fenix-card').scrollIntoView({block:'start'})`);
   await check('Fenix setup is translated and fits mobile width',`document.documentElement.scrollWidth<=innerWidth && document.getElementById('fenix-install').textContent==='Install patch'`);await screenshot('fenix-setup-mobile.png');

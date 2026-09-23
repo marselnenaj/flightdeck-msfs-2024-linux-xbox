@@ -13,6 +13,13 @@ import re
 
 # Source messages also serve as stable catalog keys; additions must include EN.
 CATALOG = {
+    'Fenix beenden': 'Stop Fenix',
+    'Fenix läuft': 'Fenix is running',
+    'Fenix wird beendet …': 'Stopping Fenix…',
+    'Fenix wurde beendet.': 'Fenix has stopped.',
+    'Beende MSFS, bevor du Fenix schließt.': 'Exit MSFS before closing Fenix.',
+    'Fenix konnte nicht vollständig beendet werden.': 'Could not stop all Fenix processes.',
+    'Fenix kann gerade nicht beendet werden. Beende MSFS und laufende Installationen zuerst.': 'Fenix cannot be stopped right now. Exit MSFS and finish active installations first.',
     'Patch installiert. Installiere jetzt Fenix mit dem offiziellen Installer.': 'Patch installed. Now install Fenix using the official installer.',
     'Installer beendet. Prüfe die nächsten Schritte oben; die Fenix-Einrichtung ist noch nicht automatisch abgeschlossen.': 'Installer exited. Check the next steps above; this does not automatically complete Fenix setup.',
     'Fenix-Fenster geschlossen. Wende jetzt die Anzeige-Einstellungen an.': 'Fenix window closed. Now apply the display settings.',

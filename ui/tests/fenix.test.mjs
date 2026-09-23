@@ -11,8 +11,8 @@ test('Fenix actions require a current idle runtime and reconcile permissions',()
     assert.ok(Object.values(permissions).every(value=>!value));
   }
   const installed={...value,state:'installed',installed:true,fenix_installed:true,settings_ready:true,manager_installed:true,can_restore:true};
-  assert.deepEqual(fenixPermissions(installed,status,true),{install:false,installer:true,open:true,manager:true,configure:true,restore:true});
-  assert.deepEqual(fenixPermissions({...value,state:'legacy',manager_installed:true},status,true),{install:false,installer:false,open:false,manager:true,configure:false,restore:false});
+  assert.deepEqual(fenixPermissions(installed,status,true),{install:false,installer:true,open:true,manager:true,configure:true,restore:true,stop:false});
+  assert.deepEqual(fenixPermissions({...value,state:'legacy',manager_installed:true},status,true),{install:false,installer:false,open:false,manager:true,configure:false,restore:false,stop:false});
   assert.equal(fenixPermissions({...value,state:'committing',can_restore:true},status,true).restore,true);
 });
 
@@ -49,4 +49,8 @@ test('open Wine applications explain a disabled step after the installer exits',
   assert.match(fenixProgress({...value,job:{state:'running',operation:'open'}},external).busy,/Windows-Anwendung/);
   assert.equal(fenixProgress({...value,job:{state:'running',operation:'install'}},external).busy,'');
   assert.match(fenixProgress({...value,job:null},external).busy,/Installation wird gerade verwendet/);
+  assert.equal(fenixPermissions({...value,can_stop:true},external,true).stop,true);
+  assert.equal(fenixPermissions({...value,can_stop:false},external,true).stop,false);
+  assert.equal(fenixPermissions({...value,can_stop:true,runtime_path:'/other'},external,true).stop,false);
+  assert.equal(fenixProgress({...value,job:{state:'running',operation:'open',stopping:true}},external).title,'Fenix wird beendet …');
 });

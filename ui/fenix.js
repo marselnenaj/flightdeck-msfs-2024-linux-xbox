@@ -10,6 +10,7 @@ export function fenixPermissions(data, status, enabled) {
     manager:idle&&data.manager_installed===true&&(data.installed===true||data.state==='legacy'),
     configure:idle&&data.installed===true&&data.fenix_installed===true&&data.settings_ready===true,
     restore:idle&&data.can_restore===true,
+    stop:enabled&&data?.runtime_path===status?.runtime.path&&data?.can_stop===true,
   };
 }
 
@@ -39,13 +40,13 @@ export function fenixProgress(data, status) {
     title='Einrichtung unterbrochen · Wiederherstellung verfügbar';detail='Öffne die Wiederherstellung unten, bevor du die Einrichtung erneut startest.';
   } else if(data) title='Für diese Runtime nicht verfügbar';
   let busy='';
-  if(active&&['installer','open','manager'].includes(data.job.operation))
+  if(active&&!data.job.stopping&&['installer','open','manager'].includes(data.job.operation))
     busy='Eine Windows-Anwendung läuft noch in dieser Installation. Schließe den Fenix-Installer und Fenix nach der Anmeldung vollständig. Flightdeck aktualisiert den Status automatisch.';
   else if(!active&&status?.game.state==='external')busy='Diese Installation wird gerade verwendet. Beende MSFS oder die andere laufende Einrichtung, bevor du Fenix änderst.';
   else if(!active&&status?.game.state&&status.game.state!=='stopped')busy='MSFS läuft. Beende das Spiel, bevor du die Fenix-Einrichtung änderst.';
   else if(!active&&data?.idle===false)busy='Eine Windows-Anwendung läuft noch in dieser Installation. Schließe den Fenix-Installer und Fenix nach der Anmeldung vollständig. Flightdeck aktualisiert den Status automatisch.';
   else if(data?.busy&&!active)busy='Eine andere Einrichtung läuft. Warte, bis sie abgeschlossen ist.';
-  if(active){title='Fenix-Einrichtung läuft …';if(!['installer','open','manager'].includes(data.job.operation))detail='Bitte warte, bis der aktuelle Schritt abgeschlossen ist.';}
+  if(active){title=data.job.stopping?'Fenix wird beendet …':'Fenix-Einrichtung läuft …';if(data.job.stopping||!['installer','open','manager'].includes(data.job.operation))detail='Bitte warte, bis der aktuelle Schritt abgeschlossen ist.';}
   return {ready:ready&&!active,supported,step,steps,title,detail,busy};
 }
 
@@ -55,7 +56,7 @@ export function createFenix({request,getStatus,isOnline,isReserved,changed,refre
   function permissions() {return fenixPermissions(data,getStatus(),fresh&&isOnline()&&!isReserved()&&!pending);}
   function render() {
     const allowed=permissions();
-    for(const action of ['install','installer','open','manager','configure','restore'])$('fenix-'+action).disabled=!allowed[action];
+    for(const action of ['install','installer','open','manager','configure','restore','stop'])$('fenix-'+action).disabled=!allowed[action];
     $('fenix-installer').disabled||=!$('fenix-installer-path').value.trim();
     $('fenix-pick-installer').disabled=pending||active||!isOnline();
     $('fenix-pick-bundle').disabled=pending||active||!isOnline();
@@ -80,6 +81,8 @@ export function createFenix({request,getStatus,isOnline,isReserved,changed,refre
     $('fenix-message').textContent=stringValue(data?.job?.message||data?.message,'',1500);
     $('fenix-error').textContent=error;$('fenix-error').hidden=!error;
     $('fenix-busy').textContent=t(progress.busy);$('fenix-busy').hidden=!progress.busy;
+    $('fenix-app-controls').hidden=!fresh||data?.fenix_running!==true;
+    $('fenix-app-state').textContent=t(data?.job?.stopping?'Fenix wird beendet …':'Fenix läuft');
     $('fenix-legacy').hidden=data?.state!=='legacy';
     $('fenix-card').setAttribute('aria-busy',String(active));
   }
@@ -114,7 +117,7 @@ export function createFenix({request,getStatus,isOnline,isReserved,changed,refre
     } catch(failure) {error=failure.message;}
     render();
   }
-  for(const operation of ['install','installer','open','manager','configure','restore'])$('fenix-'+operation).addEventListener('click',()=>void action(operation));
+  for(const operation of ['install','installer','open','manager','configure','restore','stop'])$('fenix-'+operation).addEventListener('click',()=>void action(operation));
   for(const kind of ['installer','bundle'])$('fenix-pick-'+kind).addEventListener('click',()=>void pick(kind));
   $('fenix-installer-path').addEventListener('input',render);
   $('fenix-refresh').addEventListener('click',()=>void load());

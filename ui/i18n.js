@@ -527,7 +527,10 @@ export const catalogs = Object.freeze({
     "Anzeigen und automatischer Start": "Anzeigen und automatischer Start",
     "Einrichtung abschließen": "Einrichtung abschließen",
     "Einstellungen erneut anwenden": "Einstellungen erneut anwenden",
-    "Diese Installation wird gerade verwendet. Beende MSFS oder die andere laufende Einrichtung, bevor du Fenix änderst.": "Diese Installation wird gerade verwendet. Beende MSFS oder die andere laufende Einrichtung, bevor du Fenix änderst."
+    "Diese Installation wird gerade verwendet. Beende MSFS oder die andere laufende Einrichtung, bevor du Fenix änderst.": "Diese Installation wird gerade verwendet. Beende MSFS oder die andere laufende Einrichtung, bevor du Fenix änderst.",
+    "Fenix beenden": "Fenix beenden",
+    "Fenix läuft": "Fenix läuft",
+    "Fenix wird beendet …": "Fenix wird beendet …"
   },
   "en": {
     "Simulator auswählen": "Choose simulator",
@@ -1056,7 +1059,10 @@ export const catalogs = Object.freeze({
     "Anzeigen und automatischer Start": "Displays and automatic startup",
     "Einrichtung abschließen": "Finish setup",
     "Einstellungen erneut anwenden": "Reapply settings",
-    "Diese Installation wird gerade verwendet. Beende MSFS oder die andere laufende Einrichtung, bevor du Fenix änderst.": "This installation is in use. Close MSFS or the other active setup before changing Fenix."
+    "Diese Installation wird gerade verwendet. Beende MSFS oder die andere laufende Einrichtung, bevor du Fenix änderst.": "This installation is in use. Close MSFS or the other active setup before changing Fenix.",
+    "Fenix beenden": "Stop Fenix",
+    "Fenix läuft": "Fenix is running",
+    "Fenix wird beendet …": "Stopping Fenix…"
   }
 });
 

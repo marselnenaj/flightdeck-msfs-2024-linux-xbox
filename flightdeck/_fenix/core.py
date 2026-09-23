@@ -556,7 +556,7 @@ def manager_path(prefix):
     return regular(candidates[0])
 
 
-def windows_app(runtime, executable=None, progress=lambda _: None, *, manager=False):
+def windows_app(runtime, executable=None, progress=lambda _: None, *, manager=False, wait=None):
     with locked(runtime) as root:
         if (root / MARKER).exists():
             state = read_json(root / MARKER)
@@ -582,8 +582,29 @@ def windows_app(runtime, executable=None, progress=lambda _: None, *, manager=Fa
         fd = os.open(path, os.O_CREAT | os.O_APPEND | os.O_WRONLY | os.O_NOFOLLOW, 0o600)
         try:
             progress("Fenix is open. Complete its setup or sign-in, then close the application to continue.")
-            subprocess.run([str(runner / "files/bin/wine"), str(app)], cwd=app.parent,
-                env=wine_env(prefix, runner), stdin=subprocess.DEVNULL, stdout=fd, stderr=subprocess.STDOUT, check=True)
+            args = [str(runner / "files/bin/wine"), str(app)]
+            options = dict(cwd=app.parent, env=wine_env(prefix, runner), stdin=subprocess.DEVNULL,
+                           stdout=fd, stderr=subprocess.STDOUT)
+            if wait is None:
+                subprocess.run(args, **options, check=True)
+            else:
+                # A launcher may offer cancellation while retaining this exact
+                # runtime lease through companion cleanup. The default CLI/GUI
+                # still simply waits for the official application to exit.
+                child = subprocess.Popen(args, **options)
+                try:
+                    result = wait(child)
+                except BaseException:
+                    if child.poll() is None:
+                        child.terminate()
+                        try:
+                            child.wait(timeout=3)
+                        except subprocess.TimeoutExpired:
+                            child.kill()
+                            child.wait()
+                    raise
+                if result:
+                    raise subprocess.CalledProcessError(result, args)
         finally:
             os.close(fd)
 

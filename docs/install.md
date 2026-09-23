@@ -1,6 +1,6 @@
 # Install the Flightdeck launcher
 
-This guide covers **Flightdeck 0.1.1**, including simulator selection, the Fenix
+This guide covers **Flightdeck 0.1.2**, including simulator selection, the Fenix
 panel and managed runtime component updates. See [changes](changelog.md).
 
 Download **Flightdeck-Linux-x86_64.tar.gz** from the

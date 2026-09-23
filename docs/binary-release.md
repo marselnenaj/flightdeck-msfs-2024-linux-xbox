@@ -6,7 +6,8 @@ not contain Microsoft game files, a Wine prefix, account data, Linux system
 libraries or the upstream Proton runner. The Git repository and source-only
 archive still exclude compiled runtime binaries.
 
-The current package is Flightdeck **0.1.1**. See
+The current package is Flightdeck **0.1.2**, using the unchanged **0.1.1** native
+components and their matching source archive. See
 [release changes](changelog.md) before choosing an archive.
 
 The release pins in `compat/bootstrap.lock.json` bind the component archive,

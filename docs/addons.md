@@ -67,7 +67,7 @@ running simulator has not yet been established by this test.
 ### Fenix A320
 
 Open **Mods → Fenix A320** to use the optional compatibility installer in
-Flightdeck **0.1.1**. Update older launchers using the [full package](install.md).
+Flightdeck **0.1.2**. Update older launchers using the [full package](install.md).
 The same patch is also available through the
 [standalone patch installer](https://github.com/marselnenaj/fenix-a320-linux-patch/releases/tag/v0.1.0-preview.1).
 
@@ -82,7 +82,8 @@ then close MSFS and all Fenix applications before setup.
 2. Download the official installer from your [Fenix account](https://fenixsim.com/dashboard/),
    select its EXE and choose **Run installer**. Complete its normal prerequisite and
    aircraft installation in the selected simulator profile, then close the installer.
-3. Choose **Open Fenix**, sign in/activate normally, then close the application.
+3. Choose **Open Fenix**, sign in/activate normally, then close the application
+   or use **Stop Fenix** in Flightdeck.
 4. Choose **Finish setup**. When the green **Fenix is ready to fly** message
    appears, return to the overview and start MSFS normally.
 
@@ -92,6 +93,11 @@ still open, quit the Fenix installer and Fenix completely; the panel refreshes
 automatically. Fenix itself checks your sign-in and license. On a German keyboard,
 if `AltGr+Q` does not enter `@` in its login window, try `Ctrl+Alt+Q` or paste `@`
 with `Ctrl+V`.
+
+**Stop Fenix** appears when Fenix is running in the selected profile. It closes
+Fenix, its helpers and the official manager, and waits before unlocking the
+next setup step. It is disabled while MSFS or an installer is running. Complete
+any installation or livery download in the official manager before stopping it.
 
 After setup, Fenix starts automatically with MSFS; you do not need to start it
 separately. Flightdeck closes the session's Fenix companions after normal exit,
@@ -135,8 +141,12 @@ MCDU, clock, FCU and radio rendering were verified. Full-flight testing remains
 outstanding. Weather radar is unavailable in the CPU renderer. The binary preview
 requires x86_64 Linux and glibc 2.38+; Flightdeck's full native package still requires
 glibc 2.39+. Other Wine/Proton builds, Steam prefixes and MSFS 2020 are outside this
-first patch's scope. The optional window guard hides matching
-service/display windows; the main Fenix application remains accessible.
+first patch's scope. The optional window guard runs with the simulator and hides
+matching service/display windows; the main Fenix application remains accessible.
+Opening Fenix manually does not start that guard. If an earlier manual Hyprland
+setup still hides Fenix, remove the old unconditional Fenix special-workspace
+rules from your desktop configuration. The Flightdeck installer does not edit
+your window-manager rules.
 
 **Existing local Fenix patch** means a previous development setup is detected.
 That setup stays active and the new install button is disabled. There is no

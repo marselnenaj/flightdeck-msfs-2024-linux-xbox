@@ -63,7 +63,7 @@ benötigt. Eine Verbindung zum laufenden Simulator ist damit noch nicht bestäti
 
 ## Fenix A320 einrichten
 
-Unter **Mods → Fenix A320** bietet Flightdeck **0.1.1** einen eigenen
+Unter **Mods → Fenix A320** bietet Flightdeck **0.1.2** einen eigenen
 Einrichtungsablauf. Ältere Launcher mit dem [vollständigen Paket](install.md)
 aktualisieren. Derselbe Patch ist auch als
 [eigenständiger Patch-Installer](https://github.com/marselnenaj/fenix-a320-linux-patch/releases/tag/v0.1.0-preview.1)
@@ -80,7 +80,8 @@ MSFS und alle Fenix-Anwendungen.
    herunterladen, seine EXE auswählen und **Installer starten** wählen. Die normale
    Installation samt angebotenen Voraussetzungen im ausgewählten Simulatorprofil
    abschließen und den Installer danach schließen.
-3. **Fenix öffnen**, anmelden und aktivieren. Danach Fenix wieder schließen.
+3. **Fenix öffnen**, anmelden und aktivieren. Danach Fenix wieder schließen
+   oder in Flightdeck **Fenix beenden** wählen.
 4. **Einrichtung abschließen** setzt CPU-Anzeigen, Legacy-Readouts und Autostart.
    Sobald die grüne Meldung **Fenix ist startbereit** erscheint, zur Übersicht
    wechseln und MSFS ganz normal starten.
@@ -91,6 +92,12 @@ nicht ab. Läuft noch eine Windows-Anwendung, den Fenix-Installer und Fenix
 vollständig beenden; die Anzeige aktualisiert sich automatisch. Deine Anmeldung
 und Lizenz prüft Fenix selbst. Falls im Loginfenster `AltGr+Q` kein `@` eingibt,
 `Strg+Alt+Q` versuchen oder `@` kopieren und mit `Strg+V` einfügen.
+
+**Fenix beenden** erscheint, wenn Fenix im ausgewählten Profil läuft. Der Knopf
+schließt Fenix, seine Helfer und den offiziellen Manager. Erst danach gibt
+Flightdeck die nächsten Schritte frei. Während MSFS oder ein Installer läuft,
+bleibt der Knopf gesperrt. Laufende Installationen und Livery-Downloads im
+offiziellen Manager vor dem Beenden abschließen.
 
 Nach der Einrichtung startet Fenix automatisch mit MSFS. Du musst es nicht
 separat öffnen. Beim normalen Spielende, einem Absturz oder **Stoppen** beendet
@@ -137,8 +144,12 @@ Testflug steht noch aus. Wetterradar ist im verwendeten CPU-Modus nicht verfügb
 Das Fenix-Binärpaket benötigt x86_64 Linux und glibc 2.38+; für Flightdecks
 vollständiges natives Paket gilt weiterhin glibc 2.39+. Andere Wine-/Proton-Builds,
 Steam-Prefixe und MSFS 2020 werden von diesem ersten Patch nicht unterstützt.
-Der Fensterhelfer blendet passende Fenix-Dienst-/Anzeigefenster aus; die
-Fenix-Hauptanwendung bleibt für die Anmeldung zugänglich.
+Der Fensterhelfer läuft mit dem Simulator und blendet passende Fenix-Dienst-/
+Anzeigefenster aus. Die Fenix-Hauptanwendung bleibt für die Anmeldung zugänglich.
+Manuelles Öffnen von Fenix startet den Helfer nicht. Falls eine frühere manuelle
+Hyprland-Einrichtung Fenix trotzdem versteckt, die alten bedingungslosen
+Fenix-Regeln für spezielle Arbeitsbereiche aus der Desktop-Konfiguration
+entfernen. Der Flightdeck-Installer ändert keine Fenstermanager-Regeln.
 
 **Vorhandener lokaler Fenix-Patch** bezeichnet eine frühere Entwickler-Einrichtung.
 Sie bleibt aktiv; der neue Installationsknopf ist dann gesperrt. Eine automatische
