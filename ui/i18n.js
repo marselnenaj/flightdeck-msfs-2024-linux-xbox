@@ -526,7 +526,8 @@ export const catalogs = Object.freeze({
     "Falls @ mit AltGr+Q nicht klappt: Strg+Alt+Q probieren oder @ kopieren und mit Strg+V einfügen.": "Falls @ mit AltGr+Q nicht klappt: Strg+Alt+Q probieren oder @ kopieren und mit Strg+V einfügen.",
     "Anzeigen und automatischer Start": "Anzeigen und automatischer Start",
     "Einrichtung abschließen": "Einrichtung abschließen",
-    "Einstellungen erneut anwenden": "Einstellungen erneut anwenden"
+    "Einstellungen erneut anwenden": "Einstellungen erneut anwenden",
+    "Diese Installation wird gerade verwendet. Beende MSFS oder die andere laufende Einrichtung, bevor du Fenix änderst.": "Diese Installation wird gerade verwendet. Beende MSFS oder die andere laufende Einrichtung, bevor du Fenix änderst."
   },
   "en": {
     "Simulator auswählen": "Choose simulator",
@@ -1054,7 +1055,8 @@ export const catalogs = Object.freeze({
     "Falls @ mit AltGr+Q nicht klappt: Strg+Alt+Q probieren oder @ kopieren und mit Strg+V einfügen.": "If @ does not work with AltGr+Q on a German keyboard, try Ctrl+Alt+Q or copy @ and paste it with Ctrl+V.",
     "Anzeigen und automatischer Start": "Displays and automatic startup",
     "Einrichtung abschließen": "Finish setup",
-    "Einstellungen erneut anwenden": "Reapply settings"
+    "Einstellungen erneut anwenden": "Reapply settings",
+    "Diese Installation wird gerade verwendet. Beende MSFS oder die andere laufende Einrichtung, bevor du Fenix änderst.": "This installation is in use. Close MSFS or the other active setup before changing Fenix."
   }
 });
 

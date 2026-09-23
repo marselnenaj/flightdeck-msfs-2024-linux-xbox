@@ -39,9 +39,11 @@ export function fenixProgress(data, status) {
     title='Einrichtung unterbrochen · Wiederherstellung verfügbar';detail='Öffne die Wiederherstellung unten, bevor du die Einrichtung erneut startest.';
   } else if(data) title='Für diese Runtime nicht verfügbar';
   let busy='';
-  if(status?.game.state&&status.game.state!=='stopped')busy='MSFS läuft. Beende das Spiel, bevor du die Fenix-Einrichtung änderst.';
-  else if((active&&['installer','open','manager'].includes(data.job.operation))||(data?.idle===false&&!active))
+  if(active&&['installer','open','manager'].includes(data.job.operation))
     busy='Eine Windows-Anwendung läuft noch in dieser Installation. Schließe den Fenix-Installer und Fenix nach der Anmeldung vollständig. Flightdeck aktualisiert den Status automatisch.';
+  else if(!active&&status?.game.state==='external')busy='Diese Installation wird gerade verwendet. Beende MSFS oder die andere laufende Einrichtung, bevor du Fenix änderst.';
+  else if(!active&&status?.game.state&&status.game.state!=='stopped')busy='MSFS läuft. Beende das Spiel, bevor du die Fenix-Einrichtung änderst.';
+  else if(!active&&data?.idle===false)busy='Eine Windows-Anwendung läuft noch in dieser Installation. Schließe den Fenix-Installer und Fenix nach der Anmeldung vollständig. Flightdeck aktualisiert den Status automatisch.';
   else if(data?.busy&&!active)busy='Eine andere Einrichtung läuft. Warte, bis sie abgeschlossen ist.';
   if(active){title='Fenix-Einrichtung läuft …';if(!['installer','open','manager'].includes(data.job.operation))detail='Bitte warte, bis der aktuelle Schritt abgeschlossen ist.';}
   return {ready:ready&&!active,supported,step,steps,title,detail,busy};

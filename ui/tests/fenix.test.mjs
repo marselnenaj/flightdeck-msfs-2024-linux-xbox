@@ -45,4 +45,8 @@ test('open Wine applications explain a disabled step after the installer exits',
   assert.equal(fenixPermissions({...value,can_change:true,idle:true},status,true).configure,false);
   assert.match(fenixProgress(value,{game:{state:'running'}}).busy,/MSFS läuft/);
   assert.equal(fenixProgress({...value,idle:true},status).busy,'');
+  const external={...status,game:{state:'external'}};
+  assert.match(fenixProgress({...value,job:{state:'running',operation:'open'}},external).busy,/Windows-Anwendung/);
+  assert.equal(fenixProgress({...value,job:{state:'running',operation:'install'}},external).busy,'');
+  assert.match(fenixProgress({...value,job:null},external).busy,/Installation wird gerade verwendet/);
 });
