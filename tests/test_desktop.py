@@ -209,6 +209,16 @@ class DesktopTests(unittest.TestCase):
             self.assertEqual(initial, desktop.release_identity())
             (second / "flightdeck/desktop.py").write_text("updated code, same version\n")
             self.assertNotEqual(initial, desktop.release_identity())
+            for name in ("flightdeck/_fenix/core.py", "ui/fenix.js", "compat/fenix/bundle.json",
+                         "compat/fenix/release.json", "flightdeck/resources/fenix/bundle.json",
+                         "flightdeck/resources/fenix/release.json"):
+                with self.subTest(resource=name):
+                    resource = second / name
+                    resource.parent.mkdir(parents=True, exist_ok=True)
+                    resource.write_text("original resource\n")
+                    before = desktop.release_identity()
+                    resource.write_text("updated resource\n")
+                    self.assertNotEqual(before, desktop.release_identity())
 
     def test_changed_code_busy_or_legacy_service_is_not_terminated(self):
         record = self.record()
