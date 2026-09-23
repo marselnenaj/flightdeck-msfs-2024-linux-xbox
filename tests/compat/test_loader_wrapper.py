@@ -20,11 +20,12 @@ class LoaderWrapper(unittest.TestCase):
             prefix = runtime / "local/msfs-prefix"; prefix.mkdir(parents=True)
             wrapper = runtime / "tools/xodus-wine-launch"
             shutil.copy2(ROOT / "scripts/runtime/xodus-wine-launch", wrapper)
-            source = game / "Synthetic.exe"; source.write_bytes(b"encrypted placeholder")
+            source = game / "FlightSimulator2024.exe"; source.write_bytes(b"encrypted placeholder")
             wine = root / "fake-wine"
             wine.write_text("#!/usr/bin/env python3\nimport os,sys\nfrom pathlib import Path\n"
                             "p=Path(sys.argv[1]); assert p.exists()\n"
                             "entries=os.environ['WINE_DLL_FILE_MAP'].split('|')\n"
+                            "assert os.environ['XODUS_STORE_PACKAGE_SCOPE']=='FlightdeckBaseGameOnlyV1'\n"
                             "assert len(entries)==2\n"
                             "fd=int(entries[0].split(':',1)[0]); assert os.pread(fd,2,0)==b'MZ'\n"
                             "assert p.read_bytes()[:2]==b'MZ'\nraise SystemExit(7)\n")

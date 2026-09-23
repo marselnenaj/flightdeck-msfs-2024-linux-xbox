@@ -25,6 +25,7 @@ struct XodusStoreCollectionSnapshot {
     const XodusStoreCollectionItem *items;
     const char *const *absent_ids;
     const char *const *unknown_ids;
+    char continuation[65];
 };
 #ifdef __cplusplus
 extern "C" {
@@ -33,6 +34,9 @@ HRESULT WINAPI XodusStoreQueryCollections(void *owned_account,
     const XodusStoreCollectionRequestItem *products, SIZE_T count,
     volatile LONG *cancelled, XodusStoreCollectionSnapshot **owned_snapshot);
 void WINAPI XodusStoreReleaseCollections(XodusStoreCollectionSnapshot *snapshot);
+HRESULT WINAPI XodusStoreQueryInventory(void *owned_account, UINT32 kinds,
+    UINT32 page_size, const char *market, const char *continuation,
+    volatile LONG *cancelled, XodusStoreCollectionSnapshot **owned_snapshot);
 #ifdef __cplusplus
 }
 #endif

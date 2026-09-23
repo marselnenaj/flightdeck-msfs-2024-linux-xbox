@@ -39,6 +39,7 @@ class InstallerTests(unittest.TestCase):
         (self.source / "scripts/install-launcher.py").write_bytes((ROOT / "scripts/install-launcher.py").read_bytes())
         (self.source / "scripts/install-launcher-gui.py").write_bytes((ROOT / "scripts/install-launcher-gui.py").read_bytes())
         (self.source / "compat").mkdir()
+        shutil.copytree(ROOT / "compat/fenix", self.source / "compat/fenix")
         shutil.copyfile(ROOT / "compat/upstreams.lock.json", self.source / "compat/upstreams.lock.json")
         shutil.copyfile(ROOT / "compat/bootstrap.lock.json", self.source / "compat/bootstrap.lock.json")
         shutil.copyfile(ROOT / "LICENSE", self.source / "LICENSE")
@@ -75,7 +76,7 @@ class InstallerTests(unittest.TestCase):
                          (self.source / "compat/upstreams.lock.json").read_bytes())
         self.assertEqual((folder / "flightdeck/resources/bootstrap.lock.json").read_bytes(),
                          (self.source / "compat/bootstrap.lock.json").read_bytes())
-        for name in ("flightdeck/setup.py", "ui/setup.js", "ui/flight-panorama.png", "ui/manrope-variable.woff2", "ui/OFL-Manrope.txt"):
+        for name in ("flightdeck/setup.py", "ui/setup.js", "ui/flight-panorama.png", "ui/flight-panorama-2020.png", "ui/manrope-variable.woff2", "ui/OFL-Manrope.txt"):
             self.assertEqual((folder / name).read_bytes(), (self.source / name).read_bytes())
         self.assertFalse((folder / "compat").exists())
         self.assertFalse((folder / "tests").exists())
@@ -115,6 +116,29 @@ class InstallerTests(unittest.TestCase):
         self.assertEqual(result["previous"], second["current"])
         self.assertIn(first["current"], (self.applications / "flightdeck.desktop").read_text())
         self.assertEqual(installer.rollback(self.data)["current"], second["current"])
+
+    def test_update_removes_only_generated_python_bytecode(self):
+        first = self.install()
+        old = self.data / "releases" / first["current"]
+        cache = old / "flightdeck/__pycache__"
+        cache.mkdir()
+        (cache / "__init__.cpython-314.pyc").write_bytes(b"generated cache")
+        self.update_source()
+        second = self.install()
+        self.assertNotEqual(second["current"], first["current"])
+        self.assertFalse(cache.exists())
+        installer.verify_release(self.data, first["current"])
+
+    def test_update_preserves_foreign_file_inside_python_cache(self):
+        first = self.install()
+        cache = self.data / "releases" / first["current"] / "flightdeck/__pycache__"
+        cache.mkdir()
+        foreign = cache / "personal.txt"
+        foreign.write_text("leave this alone")
+        self.update_source()
+        with self.assertRaises(installer.InstallError):
+            self.install()
+        self.assertEqual(foreign.read_text(), "leave this alone")
 
     def test_uninstall_preserves_settings_saves_and_other_files(self):
         self.install()
@@ -352,7 +376,7 @@ class InstallerTests(unittest.TestCase):
             self.assertTrue(setup["prepare_available"])
             self.assertEqual(setup["state"], "idle")
             self.assertEqual(setup["defaults"]["mode"], "install")
-            for name in ("setup.js", "updates.js", "flight-panorama.png", "manrope-variable.woff2", "index.html"):
+            for name in ("setup.js", "updates.js", "flight-panorama.png", "flight-panorama-2020.png", "manrope-variable.woff2", "index.html"):
                 with urlopen(base_url + "/" + name, timeout=5) as response:
                     self.assertEqual(response.read(), (self.source / "ui" / name).read_bytes())
                     if name.endswith(".woff2"):
@@ -499,6 +523,44 @@ class InstallerTests(unittest.TestCase):
         self.assertEqual(updated.returncode, 0, updated.stderr)
         self.assertEqual(json.loads(updated.stdout.splitlines()[-1]), ["--language", "de"])
         self.assertEqual(installer.load_installation(self.data)["language"], "de")
+
+    def test_wrapper_update_uses_selected_package_manager(self):
+        manager = self.source / "scripts/install-launcher.py"
+        current_manager = manager.read_bytes()
+        manager.write_text('raise SystemExit("Old manager cannot install this package")\n')
+        module = self.source / "flightdeck/__main__.py"
+        module.write_text('def main():\n print("updated launcher started")\n')
+        first = self.install()
+        manager.write_bytes(current_manager)
+        self.update_source()
+        wrapper = self.bin / "flightdeck"
+        invoke = lambda source: subprocess.run(
+            [sys.executable, str(wrapper), "--update", str(source)],
+            capture_output=True, text=True, timeout=15)
+        missing = self.base / "missing-package"
+        rejected = invoke(missing)
+        self.assertNotEqual(rejected.returncode, 0)
+        self.assertEqual(installer.load_installation(self.data)["current"], first["current"])
+        linked = self.base / "linked-package"
+        linked.symlink_to(self.source, target_is_directory=True)
+        rejected = invoke(linked)
+        self.assertNotEqual(rejected.returncode, 0)
+        self.assertEqual(installer.load_installation(self.data)["current"], first["current"])
+        source_file = self.source / "ui/index.html"
+        source_bytes = source_file.read_bytes()
+        source_file.unlink()
+        rejected = invoke(self.source)
+        self.assertNotEqual(rejected.returncode, 0)
+        self.assertEqual(installer.load_installation(self.data)["current"], first["current"])
+        source_file.write_bytes(source_bytes)
+        updated = invoke(self.source)
+        self.assertEqual(updated.returncode, 0, updated.stderr)
+        self.assertIn("updated launcher started", updated.stdout)
+        state = installer.load_installation(self.data)
+        self.assertEqual(state["previous"], first["current"])
+        self.assertNotEqual(state["current"], first["current"])
+        self.assertEqual((self.state / "config.json").read_text(), '{"synthetic_setting":true}')
+        self.assertEqual((self.saves / "state.bin").read_bytes(), b"synthetic save\x00data")
 
     def test_locale_default_does_not_override_browser_language(self):
         with patch.object(installer.os, "execv") as execute, \

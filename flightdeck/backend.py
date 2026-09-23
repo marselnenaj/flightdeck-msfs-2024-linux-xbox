@@ -18,6 +18,7 @@ import threading
 import time
 
 from . import __version__
+from . import games
 
 
 class LauncherError(Exception):
@@ -91,13 +92,30 @@ class Launcher:
         self.exit_code = None
         self.stopping = False
         self.setup_busy = False
+        self.component_update_error = None
         self._owned_runtime_operation = None
         self.desktop_closing = False
         self.runtime = None
+        self.known_runtimes = {}
         if self.config_file.exists():
             try:
                 value = json.loads(self.config_file.read_text(encoding="utf-8"))
                 self.runtime = self.validate_runtime(value["runtime_path"])
+                remembered = value.get("runtimes", {})
+                if isinstance(remembered, dict):
+                    for game_id, path in remembered.items():
+                        if game_id not in games.GAMES:
+                            continue
+                        try:
+                            candidate = self.validate_runtime(path)
+                            if games.for_runtime(candidate).id == game_id:
+                                self.known_runtimes[game_id] = candidate
+                        except (OSError, RuntimeError, ValueError, LauncherError):
+                            continue
+                try:
+                    self.known_runtimes[games.for_runtime(self.runtime).id] = self.runtime
+                except ValueError:
+                    pass
             except (OSError, ValueError, KeyError, TypeError, LauncherError):
                 self.runtime = None
         if runtime is not None:
@@ -106,6 +124,8 @@ class Launcher:
         self.setup = SetupManager(self)
         from .cloud_sync import CloudSaveManager
         self.cloud_saves = CloudSaveManager(self)
+        from .fenix import FenixManager
+        self.fenix = FenixManager(self)
 
     @staticmethod
     def validate_runtime(value):
@@ -180,11 +200,105 @@ class Launcher:
             self._poll()
             if self.process is not None or self._external():
                 raise LauncherError("Die Runtime kann während eines Spielstarts nicht gewechselt werden.")
+            self._require_cloud_idle()
             selected = self.validate_runtime(runtime_path)
-            atomic_json(self.config_file, {"schema": 1, "runtime_path": str(selected)})
+            # Server startup handles the constructor's initial runtime. An
+            # interactive switch also needs the bundled native update before
+            # the newly selected game becomes available to launch.
+            if hasattr(self, "setup"):
+                from .runtime_components import ComponentUpdateError, refresh_on_startup
+                previous = self.runtime
+                try:
+                    self.runtime = selected
+                    refresh_on_startup(self)
+                except (ComponentUpdateError, OSError) as error:
+                    raise LauncherError(str(error)) from None
+                finally:
+                    self.runtime = previous
+            remembered = dict(self.known_runtimes)
+            try:
+                remembered[games.for_runtime(selected).id] = selected
+            except ValueError:
+                pass
+            atomic_json(self.config_file, {"schema": 1, "runtime_path": str(selected),
+                                           "runtimes": {key: str(value) for key, value in remembered.items()}})
+            self.known_runtimes = remembered
             self.runtime = selected
+            self.component_update_error = None
             self.exit_code = None
             return {"ok": True}
+
+    def _require_cloud_idle(self):
+        manager = getattr(self, "cloud_saves", None)
+        if manager is None:
+            return
+        with manager.automation.lock:
+            if (manager.automation.runtime == self.runtime and
+                    manager.automation.state in {"syncing", "playing", "attention"}):
+                raise LauncherError("Bitte den Cloud-Abgleich für die aktuelle Version zuerst abschließen.")
+        with manager.lock:
+            if manager.job_runtime == self.runtime and manager.job and manager.job.get("state") == "running":
+                raise LauncherError("Bitte den laufenden Spielstandvorgang zuerst abschließen.")
+
+    def register_runtime(self, runtime_path):
+        """Remember an existing installation without changing the active game."""
+        from .setup import existing_checks
+        with self.lock:
+            self.require_open()
+            selected = self.validate_runtime(runtime_path)
+            try:
+                game = games.for_runtime(selected)
+            except ValueError as error:
+                raise LauncherError(str(error)) from None
+            if not all(check["ok"] for check in existing_checks(selected)):
+                raise LauncherError("Diese MSFS-Installation ist noch nicht startbereit.")
+            if self.runtime is None:
+                return self.configure(str(selected))
+            remembered = {**self.known_runtimes, game.id: selected}
+            atomic_json(self.config_file, {"schema": 1, "runtime_path": str(self.runtime),
+                                           "runtimes": {key: str(value) for key, value in remembered.items()}})
+            self.known_runtimes = remembered
+            return {"ok": True}
+
+    def version_runtimes(self):
+        """Inspect at most two remembered or standard runtime folders."""
+        from .setup import data_home, existing_checks
+        result = {}
+        for game_id in games.GAMES:
+            choices = [self.runtime, self.known_runtimes.get(game_id),
+                       data_home() / "flightdeck/runtimes" / game_id]
+            seen = set()
+            selected = None
+            for candidate in choices:
+                if candidate is None or candidate in seen:
+                    continue
+                seen.add(candidate)
+                try:
+                    path = self.validate_runtime(str(candidate))
+                    if games.for_runtime(path).id != game_id:
+                        continue
+                    item = {"path": str(path), "installed": True,
+                            "ready": all(check["ok"] for check in existing_checks(path))}
+                except (OSError, RuntimeError, ValueError, LauncherError):
+                    continue
+                if selected is None or (item["ready"] and not selected["ready"]):
+                    selected = item
+                if selected["ready"] and path == self.runtime:
+                    break
+            result[game_id] = selected or {"path": "", "installed": False, "ready": False}
+        return result
+
+    def select_game(self, game_id):
+        try:
+            game = games.select(game_id)
+        except ValueError as error:
+            raise LauncherError(str(error)) from None
+        with self.lock:
+            self.require_open()
+            selected = self.version_runtimes()[game.id]
+            if not selected["ready"]:
+                raise LauncherError("Diese MSFS-Version ist noch nicht startbereit. Bitte zuerst einrichten.")
+            return self.configure(selected["path"])
 
     def reserve_setup(self):
         with self.lock:
@@ -225,13 +339,21 @@ class Launcher:
 
     def checks(self):
         root = self.runtime
+        try:
+            game = games.for_runtime(root) if root else games.GAMES["msfs2024"]
+            version_error = None
+        except ValueError as error:
+            game = games.GAMES["msfs2024"]
+            version_error = str(error)
         definitions = (
             ("launcher", "Startprogramm", "tools/play-msfs.sh", True),
-            ("game", "Eigenes MSFS-PC-Spielpaket", "games/MSFS2024/FlightSimulator2024.exe", False),
+            ("game", "Eigenes MSFS-PC-Spielpaket", f"games/{game.directory}/{game.executable}", False),
             ("prefix", "Wine-Umgebung", "local/msfs-prefix/system.reg", False),
             ("bridge", "Kompatibilitätsbibliothek", "local/msfs-prefix/drive_c/windows/system32/xgameruntime.dll", False),
         )
         result = []
+        if version_error:
+            result.append({"id": "version", "label": "MSFS-Version", "ok": False, "detail": version_error})
         for key, label, name, executable in definitions:
             path = root / name if root else None
             ok = bool(path and path.is_file() and (not executable or os.access(path, os.X_OK)))
@@ -243,6 +365,28 @@ class Launcher:
             private_ok = not lock.is_symlink() and (not lock.exists() or lock.is_file())
         result.append({"id": "private", "label": "Privater Datenordner", "ok": private_ok,
                        "detail": "Vorhanden" if private_ok else "Privater Datenordner fehlt"})
+        from .runtime_components import update_state
+        component_state = update_state(root) if private_ok else "invalid"
+        components_ok = private_ok and component_state not in {"interrupted", "pending", "invalid"}
+        component_detail = (
+            self.component_update_error if not components_ok and self.component_update_error else
+            "Unterbrochenes Komponentenupdate: flightdeck --refresh-components erneut ausführen." if component_state == "interrupted" else
+            "Neue Runtime-Komponenten bereit. Flightdeck neu öffnen oder flightdeck --refresh-components ausführen." if component_state == "pending" else
+            "Die Runtime-Komponentenbeschreibung ist ungültig." if component_state == "invalid" else
+            "Eigene Runtime-Komponenten" if component_state == "custom" else
+            "Ältere Runtime ohne verwaltetes Komponentenupdate" if component_state == "unmanaged" else "Geprüft"
+        )
+        result.append({"id": "component_update", "label": "Runtime-Komponentenupdate", "ok": components_ok,
+                       "detail": component_detail})
+        marker = root / "private/fenix-linux-patch.json" if root else None
+        if marker and (marker.exists() or marker.is_symlink()):
+            from ._fenix import core as fenix_core
+            try:
+                complete = fenix_core.read_json(marker).get("state") == "installed"
+            except (OSError, ValueError, fenix_core.PatchError):
+                complete = False
+            result.append({"id": "fenix_setup", "label": "Fenix-Einrichtung", "ok": complete,
+                           "detail": "Geprüft" if complete else "Fenix-Einrichtung unvollständig. Unter Add-ons wiederherstellen."})
         return result
 
     def saves(self, idle):
@@ -285,9 +429,15 @@ class Launcher:
             elif external:
                 state = "external"
             checks = self.checks()
+            try:
+                selected_game = games.for_runtime(self.runtime) if self.runtime else games.GAMES["msfs2024"]
+            except ValueError:
+                selected_game = None
             ready = all(x["ok"] for x in checks)
             return {"app": {"name": "Flightdeck", "version": __version__},
-                    "runtime": {"configured": self.runtime is not None, "path": str(self.runtime) if self.runtime else "", "ready": ready, "checks": checks},
+                    "runtime": {"configured": self.runtime is not None, "path": str(self.runtime) if self.runtime else "", "ready": ready, "checks": checks,
+                                "game_id": selected_game.id if selected_game else "", "game_name": selected_game.name if selected_game else ""},
+                    "versions": self.version_runtimes(),
                     "game": {"state": state, "managed": self.process is not None,
                              "can_start": ready and state == "stopped" and not self.setup_busy and not self.desktop_closing, "can_stop": self.process is not None and not self.stopping,
                              "started_at": self.started_at, "exit_code": self.exit_code},
@@ -484,7 +634,7 @@ class Launcher:
 
     def diagnostics(self):
         """Extract numeric allowlisted outcomes, never raw lines or identities."""
-        summary = {"run_found": False, "auth_http": [], "local_save_init": [], "exit": None}
+        summary = {"run_found": False, "auth_http": [], "local_save_init": [], "store_calls": [], "exit": None}
         root = self.runtime
         if root:
             runs = [p for p in (root / "private").glob("run-*") if re.fullmatch(r"run-\d{8}-\d{6}-[A-Za-z0-9]+", p.name) and p.is_dir() and not p.is_symlink()]
@@ -504,6 +654,24 @@ class Launcher:
                     summary["run_found"] = True
                     summary["auth_http"] = sorted(set(int(x) for x in re.findall(r"xodus-title-auth: host=(?:user|device|title|xsts)\.auth\.xboxlive\.com status=(\d{3})\b", text)))
                     summary["local_save_init"] = [{"enabled": int(e), "sync_on_demand": int(s), "hresult": h.lower()} for e, s, h in dict.fromkeys(re.findall(r"\[xodus-gamesave\] local_init enabled=([01]) sync_on_demand=([01]) hr=([0-9a-fA-F]{8})\b", text))]
+                    store_methods = {"XStoreCreateContext", "XStoreQueryEntitledProductsAsync",
+                                     "XStoreQueryProductsAsync", "XStoreQueryGameAndDlcPackageUpdatesAsync",
+                                     "XStoreShowPurchaseUIAsync", "XStoreAcquireLicenseForDurablesAsync",
+                                     "XStoreAcquireLicenseForPackageAsync", "XStoreQueryAddOnLicensesAsync",
+                                     "XStoreCanAcquireLicenseForStoreIdAsync", "XStoreQueryLicenseTokenAsync"}
+                    calls = re.findall(r"\[xodus-store\] (XStore[A-Za-z0-9_]{1,80})(?: [^\r\n]{0,100})? hr=([0-9a-fA-F]{8})(?=\s|$)", text)
+                    # Native query workers report their final asynchronous
+                    # outcome by numeric kind. Map only known kinds to public
+                    # API names; never include surrounding log text.
+                    query_methods = ("XStoreQueryGameLicenseAsync", "XStoreQueryEntitledProductsAsync",
+                                     "XStoreProductsQueryNextPageAsync", "XStoreQueryLicenseTokenAsync",
+                                     "XStoreQueryProductsAsync", "XStoreQueryConsumableBalanceRemainingAsync",
+                                     "XStoreAcquireLicenseForDurablesAsync", "XStoreQueryGameAndDlcPackageUpdatesAsync")
+                    calls += [(query_methods[int(kind)], hr) for kind, hr in
+                              re.findall(r"\[xodus-store-query\] kind=([0-7]) hr=([0-9a-fA-F]{8})(?=\s|$)", text)]
+                    store_methods.update(query_methods)
+                    summary["store_calls"] = [{"method": method, "hresult": hr}
+                                              for method, hr in sorted({(method, hr.lower()) for method, hr in calls if method in store_methods})]
                     exits = re.findall(r"xodus-wine-launch: wine_pid=\d+ exit_code=(\d+) elapsed_seconds=(\d+(?:\.\d+)?)(?=\s|$)", text)
                     if exits:
                         summary["exit"] = {"code": int(exits[-1][0]), "seconds": float(exits[-1][1])}

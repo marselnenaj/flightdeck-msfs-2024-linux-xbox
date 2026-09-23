@@ -8,6 +8,11 @@ Sicherungen bleiben erhalten und nach dem Beenden werden Änderungen
 hochgeladen. Die Funktion ist experimentell. Entscheidend ist das Xbox-Profil,
 mit dem du im Spiel angemeldet bist.
 
+Mit der Simulatorauswahl in Flightdeck 0.1.1 bestimmt die ausgewählte Runtime
+auch die Cloud-Spielkennung, das Hilfsprofil und die lokalen Backups.
+MSFS-2020- und MSFS-2024-Spielstände sind nicht austauschbar. Der neue 2020-Pfad
+benötigt noch einen vollständigen Spieltest; siehe [Veröffentlichungsstand](changelog.md).
+
 ## Einfach den Simulator starten
 
 1. Das aktuelle vollständige Flightdeck-Paket installieren und **Simulator
@@ -90,6 +95,13 @@ solange das Spiel ihn seitdem nicht verändert hat. Die Cloud bleibt dabei gleic
 ## Private Daten
 
 Die Daten bleiben im ausgewählten Runtimeordner:
+
+Beim Umziehen einer vorhandenen Runtime gehört der vollständige Ordner
+`private/` zusammen. Beende vorher das Spiel und den Cloud-Abgleich. Wird nur
+`local-saves/` kopiert, können die Nachweise und Sicherungen des letzten
+Abgleichs fehlen. Flightdeck kann den Vergleich dann nicht prüfen. Die passenden
+Originaldateien müssen mit ihren privaten Zugriffsrechten erhalten bleiben;
+heruntergeladene Cloud-Kopien ersetzen diese Nachweise nicht.
 
 | Pfad | Inhalt |
 | --- | --- |

@@ -108,6 +108,7 @@ class SetupTests(unittest.TestCase):
         self.system32.mkdir(parents=True)
         for name in ("FlightSimulator2024.exe", ".xodus-streaming.msixvc", "MicrosoftGame.Config"):
             self.file("game/" + name, b"synthetic game")
+        (self.root / "game/MicrosoftGame.Config").write_text('<Game><StoreId>9P38D19T7LRV</StoreId><Executable Name="FlightSimulator2024.exe"/></Game>')
         self.file("runner/files/bin/wine", b"not run").chmod(0o700)
         self.original = self.file("runner/files/lib/wine/x86_64-windows/xgameruntime.dll", original)
         (self.system32 / "xgameruntime.dll").symlink_to(self.original)
@@ -234,7 +235,7 @@ if sys.argv[1] == 'streaming':
     target = pathlib.Path(sys.argv[3])
     (target / 'FlightSimulator2024.exe').write_bytes(b'encrypted synthetic exe')
     (target / '.xodus-streaming.msixvc').write_bytes(b'synthetic complete marker')
-    (target / 'MicrosoftGame.Config').write_text('<Game><ExecutableList><Executable Name="FlightSimulator2024.exe"/></ExecutableList></Game>')
+    (target / 'MicrosoftGame.Config').write_text('<Game><StoreId>9P38D19T7LRV</StoreId><ExecutableList><Executable Name="FlightSimulator2024.exe"/></ExecutableList></Game>')
 ''')
         checksum = hashlib.sha256(cli.read_bytes()).hexdigest()
         manifest_file = self.root / "artifacts/manifest.json"
@@ -313,6 +314,17 @@ if sys.argv[1] == 'streaming':
         self.install(local_saves=True)
         self.assertEqual((self.destination / "private/local-saves.enabled").stat().st_mode & 0o777, 0o600)
         self.assertEqual((self.destination / "private/local-saves").stat().st_mode & 0o777, 0o700)
+
+    def test_prepare_2020_keeps_edition_in_new_runtime(self):
+        (self.root / "game/FlightSimulator2024.exe").rename(self.root / "game/FlightSimulator.exe")
+        (self.root / "game/MicrosoftGame.Config").write_text(
+            '<Game><StoreId>9NRRJLLXM68V</StoreId><Executable Name="FlightSimulator.exe"/></Game>')
+        self.data["game_id"] = "msfs2020"
+        self.install(local_saves=True)
+        self.assertEqual(json.loads((self.destination / "private/runtime.json").read_text())["game_id"], "msfs2020")
+        self.assertEqual((self.destination / "games/MSFS2020").resolve(), self.root / "game")
+        self.assertFalse((self.destination / "games/MSFS2024").exists())
+        self.assertTrue(self.launcher.status()["game"]["can_start"])
 
     def test_optional_cloud_helper_is_verified_and_copied(self):
         helper = self.file("artifacts/" + setup.CONNECTED_STORAGE_HELPER, b"synthetic helper")

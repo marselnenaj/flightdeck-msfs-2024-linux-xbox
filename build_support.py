@@ -18,6 +18,8 @@ class BuildWithResources(build_py):
             yield root / "scripts" / "runtime" / name, target / "runtime" / name
         yield root / "compat" / "upstreams.lock.json", target / "upstreams.lock.json"
         yield root / "compat" / "bootstrap.lock.json", target / "bootstrap.lock.json"
+        for name in ("bundle.json", "release.json", "LICENSE"):
+            yield root / "compat/fenix" / name, target / "fenix" / name
 
     def run(self):
         super().run()

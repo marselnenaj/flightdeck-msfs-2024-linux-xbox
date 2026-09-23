@@ -17,6 +17,7 @@ import re
 import stat
 
 from .setup import SetupError, SetupCancelled, interrupted
+from . import games
 
 FEATURE = "streaming-integrity-index-v1"
 UNAVAILABLE = "Für diese Installation fehlt ein vollständiger Download-Prüfnachweis. Eine vollständige Reparatur erstellt ihn; vorhandene Dateien werden nicht als fehlerfreie Vorlage übernommen."
@@ -118,7 +119,7 @@ def verify(launcher, *, notify, cancel):
     runtime = launcher.runtime
     if runtime is None:
         raise SetupError("Zuerst eine Runtime auswählen.")
-    game = runtime / "games/MSFS2024"
+    game = games.path(runtime)
     with launcher.runtime_lock(operation="game_integrity"):
         try:
             with baseline(game) as (root, value):
@@ -159,7 +160,7 @@ def verify(launcher, *, notify, cancel):
             raise SetupError(UNAVAILABLE) from None
 
 
-def record_installation(game):
+def record_installation(game, *, game_id="msfs2024"):
     """Called only at successful download completion, before runtime publication.
 
     Preserve package identity separately so damage to MicrosoftGame.Config can
@@ -175,9 +176,11 @@ def record_installation(game):
             data = stream.read(1024 * 1024 + 1)
         if len(data) != row["length"] or hashlib.sha256(data).hexdigest() != row["sha256"]:
             raise ValueError()
-        identity = installed(game, data=data)
+        identity = installed(game, data=data, game_id=game_id)
         encoded = json.dumps(index, sort_keys=True, separators=(",", ":")).encode()
         value = {"format": 1, "index_sha256": hashlib.sha256(encoded).hexdigest(), "identity": identity}
+        if game_id != "msfs2024":
+            value.update(format=2, game_id=game_id)
         directory = _open(root, ".xodus-resume", directory=True)
         temporary = "installed.json.new"
         try:
@@ -197,10 +200,10 @@ def record_installation(game):
             os.close(directory)
 
 
-def installed_identity(game):
+def installed_identity(game, *, game_id="msfs2024"):
     from .game_update import installed, version
     try:
-        return installed(game)
+        return installed(game, game_id=game_id)
     except ValueError as original:
         try:
             with baseline(game) as (root, index):
@@ -211,7 +214,9 @@ def installed_identity(game):
                     os.close(journal)
                 digest = hashlib.sha256(json.dumps(index, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
                 identity = saved["identity"]
-                if (set(saved) != {"format", "index_sha256", "identity"} or saved["format"] != 1
+                receipt_bound = (set(saved) == {"format", "index_sha256", "identity"} and saved["format"] == 1 and game_id == "msfs2024") or (
+                    set(saved) == {"format", "index_sha256", "identity", "game_id"} and saved["format"] == 2 and saved["game_id"] == game_id)
+                if (not receipt_bound
                         or saved["index_sha256"] != digest or not isinstance(identity, dict)
                         or set(identity) != {"name", "publisher", "version"}
                         or not all(isinstance(v, str) and v for v in identity.values())):

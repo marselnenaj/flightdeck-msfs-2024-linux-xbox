@@ -26,6 +26,7 @@ import threading
 import uuid
 
 from .i18n import error_message, message, translate_message
+from . import games
 
 ARTIFACTS = (
     "bin/xodus-cli", "bin/xodus-service", "runtime/xgameruntime.dll",
@@ -191,7 +192,14 @@ def bootstrap_module():
 def existing_checks(path):
     """Inspect prepared-runtime files without reading contents or creating locks."""
     checks = []
+    try:
+        game = games.for_runtime(path)
+    except ValueError as error:
+        checks.append({"id": "version", "label": "MSFS-Version", "ok": False, "detail": str(error)})
+        game = games.GAMES["msfs2024"]
     for key, label, relative, executable in EXISTING_FILES:
+        if key == "game":
+            relative = f"games/{game.directory}/{game.executable}"
         try:
             regular(path / relative, label, executable)
             detail, ok = "Vorhanden", True
@@ -293,6 +301,10 @@ def preflight(data, *, source_root=None, notify=None, cancel=None):
 
     if not isinstance(data, dict):
         raise SetupError("Ungültige Einrichtungseinstellungen.")
+    try:
+        game = games.select(data.get("game_id", "msfs2024"))
+    except ValueError as error:
+        raise SetupError(str(error)) from None
     sources = check("paths", "Eingabeordner", lambda: {
         name: path_input(data.get(name + "_path"), label) for name, label in
         (("artifacts", "Build-Artefakte"), ("game", "Spielpaket"), ("runner", "Proton-Runner"), ("prefix", "Wine-Umgebung"))
@@ -322,12 +334,11 @@ def preflight(data, *, source_root=None, notify=None, cancel=None):
         raise SetupError("Die Runner-Beschreibung ist unvollständig. Flightdeck bitte erneut installieren.") from None
 
     def game_files():
-        for name in ("FlightSimulator2024.exe", ".xodus-streaming.msixvc"):
-            regular(sources["game"] / name, message("Spielpaket: {name}", name=name))
-        config = sources["game"] / "MicrosoftGame.config"
-        if not config.is_file():
-            config = sources["game"] / "MicrosoftGame.Config"
-        regular(config, "MicrosoftGame.Config im Spielpaket")
+        from .game_install import validate_download, GameInstallError
+        try:
+            validate_download(sources["game"], game.id)
+        except GameInstallError as error:
+            raise SetupError(str(error)) from None
     check("game", "Eigenes Xbox-PC-Spielpaket", game_files)
     original = sources["runner"] / "files/lib/wine/x86_64-windows/xgameruntime.dll"
 
@@ -377,7 +388,7 @@ def preflight(data, *, source_root=None, notify=None, cancel=None):
             raise SetupError(message("Am Ziel fehlt Speicherplatz. Für eine vollständige Kopie werden ungefähr {gib} GiB benötigt.", gib=format(required / (1024 ** 3), ".1f")))
     check("space", "Freier Speicherplatz für eine unabhängige Kopie", space)
     normalized = {name + "_path": str(path) for name, path in sources.items()}
-    normalized.update(destination_path=str(destination), market=market, local_saves=local_saves, media_plugins_path=str(plugins) if plugins else "", mode="prepare")
+    normalized.update(destination_path=str(destination), market=market, local_saves=local_saves, game_id=game.id, media_plugins_path=str(plugins) if plugins else "", mode="prepare")
     return Plan(normalized, sources, destination, tools, original, expected, manifest, plugins, size)
 
 
@@ -457,7 +468,8 @@ def prepare(plan, *, notify=None, cancel=None, xdg_root=None):
         for script in (temporary / "tools").iterdir():
             if script.is_file():
                 script.chmod(0o700)
-        (temporary / "games/MSFS2024").symlink_to(plan.sources["game"], target_is_directory=True)
+        game = games.select(plan.inputs["game_id"])
+        (temporary / "games" / game.directory).symlink_to(plan.sources["game"], target_is_directory=True)
         (temporary / "runner").symlink_to(plan.sources["runner"], target_is_directory=True)
         event("copy_prefix", "Wine-Umgebung wird unabhängig kopiert. Das kann einige Minuten dauern …")
         _copy_prefix(plan.sources["prefix"], temporary / "local/msfs-prefix", cancel)
@@ -480,9 +492,10 @@ def prepare(plan, *, notify=None, cancel=None, xdg_root=None):
         _copy_file(temporary / "local/store-runtime/x86_64-windows/xodus_store_test.dll", system32 / "xodus_store_test.dll")
         if plan.plugins:
             (temporary / "local/media-plugins").symlink_to(plan.plugins, target_is_directory=True)
-        config = {"format": 1, "market": plan.inputs["market"], "local_saves": plan.inputs["local_saves"]}
+        config = {"format": 1, "game_id": game.id, "market": plan.inputs["market"], "local_saves": plan.inputs["local_saves"]}
         for filename, content in (("runtime.json", config), ("import-manifest.json", {
             "format": 1, "artifacts": plan.manifest, "original_runtime_sha256": plan.original_hash,
+            "runtime_files": {name: digest(temporary / "tools" / name, cancel) for name in RUNTIME_FILES},
             "local_saves": plan.inputs["local_saves"], "inputs": {name: str(path) for name, path in plan.sources.items()},
         })):
             file = temporary / "private" / filename
@@ -527,16 +540,20 @@ class SetupManager:
         tools, lock = resource_paths(self.source_root)
         available = all((tools / name).is_file() for name in RUNTIME_FILES) and lock.is_file()
         root = self.launcher.runtime
+        try:
+            game = games.for_runtime(root) if root else games.GAMES["msfs2024"]
+        except ValueError:
+            game = games.GAMES["msfs2024"]
         artifacts = Path(__file__).resolve().parents[1] / "build/compat/artifacts"
         bootstrap = bootstrap_module()
         install = bootstrap.availability(source_root=self.source_root) if bootstrap else {
             "available": False, "reason": "Die automatische Installation ist in diesem Quellstand noch nicht verfügbar."}
         defaults = {"mode": "existing" if root else "install", "runtime_path": str(root) if root else "",
                     "artifacts_path": str(artifacts) if (artifacts / "manifest.json").is_file() else "",
-                    "game_path": str((root / "games/MSFS2024").resolve()) if root else "",
+                    "game_path": str((root / "games" / game.directory).resolve()) if root else "",
                     "runner_path": str((root / "runner").resolve()) if root and (root / "runner").is_dir() else "",
                     "prefix_path": str(root / "local/msfs-prefix") if root else "",
-                    "destination_path": str(data_home() / "flightdeck/runtimes/msfs2024"),
+                    "destination_path": str(data_home() / "flightdeck/runtimes" / game.id), "game_id": game.id,
                     "market": suggested_market(), "local_saves": True, "media_plugins_path": ""}
         with self.lock:
             return {"available": True, "prepare_available": available, "directory_picker": self._picker() is not None,
@@ -550,6 +567,7 @@ class SetupManager:
         with self.launcher.lock:
             configured = self.launcher.runtime
         candidates = [configured] if configured else []
+        candidates.extend(self.launcher.known_runtimes.values())
         source = Path(self.source_root) if self.source_root is not None else Path(__file__).resolve().parents[1]
         if (source / "compat/upstreams.lock.json").is_file() and (source / "scripts/runtime").is_dir():
             sibling = source.parent / "msfs-linux"
@@ -579,7 +597,11 @@ class SetupManager:
                 checks = existing_checks(path)
             except (OSError, RuntimeError, LauncherError):
                 continue
-            found.append({"name": "Microsoft Flight Simulator 2024", "path": str(path),
+            try:
+                game = games.for_runtime(path)
+            except ValueError:
+                game = None
+            found.append({"name": game.name if game else "Unbekannte MSFS-Version", "game_id": game.id if game else "", "path": str(path),
                           "ready": all(row["ok"] for row in checks), "configured": path == configured,
                           "checks": checks})
         found.sort(key=lambda item: (not item["configured"], not item["ready"], item["path"]))
@@ -685,6 +707,7 @@ class SetupManager:
                 # of the unrelated suggestion for a future installation.
                 market = data.get("market")
                 self.job["market"] = market if isinstance(market, str) and re.fullmatch(r"[A-Z]{2}", market) else ""
+                self.job["game_id"] = data.get("game_id", "msfs2024")
             if mode == "update":
                 self.job["runtime_path"] = str(self.launcher.runtime)
                 self.job["operation"] = operation
@@ -730,7 +753,8 @@ class SetupManager:
                 bootstrap = bootstrap_module()
                 if bootstrap is None:
                     raise SetupError("Die automatische Installation ist in diesem Quellstand noch nicht verfügbar.")
-                data = {**data, "destination_path": data.get("destination_path") or str(data_home() / "flightdeck/runtimes/msfs2024")}
+                game = games.select(data.get("game_id", "msfs2024"))
+                data = {**data, "destination_path": data.get("destination_path") or str(data_home() / "flightdeck/runtimes" / game.id)}
                 plan = bootstrap.preflight(data, source_root=self.source_root, notify=self._notify, cancel=self.cancel_event)
             else:
                 plan = self._check_existing(data) if data["mode"] == "existing" else preflight(data, source_root=self.source_root, notify=self._notify, cancel=self.cancel_event)
@@ -806,11 +830,12 @@ class SetupManager:
                 xdg = workspace / "xdg"
                 game = download_game(components["cli"], components["cli_sha256"], workspace / "game", plan.inputs["market"],
                                      cancel=self.cancel_event, notify=self._notify, xdg_root=xdg,
-                                     control=self.download_control, cli_features=components.get("cli_features", []), transfer=transfer)
+                                     control=self.download_control, cli_features=components.get("cli_features", []), transfer=transfer,
+                                     game_id=plan.inputs.get("game_id", "msfs2024"))
                 self._notify("provision", "Das heruntergeladene Spiel wird für den Start eingerichtet …")
                 inputs = {key: str(components[key]) for key in ("artifacts_path", "runner_path", "prefix_path")}
                 inputs.update(game_path=str(game), destination_path=str(plan.destination), market=plan.inputs["market"],
-                              local_saves=plan.inputs.get("local_saves", False), mode="prepare")
+                              local_saves=plan.inputs.get("local_saves", False), game_id=plan.inputs.get("game_id", "msfs2024"), mode="prepare")
                 prepared = preflight(inputs, source_root=self.source_root, notify=self._notify, cancel=self.cancel_event)
                 path = prepare(prepared, notify=self._notify, cancel=self.cancel_event, xdg_root=xdg)
             elif isinstance(self.plan, Plan):

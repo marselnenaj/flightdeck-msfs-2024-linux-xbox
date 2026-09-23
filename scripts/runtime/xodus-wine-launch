@@ -7,6 +7,7 @@ headers lets Wine choose the architecture; its image is supplied by Xodus' fd.
 This wrapper does not obtain licenses or decrypt any content.
 """
 import os
+import json
 from pathlib import Path
 import signal
 import struct
@@ -33,9 +34,24 @@ def main():
     else:
         source = Path(argument)
     source = source.resolve(strict=True)
-    game_root = (BASE.parent / "games/MSFS2024").resolve(strict=True)
+    config = BASE.parent / "private/runtime.json"
+    if config.exists() or config.is_symlink():
+        info = config.lstat()
+        if not config.is_file() or config.is_symlink() or info.st_size > 65536:
+            fail("Invalid runtime configuration")
+        game_id = json.loads(config.read_text()).get("game_id", "msfs2024")
+    else:
+        game_id = "msfs2024"
+    directories = {"msfs2020": ("MSFS2020", "FlightSimulator.exe"),
+                   "msfs2024": ("MSFS2024", "FlightSimulator2024.exe")}
+    if type(game_id) is not str or game_id not in directories:
+        fail("Invalid configured game")
+    directory, executable = directories[game_id]
+    game_root = (BASE.parent / "games" / directory).resolve(strict=True)
     if not source.is_relative_to(game_root):
         fail("The entry point is outside the configured game directory")
+    if source.name.casefold() != executable.casefold():
+        fail("The entry point does not match the configured game")
 
     map_value = os.environ.get("WINE_DLL_FILE_MAP", "")
     mappings = []
@@ -69,10 +85,16 @@ def main():
     if len(headers) != header_size:
         fail("Incomplete PE headers in inherited fd")
 
-    stub_fd, stub_name = tempfile.mkstemp(prefix=source.name + ".xodus-launch-", suffix=".exe", dir=source.parent)
-    stub = Path(stub_name)
+    temporary = tempfile.TemporaryDirectory(prefix=".xodus-launch-", dir=source.parent)
+    launch_dir = Path(temporary.name)
+    stub = launch_dir / source.name
+    guard = None
     try:
-        with os.fdopen(stub_fd, "wb") as stream:
+        for resource in source.parent.iterdir():
+            if resource == source or resource == launch_dir or resource.name.startswith((".xodus-fenix-", ".xodus-launch-")):
+                continue
+            (launch_dir / resource.name).symlink_to(resource)
+        with stub.open("xb") as stream:
             stream.write(headers)
             stream.truncate(file_size)
         child_env = dict(os.environ)
@@ -81,8 +103,24 @@ def main():
         if prefix != (BASE.parent / "local/msfs-prefix").resolve():
             fail("The Wine prefix differs from this runtime configuration")
         child_env["WINEPREFIX"] = str(prefix)
-        child_env["WINE_DLL_FILE_MAP"] = map_value + f"|{payload_fd}:{nt_path(stub)}"
+        # This loader mounts exactly one Store MSIXVC package. Flightdeck has
+        # no separate Store DLC package installer yet; simulator content packs
+        # are managed by the game and are not registered Store packages. Keep
+        # the scope explicit so generic Wine clients cannot assume no DLC.
+        child_env["XODUS_STORE_PACKAGE_SCOPE"] = "FlightdeckBaseGameOnlyV1"
+        source_parent = nt_path(source.parent) + "\\"
+        aliases = [(fd, nt_path(launch_dir) + "\\" + name[len(source_parent):])
+                   for fd, name in mappings
+                   if name.casefold().startswith(source_parent.casefold())]
+        child_env["WINE_DLL_FILE_MAP"] = map_value + "|" + "|".join(f"{fd}:{name}" for fd, name in aliases)
         wine = Path(child_env.get("XODUS_WINE_RUNNER", str(DEFAULT_WINE))).resolve(strict=True)
+        guard_path = prefix / "drive_c/windows/system32/FenixWindowGuard.exe"
+        if child_env.get("WINE_FENIX_WINDOW_GUARD") == "1" and guard_path.is_file():
+            guard_env = dict(child_env)
+            guard_env.pop("WINE_DLL_FILE_MAP", None)
+            guard = subprocess.Popen([str(wine), str(guard_path)], env=guard_env,
+                                     stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                                     stderr=subprocess.DEVNULL, close_fds=True)
         started = time.monotonic()
         process = subprocess.Popen([str(wine), str(stub), *sys.argv[2:]],
                                    cwd=source.parent, env=child_env,
@@ -103,7 +141,14 @@ def main():
             for number, handler in previous.items():
                 signal.signal(number, handler)
     finally:
-        stub.unlink(missing_ok=True)
+        if guard is not None and guard.poll() is None:
+            guard.terminate()
+            try:
+                guard.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                guard.kill()
+                guard.wait()
+        temporary.cleanup()
 
 if __name__ == "__main__":
     try:

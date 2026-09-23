@@ -22,7 +22,10 @@ struct Offer {
 struct Coin {
   std::string id, sku, offer_token, title, description, language, sku_title,
       sku_description, sku_language;
+  std::vector<Image> images, sku_images;
+  std::vector<std::string> keywords;
   std::vector<Offer> offers;
+  bool download = false;
 };
 bool string_is(const Json &v, const char *s) {
   return v.is_string() && v.get<std::string>() == s;
@@ -169,6 +172,8 @@ struct PageOwner {
   std::vector<XStoreProduct> products;
   std::vector<XStoreSku> skus;
   std::vector<std::vector<XStoreAvailability>> offers;
+  std::vector<std::vector<XStoreImage>> images, sku_images;
+  std::vector<std::vector<const char *>> keywords;
   std::deque<std::string> text;
   const char *keep(const std::string &s) {
     text.push_back(s);
@@ -177,6 +182,18 @@ struct PageOwner {
   char *keep_mutable(const std::string &s) {
     text.push_back(s);
     return text.back().data();
+  }
+  void copy_images(const std::vector<Image> &source,
+                   std::vector<XStoreImage> *destination) {
+    destination->resize(source.size());
+    for (size_t i = 0; i < source.size(); ++i) {
+      auto &out = (*destination)[i];
+      out.uri = keep(source[i].uri);
+      out.width = source[i].width;
+      out.height = source[i].height;
+      out.caption = source[i].caption.empty() ? nullptr : keep(source[i].caption);
+      out.imagePurposeTag = keep(source[i].purpose);
+    }
   }
   HRESULT price(const Offer &o, XStorePrice *out) {
     if (!std::isfinite(o.price) || !std::isfinite(o.base) || o.price < 0 ||
@@ -207,6 +224,7 @@ std::map<XodusStoreProductPage *, std::unique_ptr<PageOwner>> pages;
 struct CoinCatalogPlan {
   std::vector<Coin> coins;
   std::map<std::string, UINT32> kinds;
+  bool entitled = false;
 };
 
 HRESULT plan_coins(const std::vector<Product> &catalog,
@@ -214,17 +232,19 @@ HRESULT plan_coins(const std::vector<Product> &catalog,
                    const std::vector<std::string> &actions,
                    const std::string &parent, const std::string &market,
                    const std::string &language, INT64 now, CoinPlan *out,
-                   std::vector<XodusStoreCollectionRequestItem> *requests) {
+                   std::vector<XodusStoreCollectionRequestItem> *requests,
+                   bool entitled) {
   if (!out || !requests)
     return E_POINTER;
   out->reset();
   requests->clear();
-  if (ids.empty() || ids.size() > 100 || !kinds || (kinds & ~31u))
+  if ((!entitled && ids.empty()) || ids.size() > 100 || !kinds || (kinds & ~31u))
     return E_INVALIDARG;
   if (actions.size() > 1)
     return E_NOTIMPL;
   try {
     auto plan = std::make_shared<CoinCatalogPlan>();
+    plan->entitled = entitled;
     std::set<std::string> processed;
     for (const auto &requested : ids) {
       std::string id = requested.substr(0, 12),
@@ -239,43 +259,46 @@ HRESULT plan_coins(const std::vector<Product> &catalog,
       const Product &product = *found;
       if (!(kinds & product.kind))
         continue;
-      if (product.kind != 1 && product.kind != 16)
+      // Package-free Durables can be described by the same catalog shape.
+      // Their ownership is reported only with a positive Collections record;
+      // absence is unknown because device-shared licenses are not covered.
+      if (product.kind != 1 && product.kind != 2 && product.kind != 16 && !(entitled && product.kind == 4))
         return E_NOTIMPL;
       if (product.raw_json.empty())
         return E_INVALIDARG;
       auto json = Json::parse(product.raw_json);
       const auto &p = json.at("Product");
-      if (!associated(p, parent, market, "addOnParent"))
+      if (!(entitled && product.id == parent) && !associated(p, parent, market, "addOnParent"))
         return E_NOTIMPL;
-      if (product.skus.size() != 1 ||
-          (!sku.empty() && sku != product.skus[0].id))
+      auto selected = std::find_if(product.skus.begin(), product.skus.end(),
+          [&](const Sku &candidate) { return sku.empty() || candidate.id == sku; });
+      if ((!entitled && product.skus.size() != 1) || selected == product.skus.end() || (entitled && sku.empty()))
         return E_NOTIMPL;
-      const auto &s = p.at("DisplaySkuAvailabilities")[0].at("Sku");
+      const auto selected_index = static_cast<size_t>(selected - product.skus.begin());
+      const auto &s = p.at("DisplaySkuAvailabilities")[selected_index].at("Sku");
       const auto &props = s.at("Properties");
       if (!boolean_is(props, "IsTrial", false) || !props.count("Packages") ||
-          !props.at("Packages").is_array() || !props.at("Packages").empty() ||
+          !props.at("Packages").is_array() || (!entitled && !props.at("Packages").empty()) ||
           !empty_media(props, "BundledSkus") || !s.count("RecurrencePolicy") ||
           !s.at("RecurrencePolicy").is_null() ||
           !s.count("SubscriptionPolicyId") ||
           !s.at("SubscriptionPolicyId").is_null())
         return E_NOTIMPL;
       for (const auto &localized : p.at("LocalizedProperties"))
-        if (!empty_media(localized, "Images") ||
-            !empty_media(localized, "Videos") ||
-            !empty_media(localized, "SearchTitles"))
+        if (!entitled && !empty_media(localized, "Videos"))
           return E_NOTIMPL;
       for (const auto &localized : s.at("LocalizedProperties"))
-        if (!empty_media(localized, "Images") ||
-            !empty_media(localized, "Videos"))
+        if (!entitled && !empty_media(localized, "Videos"))
           return E_NOTIMPL;
       const auto *pt = language_text(product.localized, language, market);
       const auto *st =
-          language_text(product.skus[0].localized, language, market);
+          language_text(selected->localized, language, market);
       if (!pt || !st)
         return E_NOTIMPL;
       Coin coin;
       coin.id = id;
-      coin.sku = product.skus[0].id;
+      coin.sku = selected->id;
+      coin.download = !props.at("Packages").empty();
       coin.offer_token = product.offer_token;
       coin.title = pt->title;
       coin.description = pt->description;
@@ -283,10 +306,13 @@ HRESULT plan_coins(const std::vector<Product> &catalog,
       coin.sku_title = st->title;
       coin.sku_description = st->description;
       coin.sku_language = st->language;
+      coin.images = pt->images;
+      coin.sku_images = st->images;
+      coin.keywords = pt->keywords;
       const auto &raw_offers =
-          p.at("DisplaySkuAvailabilities")[0].at("Availabilities");
-      for (size_t i = 0; i < product.skus[0].availabilities.size(); ++i) {
-        const auto &a = product.skus[0].availabilities[i];
+          p.at("DisplaySkuAvailabilities")[selected_index].at("Availabilities");
+      for (size_t i = 0; i < selected->availabilities.size(); ++i) {
+        const auto &a = selected->availabilities[i];
         INT64 start, end;
         if (std::find(a.markets.begin(), a.markets.end(), market) ==
             a.markets.end())
@@ -300,14 +326,18 @@ HRESULT plan_coins(const std::vector<Product> &catalog,
           continue;
         if (std::find(a.actions.begin(), a.actions.end(), "Purchase") !=
                 a.actions.end() &&
-            !associated(p, parent, market, "SellableBy"))
+            !associated(p, parent, market, "SellableBy")) {
+          if (entitled) continue;
           return E_NOTIMPL;
+        }
         if (!utc(a.start_date, &start) || !utc(a.end_date, &end))
           return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
         if (start > now || end <= now)
           continue;
-        if (!a.has_price || !unrestricted(raw_offers.at(i)))
+        if (!a.has_price || !unrestricted(raw_offers.at(i))) {
+          if (entitled) continue;
           return E_NOTIMPL;
+        }
         if (std::abs(std::round(a.price.list_price * 100) -
                      a.price.list_price * 100) > 0.00001 ||
             std::abs(std::round(a.price.base_price * 100) -
@@ -316,21 +346,27 @@ HRESULT plan_coins(const std::vector<Product> &catalog,
         coin.offers.push_back(Offer{a.id, a.price.currency, a.price.base_price,
                                     a.price.list_price, end});
       }
-      if (coin.offers.empty()) {
+      if (coin.offers.empty() && !entitled) {
         if (!actions.empty())
           continue;
         return E_NOTIMPL;
       }
       for (const auto &o : coin.offers)
         if (o.currency != coin.offers[0].currency ||
-            o.price != coin.offers[0].price || o.base != coin.offers[0].base)
-          return E_NOTIMPL;
+            o.price != coin.offers[0].price || o.base != coin.offers[0].base) {
+          if (!entitled) return E_NOTIMPL;
+          // Personalized/ambiguous prices are not needed to list an owned SKU.
+          coin.offers.clear(); break;
+        }
       const auto exact = id + "/" + coin.sku;
       if (!processed.insert(exact).second)
         continue;
       plan->kinds.emplace(exact, product.kind);
       plan->coins.push_back(std::move(coin));
     }
+    if (entitled) std::sort(plan->coins.begin(), plan->coins.end(), [](const Coin &a, const Coin &b) {
+      return a.id == b.id ? a.sku < b.sku : a.id < b.id;
+    });
     for (const auto &p : plan->kinds) {
       XodusStoreCollectionRequestItem item{};
       memcpy(item.store_id, p.first.c_str(), 18);
@@ -347,7 +383,7 @@ HRESULT plan_coins(const std::vector<Product> &catalog,
 }
 HRESULT coin_page(const CoinPlan &plan,
                   const XodusStoreCollectionSnapshot *collection, INT64 now,
-                  XodusStoreProductPage **out) {
+                  XodusStoreProductPage **out, const char *continuation) {
   if (!out)
     return E_POINTER;
   *out = nullptr;
@@ -387,23 +423,39 @@ HRESULT coin_page(const CoinPlan &plan,
       for (UINT32 i = 0; i < collection->absent_count; ++i) {
         const auto *id = collection->absent_ids[i];
         if (!id || strnlen(id, 18) != 17 || !plan->kinds.count(id) ||
+            (plan->kinds.at(id) != 1 && plan->kinds.at(id) != 16) ||
             !seen.insert(id).second)
           return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
         absent.insert(id);
       }
       if (seen.size() != plan->kinds.size())
         return E_NOTIMPL;
+      if (plan->entitled && owned.size() != plan->coins.size())
+        return E_NOTIMPL;
     }
     auto page = std::make_unique<PageOwner>();
     const auto count = plan->coins.size();
-    page->products.resize(count);
+    size_t product_count = count;
+    if (plan->entitled) {
+      product_count = 0;
+      for (size_t i = 0; i < count; ++i)
+        if (!i || plan->coins[i].id != plan->coins[i-1].id) ++product_count;
+    }
+    page->products.resize(product_count);
     page->skus.resize(count);
     page->offers.resize(count);
+    page->images.resize(count);
+    page->sku_images.resize(count);
+    page->keywords.resize(count);
+    size_t product_index = 0;
     for (size_t i = 0; i < count; ++i) {
       const auto &c = plan->coins[i];
       const auto key = c.id + "/" + c.sku;
-      auto &product = page->products[i];
+      bool first = !plan->entitled || !i || c.id != plan->coins[i-1].id;
+      if (i && first) ++product_index;
+      auto &product = page->products[product_index];
       auto &sku = page->skus[i];
+      if (first) {
       product.storeId = page->keep(c.id);
       product.title = page->keep(c.title);
       product.description = page->keep(c.description);
@@ -413,17 +465,34 @@ HRESULT coin_page(const CoinPlan &plan,
           "https://www.microsoft.com/store/productId/" + c.id);
       product.productKind = static_cast<XStoreProductKind>(plan->kinds.at(key));
       product.isInUserCollection = owned.count(key) != 0;
-      product.skusCount = 1;
+      product.skusCount = 0;
       product.skus = &sku;
+      page->copy_images(c.images, &page->images[i]);
+      product.imagesCount = page->images[i].size();
+      product.images = page->images[i].data();
+      for (const auto &keyword : c.keywords)
+        page->keywords[i].push_back(page->keep(keyword));
+      product.keywordsCount = page->keywords[i].size();
+      product.keywords = page->keywords[i].data();
+      product.price.currencyCode = page->keep("");
+      }
+      ++product.skusCount;
+      product.hasDigitalDownload = product.hasDigitalDownload || c.download;
       sku.skuId = page->keep(c.sku);
       sku.title = page->keep(c.sku_title);
       sku.description = page->keep(c.sku_description);
       sku.language = page->keep(c.sku_language);
       sku.isInUserCollection = product.isInUserCollection;
-      HRESULT hr = page->price(c.offers[0], &product.price);
-      if (FAILED(hr))
-        return hr;
-      sku.price = product.price;
+      page->copy_images(c.sku_images, &page->sku_images[i]);
+      sku.imagesCount = page->sku_images[i].size();
+      sku.images = page->sku_images[i].data();
+      HRESULT hr = S_OK;
+      sku.price.currencyCode = page->keep("");
+      if (!c.offers.empty()) {
+        hr = page->price(c.offers[0], &sku.price);
+        if (FAILED(hr)) return hr;
+        if (first) product.price = sku.price;
+      }
       if (sku.isInUserCollection) {
         const auto &data = *owned.at(key);
         auto &v = sku.collectionData;
@@ -452,9 +521,9 @@ HRESULT coin_page(const CoinPlan &plan,
       sku.availabilities = page->offers[i].data();
     }
     page->page.structure_size = sizeof(page->page);
-    page->page.product_count = count;
+    page->page.product_count = product_count;
     page->page.products = page->products.data();
-    page->page.continuation = nullptr;
+    page->page.continuation = continuation && *continuation ? page->keep(continuation) : nullptr;
     auto result = &page->page;
     {
       std::lock_guard<std::mutex> lock(pages_mutex);

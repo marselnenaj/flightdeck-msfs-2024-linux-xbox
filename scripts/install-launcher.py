@@ -27,7 +27,8 @@ NATIVE_NOTICE_MAX = 16 * 1024 * 1024
 NATIVE_FEATURES = ("connected-storage-read-v1", "connected-storage-sync-v1")
 NATIVE_FILES = ("bin/xodus-cli", "bin/xodus-service", "bin/flightdeck-connected-storage.exe", "runtime/xgameruntime.dll",
                 "builtin/x86_64-windows/xodus_store_test.dll", "builtin/x86_64-unix/xodus_store_test.so")
-PUBLIC_IMAGES = {"ui/flight-panorama.png": "f64fc375e0aaa806c4de91cd91ec8f18994a06ff64aa80d8b6d95f7c463c9304"}
+PUBLIC_IMAGES = {"ui/flight-panorama.png": "f64fc375e0aaa806c4de91cd91ec8f18994a06ff64aa80d8b6d95f7c463c9304",
+                 "ui/flight-panorama-2020.png": "cd81013284d468fe6d306438e66d9a0d7ee35d6bda02ec2b44dea010f8cf8344"}
 PUBLIC_FONT = {"ui/manrope-variable.woff2": "30b83738add8c9edd9e3450b98036a9a8fb5668d0cbd4eb0ce5fe6761197f21f",
                "ui/OFL-Manrope.txt": "58172e0c0fac2cda8a37b348164bb55e44b0e69051e557e92b1d3f6910141f7b"}
 SOURCE_ROOT = Path(__file__).resolve().parents[1]
@@ -178,7 +179,7 @@ def read_regular(path: Path, limit: int | None = None) -> bytes:
         elif path.name == "THIRD-PARTY-NOTICES.txt":
             limit = NATIVE_NOTICE_MAX
         else:
-            limit = 4 * 1024 * 1024 if path.name == "flight-panorama.png" else MAX_FILE
+            limit = 4 * 1024 * 1024 if path.name in {Path(name).name for name in PUBLIC_IMAGES} else MAX_FILE
     no_links(path)
     try:
         fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
@@ -236,10 +237,14 @@ def source_snapshot(source: Path) -> dict[str, bytes]:
     if any((source / name).exists() or (source / name).is_symlink() for name in PUBLIC_FONT):
         paths.update(PUBLIC_FONT)
     inputs = {name: source / name for name in paths}
+    for name in ("__init__.py", "core.py"):
+        inputs["flightdeck/_fenix/" + name] = source / "flightdeck/_fenix" / name
     for name in ("launch-msfs.sh", "play-msfs.sh", "runtime-env.sh", "xodus.sh", "xodus-service.sh", "xodus-wine-launch"):
         inputs["flightdeck/resources/runtime/" + name] = source / "scripts/runtime" / name
     inputs["flightdeck/resources/upstreams.lock.json"] = source / "compat/upstreams.lock.json"
     inputs["flightdeck/resources/bootstrap.lock.json"] = source / "compat/bootstrap.lock.json"
+    for name in ("bundle.json", "release.json", "LICENSE"):
+        inputs["flightdeck/resources/fenix/" + name] = source / "compat/fenix" / name
     result = {}
     for name in sorted(inputs):
         data = read_regular(inputs[name])
@@ -350,9 +355,31 @@ def release_manifest(root: Path, identity: str) -> tuple[Path, dict]:
     return folder, record
 
 
+def remove_bytecode_caches(folder: Path, expected: set[str]) -> None:
+    """Discard only generated caches for shipped Python modules before verifying."""
+    for cache in folder.rglob("__pycache__"):
+        no_links(cache)
+        if not cache.is_dir():
+            raise InstallError(tr('Fremde Datei in der installierten Version: {path}', path=cache))
+        entries = list(cache.iterdir())
+        for path in entries:
+            no_links(path)
+            match = re.fullmatch(r"([A-Za-z_][A-Za-z0-9_]*)\.cpython-\d+(?:\.opt-\d+)?\.pyc", path.name)
+            source = cache.parent / (match.group(1) + ".py") if match else None
+            info = path.lstat()
+            if (not match or source.relative_to(folder).as_posix() not in expected
+                    or not stat.S_ISREG(info.st_mode) or info.st_uid != os.getuid()
+                    or info.st_nlink != 1):
+                raise InstallError(tr('Fremde Datei in der installierten Version: {path}', path=path))
+        for path in entries:
+            path.unlink()
+        cache.rmdir()
+
+
 def verify_release(root: Path, identity: str) -> Path:
     folder, record = release_manifest(root, identity)
     expected = set(record["files"]) | {"release.json"}
+    remove_bytecode_caches(folder, expected)
     for path in folder.rglob("*"):
         no_links(path)
         if not path.is_dir() and str(path.relative_to(folder)) not in expected:
@@ -473,7 +500,15 @@ try:
         if action != "--update" and len(arguments) != 1:
             raise ValueError(text("extra"))
         managed = [commands[action]] + (arguments[1:] if action == "--update" else [])
-        invocation = [sys.executable, str(manager), "--data-dir", str(root),
+        # An update must be installed by the selected *new* package. The old
+        # manager cannot know future native features or package formats.
+        # Rollback/uninstall still use the trusted installed manager.
+        selected_manager = pathlib.Path(arguments[1]) / "scripts" / "install-launcher.py" if action == "--update" else manager
+        selected_manager = pathlib.Path(os.path.abspath(selected_manager))
+        if (not selected_manager.is_file() or
+                any(part.is_symlink() for part in (selected_manager, *selected_manager.parents))):
+            raise ValueError(text("update" if action == "--update" else "invalid"))
+        invocation = [sys.executable, str(selected_manager), "--data-dir", str(root),
                       "--language", language, *managed]
         if action == "--uninstall":
             os.execv(sys.executable, invocation)

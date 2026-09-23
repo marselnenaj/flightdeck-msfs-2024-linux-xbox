@@ -21,6 +21,9 @@ COPY = {
         "no_browser": "Browser nicht automatisch öffnen",
         "language": "Sprache der Oberfläche und Terminalmeldungen",
         "desktop": "Als eigenes Fenster öffnen; Hintergrunddienst automatisch verwalten",
+        "refresh_components": "Geprüfte Laufzeitkomponenten der ausgewählten Runtime aktualisieren",
+        "components_updated": "Runtime-Komponenten aktualisiert. Spielstände und Spielpaket blieben erhalten.",
+        "components_current": "Runtime-Komponenten sind bereits aktuell.",
         "invalid_port": "Port muss zwischen 0 und 65535 liegen.",
         "failed": "Flightdeck konnte nicht starten: {error}\n",
         "local": "Nur lokal. Strg+C beendet die Oberfläche; ein gestartetes Spiel läuft weiter.",
@@ -33,6 +36,9 @@ COPY = {
         "no_browser": "Do not open the browser automatically",
         "language": "Language for the interface and terminal messages",
         "desktop": "Open an application window and manage the background service automatically",
+        "refresh_components": "Update verified native components in the selected runtime",
+        "components_updated": "Runtime components updated. Saves and game files were preserved.",
+        "components_current": "Runtime components are already current.",
         "invalid_port": "Port must be between 0 and 65535.",
         "failed": "Flightdeck could not start: {error}\n",
         "local": "Local only. Ctrl+C closes the interface; a running simulator is left running.",
@@ -58,10 +64,20 @@ def main(argv=None):
     parser.add_argument("--port", type=int, default=0, help=text["port"])
     parser.add_argument("--no-browser", action="store_true", help=text["no_browser"])
     parser.add_argument("--desktop", action="store_true", help=text["desktop"])
+    parser.add_argument("--refresh-components", action="store_true", help=text["refresh_components"])
     parser.add_argument("--desktop-service", action="store_true", help=argparse.SUPPRESS)
     args = parser.parse_args(argv)
     if not 0 <= args.port <= 65535:
         parser.error(text["invalid_port"])
+    if args.refresh_components:
+        from .runtime_components import ComponentUpdateError, refresh
+        try:
+            changed = refresh(Launcher(args.state_dir, args.runtime))
+        except (ComponentUpdateError, LauncherError, OSError) as error:
+            from .i18n import error_message, translate_message
+            parser.exit(1, text["failed"].format(error=translate_message(error_message(error), language)))
+        print(text["components_updated" if changed else "components_current"])
+        return
     if args.desktop_service or (args.desktop and not args.no_browser):
         from . import desktop
         try:

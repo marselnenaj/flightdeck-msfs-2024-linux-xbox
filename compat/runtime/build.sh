@@ -6,7 +6,7 @@ sources=(
     src/GameSaveLocalCore.cpp src/GameSaveBridge.cpp src/GameSaveAsync.cpp
     src/RuntimeDiagnostics.cpp src/UserBridge.cpp
     src/StoreBridge.cpp src/StoreContext.cpp src/StoreQueries.cpp
-    src/StoreLicenseEvents.cpp src/StoreCatalog.cpp src/StoreCatalogBatch.cpp
+    src/StoreLicenseEvents.cpp src/StoreDurableLicense.cpp src/StoreCatalog.cpp src/StoreCatalogBatch.cpp
     src/StoreCatalogCoinMapper.cpp src/StoreCatalogProvider.cpp
     src/NetworkingState.cpp src/NetworkSecurity.cpp src/XThreading.cpp
     src/XAsync.cpp src/XTaskQueue.cpp src/ThreadPool.cpp src/WaitTimer.cpp

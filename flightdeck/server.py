@@ -17,6 +17,14 @@ class Server(ThreadingHTTPServer):
 
     def __init__(self, launcher: Launcher, port=0, ui_root=None):
         from .desktop import release_identity
+        from .runtime_components import refresh_on_startup
+        try:
+            refresh_on_startup(launcher)
+        except (LauncherError, OSError, ValueError) as error:
+            # Keep the local UI available to explain the failed update. The
+            # runtime readiness check prevents a partial component set from
+            # being started, and a later launch can retry the journal.
+            launcher.component_update_error = error_message(error)
         self.launcher = launcher
         self.token = secrets.token_urlsafe(32)
         self.release_identity = release_identity()
@@ -35,6 +43,7 @@ class Server(ThreadingHTTPServer):
     def server_close(self):
         self.launcher.cloud_saves.close()
         self.launcher.setup.close()
+        self.launcher.fenix.close()
         super().server_close()
 
     def desktop_refresh(self):
@@ -106,6 +115,8 @@ class Handler(BaseHTTPRequestHandler):
                 self.reply(200, snapshot(self.server.launcher))
             elif path == "/api/cloud-saves":
                 self.reply(200, self.server.launcher.cloud_saves.snapshot())
+            elif path == "/api/fenix":
+                self.reply(200, self.server.launcher.fenix.snapshot())
             elif path == "/api/mods":
                 from .mods import snapshot
                 self.reply(200, snapshot(self.server.launcher))
@@ -113,7 +124,7 @@ class Handler(BaseHTTPRequestHandler):
                 self.reply(200, self.server.launcher.setup.snapshot())
             elif path == "/api/setup/discover":
                 self.reply(200, self.server.launcher.setup.discover())
-            elif path in {"/", "/index.html", "/app.js", "/setup.js", "/mods.js", "/updates.js", "/cloud-saves.js", "/i18n.js", "/state.js", "/styles.css", "/mark.svg", "/flight-panorama.png", "/manrope-variable.woff2"}:
+            elif path in {"/", "/index.html", "/app.js", "/setup.js", "/mods.js", "/fenix.js", "/updates.js", "/cloud-saves.js", "/i18n.js", "/state.js", "/styles.css", "/mark.svg", "/flight-panorama.png", "/flight-panorama-2020.png", "/manrope-variable.woff2"}:
                 name = "index.html" if path == "/" else path[1:]
                 types = {".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".svg": "image/svg+xml", ".png": "image/png", ".woff2": "font/woff2"}
                 file = self.server.ui_root / name
@@ -158,6 +169,10 @@ class Handler(BaseHTTPRequestHandler):
                 result = self.server.desktop_refresh()
             elif path == "/api/config":
                 result = launcher.configure(data.get("runtime_path"))
+            elif path == "/api/game/select":
+                result = launcher.select_game(data.get("game_id"))
+            elif path == "/api/game/register":
+                result = launcher.register_runtime(data.get("runtime_path"))
             elif path == "/api/launch":
                 result = launcher.launch()
             elif path == "/api/stop":
@@ -179,6 +194,10 @@ class Handler(BaseHTTPRequestHandler):
                 result = launcher.cloud_saves.discard_plan(data.get("plan_id"))
             elif path == "/api/cloud-saves/cancel":
                 result = launcher.cloud_saves.cancel(data.get("job_id"))
+            elif path == "/api/fenix/pick":
+                result = launcher.fenix.pick(data.get("kind"))
+            elif path.startswith("/api/fenix/"):
+                result = launcher.fenix.start(path.rsplit("/", 1)[-1], data)
             elif path == "/api/mods/open-folder":
                 from .mods import open_folder
                 result = open_folder(launcher)

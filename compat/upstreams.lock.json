@@ -6,14 +6,14 @@
     "archive_url": "https://codeload.github.com/Sightem/WineGDK/tar.gz/b5d23b074cfd5e28e79acceaaefaf41a26ce6272",
     "archive_sha256": "a99999b2ef792e4c579ac96dcf9cfb4631eb8993db701e94f4bab35f868e5373",
     "patch": "compat/patches/winegdk-runtime.patch",
-    "patch_sha256": "779175a1f0fba38a9b58add19be39a282d3151fc5c66ae875327ced2f90cb351",
+    "patch_sha256": "dbec601e65e4806b8cfd1677f2316afdd0e8b5148df218000cc79d37952be5a1",
     "license": "LGPL-2.1-or-later"
   },
   "xodus": {
     "repository": "https://github.com/xodus-gaming/xodus.git",
     "revision": "0670e25aeb0e0e9f800f8f2f4968ae3b681842a7",
     "patch": "compat/patches/xodus-broker.patch",
-    "patch_sha256": "2d757a6f82502411085e807c36eb6ab9e96c65cbf5bc4bb58ff3b8566d17cb36",
+    "patch_sha256": "de63d3052162fa4eda46a1d58ed72adc908a422a760b8faef30f4e164907a826",
     "license": "GPL-3.0-only"
   },
   "store_idl": {

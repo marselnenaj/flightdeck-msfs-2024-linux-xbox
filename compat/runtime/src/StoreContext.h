@@ -45,6 +45,14 @@ struct XodusStoreAccountProvider
         const char *const *ids, SIZE_T id_count,
         const char *const *actions, SIZE_T action_count, const char *continuation,
         volatile LONG *cancelled, XodusStoreProductPage **owned_page) = nullptr;
+    /* Current Microsoft-signed exact Durable grant, capped to a 60-second
+     * online observation. Catalog/Collections ownership alone is insufficient. */
+    HRESULT (WINAPI *query_durable_license)(void *state, void *account, const char *store_id,
+        volatile LONG *cancelled, XStoreGameLicense *license) = nullptr;
+    /* S_OK only after an authenticated exact revision match for the complete
+     * registered package scope. Unknown scopes/revisions must remain errors. */
+    HRESULT (WINAPI *check_package_updates)(void *state, void *account,
+        volatile LONG *cancelled) = nullptr;
 };
 
 class XodusStoreContextState;

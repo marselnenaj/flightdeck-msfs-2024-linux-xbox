@@ -2,7 +2,7 @@
 
 [Deutsche Anleitung](addons.de.md)
 
-Open **Add-ons** in Flightdeck to see the packages in your simulator's Community
+Open **Mods** in Flightdeck to see the packages in your selected simulator's Community
 folder. **Open Community folder** opens that location in the Linux file manager;
 **Refresh** reads the inventory again after an installation.
 
@@ -21,8 +21,9 @@ add-on programs or change package contents when reading this list.
 
 ## Install a normal Community package
 
-1. Close MSFS. Download the add-on's **MSFS 2024** version from its developer.
-2. In Flightdeck, select **Add-ons → Open Community folder**.
+1. Select **MSFS 2024** or **MSFS 2020** in Flightdeck, then close the simulator.
+   Download the add-on for that edition from its developer.
+2. In Flightdeck, select **Mods → Open Community folder**.
 3. Extract the package into that folder. The package's `manifest.json` should be
    directly inside its own directory, for example
    `Community/example-aircraft/manifest.json`. Avoid an extra outer ZIP directory.
@@ -32,9 +33,8 @@ add-on programs or change package contents when reading this list.
    loads correctly in the simulator.
 
 Follow the developer's own installer when one is supplied. Keep existing
-settings and liveries before replacing a package. Flightdeck currently lists
-packages and opens their folder; it does not install, update, enable or delete
-individual add-ons for you.
+settings and liveries before replacing a package. The general Community inventory lists packages and opens their folder.
+Fenix has a separate setup workflow below, currently for MSFS 2024 only.
 
 ## Aircraft with companion applications
 
@@ -64,65 +64,95 @@ initialization. It required the runner's `libvkd3d-1.dll`,
 already runner components, not modified FlyByWire files. A connection to a
 running simulator has not yet been established by this test.
 
-### Fenix
+### Fenix A320
 
-The [Fenix installer](https://support.fenixsim.com/hc/en-us/articles/12459059815823-New-Fenix-Installer)
-requires your Fenix login and installs a separate companion application. Fenix
-instructs users to close MSFS and the Fenix application before installation.
-The presence of its aircraft package alone does not establish working displays,
-systems or communication with MSFS under Wine.
+Open **Mods → Fenix A320** to use the optional compatibility installer in
+Flightdeck **0.1.1**. Update older launchers using the [full package](install.md).
+The same patch is also available through the
+[standalone patch installer](https://github.com/marselnenaj/fenix-a320-linux-patch/releases/tag/v0.1.0-preview.1).
 
-Get the current installer from your [Fenix customer dashboard](https://fenixsim.com/dashboard/downloads/).
-Use the account that owns your aircraft. Fenix installs its own prerequisites;
-the tested installer 1.0.286 requested WebView2, .NET 8 Windows Desktop x64 and
-the Visual C++ x64 runtime.
+It supports MSFS 2024 with the pinned Xodus Wine runner. It creates an independent
+runner/profile, keeps a backup, verifies release hashes and configures CPU displays,
+Legacy readouts and Fenix autostart. Run MSFS 2024 once to create its user settings,
+then close MSFS and all Fenix applications before setup.
 
-The Wine test completed the official aircraft download and installation of
-Fenix Airbus A320 **2.4.0.4720**. These settings were needed in its **separate
-test prefix**:
+1. Choose **Install patch**. Flightdeck downloads the Linux ZIP from the public
+   Fenix patch GitHub release and verifies its SHA-256. Native Microsoft .NET
+   Framework 4.8 is installed when needed.
+2. Download the official installer from your [Fenix account](https://fenixsim.com/dashboard/),
+   select its EXE and choose **Run installer**. Complete its normal prerequisite and
+   aircraft installation in the selected simulator profile, then close the installer.
+3. Choose **Open Fenix**, sign in/activate normally, then close the application.
+4. Choose **Finish setup**. When the green **Fenix is ready to fly** message
+   appears, return to the overview and start MSFS normally.
 
-- `DOTNET_SYSTEM_GLOBALIZATION_USENLS=1` selects Windows NLS for .NET. Without it,
-  this runner failed to load an ICU symbol.
-- `HKCU\Software\Microsoft\Avalon.Graphics\DisableHWAcceleration`, a DWORD set
-  to `1`, enables WPF software rendering. Without it, the installer window was
-  blank. Keep Wine's `mscoree` loader enabled.
-- `DOTNET_ReadyToRun=0` disables precompiled .NET code for the Fenix process.
-  Without it, the download planner failed with `SQLite Error 1`, either
-  `no more rows available` or `SQL logic error`. With it, the official installer
-  completed the download and installation. The precise runtime defect is still
-  unknown; replacing or deleting the database was not required.
+Flightdeck marks completed steps and highlights the next action. Finishing the
+official installer alone does not complete setup. If a Windows application is
+still open, quit the Fenix installer and Fenix completely; the panel refreshes
+automatically. Fenix itself checks your sign-in and license. On a German keyboard,
+if `AltGr+Q` does not enter `@` in its login window, try `Ctrl+Alt+Q` or paste `@`
+with `Ctrl+V`.
 
-These are documented [.NET globalization](https://learn.microsoft.com/en-us/dotnet/core/runtime-config/globalization)
-and [WPF rendering](https://learn.microsoft.com/en-us/dotnet/desktop/wpf/graphics-multimedia/graphics-rendering-registry-settings)
-settings; Microsoft also documents the [ReadyToRun switch](https://learn.microsoft.com/en-us/dotnet/core/runtime-config/compilation).
-Set the environment variables on the Fenix launch command, not globally for MSFS.
-Flightdeck does not currently apply these settings or start Fenix for you.
+After setup, Fenix starts automatically with MSFS; you do not need to start it
+separately. Flightdeck closes the session's Fenix companions after normal exit,
+a game crash or **Stop**, with a bounded fallback for stuck processes. The
+official Fenix installer and other Wine profiles are excluded from that cleanup.
 
-For an invisible cursor, an app-local test is
-`WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--disable-features=HideCursorWhileTyping`.
-Preserve any existing browser arguments. This targets a documented
-[WebView2 cursor regression](https://github.com/MicrosoftEdge/WebView2Feedback/issues/5687);
-its individual effect has not yet been confirmed in our Wine test.
+The source checkout currently pins patch **0.1.0-preview.1**. Flightdeck downloads
+the reviewed version recorded in `compat/fenix/release.json`, not an arbitrary
+latest release. Installing Flightdeck itself does not install Fenix automatically.
+No GitHub login is needed for the public patch download. Download and activation
+of the purchased aircraft use the official Fenix software and your Fenix account.
 
-If Fenix cannot find MSFS, first check which Wine prefix launched the installer.
-A fresh prefix does not contain your simulator profile. Fenix reads `UserCfg.opt`
-and also checks the surrounding profile files; copying only that file can still
-fail detection. `InstalledPackagesPath` must resolve through that prefix's Wine
-drive mappings to the actual Packages folder. Use separate copies for initial
-tests instead of giving an untested installer write access to the live profile.
-Do not create empty files just to satisfy the detection check.
+For a local copy, extract the **Linux installer ZIP** and select the directory
+containing `bundle.json` under **Local patch bundle and restore**. A GitHub source
+checkout or the source-only archive lacks the Wine payload. Leaving this field
+blank uses the verified download/cache. The standalone `install.sh` provides the
+same setup without Flightdeck's panel and needs Python Tk for its graphical UI;
+the Flightdeck panel does not require Tk.
 
-If the installer used an isolated profile, its Community directory is also
-separate. With MSFS closed, copy the completed `fnx-aircraft-320` package into the
-Community folder shown by Flightdeck, without overwriting another installation.
-Refresh the mod list to verify the title and version. The test verified all
-2,076 copied files, and Flightdeck recognized the package. Future changes made
-by an installer still pointed at the test profile do not update that copy.
+#### Liveries
 
-Aircraft license activation, Fenix companion startup and its connection to MSFS
-remain separate live tests. A completed installation does not establish that
-cockpit displays or aircraft systems work under Wine. The Community package
-alone does not include the separate companion installation.
+**Open Fenix Installer / Liveries** opens the already installed official manager.
+Close the simulator and other Fenix applications first. The button becomes
+available when Flightdeck detects that manager in the selected Wine profile.
+Choose liveries for the exact aircraft, engine and wing variant. A321 liveries do
+not appear for A320; CFM/IAE and Sharklets variants can also have separate selection
+requirements. For example, an **A320 CFM SL** livery belongs to that Sharklets
+variant, not the A320 IAE. A livery does not add a separately sold aircraft.
 
-Obtain add-ons and their installers from their developers. Flightdeck's releases
-do not include aircraft packages, paid installers or account data.
+For a third-party download, check support for your Fenix version and simulator,
+extract the actual package into **Mods → Open Community folder**, then refresh the
+inventory. Its `manifest.json` must be directly inside the package folder.
+Restart MSFS and select the matching aircraft variant before choosing its livery.
+If it is listed in Flightdeck but absent in the simulator, recheck the aircraft,
+engine/wing variant, simulator version and extra archive directory level.
+
+#### Compatibility and recovery
+
+Tested cockpit: Fenix 2.4.0.4720, MSFS 2024 1.8.16.0 and Hyprland. PFD/ND/ECAM,
+MCDU, clock, FCU and radio rendering were verified. Full-flight testing remains
+outstanding. Weather radar is unavailable in the CPU renderer. The binary preview
+requires x86_64 Linux and glibc 2.38+; Flightdeck's full native package still requires
+glibc 2.39+. Other Wine/Proton builds, Steam prefixes and MSFS 2020 are outside this
+first patch's scope. The optional window guard hides matching
+service/display windows; the main Fenix application remains accessible.
+
+**Existing local Fenix patch** means a previous development setup is detected.
+That setup stays active and the new install button is disabled. There is no
+automatic migration; test a fresh install with a separate compatible runtime if
+needed. Disabled steps can also mean MSFS, Fenix or another setup job is still
+running, or the previous step has not finished. Close those applications and use
+**Reload status**. The official installer step also needs a selected EXE.
+
+**Restore original profile** restores the pre-patch runner, scripts and Windows
+profile. Settings and packages added inside the profile after patch installation
+stay in the retained newer profile; they are not merged into the restored one.
+External Community packages and
+Flightdeck's separate Xbox save storage are not removed. Interrupted patch setup
+blocks game launch and offers restore. The separate patch project contains full
+source/build instructions and a standalone installer:
+[fenix-a320-linux-patch](https://github.com/marselnenaj/fenix-a320-linux-patch).
+
+Fenix/Microsoft software and account data are not part of Flightdeck or the patch
+release. The official Fenix login and license activation remain required.

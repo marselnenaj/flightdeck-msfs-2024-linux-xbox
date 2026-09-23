@@ -67,8 +67,11 @@ def stage(args):
             raise ValueError(component + " patch checksum mismatch")
         # Do not inherit an enclosing checkout when staging under its build/.
         environment = dict(os.environ, GIT_CEILING_DIRECTORIES=str(target.parent))
-        subprocess.run(["git", "apply", "--check", str(patch)], cwd=target, env=environment, check=True)
-        subprocess.run(["git", "apply", str(patch)], cwd=target, env=environment, check=True)
+        # The small login patch uses zero-context hunks to avoid whitespace-only
+        # context lines in the shipped patch. Both the pristine upstream revision
+        # and every resulting source file are checked against pinned digests.
+        subprocess.run(["git", "apply", "--unidiff-zero", "--check", str(patch)], cwd=target, env=environment, check=True)
+        subprocess.run(["git", "apply", "--unidiff-zero", str(patch)], cwd=target, env=environment, check=True)
     runtime = destination / "runtime"
     shutil.copytree(REPO / "compat/runtime", runtime)
     expected = json.loads((REPO / "compat/source-deltas.json").read_text())

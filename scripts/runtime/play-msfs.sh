@@ -119,11 +119,114 @@ stop_owned_process() {
     if owned_process_alive "$pid"; then signal_owned_process "$pid" KILL; fi
     wait "$pid" 2>/dev/null || true
 }
+stop_fenix_companions() {
+    # Wine companions can detach from the game's Unix process group. Keep the
+    # runtime lease until their bounded shutdown has finished. Never use pkill
+    # or wineserver -k here: installers and other Wine profiles remain independent.
+    python3 - "$MSFS_LINUX_ROOT" 9>&- <<'FENIX_CLEANUP'
+import os, select, signal, subprocess, sys, time
+from pathlib import Path
+
+root = Path(sys.argv[1]).resolve()
+prefix = (root / 'local/msfs-prefix').resolve()
+names = {'fenix.exe', 'fenixbootstrapper.exe', 'fenixsystem.exe',
+         'fenixdisplay.exe', 'fenixcdu.exe', 'fenixwizzard.exe',
+         'fenix.gqlgateway.exe', 'fenixwindowguard.exe'}
+# The official FenixApp/installer, other aircraft and generic Wine services are
+# deliberately outside the session's companion list.
+handles = {}
+poller = select.poll()
+
+def collect():
+    for proc in Path('/proc').iterdir():
+        if not proc.name.isdecimal() or int(proc.name) in handles:
+            continue
+        fd = None
+        try:
+            if proc.stat().st_uid != os.getuid():
+                continue
+            # Hold the process identity before inspecting it, so a recycled PID
+            # can never receive a later signal intended for a departed helper.
+            fd = os.pidfd_open(int(proc.name))
+            values = (proc / 'environ').read_bytes().split(b'\0')
+            found = next((v[11:] for v in values if v.startswith(b'WINEPREFIX=')), None)
+            if found is None or Path(os.fsdecode(found)).resolve() != prefix:
+                continue
+            command = (proc / 'cmdline').read_bytes().split(b'\0', 1)[0]
+            name = os.fsdecode(command).strip().strip('"').replace('\\', '/').rsplit('/', 1)[-1].casefold()
+            if name not in names:
+                continue
+            poller.register(fd, select.POLLIN)
+            handles[int(proc.name)] = (fd, name)
+            fd = None
+        except (OSError, ValueError):
+            continue
+        finally:
+            if fd is not None:
+                os.close(fd)
+
+def live():
+    exited = {fd for fd, _ in poller.poll(0)}
+    return [(fd, name) for fd, name in handles.values() if fd not in exited]
+
+def wait_for_exit(seconds):
+    deadline = time.monotonic() + seconds
+    while live() and time.monotonic() < deadline:
+        time.sleep(.05)
+        collect()
+
+def send(number):
+    for fd, _ in live():
+        try:
+            signal.pidfd_send_signal(fd, number)
+        except ProcessLookupError:
+            pass
+
+try:
+    collect()
+    if handles:
+        wine = root / 'runner/files/bin/wine'
+        if wine.is_file():
+            env = dict(os.environ, WINEPREFIX=str(prefix), WINEDEBUG='-all')
+            env.pop('WINE_DLL_FILE_MAP', None)
+            env.pop('WINEDLLPATH', None)
+            env['WINEDLLOVERRIDES'] = 'winemenubuilder.exe=d'
+            # Wine taskkill without /F posts WM_CLOSE. Give Fenix a chance to
+            # persist settings before handling hidden/stuck companions below.
+            arguments = [str(wine), 'taskkill.exe']
+            for name in sorted({name for _, name in live()}):
+                arguments.extend(('/IM', name))
+            if len(arguments) > 2:
+                try:
+                    subprocess.run(arguments, env=env, stdin=subprocess.DEVNULL,
+                                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                                   close_fds=True, timeout=3, check=False)
+                except (OSError, subprocess.TimeoutExpired):
+                    pass
+        wait_for_exit(2)
+        collect()
+        send(signal.SIGTERM)
+        wait_for_exit(1)
+        collect()
+        send(signal.SIGKILL)
+        wait_for_exit(1)
+        print('Fenix session cleanup: %d companion processes, %d still running.' %
+              (len(handles), len(live())), flush=True)
+        if live():
+            raise SystemExit(1)
+finally:
+    for fd, _ in handles.values():
+        os.close(fd)
+FENIX_CLEANUP
+}
 cleanup() {
     local status=$?
     trap '' INT TERM
     if [[ -n "$MSFS_GAME_PID" ]] && (( ! MSFS_GAME_FINISHED )); then
         stop_owned_process "$MSFS_GAME_PID"
+    fi
+    if [[ -n "$MSFS_GAME_PID" ]]; then
+        stop_fenix_companions || printf '%s\n' 'Some Fenix companions could not be closed; check the private launcher log.' >&2
     fi
     if [[ -n "$MSFS_SERVICE_PID" ]]; then stop_owned_process "$MSFS_SERVICE_PID"; fi
     return "$status"

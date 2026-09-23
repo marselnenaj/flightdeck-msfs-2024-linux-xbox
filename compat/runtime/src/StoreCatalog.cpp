@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 // Public DisplayCatalog reader. Never a substitute for Store collection data.
 #include "StoreCatalog.h"
+#include <algorithm>
 #include <cmath>
 #include <set>
 #include <stdexcept>
@@ -55,6 +56,41 @@ std::vector<Text> localized(const Json &array, const char *title,
     entry.title = text(item.at(title));
     entry.description = text(item.at(description));
     entry.markets = strings(item.at("Markets"));
+    if (item.count("Images") && !item.at("Images").is_null()) {
+      const auto &images = item.at("Images");
+      if (!images.is_array() || images.size() > 128)
+        throw std::invalid_argument("images");
+      for (const auto &raw : images) {
+        Image image;
+        image.uri = text(raw.at("Uri"), 2048);
+        if (image.uri.rfind("//", 0) == 0)
+          image.uri.insert(0, "https:");
+        if (image.uri.rfind("https://", 0) != 0 ||
+            image.uri.size() <= 8 ||
+            std::any_of(image.uri.begin(), image.uri.end(), [](unsigned char c) {
+              return c <= 32 || c == 127 || c == '\\';
+            }))
+          throw std::invalid_argument("image uri");
+        const auto &width = raw.at("Width"), &height = raw.at("Height");
+        if (!width.is_number_unsigned() || !height.is_number_unsigned() ||
+            width.get<UINT64>() == 0 || height.get<UINT64>() == 0 ||
+            width.get<UINT64>() > 16384 || height.get<UINT64>() > 16384)
+          throw std::invalid_argument("image size");
+        image.width = width.get<UINT32>();
+        image.height = height.get<UINT32>();
+        if (raw.count("Caption") && !raw.at("Caption").is_null())
+          image.caption = text(raw.at("Caption"), 1024);
+        image.purpose = text(raw.at("ImagePurpose"), 128);
+        entry.images.push_back(std::move(image));
+      }
+    }
+    if (item.count("SearchTitles") && !item.at("SearchTitles").is_null()) {
+      const auto &titles = item.at("SearchTitles");
+      if (!titles.is_array() || titles.size() > 128)
+        throw std::invalid_argument("search titles");
+      for (const auto &raw : titles)
+        entry.keywords.push_back(text(raw.at("SearchTitleString"), 256));
+    }
     result.push_back(std::move(entry));
   }
   return result;

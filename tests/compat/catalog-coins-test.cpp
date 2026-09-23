@@ -21,6 +21,17 @@ static INT64 now_utc() {
 static Json complete_fixture() {
   Json f = fixture();
   auto &p = f["Product"], &s = p["DisplaySkuAvailabilities"][0]["Sku"];
+  p["LocalizedProperties"][0]["Images"] = Json::array(
+      {{{"Uri", "//store-images.s-microsoft.com/synthetic-product"},
+        {"Width", 640}, {"Height", 480}, {"Caption", "Product art"},
+        {"ImagePurpose", "BoxArt"}}});
+  p["LocalizedProperties"][0]["SearchTitles"] = Json::array(
+      {{{"SearchTitleString", "Synthetic flight"},
+        {"SearchTitleType", "AddOnKeyword"}}});
+  s["LocalizedProperties"][0]["Images"] = Json::array(
+      {{{"Uri", "https://store-images.s-microsoft.com/synthetic-sku"},
+        {"Width", 320}, {"Height", 240}, {"Caption", nullptr},
+        {"ImagePurpose", "Screenshot"}}});
   p["MarketProperties"] =
       Json::array({{{"Markets", Json::array({"AT"})},
                     {"RelatedProducts",
@@ -74,7 +85,8 @@ static HRESULT WINAPI mock_join(void *account,
   *out = nullptr;
   if (account != reinterpret_cast<void *>(0x1234) || count != 1 ||
       strcmp(requests[0].store_id, "ABCD1234EFGH/0001") ||
-      requests[0].kind != 16)
+      requests[0].kind !=
+          (source["Product"]["ProductKind"] == "Durable" ? 2u : 16u))
     return E_INVALIDARG;
   if (response_mode == 2)
     return E_NOTIMPL;
@@ -88,10 +100,10 @@ static HRESULT WINAPI mock_join(void *account,
   if (response_mode == 1) {
     XodusStoreCollectionItem item{};
     memcpy(item.store_id, requests[0].store_id, 18);
-    item.kind = 16;
+    item.kind = requests[0].kind;
     item.acquired_date = item.start_date = v.observed_at - 100;
     item.end_date = v.observed_at + 1000;
-    item.quantity = 7;
+    item.quantity = item.kind == 2 ? 1 : 7;
     item.campaign_id = "synthetic-campaign";
     item.developer_offer_id = "synthetic-offer";
     snap->items.push_back(item);
@@ -139,12 +151,22 @@ int main() {
     check("desktop-price-ignores-mobile-zero",
           p.price.price == 10.25f && strcmp(p.price.currencyCode, "EUR") == 0 &&
               p.skusCount == 1 && p.skus[0].availabilitiesCount == 1);
+    check("localized-media-and-search-title",
+          p.imagesCount == 1 && p.images[0].width == 640 &&
+              strcmp(p.images[0].uri,
+                     "https://store-images.s-microsoft.com/synthetic-product") == 0 &&
+              strcmp(p.images[0].imagePurposeTag, "BoxArt") == 0 &&
+              p.keywordsCount == 1 &&
+              strcmp(p.keywords[0], "Synthetic flight") == 0 &&
+              p.skus[0].imagesCount == 1 &&
+              p.skus[0].images[0].caption == nullptr);
     check("store-absence-not-wallet-balance",
           !p.isInUserCollection && !p.skus[0].isInUserCollection &&
               p.skus[0].collectionData.quantity == 0);
     source = nullptr;
     check("page-outlives-catalog-plan-and-snapshot",
           strcmp(p.title, "Synthetic coins") == 0 &&
+              strcmp(p.images[0].caption, "Product art") == 0 &&
               strcmp(p.skus[0].skuId, "0001") == 0 &&
               strcmp(p.skus[0].availabilities[0].availabilityId,
                      "SYNTHETIC-AVAILABILITY") == 0);
@@ -192,7 +214,26 @@ int main() {
   negative("foreign-sellable-by", bad);
   bad = complete_fixture();
   bad["Product"]["ProductKind"] = "Durable";
-  negative("shared-durable-remains-unsupported", bad);
+  source = bad;
+  response_mode = 3;
+  page = reinterpret_cast<XodusStoreProductPage *>(1);
+  check("unknown-durable-never-becomes-not-owned",
+        FAILED(query(&page)) && !page);
+  response_mode = 0;
+  page = reinterpret_cast<XodusStoreProductPage *>(1);
+  check("invalid-negative-durable-rejected",
+        FAILED(query(&page)) && !page);
+  response_mode = 1;
+  page = nullptr;
+  check("positive-package-free-durable",
+        query(&page) == S_OK && page && page->product_count == 1 &&
+            page->products[0].productKind == XStoreProductKind::Durable &&
+            page->products[0].isInUserCollection &&
+            page->products[0].skus[0].isInUserCollection &&
+            page->products[0].skus[0].collectionData.quantity == 1);
+  if (page)
+    release_coin_page(page);
+  response_mode = 0;
   bad = complete_fixture();
   bad["Product"]["DisplaySkuAvailabilities"][0]["Sku"]["Properties"]
      ["IsTrial"] = true;
@@ -217,6 +258,13 @@ int main() {
   bad["Product"]["DisplaySkuAvailabilities"][0]["Availabilities"][0]
      ["Conditions"]["StartDate"] = "1753-01-01T00:00:00.Z";
   negative("empty-fraction", bad);
+  bad = complete_fixture();
+  bad["Product"]["LocalizedProperties"][0]["Images"][0]["Uri"] =
+      "file:///etc/passwd";
+  negative("non-https-image-uri", bad);
+  bad = complete_fixture();
+  bad["Product"]["LocalizedProperties"][0]["Images"][0]["Width"] = 640.5;
+  negative("fractional-image-width", bad);
   source = complete_fixture();
   int before = joins;
   page = nullptr;
@@ -247,6 +295,47 @@ int main() {
   SetEnvironmentVariableA("XODUS_STORE_MARKET", "AT");
   SetEnvironmentVariableA("XODUS_STORE_LANGUAGE", "");
   check("empty-language", catalog_locale(&m, &l) == E_INVALIDARG);
+  // Entitlement enumeration must retain owned, withdrawn SKUs even when no
+  // purchase offer exists. Multiple owned SKUs form one product and one page.
+  source = complete_fixture();
+  source["Product"]["ProductKind"] = "Durable";
+  auto &owned_skus = source["Product"]["DisplaySkuAvailabilities"];
+  owned_skus[0]["Availabilities"] = Json::array();
+  owned_skus.push_back(owned_skus[0]);
+  owned_skus[1]["Sku"]["SkuId"] = "0002";
+  owned_skus[1]["Sku"]["Properties"]["Packages"] = Json::array({Json::object()});
+  Product owned_catalog;
+  check("owned-catalog-without-purchase-offers", parse(source.dump(), "ABCD1234EFGH", true, &owned_catalog) == S_OK);
+  CoinPlan owned_plan;
+  std::vector<XodusStoreCollectionRequestItem> owned_requests;
+  check("owned-multiple-sku-plan", plan_coins({owned_catalog}, {"ABCD1234EFGH/0001", "ABCD1234EFGH/0002"}, 2, {},
+      "PARENT123456", "AT", "en-US", now_utc(), &owned_plan, &owned_requests, true) == S_OK && owned_requests.size() == 2);
+  XodusStoreCollectionItem owned_items[2]{};
+  for (size_t i = 0; i < 2; ++i) {
+    strcpy(owned_items[i].store_id, i ? "ABCD1234EFGH/0002" : "ABCD1234EFGH/0001");
+    owned_items[i].kind = 2; owned_items[i].quantity = 1;
+    owned_items[i].acquired_date = owned_items[i].start_date = 1;
+    owned_items[i].end_date = now_utc() + 300;
+  }
+  XodusStoreCollectionSnapshot owned_snapshot{};
+  owned_snapshot.structure_size = sizeof(owned_snapshot);
+  owned_snapshot.direct_coverage = owned_snapshot.satisfying_coverage = 1;
+  owned_snapshot.observed_at = now_utc(); owned_snapshot.expires_at = now_utc() + 30;
+  owned_snapshot.items = owned_items; owned_snapshot.item_count = 2;
+  const std::string next(64, 'a');
+  page = nullptr;
+  check("owned-skus-grouped-with-cursor", coin_page(owned_plan, &owned_snapshot, now_utc(), &page, next.c_str()) == S_OK && page &&
+      page->product_count == 1 && page->products[0].skusCount == 2 && page->products[0].isInUserCollection &&
+      page->products[0].hasDigitalDownload && page->products[0].skus[0].availabilitiesCount == 0 &&
+      !strcmp(page->products[0].skus[1].skuId, "0002") && !strcmp(page->continuation, next.c_str()));
+  if (page) release_coin_page(page);
+  owned_snapshot.item_count = 1; page = nullptr;
+  check("missing-owned-sku-is-not-empty-success", FAILED(coin_page(owned_plan, &owned_snapshot, now_utc(), &page)) && !page);
+  owned_snapshot.item_count = 2; owned_items[1].end_date = now_utc()-1;
+  check("expired-owned-sku-rejected", FAILED(coin_page(owned_plan, &owned_snapshot, now_utc(), &page)) && !page);
+  check("complete-empty-inventory-plan", plan_coins({}, {}, 2, {}, "PARENT123456", "AT", "en-US", now_utc(), &owned_plan, &owned_requests, true) == S_OK);
+  check("complete-empty-inventory-page", coin_page(owned_plan, nullptr, now_utc(), &page) == S_OK && page && page->product_count == 0);
+  if (page) release_coin_page(page);
   std::printf("coin-provider checks=%d failures=%d external_requests=0\n",
               checks, failures);
   return failures ? 1 : 0;

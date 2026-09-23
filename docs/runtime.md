@@ -8,16 +8,25 @@ required for that workflow.
 
 This page covers the advanced import and developer staging of existing files.
 The launcher accepts a prepared runtime directory. Its required entry point is
-`tools/play-msfs.sh`; the game is at `games/MSFS2024/FlightSimulator2024.exe`, the
-isolated prefix at `local/msfs-prefix`, and optional local saves at
-`private/local-saves`. The encrypted package's `.xodus-streaming.msixvc` and
+`tools/play-msfs.sh`, the isolated prefix is at `local/msfs-prefix`, and optional
+local saves are at `private/local-saves`. Each simulator uses a separate runtime:
+
+| `private/runtime.json` game ID | Game executable | Default runtime directory |
+| --- | --- | --- |
+| `msfs2024` | `games/MSFS2024/FlightSimulator2024.exe` | `~/.local/share/flightdeck/runtimes/msfs2024` |
+| `msfs2020` | `games/MSFS2020/FlightSimulator.exe` | `~/.local/share/flightdeck/runtimes/msfs2020` |
+
+The data root follows `XDG_DATA_HOME` when configured. Missing edition metadata
+is treated as legacy MSFS 2024; invalid or conflicting identities are rejected.
+Selecting an edition changes the runtime, Community inventory, update target and
+save storage together. The encrypted package's `.xodus-streaming.msixvc` and
 MicrosoftGame.Config must remain alongside the game. Xodus obtains and checks
 the user's actual entitlement; the compatibility code does not grant licenses.
 
 ## Advanced: prepare a runtime from existing files
 
-The installed launcher provides the same preparation logic under **Einrichtung
-→ Neue Runtime vorbereiten**. Select the input folders, review the checks and
+The installed launcher provides the same preparation logic under **Install MSFS
+→ Prepare a new runtime**. Select the edition and input folders, review the checks and
 start setup. Folder picker buttons appear when zenity or kdialog is available;
 paths can always be entered directly. A new runtime is built in a temporary
 directory and published only after successful verification. Cancelling removes
@@ -44,6 +53,10 @@ python3 scripts/stage-runtime.py \
   --prefix "$PREPARED_WINE_PREFIX" --destination "$NEW_RUNTIME_DIRECTORY" \
   --market "$STORE_COUNTRY_CODE" --local-saves
 ```
+
+This command-line helper currently stages MSFS 2024. For a prepared MSFS 2020
+runtime, select that edition in Flightdeck's setup form; the helper has no
+`--game-id` option.
 
 The command verifies artifact hashes and the runner ABI fingerprint, copies
 the prefix using reflinks where available, links the supplied game and runner,
@@ -82,24 +95,48 @@ IPC socket beneath XDG_RUNTIME_DIR, starts its broker, forwards termination
 signals, and returns the actual game process exit status. Private logs remain
 under the runtime's `private/` directory.
 
-The loader wrapper preserves Xodus's inherited memory-file descriptors and
-creates only a temporary sparse executable containing PE headers. It does not
+The loader wrapper preserves Xodus's inherited memory-file descriptors and the
+simulator's executable basename in a temporary launch directory, with resource
+aliases alongside it. The sparse executable contains only PE headers. It does not
 write a decrypted executable or obtain a license itself. Temporary launch
-headers are removed when the wrapper exits. The game and prefix paths must
+headers and aliases are removed when the wrapper exits. The game and prefix paths must
 match this runtime configuration.
+
+## Optional Fenix profile
+
+Fenix support is selected explicitly under **Mods → Fenix A320** for MSFS 2024.
+The patch creates its own runner/profile copies and records install/restore
+state in `private/fenix-linux-patch.json`. Its original runner, Windows profile
+and launch scripts remain available for restore. Launch reads the completed
+patch state before enabling the Fenix compatibility settings and window helper.
+An interrupted transaction blocks game launch until recovered.
+
+The `private/fenix-compat.json` marker belongs to earlier local development
+setups. Flightdeck recognizes it and does not automatically replace that setup.
+Do not remove a marker to bypass runner checks. For an installation test, use a
+separate compatible runtime and separate launcher state:
+
+```sh
+flightdeck --runtime "$TEST_RUNTIME_DIRECTORY" --state-dir "$TEST_LAUNCHER_STATE"
+```
+
+The runtime must already be independently prepared; `--state-dir` alone does
+not copy it. See [Fenix installation and recovery](addons.md#fenix-a320).
 
 ## Current limits
 
 Native play has reached a cockpit in development. This is an experimental
 compatibility layer with a bounded read-only Store integration: explicit queries
-can return simple consumable products, public desktop prices and actual
-Store-account collection data. The catalog must establish the game's association
+can return supported consumable/Durable products, public desktop prices and actual
+Store-account collection data. Owned add-ons can be enumerated for the current
+title and supported Durable handles require signed license grants.
+The catalog must establish the game's association
 and the supported product shape. Unverified ownership and unsupported product
 shapes produce an error. See [the Collections contract](marketplace-collections.md)
 for the scope and validation level.
 
-Whole-title DLC inventory, purchase dialogs and consumable fulfillment remain
-unverified. The launcher supports full-package updates, integrity checks and
+Full DLC coverage remains unverified; purchase dialogs, device-shared DLC rights
+and consumable fulfillment are unsupported. The launcher supports full-package updates, integrity checks and
 repairs; see [game updates](game-updates.md). Cloud saves synchronize automatically
 before a managed game starts and after it exits, with local backups and explicit
 conflict choices. The local save provider does not synchronize during gameplay.

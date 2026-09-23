@@ -77,6 +77,62 @@ HRESULT catalog_locale(std::string *market, std::string *language) {
   return S_OK;
 }
 
+HRESULT query_entitled(CatalogReader &reader, const InventoryProvider &provider,
+                       void *store_account, const std::string &parent,
+                       const std::string &market, const std::string &language,
+                       UINT32 kinds, UINT32 page_size, const char *cursor,
+                       volatile LONG *cancelled, XodusStoreProductPage **out) {
+  if (!out) return E_POINTER;
+  *out = nullptr;
+  if (!provider.query || !provider.release) return E_NOTIMPL;
+  page_size = std::min(page_size, 100u);
+  if (!store_account || !cancelled || !root_id(parent) || !kinds ||
+      (kinds & ~31u) || !page_size || page_size > 100) return E_INVALIDARG;
+  if (cancelled_now(cancelled)) return E_ABORT;
+  try {
+    XodusStoreCollectionSnapshot *raw = nullptr;
+    HRESULT hr = provider.query(store_account, kinds, page_size, market.c_str(), cursor, cancelled, &raw);
+    std::unique_ptr<XodusStoreCollectionSnapshot, decltype(provider.release)> snapshot(raw, provider.release);
+    if (FAILED(hr)) return diagnose("inventory", hr);
+    if (cancelled_now(cancelled)) return E_ABORT;
+    const auto now = now_utc();
+    if (!snapshot || snapshot->structure_size != sizeof(*snapshot) ||
+        snapshot->direct_coverage != 1 || snapshot->satisfying_coverage != 1 || snapshot->shared_coverage != 0 ||
+        snapshot->unknown_count || snapshot->absent_count || snapshot->item_count > 100 ||
+        (snapshot->item_count && !snapshot->items) || snapshot->observed_at < 0 ||
+        snapshot->observed_at > now || snapshot->expires_at <= now || snapshot->expires_at - snapshot->observed_at > 30 ||
+        !memchr(snapshot->continuation, 0, sizeof(snapshot->continuation))) return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
+    std::vector<std::string> ids, roots;
+    for (UINT32 i = 0; i < snapshot->item_count; ++i) {
+      const auto &item = snapshot->items[i];
+      if (strnlen(item.store_id, sizeof(item.store_id)) != 17 || item.store_id[12] != '/' ||
+          !root_id(std::string(item.store_id, 12)) || !(item.kind & kinds)) return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
+      ids.emplace_back(item.store_id);
+      roots.emplace_back(item.store_id, 12);
+    }
+    std::vector<Product> products;
+    if (!roots.empty()) {
+      hr = reader.read(roots, market, language, cancelled, &products, GetTickCount64() + 25000, true);
+      if (FAILED(hr)) return diagnose("inventory-catalog", hr);
+    }
+    CoinPlan plan;
+    std::vector<XodusStoreCollectionRequestItem> requests;
+    hr = plan_coins(products, ids, kinds, {}, parent, market, language, now_utc(), &plan, &requests, true);
+    if (FAILED(hr)) return diagnose("inventory-mapping", hr);
+    if (cancelled_now(cancelled)) return E_ABORT;
+    if (snapshot->expires_at <= now_utc()) return HRESULT_FROM_WIN32(ERROR_TIMEOUT);
+    hr = coin_page(plan, snapshot.get(), now_utc(), out, snapshot->continuation);
+    if (SUCCEEDED(hr) && (*out)->product_count > page_size) {
+      release_coin_page(*out); *out = nullptr; return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
+    }
+    if (SUCCEEDED(hr) && cancelled_now(cancelled)) {
+      release_coin_page(*out); *out = nullptr; return E_ABORT;
+    }
+    return diagnose("inventory-page", hr);
+  } catch (const std::bad_alloc &) { return E_OUTOFMEMORY; }
+    catch (...) { return HRESULT_FROM_WIN32(ERROR_INVALID_DATA); }
+}
+
 HRESULT query_coins(CatalogReader &reader, const CollectionsProvider &provider,
                     void *store_account, const std::string &parent,
                     const std::string &market, const std::string &language,

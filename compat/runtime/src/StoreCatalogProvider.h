@@ -10,6 +10,16 @@ struct CollectionsProvider {
                          XodusStoreCollectionSnapshot **);
   void(WINAPI *release)(XodusStoreCollectionSnapshot *);
 };
+struct InventoryProvider {
+  HRESULT(WINAPI *query)(void *, UINT32, UINT32, const char *, const char *,
+                         volatile LONG *, XodusStoreCollectionSnapshot **);
+  void(WINAPI *release)(XodusStoreCollectionSnapshot *);
+};
+HRESULT query_entitled(CatalogReader &reader, const InventoryProvider &provider,
+                       void *store_account, const std::string &parent,
+                       const std::string &market, const std::string &language,
+                       UINT32 kinds, UINT32 page_size, const char *cursor,
+                       volatile LONG *cancelled, XodusStoreProductPage **out);
 // Inputs are borrowed only for this call. A successful page owns all output
 // strings/arrays and must be released using release_coin_page.
 HRESULT query_coins(CatalogReader &reader, const CollectionsProvider &provider,

@@ -251,6 +251,14 @@ class BackendTests(unittest.TestCase):
             "xodus-title-auth: host=user.auth.xboxlive.com status=200 token=" + secrets[0],
             "[xodus-gamesave] local_init enabled=1 sync_on_demand=0 hr=00000000",
             "[xodus-gamesave] local_init enabled=1 sync_on_demand=1 hr=80004001",
+            "[xodus-store] XStoreShowPurchaseUIAsync store_id=ABCD1234EFGH hr=80004001 token=" + secrets[0],
+            "[xodus-store] XStoreAcquireLicenseForDurablesAsync store_id=ABCD1234EFGH hr=80004001",
+            "[xodus-store] XStoreQueryGameAndDlcPackageUpdatesAsync hr=80004001",
+            "[xodus-store-query] kind=1 hr=80004001 account=" + secrets[1],
+            "[xodus-store-query] kind=4 hr=00000000 token=" + secrets[0],
+            "[xodus-store-query] kind=6 hr=00000000 account=" + secrets[1],
+            "[xodus-store-query] kind=7 hr=00000000",
+            "[xodus-store-query] kind=9 hr=00000000",
             "xodus-wine-launch: wine_pid=123 exit_code=0 elapsed_seconds=12.5",
         ))
         run = self.write_log(log)
@@ -264,6 +272,15 @@ class BackendTests(unittest.TestCase):
         self.assertEqual(result["summary"]["local_save_init"], [
             {"enabled": 1, "sync_on_demand": 0, "hresult": "00000000"},
             {"enabled": 1, "sync_on_demand": 1, "hresult": "80004001"},
+        ])
+        self.assertEqual(result["summary"]["store_calls"], [
+            {"method": "XStoreAcquireLicenseForDurablesAsync", "hresult": "00000000"},
+            {"method": "XStoreAcquireLicenseForDurablesAsync", "hresult": "80004001"},
+            {"method": "XStoreQueryEntitledProductsAsync", "hresult": "80004001"},
+            {"method": "XStoreQueryGameAndDlcPackageUpdatesAsync", "hresult": "00000000"},
+            {"method": "XStoreQueryGameAndDlcPackageUpdatesAsync", "hresult": "80004001"},
+            {"method": "XStoreQueryProductsAsync", "hresult": "00000000"},
+            {"method": "XStoreShowPurchaseUIAsync", "hresult": "80004001"},
         ])
         self.assertEqual(result["summary"]["exit"], {"code": 0, "seconds": 12.5})
         self.assertEqual((run / "game.log").read_bytes(), before)
@@ -546,6 +563,79 @@ while not (root/'private/game-done').exists() or kind=='service':time.sleep(.01)
             child.wait(timeout=8)
             self.assertTrue((self.runtime / "private/game-stopped").exists())
             self.assertTrue((self.runtime / "private/service-stopped").exists())
+            self.assert_competitor_blocked()
+
+    def fenix_companion(self, name, label, *, other_prefix=False, stubborn=False):
+        ready = self.base / (label + "-ready")
+        stopped = self.base / (label + "-stopped")
+        code = """
+import os,signal,sys,time
+from pathlib import Path
+def stop(number,frame):
+    Path(sys.argv[2]).write_text(str(number));raise SystemExit(0)
+signal.signal(signal.SIGUSR1,stop)
+signal.signal(signal.SIGTERM,signal.SIG_IGN if sys.argv[3]=='stubborn' else stop)
+Path(sys.argv[1]).write_text(str(os.getpid()))
+while True:time.sleep(.01)
+"""
+        prefix = self.base / "other-prefix" if other_prefix else self.runtime / "local/msfs-prefix"
+        process = subprocess.Popen([name, "-c", code, str(ready), str(stopped), "stubborn" if stubborn else "normal"],
+            executable=sys.executable, env=dict(os.environ, WINEPREFIX=str(prefix)),
+            start_new_session=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        self.children.append(process)
+        self.wait_for(ready.exists)
+        return process, stopped
+
+    def test_game_exit_closes_detached_fenix_gracefully_and_preserves_other_apps(self):
+        environment = self.managed_fixture()
+        companion, stopped = self.fenix_companion(r"C:\Program Files\FenixSim A320\Fenix.exe", "fenix")
+        survivors = [self.fenix_companion("Fenix.exe", "other-fenix", other_prefix=True)[0],
+                     self.fenix_companion("FenixApp.exe", "manager")[0],
+                     self.fenix_companion("OtherAircraft.exe", "aircraft")[0]]
+        wine = self.runtime / "runner/files/bin/wine"; wine.parent.mkdir(parents=True)
+        arguments = self.base / "taskkill-arguments"
+        wine.write_text("#!" + sys.executable + "\nimport json,os,signal,sys\nfrom pathlib import Path\n"
+            + f"Path({str(arguments)!r}).write_text(json.dumps(sys.argv[1:]))\n"
+            + f"os.kill({companion.pid},signal.SIGUSR1)\n")
+        wine.chmod(0o700)
+        self.launcher.reserve_setup(); self.launcher.managed_session = "synthetic-session"
+        with self.launcher.runtime_lock(operation="cloud_session") as fd, patch.dict(os.environ, environment):
+            child = self.launcher._spawn_reserved(fd); self.children.append(child)
+            self.wait_for(lambda: (self.runtime / "private/game-ready").exists())
+            (self.runtime / "private/game-done").touch()
+            self.assertEqual(child.wait(timeout=10), 0)
+            self.assertEqual(companion.wait(timeout=1), 0)
+            self.assertEqual(stopped.read_text(), str(signal.SIGUSR1))
+            self.assertEqual(json.loads(arguments.read_text()), ["taskkill.exe", "/IM", "fenix.exe"])
+            self.assertTrue(all(process.poll() is None for process in survivors))
+            self.assert_competitor_blocked()
+
+    def test_launcher_stop_cleans_stuck_detached_fenix_before_releasing_runtime(self):
+        environment = self.managed_fixture()
+        companion, stopped = self.fenix_companion("FenixDisplay.exe", "display", stubborn=True)
+        self.launcher.reserve_setup(); self.launcher.managed_session = "synthetic-session"
+        with self.launcher.runtime_lock(operation="cloud_session") as fd, patch.dict(os.environ, environment):
+            child = self.launcher._spawn_reserved(fd); self.children.append(child)
+            self.wait_for(lambda: (self.runtime / "private/game-ready").exists())
+            self.launcher.stop(); child.wait(timeout=12)
+            self.assertEqual(companion.wait(timeout=1), -signal.SIGKILL)
+            self.assertFalse(stopped.exists())
+            self.assertTrue((self.runtime / "private/service-stopped").exists())
+            self.assert_competitor_blocked()
+
+    def test_game_crash_closes_detached_fenix_and_preserves_exit_code(self):
+        environment = self.managed_fixture()
+        game = self.runtime / "tools/launch-msfs.sh"
+        game.write_text(game.read_text() + "\nraise SystemExit(42)\n")
+        companion, stopped = self.fenix_companion("FenixSystem.exe", "system")
+        self.launcher.reserve_setup(); self.launcher.managed_session = "synthetic-session"
+        with self.launcher.runtime_lock(operation="cloud_session") as fd, patch.dict(os.environ, environment):
+            child = self.launcher._spawn_reserved(fd); self.children.append(child)
+            self.wait_for(lambda: (self.runtime / "private/game-ready").exists())
+            (self.runtime / "private/game-done").touch()
+            self.assertEqual(child.wait(timeout=10), 42)
+            self.assertEqual(companion.wait(timeout=1), 0)
+            self.assertEqual(stopped.read_text(), str(signal.SIGTERM))
             self.assert_competitor_blocked()
 
     def test_managed_legacy_default_socket_ignores_inherited_other_runtime(self):

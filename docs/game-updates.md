@@ -1,5 +1,10 @@
 # MSFS base-game updates
 
+Select **MSFS 2024** or **MSFS 2020** in the overview before opening **Updates**.
+Checks, repair and rollback apply to that edition's runtime and base-game
+package. Switching editions clears the previous online check. Edition selection
+is available in [Flightdeck 0.1.1](changelog.md).
+
 The launcher can explicitly check the installed Microsoft Store / Xbox PC base
 game against current authenticated Store package metadata. It reads the real
 `MicrosoftGame.Config` identity, Store ID and four-part game version. Opening
@@ -10,6 +15,9 @@ This covers the base package and executable version. Additional streamed game
 content and Marketplace content continue to use the MSFS library. Community
 add-ons and their installers have their own update mechanisms. No mandatory
 update or add-on compatibility claim is inferred from a version comparison.
+Flightdeck's own launcher/component updates are described in
+[Update and rollback](install.md#update-and-rollback); Fenix uses its separate
+[setup and official installer](addons.md#fenix-a320).
 
 ## Applying an update
 

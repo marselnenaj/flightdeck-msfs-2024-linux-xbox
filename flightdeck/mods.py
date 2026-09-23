@@ -77,10 +77,11 @@ def _configured_path(raw, prefix):
 
 
 def _family(runtime):
+    from . import games
     # MSIX's publisher ID is the first 64 SHA-256 bits of the exact UTF-16LE
     # publisher string, encoded MSB-first with the documented base32 alphabet.
     for spelling in ("MicrosoftGame.Config", "MicrosoftGame.config"):
-        path = runtime / "games/MSFS2024" / spelling
+        path = games.path(runtime) / spelling
         if path.exists():
             data = _read(path, CONFIG_LIMIT)
             if b"<!DOCTYPE" in data.upper() or b"<!ENTITY" in data.upper():
@@ -99,6 +100,7 @@ def _family(runtime):
 
 
 def _locations(runtime):
+    from . import games
     prefix = runtime / "local/msfs-prefix"
     candidates = []
     settings = runtime / "private/runtime.json"
@@ -119,7 +121,7 @@ def _locations(runtime):
         if not profile.is_dir():
             continue
         base = Path(profile.path)
-        configs = [base / "AppData/Roaming/Microsoft Flight Simulator 2024/UserCfg.opt"]
+        configs = [base / "AppData/Roaming" / games.for_runtime(runtime).user_config / "UserCfg.opt"]
         if family:
             configs.append(base / "AppData/Local/Packages" / family / "LocalCache/UserCfg.opt")
         for config in configs:

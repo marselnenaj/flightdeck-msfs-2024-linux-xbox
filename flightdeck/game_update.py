@@ -28,13 +28,14 @@ from .game_install import (MSFS_STORE_ID, RESUME_FEATURE, verify_cli, run_cli,
                            download_game, _stop_owned)
 from .setup import SetupError, interrupted
 from .mods import _read
+from . import games
 
 FEATURE = "package-info-json-v1"
 
 
-def installed_identity(game):
+def installed_identity(game, *, game_id="msfs2024"):
     from .game_integrity import installed_identity as read_identity
-    return read_identity(game)
+    return read_identity(game, game_id=game_id)
 
 
 class UpdateError(SetupError):
@@ -54,7 +55,8 @@ def version(value):
     return parts
 
 
-def installed(game, *, data=None):
+def installed(game, *, data=None, game_id="msfs2024"):
+    game_spec = games.select(game_id)
     config = game / "MicrosoftGame.Config"
     if not config.exists():
         config = game / "MicrosoftGame.config"
@@ -68,7 +70,7 @@ def installed(game, *, data=None):
         root = ET.fromstring(text)
         identity = [n for n in root.iter() if n.tag.rsplit("}", 1)[-1] == "Identity"]
         stores = [n for n in root.iter() if n.tag.rsplit("}", 1)[-1] == "StoreId"]
-        if len(identity) != 1 or len(stores) != 1 or stores[0].text != MSFS_STORE_ID:
+        if len(identity) != 1 or len(stores) != 1 or stores[0].text != game_spec.store_id:
             raise ValueError()
         attrs = identity[0].attrib
         result = {"name": attrs["Name"], "publisher": attrs["Publisher"], "version": attrs["Version"]}
@@ -146,7 +148,7 @@ def package_info(cli, expected, runtime, market, cancel):
     # Even an unexpected CLI failure cannot accumulate unbounded output or
     # expose a URL. Only the strict JSON projection below leaves this function.
     with tempfile.TemporaryFile() as output:
-        process = subprocess.Popen([str(path), "package-info", MSFS_STORE_ID, "--market", market],
+        process = subprocess.Popen([str(path), "package-info", games.for_runtime(runtime).store_id, "--market", market],
                                    cwd=runtime / "private", env=environment, stdin=subprocess.DEVNULL,
                                    stdout=output, stderr=subprocess.DEVNULL, close_fds=True,
                                    start_new_session=True, umask=0o077)
@@ -166,13 +168,13 @@ def package_info(cli, expected, runtime, market, cancel):
             value = json.loads(output.read(8193))
         finally:
             _stop_owned(process)
-    return validate_info(value)
+    return validate_info(value, game_id=games.for_runtime(runtime).id)
 
 
-def validate_info(value):
+def validate_info(value, *, game_id="msfs2024"):
     keys = {"schema", "store_id", "version", "version_id", "content_id", "package_identity", "size_bytes"}
     try:
-        if not isinstance(value, dict) or set(value) != keys or type(value["schema"]) is not int or value["schema"] != 1 or value["store_id"] != MSFS_STORE_ID:
+        if not isinstance(value, dict) or set(value) != keys or type(value["schema"]) is not int or value["schema"] != 1 or value["store_id"] != games.select(game_id).store_id:
             raise ValueError()
         version(value["version"])
         for key in ("content_id",):
@@ -250,12 +252,13 @@ def check(launcher, data, *, notify, cancel, source_root=None):
         from .game_integrity import FEATURE as INTEGRITY_FEATURE
         if INTEGRITY_FEATURE not in features:
             raise UpdateError("Für eine vollständige Reparatur mit Prüfnachweis bitte das aktuelle Flightdeck-Paket installieren.")
-    current = installed_identity(runtime / "games/MSFS2024")
+    game_spec = games.for_runtime(runtime)
+    current = installed_identity(games.path(runtime), game_id=game_spec.id)
     # If user data lives inside the package, swapping the path may hide it.
     # Require an explicit move in the game rather than guessing what to copy.
     from .mods import _locations
     locations, limited = _locations(runtime)
-    target = (runtime / "games/MSFS2024").resolve(strict=True)
+    target = games.path(runtime).resolve(strict=True)
     if limited or any(path.is_relative_to(target) for path, _ in locations):
         raise UpdateError("Community- oder Benutzerpakete liegen im Spielpaket. Diese bitte zuerst im Spiel in einen separaten Paketordner verschieben.")
     market = configured_market(runtime)
@@ -276,18 +279,19 @@ def check(launcher, data, *, notify, cancel, source_root=None):
 
 
 def _history_record(runtime, path):
+    game_spec = games.for_runtime(runtime)
     value = json.loads(_read(path, 16384))
-    if value.get("format") != 1 or not re.fullmatch(r"\.MSFS2024-before-[0-9a-f]{32}", value.get("previous_entry", "")):
+    if value.get("format") != 1 or not re.fullmatch(rf"\.{game_spec.directory}-before-[0-9a-f]{{32}}", value.get("previous_entry", "")):
         raise ValueError()
     previous = runtime / "games" / value["previous_entry"]
     target = Path(value["new_target"])
     if not target.is_absolute() or not target.is_relative_to(runtime / "private/game-updates"):
         raise ValueError()
     # The pointer itself resolves a crash between exchange and journal update.
-    active = runtime / "games/MSFS2024"
+    active = games.path(runtime)
     if not active.is_symlink() or active.resolve() != target or not previous.exists():
         raise ValueError()
-    if installed_identity(active) != value["new_identity"] or installed_identity(previous) != value["old_identity"]:
+    if installed_identity(active, game_id=game_spec.id) != value["new_identity"] or installed_identity(previous, game_id=game_spec.id) != value["old_identity"]:
         raise ValueError()
     return value, previous
 
@@ -305,10 +309,11 @@ def _history(runtime):
 
 def install(launcher, plan, *, notify, cancel, control, committing, transfer=None):
     runtime = plan.runtime
+    game_spec = games.for_runtime(runtime)
     with launcher.runtime_lock(operation="game_update"):
         _private(runtime / "private")
         _private(runtime / "games")
-        if launcher.runtime != runtime or (runtime / "games/MSFS2024").resolve() != plan.game_target or installed_identity(runtime / "games/MSFS2024") != plan.current:
+        if launcher.runtime != runtime or games.path(runtime).resolve() != plan.game_target or installed_identity(games.path(runtime), game_id=game_spec.id) != plan.current:
             raise UpdateError("Das installierte Spiel hat sich geändert. Bitte Updates erneut prüfen.")
         # Space is an estimate for the entire new package, not a delta promise.
         if shutil.disk_usage(runtime / "private").free < plan.latest["size_bytes"] * 2 + 1024**3:
@@ -321,15 +326,16 @@ def install(launcher, plan, *, notify, cancel, control, committing, transfer=Non
         _private(xdg, create=True)
         game = download_game(plan.cli, plan.cli_hash, work / "game", plan.market, cancel=cancel,
                              notify=notify, xdg_root=xdg, control=control, cli_features=plan.features,
-                             sign_in=False, expected_package=plan.latest["package_identity"], transfer=transfer)
+                             sign_in=False, expected_package=plan.latest["package_identity"], transfer=transfer,
+                             game_id=game_spec.id)
         notify("verify_update", "Die heruntergeladene Spielversion wird vor dem Wechsel geprüft …")
-        identity = installed(game)
+        identity = installed(game, game_id=game_spec.id)
         if identity != {**plan.current, "version": plan.latest["version"]}:
             raise UpdateError("Das heruntergeladene Paket passt nicht zur geprüften Spielidentität und Version. Die bisherige Version bleibt aktiv.")
         interrupted(cancel)
-        if (runtime / "games/MSFS2024").resolve() != plan.game_target or installed_identity(runtime / "games/MSFS2024") != plan.current:
+        if games.path(runtime).resolve() != plan.game_target or installed_identity(games.path(runtime), game_id=game_spec.id) != plan.current:
             raise UpdateError("Das installierte Spiel hat sich geändert. Bitte Updates erneut prüfen.")
-        previous = runtime / "games" / (".MSFS2024-before-" + uuid.uuid4().hex)
+        previous = runtime / "games" / (f".{game_spec.directory}-before-" + uuid.uuid4().hex)
         previous.symlink_to(game, target_is_directory=True)
         history = {"format": 1, "previous_entry": previous.name, "new_target": str(game),
                    "old_identity": plan.current, "new_identity": identity,
@@ -351,7 +357,7 @@ def install(launcher, plan, *, notify, cancel, control, committing, transfer=Non
         swapped = False
         try:
             _write(pending, history)
-            exchange(previous, runtime / "games/MSFS2024")
+            exchange(previous, games.path(runtime))
             swapped = True
             _sync(runtime / "games")
             _write(record, history)
@@ -359,7 +365,7 @@ def install(launcher, plan, *, notify, cancel, control, committing, transfer=Non
             _sync(pending.parent)
         except Exception:
             if swapped:
-                exchange(previous, runtime / "games/MSFS2024")
+                exchange(previous, games.path(runtime))
                 _sync(runtime / "games")
             if old_record is not None:
                 _write(record, old_record)
@@ -384,7 +390,7 @@ def rollback(launcher):
         with launcher.runtime_lock(operation="game_update"):
             runtime = launcher.runtime
             value, previous = _history(runtime)
-            exchange(previous, runtime / "games/MSFS2024")
+            exchange(previous, games.path(runtime))
             _sync(runtime / "games")
         return {"ok": True, "message": "Die vorherige Spielversion wurde wieder aktiviert. Spielstände und Add-ons wurden nicht verändert."}
     except (OSError, ValueError, KeyError, TypeError):
@@ -408,10 +414,11 @@ def snapshot(launcher):
     if runtime is None:
         return result
     from . import game_integrity
-    usable = game_integrity.available(runtime / "games/MSFS2024")
-    result["integrity"].update(available=usable, unavailable_reason="" if usable else game_integrity.UNAVAILABLE, can_check=usable and not busy)
     try:
-        result["installed_version"] = installed_identity(runtime / "games/MSFS2024")["version"]
+        game_spec = games.for_runtime(runtime)
+        usable = game_integrity.available(games.path(runtime))
+        result["integrity"].update(available=usable, unavailable_reason="" if usable else game_integrity.UNAVAILABLE, can_check=usable and not busy)
+        result["installed_version"] = installed_identity(games.path(runtime), game_id=game_spec.id)["version"]
         _, _, features = tools(runtime, launcher.setup.source_root, verify=False)
         result.update(available=True, unavailable_reason="", can_check=not busy, can_repair=not busy and game_integrity.FEATURE in features)
     except (OSError, ValueError, KeyError) as error:

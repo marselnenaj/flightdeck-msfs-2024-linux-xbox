@@ -31,14 +31,24 @@ export function normalizeStatus(raw) {
   }
   const allowedStates = ['stopped', 'starting', 'running', 'stopping', 'external'];
   const state = allowedStates.includes(raw.game.state) ? raw.game.state : 'unknown';
+  const versions = {};
+  for (const gameId of ['msfs2024','msfs2020']) {
+    const entry = raw.versions?.[gameId];
+    const path = stringValue(entry?.path);
+    versions[gameId] = {path, installed:entry?.installed===true && path.startsWith('/'),
+      ready:entry?.ready===true && entry?.installed===true && path.startsWith('/')};
+  }
   return {
     app: {name: stringValue(raw.app?.name, 'Flightdeck'), version: stringValue(raw.app?.version, '', 80)},
     service: {update_pending: raw.service?.update_pending === true,
       message: stringValue(raw.service?.message, '', 1000)},
     runtime: {
       configured: raw.runtime.configured === true, path: stringValue(raw.runtime.path),
+      game_id: ['msfs2020','msfs2024'].includes(raw.runtime.game_id)?raw.runtime.game_id:'msfs2024',
+      game_name: stringValue(raw.runtime.game_name, 'Microsoft Flight Simulator 2024', 100),
       ready: raw.runtime.ready === true, checks: normalizeChecks(raw.runtime.checks),
     },
+    versions,
     game: {
       state, managed: raw.game.managed === true,
       can_start: raw.game.can_start === true && state === 'stopped' && raw.runtime.ready === true,

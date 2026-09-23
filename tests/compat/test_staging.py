@@ -40,6 +40,7 @@ class RuntimeStaging(unittest.TestCase):
             path.write_bytes(b"synthetic fixture")
             if path.name == "wine":
                 path.chmod(0o700)
+        (self.args.game / "MicrosoftGame.Config").write_text('<Game><StoreId>9P38D19T7LRV</StoreId><Executable Name="FlightSimulator2024.exe"/></Game>')
         self.original = self.args.runner / "files/lib/wine/x86_64-windows/xgameruntime.dll"
         self.original.parent.mkdir(parents=True); self.original.write_bytes(original)
         self.system32 = self.args.prefix / "drive_c/windows/system32"
@@ -106,7 +107,7 @@ class RuntimeStaging(unittest.TestCase):
             stage_runtime.stage(self.args)
         self.args.market = "AT"
         (self.args.game / ".xodus-streaming.msixvc").unlink()
-        with self.assertRaisesRegex(ValueError, "fehlt"):
+        with self.assertRaisesRegex(ValueError, "nicht vollständig abgeschlossen"):
             stage_runtime.stage(self.args)
         self.assertFalse(self.args.destination.exists())
 

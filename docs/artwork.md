@@ -7,6 +7,14 @@ performance, and is included under the launcher's MIT license.
 
 SHA256: `f64fc375e0aaa806c4de91cd91ec8f18994a06ff64aa80d8b6d95f7c463c9304`.
 
+`ui/flight-panorama-2020.png` is a second original AI-generated illustration
+created for Flightdeck with OpenAI image generation. It shows an unbranded twin
+engine aircraft above a Mediterranean coastline, so MSFS 2020 is visibly
+different from the Alpine MSFS 2024 view. It is not a simulator screenshot or
+evidence of game performance and is included under the launcher's MIT license.
+
+SHA256: `cd81013284d468fe6d306438e66d9a0d7ee35d6bda02ec2b44dea010f8cf8344`.
+
 ## Flightdeck mark
 
 `ui/mark.svg` is Flightdeck's pointed folded-paper plane mark. An OpenAI

@@ -3,6 +3,7 @@
 #include "StoreContext.h"
 #include "StoreLicenseEvents.h"
 #include "StoreQueries.h"
+#include "StoreDurableLicense.h"
 #include <atomic>
 #include <cstring>
 #include <xstore.h>
@@ -73,6 +74,7 @@ void XodusStoreContextClose(void *handle)
         contexts.erase(found);
     }
     XodusStoreQueriesContextClosed(handle);
+    XodusStoreDurableContextClosed(handle);
     XodusStoreLicenseEventsContextClosed(handle);
     /* The account release callback runs after dropping the registry lock. */
 }
@@ -90,6 +92,7 @@ void XodusStoreContextShutdown()
         }
     }
     for(auto &entry:detached)XodusStoreQueriesContextClosed(entry.first);
+    XodusStoreDurableShutdown();
     XodusStoreLicenseEventsShutdown();
     /* Provider callbacks run outside the lock. In-flight creates see stopped
      * before publishing and release their acquired reference on return. */

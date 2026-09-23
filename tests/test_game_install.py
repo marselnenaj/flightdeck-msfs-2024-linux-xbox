@@ -47,7 +47,7 @@ if settings.get('complete', True):
     target = pathlib.Path(sys.argv[3])
     (target / 'FlightSimulator2024.exe').write_bytes(b'synthetic encrypted executable')
     (target / '.xodus-streaming.msixvc').write_bytes(b'synthetic marker')
-    (target / 'MicrosoftGame.Config').write_text('<Game><ExecutableList><Executable Name="FlightSimulator2024.exe"/></ExecutableList></Game>')
+    (target / 'MicrosoftGame.Config').write_text('<Game><StoreId>9P38D19T7LRV</StoreId><ExecutableList><Executable Name="FlightSimulator2024.exe"/></ExecutableList></Game>')
 sys.exit(settings.get('download_exit', 0))
 ''')
         self.cli.chmod(0o700)
@@ -91,6 +91,18 @@ sys.exit(settings.get('download_exit', 0))
         self.assertIn("3", english)
         self.assertEqual(self.arguments(), [["login"]])
         self.assertNotIn("sensitive", str(result.exception))
+
+    def test_login_startup_and_keyring_failures_have_safe_guidance(self):
+        for code, english_hint in ((70, "graphical desktop"), (71, "keyring"), (72, "keyring"), (101, "WebKitGTK")):
+            with self.subTest(code=code):
+                self.destination = self.root / f"game-{code}"
+                self.settings(login_exit=code)
+                with self.assertRaises(game_install.GameInstallError) as result:
+                    self.invoke()
+                english = translate_message(error_message(result.exception), "en")
+                self.assertIn(english_hint, english)
+                self.assertNotIn("invalid.example", english)
+                self.assertEqual(self.arguments()[-1], ["login"])
 
     def test_update_uses_exact_revision_without_implicit_initial_login(self):
         self.invoke(sign_in=False, expected_package="a" * 64,

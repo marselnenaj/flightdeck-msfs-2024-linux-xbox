@@ -25,15 +25,15 @@ def run(args):
     if args.suite in ("gamesave", "all"):
         names.extend(("core", "bridge", "async", "save-interchange"))
     if args.suite in ("store", "all"):
-        names.append("explicit-products")
+        names.extend(("explicit-products", "durable-license", "package-updates"))
     if args.suite in ("store", "catalog", "all"):
         names.extend(("catalog", "catalog-batch", "catalog-coins"))
     queue_sources = ("XAsync.cpp", "XTaskQueue.cpp", "ThreadPool.cpp", "WaitTimer.cpp")
     for name in names:
         case = work / name; case.mkdir(); data = case / "synthetic-saves"; data.mkdir()
-        if name == "explicit-products":
+        if name in ("explicit-products", "durable-license", "package-updates"):
             selected = [sources / part for part in
-                        ("StoreQueries.cpp", "StoreContext.cpp", *queue_sources)]
+                        ("StoreQueries.cpp", "StoreContext.cpp", "StoreDurableLicense.cpp", *queue_sources)]
         elif name.startswith("catalog"):
             selected = [sources / "StoreCatalog.cpp"]
             if name != "catalog": selected.append(sources / "StoreCatalogBatch.cpp")
@@ -50,6 +50,7 @@ def run(args):
         command = ["x86_64-w64-mingw32-g++", "-std=c++17", "-O2", "-static",
                    "-I", str(runtime / "include"), "-I", str(sources)]
         if name in ("core", "bridge", "async"): command.append("-DXODUS_GAMESAVE_TESTING")
+        if name == "durable-license": command.append("-DSTORE_DURABLES_TESTING")
         if name in ("core", "async", "save-interchange"): command.append("-municode")
         libraries = ["-lwinhttp"] if name.startswith("catalog") else ["-lbcrypt", "-lole32", "-luuid"]
         subprocess.run(command + [str(p) for p in selected] +

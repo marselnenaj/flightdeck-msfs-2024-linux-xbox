@@ -38,7 +38,32 @@ static HRESULT WINAPI query(void*,void *account,UINT32 kinds,const char *const *
     value->sku.skuId="0001";value->sku.isInUserCollection=TRUE;
     *out=&value->page;return mode==Denied?E_ACCESSDENIED:S_OK;
 }
+enum BalanceMode {OwnedBalance,AbsentBalance,WrongKindBalance,WrongIdBalance,
+    MixedBalance,PagedBalance,EmptyBalance,DeniedBalance};
+static BalanceMode balance_mode=OwnedBalance;
+static std::atomic<int> balance_calls{0};
+static HRESULT WINAPI query_balance(void*,void *account,UINT32 kinds,const char *const *ids,SIZE_T count,
+    const char *const *actions,SIZE_T action_count,const char *cursor,volatile LONG *cancel,XodusStoreProductPage **out) {
+    ++balance_calls;*out=nullptr;
+    if(!account||kinds!=static_cast<UINT32>(XStoreProductKind::Consumable)||count!=1||
+       strcmp(ids[0],"ABCD1234EFGH")||actions||action_count||cursor||InterlockedCompareExchange(cancel,0,0))return E_INVALIDARG;
+    if(balance_mode==DeniedBalance)return E_ACCESSDENIED;
+    auto value=new Fixture{};++pages;
+    value->page.structure_size=sizeof(value->page);
+    value->page.product_count=balance_mode==EmptyBalance?0:1;
+    value->page.products=&value->product;
+    value->page.continuation=balance_mode==PagedBalance?"more":nullptr;
+    value->product.storeId=balance_mode==WrongIdBalance?"OTHER1234567":"ABCD1234EFGH";
+    value->product.productKind=balance_mode==WrongKindBalance?XStoreProductKind::UnmanagedConsumable:XStoreProductKind::Consumable;
+    value->product.isInUserCollection=balance_mode==AbsentBalance?FALSE:TRUE;
+    value->product.skusCount=1;value->product.skus=&value->sku;
+    value->sku.skuId="0001";
+    value->sku.isInUserCollection=balance_mode==AbsentBalance||balance_mode==MixedBalance?FALSE:TRUE;
+    value->sku.collectionData.quantity=7;
+    *out=&value->page;return S_OK;
+}
 static XodusStoreAccountProvider binding{nullptr,acquire,release,nullptr,nullptr,release_page,nullptr,nullptr,query};
+static XodusStoreAccountProvider balance_binding{nullptr,acquire,release,nullptr,nullptr,release_page,nullptr,nullptr,query_balance};
 static const char *ids[]={"ABCD1234EFGH","OTHER1234567/0001"};
 static const char *actions[]={"Purchase"};
 static XAsyncBlock block(){XAsyncBlock a{};a.queue=queue;return a;}
@@ -148,6 +173,31 @@ int main(){
         if(!close_context)XodusStoreContextClose(context);
     }
     blocking=false;CloseHandle(entered);XTaskQueueCloseHandle(pool);
+    void *balance_context=nullptr;
+    check("balance-context",XodusStoreContextCreate(&balance_binding,nullptr,&balance_context)==S_OK);
+    XStoreConsumableResult balance{99};
+    check("balance-null-async",XodusStoreQueryConsumableBalanceRemainingAsync(balance_context,"ABCD1234EFGH",nullptr)==E_POINTER);
+    check("balance-null-id",XodusStoreQueryConsumableBalanceRemainingAsync(balance_context,nullptr,&a)==E_POINTER);
+    check("balance-invalid-id",XodusStoreQueryConsumableBalanceRemainingAsync(balance_context,"../../escape",&a)==E_INVALIDARG);
+    a=block();check("balance-begin",XodusStoreQueryConsumableBalanceRemainingAsync(balance_context,"ABCD1234EFGH",&a)==S_OK);
+    check("balance-pending",XodusStoreQueryConsumableBalanceRemainingResult(&a,&balance)==E_PENDING&&balance.quantity==0);
+    dispatch();check("balance-wrong-result",XodusStoreQueryProductsResult(&a,&page)==E_INVALIDARG&&!page);
+    check("balance-owned-quantity",XodusStoreQueryConsumableBalanceRemainingResult(&a,&balance)==S_OK&&balance.quantity==7&&pages==0);
+    check("balance-result-once",FAILED(XodusStoreQueryConsumableBalanceRemainingResult(&a,&balance))&&balance.quantity==0);
+    for(auto pair:{std::pair<BalanceMode,HRESULT>{AbsentBalance,S_OK},{WrongKindBalance,HRESULT_FROM_WIN32(ERROR_INVALID_DATA)},
+            {WrongIdBalance,HRESULT_FROM_WIN32(ERROR_INVALID_DATA)},{MixedBalance,HRESULT_FROM_WIN32(ERROR_INVALID_DATA)},
+            {PagedBalance,E_NOTIMPL},{EmptyBalance,E_NOTIMPL},{DeniedBalance,E_ACCESSDENIED}}) {
+        balance_mode=pair.first;a=block();balance.quantity=99;
+        check("balance-start",XodusStoreQueryConsumableBalanceRemainingAsync(balance_context,"ABCD1234EFGH",&a)==S_OK);
+        dispatch();HRESULT result=XodusStoreQueryConsumableBalanceRemainingResult(&a,&balance);
+        check("balance-classification",result==pair.second&&balance.quantity==0&&pages==0);
+    }
+    balance_mode=OwnedBalance;a=block();int before_balance=balance_calls;
+    XodusStoreQueryConsumableBalanceRemainingAsync(balance_context,"ABCD1234EFGH",&a);XAsyncCancel(&a);dispatch();
+    check("balance-cancel",XodusStoreQueryConsumableBalanceRemainingResult(&a,&balance)==E_ABORT&&balance.quantity==0&&balance_calls==before_balance);
+    a=block();XodusStoreQueryConsumableBalanceRemainingAsync(balance_context,"ABCD1234EFGH",&a);dispatch();
+    XodusStoreContextClose(balance_context);
+    check("balance-closed-context",XodusStoreQueryConsumableBalanceRemainingResult(&a,&balance)==E_ABORT&&balance.quantity==0&&pages==0);
     XodusStoreContextCreate(&binding,nullptr,&context);a=block();start(context,&a);
     XodusStoreQueriesShutdown();XodusStoreContextShutdown();dispatch();
     check("shutdown",XodusStoreQueryProductsResult(&a,&page)==E_ABORT&&!page);

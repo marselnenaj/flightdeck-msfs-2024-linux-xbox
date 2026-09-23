@@ -26,6 +26,7 @@ export function normalizeSetup(raw) {
     progress: typeof source.progress === 'number' && Number.isFinite(source.progress) && source.progress >= 0 && source.progress <= 100 ? source.progress : null,
     transfer: normalizeTransfer(source.transfer),
     runtime_path: stringValue(source.runtime_path), market: normalizeRegion(source.market),
+    game_id: ['msfs2020','msfs2024'].includes(source.game_id)?source.game_id:'msfs2024',
   } : null;
   return {available: raw.available, install_available:raw.install_available===true, install_unavailable_reason:stringValue(raw.install_unavailable_reason,'',1200), prepare_available: raw.prepare_available === true, directory_picker: raw.directory_picker === true,
     prepare_unavailable_reason: stringValue(raw.prepare_unavailable_reason, '', 1200),
@@ -72,6 +73,32 @@ export function createSetup({request, getStatus, isOnline, renderChecks, notice,
   let discovery = null, discovering = false, discoveryError = false;
   let connectAfterCheck = false, ownCheckId = null;
   let regionLocale = '';
+  let suggestedDestination = '';
+  let preferredSetup = null;
+  function setEdition(gameId) {
+    if(!['msfs2020','msfs2024'].includes(gameId))return;
+    $('setup-game-id').value=gameId;
+    const replacement=suggestedDestination.replace(/\/(msfs2020|msfs2024)$/,`/${gameId}`);
+    for(const id of ['install-destination','setup-destination']){
+      const current=$(id).value;
+      if(current===suggestedDestination||/\/(msfs2020|msfs2024)$/.test(current))$(id).value=current.replace(/\/(msfs2020|msfs2024)$/,`/${gameId}`);
+    }
+    suggestedDestination=replacement;
+  }
+  function applyPreferredSetup() {
+    if(!preferredSetup||!initialized)return;
+    const choice=preferredSetup;preferredSetup=null;
+    mode=choice.mode;
+    if(choice.mode==='install')setEdition(choice.gameId);
+    else $('runtime-path').value=choice.path;
+  }
+  function focusSetup(choice) {
+    preferredSetup=choice;
+    if(!initialized)return;
+    if(setupBusy(data?.job))return;
+    if(data?.job){ignoredId=data.job.id;data={...data,job:null};}
+    applyPreferredSetup();render();
+  }
   function renderRegions() {
     if(regionLocale===locale())return;
     regionLocale=locale();
@@ -133,13 +160,16 @@ export function createSetup({request, getStatus, isOnline, renderChecks, notice,
   const modes = [...document.querySelectorAll('input[name="setup_mode"]')];
   const pickerButtons=[];
   for(const [field,id] of Object.entries(fieldIds)) {
-    if(['market','destination_path'].includes(field))continue;
+    if(field==='market')continue;
     const input=$(id), row=document.createElement('div');row.className='path-picker';
     input.before(row);row.append(input);
     const button=document.createElement('button');button.type='button';button.className='button secondary';
     button.dataset.input=id;button.hidden=true;
     button.addEventListener('click',()=>void pick(field,id));row.append(button);pickerButtons.push(button);
   }
+  const installDestinationButton=$('install-destination-pick');
+  installDestinationButton.addEventListener('click',()=>void pick('destination_path','install-destination'));
+  pickerButtons.push(installDestinationButton);
   function render() {
     renderRegions();
     const job = data?.job, busy = setupBusy(job), allowed = !!data?.available && online && isOnline() && getStatus()?.game.state === 'stopped';
@@ -148,8 +178,14 @@ export function createSetup({request, getStatus, isOnline, renderChecks, notice,
     $('setup-install-fields').hidden=mode!=='install';
     $('setup-advanced').hidden=mode==='install';
     $('setup-form-detail').hidden=mode==='install';
-    const defaultDestination=stringValue(data?.defaults?.destination_path);
+    const defaultDestination=stringValue(data?.defaults?.destination_path).replace(/\/(msfs2020|msfs2024)$/,`/${$('setup-game-id').value}`);
     $('install-destination-summary').textContent=$('install-destination').value.trim()||defaultDestination||t('Wird beim Prüfen festgelegt.');
+    const destinationHelp=t('Wähle einen vorhandenen übergeordneten Ordner. Flightdeck legt darin {name} neu an.',{name:$('setup-game-id').value});
+    $('install-destination-help').textContent=destinationHelp;
+    $('setup-destination-help').textContent=destinationHelp;
+    $('setup-version-field').hidden=mode==='existing';
+    $('setup-game-id').disabled=locked||mode==='existing';
+    $('setup-game').placeholder=t('/pfad/zu/MSFS2024').replace('MSFS2024',$('setup-game-id').value==='msfs2020'?'MSFS2020':'MSFS2024');
     for(const id of ['install-market','install-destination'])$(id).disabled=locked||mode!=='install';
     $('install-market').required=mode==='install';
     $('install-unavailable').hidden=data?.install_available===true;
@@ -159,7 +195,12 @@ export function createSetup({request, getStatus, isOnline, renderChecks, notice,
     $('setup-form-detail').textContent = mode==='install'?t('Mit deinem Microsoft-Konto anmelden und deine gekaufte Xbox-PC-Version herunterladen.'):mode === 'existing' ? t('Wähle den Ordner, in dem deine vorbereitete Runtime liegt.') : t('Führe deine vorhandenen Komponenten in einem neuen lokalen Ordner zusammen.');
     for (const id of Object.values(fieldIds)) $(id).disabled = locked;
     $('setup-market').disabled=locked||mode!=='prepare';$('setup-market').required=mode==='prepare';
-    pickerButtons.forEach(button=>{button.textContent=t('Durchsuchen …');button.setAttribute('aria-label',t('{field} auswählen',{field:$(button.dataset.input).labels[0]?.textContent||t('Ordner')}));button.hidden=!data?.directory_picker;button.disabled=locked;});
+    pickerButtons.forEach(button=>{
+      const destination=button.id==='install-destination-pick';
+      button.textContent=t(destination?'Ordner wählen …':'Durchsuchen …');
+      button.setAttribute('aria-label',destination?t('Übergeordneten Speicherort wählen'):t('{field} auswählen',{field:$(button.dataset.input).labels[0]?.textContent||t('Ordner')}));
+      button.hidden=!data?.directory_picker;button.disabled=locked;
+    });
     renderDiscovery(locked);
     $('config-button').disabled = locked || (mode==='install'&&(!data?.install_available||!normalizeRegion($('install-market').value))) || (mode==='prepare'&&!normalizeRegion($('setup-market').value)) || (mode==='existing'&&!$('runtime-path').value.trim());
     $('setup-build-help').hidden=mode==='install'||!$('setup-advanced').open;
@@ -184,6 +225,10 @@ export function createSetup({request, getStatus, isOnline, renderChecks, notice,
     steps.forEach((label,i)=>{$('setup-step-'+(i+1)).textContent=t(label);});
     for (let i = 1; i <= 3; ++i) {const el=$('setup-step-'+i);el.className=i===step?'active':i<step?'done':'';if(i===step)el.setAttribute('aria-current','step');else el.removeAttribute('aria-current');}
     if (job) {
+      const target=(mode==='install'||mode==='prepare')&&['ready','complete'].includes(job.state)?job.runtime_path:'';
+      $('setup-target').hidden=!target;
+      $('setup-target-label').textContent=target?t('Neuer Speicherort für {game}:',{game:job.game_id==='msfs2020'?'MSFS 2020':'MSFS 2024'}):'';
+      $('setup-target-path').textContent=target;
       const titles={checking:t('Installation wird geprüft'),ready:t('Alles geprüft. Bereit zum Einrichten.'),installing:t('Deine Runtime wird eingerichtet'),complete:t('Deine Runtime ist verbunden.'),failed:t('Einrichtung nicht abgeschlossen'),cancelled:t('Einrichtung abgebrochen')};
       $('setup-job-title').textContent=mode==='install'&&job.state==='installing'?t(({bootstrap:'Komponenten werden vorbereitet',authentication:'Microsoft-Anmeldung',download:'MSFS wird heruntergeladen',pausing:'Download wird pausiert',paused:'Download pausiert',provision:'Installation wird eingerichtet'})[job.phase]||'Installation wird eingerichtet'):titles[job.state]; $('setup-job-message').textContent=job.message;
       $('setup-job-message').hidden=!!job.error&&job.message===job.error;
@@ -216,12 +261,17 @@ export function createSetup({request, getStatus, isOnline, renderChecks, notice,
       mode=defaults.mode==='prepare'&&next.prepare_available?'prepare':defaults.mode==='install'||!defaults.runtime_path?'install':'existing';
       for(const [key,id] of Object.entries(fieldIds)) $(id).value=stringValue(defaults[key]);
       if(!$('runtime-path').value)$('runtime-path').value=getStatus()?.runtime.path||'';
-      $('install-market').value=normalizeRegion(defaults.market);$('setup-market').value=normalizeRegion(defaults.market);$('install-destination').value=stringValue(defaults.destination_path);initialized=true;
+      $('install-market').value=normalizeRegion(defaults.market);$('setup-market').value=normalizeRegion(defaults.market);
+      $('setup-game-id').value=['msfs2020','msfs2024'].includes(defaults.game_id)?defaults.game_id:'msfs2024';
+      suggestedDestination=stringValue(defaults.destination_path);
+      $('install-destination').value=suggestedDestination;initialized=true;
+      applyPreferredSetup();
     }
     if(next.job?.id===ignoredId&&!setupBusy(next.job))next.job=null;
     if(next.job?.mode&&next.job.mode!=='update') {
       mode=next.job.mode;
       if(mode==='install'||mode==='prepare')$(mode==='install'?'install-market':'setup-market').value=next.job.market;
+      if(mode==='install'||mode==='prepare')$('setup-game-id').value=next.job.game_id;
     }
     data=next;online=true;errorMessage='';render();advanceExisting();
     if(data.job?.state==='complete'&&completedId!==data.job.id){completedId=data.job.id;void refreshStatus();}
@@ -235,9 +285,16 @@ export function createSetup({request, getStatus, isOnline, renderChecks, notice,
     if(pending||setupBusy(data?.job)||!data?.directory_picker||!isOnline()||!getStatus()?.csrf_token)return;
     pending=true;render();
     try {
-      const initial=$(id).value;
+      const destination=field==='destination_path';
+      const value=$(id).value.trim().replace(/\/+$/,'');
+      const initial=destination&&value.startsWith('/')?value.slice(0,value.lastIndexOf('/'))||'/':value;
       const result=await request('/api/setup/pick',{method:'POST',body:{field,...(initial.startsWith('/')?{initial}:{})},token:getStatus().csrf_token,timeout:130000});
-      if(result.cancelled===false&&result.field===field&&typeof result.path==='string')$(id).value=result.path;
+      if(result.cancelled===false&&result.field===field&&typeof result.path==='string'&&result.path.startsWith('/')){
+        const parent=result.path.replace(/\/+$/,'')||'/';
+        const selected=destination?(parent==='/'?'':parent)+'/'+$('setup-game-id').value:result.path;
+        $(id).value=selected;
+        if(destination)suggestedDestination=selected;
+      }
     }catch(error){notice(error.message,true);}
     finally{pending=false;render();}
   }
@@ -259,9 +316,9 @@ export function createSetup({request, getStatus, isOnline, renderChecks, notice,
   $('runtime-form').addEventListener('submit',event=>{
     event.preventDefault();if(!online||pending||setupBusy(data?.job)||getStatus()?.game.state!=='stopped')return;
     const body={mode};
-    if(mode==='install'){if(!data?.install_available)return;body.market=$('install-market').value.trim().toUpperCase();body.local_saves=true;if($('install-destination').value.trim())body.destination_path=$('install-destination').value;}
+    if(mode==='install'){if(!data?.install_available)return;body.market=$('install-market').value.trim().toUpperCase();body.local_saves=true;body.game_id=$('setup-game-id').value;if($('install-destination').value.trim())body.destination_path=$('install-destination').value;}
     else if(mode==='existing')body.runtime_path=$('runtime-path').value;
-    else {for(const [key,id] of Object.entries(fieldIds))if(key!=='runtime_path')body[key]=$(id).value;body.local_saves=true;}
+    else {for(const [key,id] of Object.entries(fieldIds))if(key!=='runtime_path')body[key]=$(id).value;body.local_saves=true;body.game_id=$('setup-game-id').value;}
     const required=mode==='install'?['market']:mode==='existing'?['runtime_path']:['artifacts_path','game_path','runner_path','prefix_path','destination_path','market'];
     if(mode!=='existing'&&!normalizeRegion(body.market)){notice(t('Bitte wähle deine Store-Region aus.'),true);$(mode==='install'?'install-market':'setup-market').focus();return;}
     if(required.some(key=>!body[key]?.trim())){notice(t('Bitte fülle alle benötigten Pfade aus und wähle eine Store-Region.'),true);return;}
@@ -275,6 +332,7 @@ export function createSetup({request, getStatus, isOnline, renderChecks, notice,
   $('setup-discover').addEventListener('click',()=>void discover());
   $('runtime-path').addEventListener('input',()=>render());
   $('install-destination').addEventListener('input',()=>render());
+  $('setup-game-id').addEventListener('change',()=>{setEdition($('setup-game-id').value);render();});
   for(const id of ['install-market','setup-market'])$(id).addEventListener('change',()=>render());
   $('setup-advanced').addEventListener('toggle',()=>{
     if(!$('setup-advanced').open&&mode==='prepare'&&!pending&&!setupBusy(data?.job))mode=getStatus()?.runtime.configured?'existing':'install';
@@ -282,5 +340,7 @@ export function createSetup({request, getStatus, isOnline, renderChecks, notice,
   });
   setInterval(()=>{if(!document.hidden&&!pending&&(location.hash==='#installation'||setupBusy(data?.job)))void poll();},1500);
   void poll();
-  return {poll,render,discover,job:()=>data?.job,reserved:()=>pending||setupBusy(data?.job)};
+  return {poll,render,discover,job:()=>data?.job,reserved:()=>pending||setupBusy(data?.job),
+    chooseInstall:gameId=>focusSetup({mode:'install',gameId}),
+    chooseExisting:path=>focusSetup({mode:'existing',path})};
 }

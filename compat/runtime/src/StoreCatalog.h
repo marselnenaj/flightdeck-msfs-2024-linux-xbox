@@ -7,9 +7,15 @@
 namespace xodus_catalog {
 // Anonymous catalog facts only. Deliberately no ownership/collection flags,
 // balance, title-association decision, or personalized purchase availability.
+struct Image {
+  std::string uri, caption, purpose;
+  UINT32 width = 0, height = 0;
+};
 struct Text {
   std::string language, title, description;
   std::vector<std::string> markets;
+  std::vector<Image> images;
+  std::vector<std::string> keywords;
 };
 struct Price {
   double list_price = 0, base_price = 0;

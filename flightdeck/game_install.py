@@ -21,8 +21,9 @@ import time
 import xml.etree.ElementTree as ET
 
 from .i18n import message
+from . import games
 
-MSFS_STORE_ID = "9P38D19T7LRV"
+MSFS_STORE_ID = games.GAMES["msfs2024"].store_id
 RESUME_FEATURE = "streaming-resume-files-v1"
 PROGRESS_FEATURE = "streaming-progress-v1"
 
@@ -178,12 +179,13 @@ def run_cli(cli, arguments, *, cwd, cancel, timeout=None, xdg_root=None, control
                 progress.close()
 
 
-def validate_download(destination):
+def validate_download(destination, game_id="msfs2024"):
     """A zero CLI exit alone is insufficient in the pinned streaming command."""
     root = Path(destination)
+    game = games.select(game_id)
     marker = root / ".xodus-streaming.msixvc"
     temporary = root / ".xodus-streaming-tmp.msixvc"
-    executable = root / "FlightSimulator2024.exe"
+    executable = root / game.executable
     config = root / "MicrosoftGame.Config"
     if not config.is_file():
         config = root / "MicrosoftGame.config"
@@ -202,13 +204,32 @@ def validate_download(destination):
         raise GameInstallError("Die heruntergeladene Spielkonfiguration ist ungültig.") from None
     if tree.tag.rsplit("}", 1)[-1] != "Game":
         raise GameInstallError("Die heruntergeladene Spielkonfiguration ist ungültig.")
-    if not any(node.tag.rsplit("}", 1)[-1] == "Executable" and node.get("Name", "").lower() == "flightsimulator2024.exe" for node in tree.iter()):
+    if not any(node.tag.rsplit("}", 1)[-1] == "Executable" and node.get("Name", "").casefold() == game.executable.casefold() for node in tree.iter()):
         raise GameInstallError("Die heruntergeladene Spielkonfiguration ist ungültig.")
+    stores = [node for node in tree.iter() if node.tag.rsplit("}", 1)[-1] == "StoreId"]
+    if len(stores) != 1 or stores[0].text != game.store_id:
+        raise GameInstallError("Die heruntergeladene Spielkonfiguration gehört nicht zur gewählten MSFS-Version.")
     return root
 
 
+def _check_login_result(result):
+    """Translate the CLI's fixed exit codes without reading credential output."""
+    if result == 0:
+        return
+    failures = {
+        70: "Das Microsoft-Anmeldefenster oder der Anmeldeablauf ist fehlgeschlagen. Flightdeck aus der grafischen Sitzung starten und erneut versuchen.",
+        71: "Die Microsoft-Anmeldung konnte nicht vorbereitet werden. Schlüsselbund und Netzwerk prüfen und erneut versuchen.",
+        72: "Die Microsoft-Anmeldedaten konnten nicht gespeichert werden. Den Linux-Schlüsselbund prüfen und erneut versuchen.",
+        101: "Die Microsoft-Anmeldung wurde unerwartet beendet. Grafische Sitzung, GTK/WebKitGTK und Schlüsselbund prüfen und erneut versuchen.",
+    }
+    if result in failures:
+        raise GameInstallError(failures[result])
+    raise GameInstallError(message("Die Microsoft-Anmeldung wurde nicht abgeschlossen (Code {code}). Bitte erneut versuchen.", code=result))
+
+
 def download_game(cli, expected_cli_sha256, destination, market, *, cancel=None, notify=None, xdg_root=None,
-                  control=None, cli_features=(), sign_in=True, expected_package=None, transfer=None):
+                  control=None, cli_features=(), sign_in=True, expected_package=None, transfer=None,
+                  game_id="msfs2024"):
     """Explicit action: Microsoft UI login, then the licensed streaming command.
 
     No CIK-dumping `license` command is used. Xodus obtains the content license
@@ -219,6 +240,10 @@ def download_game(cli, expected_cli_sha256, destination, market, *, cancel=None,
     """
     if not isinstance(market, str) or not re.fullmatch(r"[A-Z]{2}", market):
         raise GameInstallError("Bitte einen Ländercode mit zwei Großbuchstaben wählen, zum Beispiel AT.")
+    try:
+        game_spec = games.select(game_id)
+    except ValueError as error:
+        raise GameInstallError(str(error)) from None
     path = verify_cli(cli, expected_cli_sha256)
     target = Path(destination)
     if not target.is_absolute() or not target.parent.is_dir():
@@ -247,14 +272,13 @@ def download_game(cli, expected_cli_sha256, destination, market, *, cancel=None,
     if sign_in:
         event("authentication", "Bitte im Microsoft-Fenster mit dem Konto anmelden, das MSFS besitzt.")
         result = run_cli(path, ["login"], cwd=target.parent, cancel=cancel, timeout=15 * 60, xdg_root=xdg_root)
-        if result:
-            raise GameInstallError(message("Die Microsoft-Anmeldung wurde nicht abgeschlossen (Code {code}). Bitte erneut versuchen.", code=result))
+        _check_login_result(result)
     # Recheck the exact executable before a second independent invocation.
     path = verify_cli(cli, expected_cli_sha256)
     event("download", "MSFS wird über Xodus angefordert, die Lizenz geprüft und das Spiel heruntergeladen. Das kann längere Zeit dauern …")
     supported = isinstance(cli_features, (list, tuple)) and RESUME_FEATURE in cli_features
     progress_supported = supported and PROGRESS_FEATURE in cli_features
-    arguments = ["streaming", MSFS_STORE_ID, str(target), "--market", market, "--parallel", "4"]
+    arguments = ["streaming", game_spec.store_id, str(target), "--market", market, "--parallel", "4"]
     if supported:
         arguments.append("--resume-files")
     if expected_package is not None:
@@ -278,8 +302,7 @@ def download_game(cli, expected_cli_sha256, destination, market, *, cancel=None,
                     event("authentication", "Die Anmeldung ist abgelaufen. Bitte erneut bei Microsoft anmelden; vollständige Downloads bleiben erhalten.")
                     login = run_cli(verify_cli(cli, expected_cli_sha256), ["login"], cwd=target.parent,
                                     cancel=cancel, timeout=15 * 60, xdg_root=xdg_root)
-                    if login:
-                        raise GameInstallError(message("Die Microsoft-Anmeldung wurde nicht abgeschlossen (Code {code}). Bitte erneut versuchen.", code=login))
+                    _check_login_result(login)
                     reauthenticated = True
                     event("download", "Der Download wird mit frischen Zugängen fortgesetzt. Vollständige Dateien werden erneut geprüft …")
                     if control:
@@ -297,11 +320,11 @@ def download_game(cli, expected_cli_sha256, destination, market, *, cancel=None,
         if result:
             raise GameInstallError(message("Der Spieldownload wurde nicht abgeschlossen (Code {code}). Bitte Kaufberechtigung, Speicherplatz und Verbindung prüfen.", code=result))
         _cancelled(cancel)
-        game = validate_download(target)
+        game = validate_download(target, game_spec.id)
         if "streaming-integrity-index-v1" in cli_features:
             from .game_integrity import record_installation
             try:
-                record_installation(game)
+                record_installation(game, game_id=game_spec.id)
             except (OSError, ValueError, TypeError):
                 raise GameInstallError("Der vollständige Download-Prüfnachweis fehlt oder ist ungültig. Das Paket wurde nicht aktiviert.") from None
         return game

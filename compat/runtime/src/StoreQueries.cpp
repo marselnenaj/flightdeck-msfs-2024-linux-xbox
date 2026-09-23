@@ -3,6 +3,8 @@
 // responses. Synthetic fixtures are injected only by standalone test programs.
 #include "StoreQueries.h"
 #include "StoreContext.h"
+#include "StoreDurableLicense.h"
+#include <algorithm>
 #include <atomic>
 #include <memory>
 #include <mutex>
@@ -12,8 +14,8 @@
 #include <vector>
 
 namespace {
-enum class Kind { License, Products, NextPage, LicenseToken, ExplicitProducts };
-const char license_identity=0, products_identity=0, next_identity=0, token_identity=0, explicit_identity=0;
+enum class Kind { License, Products, NextPage, LicenseToken, ExplicitProducts, Balance, Durable, PackageUpdates };
+const char license_identity=0, products_identity=0, next_identity=0, token_identity=0, explicit_identity=0, balance_identity=0, durable_identity=0, updates_identity=0;
 constexpr SIZE_T max_token_size=60001, max_challenge_size=8192, max_product_count=100;
 std::atomic<bool> stopped{false};
 std::atomic<unsigned> diagnostic_count{0};
@@ -28,7 +30,9 @@ void diagnostic(Kind kind,HRESULT hr) {
 }
 const void *identity(Kind kind) {
     return kind==Kind::License?&license_identity:kind==Kind::Products?&products_identity:
-        kind==Kind::NextPage?&next_identity:kind==Kind::ExplicitProducts?&explicit_identity:&token_identity;
+        kind==Kind::NextPage?&next_identity:kind==Kind::ExplicitProducts?&explicit_identity:
+        kind==Kind::Balance?&balance_identity:kind==Kind::Durable?&durable_identity:
+        kind==Kind::PackageUpdates?&updates_identity:&token_identity;
 }
 struct Page {
     XodusStoreContextRef context;
@@ -53,6 +57,8 @@ struct Job {
     std::string continuation;
     volatile LONG cancelled=0;
     XStoreGameLicense license{};
+    XStoreConsumableResult balance{};
+    XStoreLicenseHandle durable=nullptr;
     std::shared_ptr<Page> page;
     std::vector<std::string> product_ids;
     std::vector<std::string> action_filters;
@@ -61,6 +67,7 @@ struct Job {
     char *token=nullptr;
     SIZE_T token_size=0;
     ~Job() {
+        if(durable)XodusStoreCloseLicenseHandle(durable);
         auto binding=XodusStoreContextProvider(context);
         if(token&&binding&&binding->release_license_token)
             binding->release_license_token(binding->state,token,token_size);
@@ -84,6 +91,30 @@ HRESULT validate_license(const XStoreGameLicense &value) {
         value.isActive<=1 && value.isTrialOwnedByThisUser<=1 && value.isDiscLicense<=1 && value.isTrial<=1 ?
         S_OK:HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
 }
+HRESULT query_balance(Job *job,const XodusStoreAccountProvider *provider) {
+    if(!provider->query_products||!provider->release_product_page)return E_NOTIMPL;
+    const char *id=job->product_ids[0].c_str();
+    XodusStoreProductPage *raw=nullptr;
+    const HRESULT hr=provider->query_products(provider->state,XodusStoreContextAccount(job->context),
+        static_cast<UINT32>(XStoreProductKind::Consumable),&id,1,nullptr,0,nullptr,&job->cancelled,&raw);
+    // Providers may allocate a page even when they report failure.
+    const auto release=[&](XodusStoreProductPage *page) {provider->release_product_page(provider->state,page);};
+    std::unique_ptr<XodusStoreProductPage,decltype(release)> page(raw,release);
+    if(FAILED(hr))return hr;
+    if(!page || page->structure_size!=sizeof(*page) || page->product_count!=1 ||
+       !page->products || (page->continuation&&*page->continuation))return E_NOTIMPL;
+    const XStoreProduct &product=page->products[0];
+    if(!product.storeId || std::strncmp(product.storeId,id,13) ||
+       product.productKind!=XStoreProductKind::Consumable ||
+       product.isInUserCollection>1 || product.skusCount!=1 || !product.skus)return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
+    const XStoreSku &sku=product.skus[0];
+    if(!sku.skuId || strnlen(sku.skuId,5)!=4 ||
+       !std::all_of(sku.skuId,sku.skuId+4,[](char c){return (c>='A'&&c<='Z')||(c>='0'&&c<='9');}) ||
+       sku.isInUserCollection>1 || sku.isInUserCollection!=product.isInUserCollection)
+        return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
+    job->balance.quantity=sku.isInUserCollection?sku.collectionData.quantity:0;
+    return S_OK;
+}
 HRESULT do_work(Job *job) {
     if(abort_job(job))return E_ABORT;
     auto provider=XodusStoreContextProvider(job->context);
@@ -92,6 +123,16 @@ HRESULT do_work(Job *job) {
         if(!provider->query_game_license)return E_NOTIMPL;
         hr=provider->query_game_license(provider->state,XodusStoreContextAccount(job->context),&job->cancelled,&job->license);
         if(SUCCEEDED(hr))hr=validate_license(job->license);
+    } else if(job->kind==Kind::PackageUpdates) {
+        if(!provider->check_package_updates)return E_NOTIMPL;
+        hr=provider->check_package_updates(provider->state,XodusStoreContextAccount(job->context),&job->cancelled);
+        // The current provider contract proves an exact current revision only.
+        // S_FALSE is not proof of an empty result, nor is any failed request.
+        if(SUCCEEDED(hr)&&hr!=S_OK)hr=HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
+    } else if(job->kind==Kind::Durable) {
+        hr=XodusStoreDurableAcquire(job->context,job->product_ids[0].c_str(),&job->cancelled,&job->durable);
+    } else if(job->kind==Kind::Balance) {
+        hr=query_balance(job,provider);
     } else if(job->kind==Kind::LicenseToken) {
         if(!provider->query_license_token||!provider->release_license_token)return E_NOTIMPL;
         std::vector<const char*> ids;ids.reserve(job->product_ids.size());
@@ -145,11 +186,14 @@ HRESULT WINAPI provider(XAsyncOp op,const XAsyncProviderData *data) {
         catch(...) {hr=E_FAIL;}
         diagnostic(job->kind,hr);
         SIZE_T required=job->kind==Kind::License?sizeof(job->license):
+            job->kind==Kind::PackageUpdates?0:
+            job->kind==Kind::Durable?sizeof(job->durable):
+            job->kind==Kind::Balance?sizeof(job->balance):
             job->kind==Kind::LicenseToken?job->token_size:sizeof(XStoreProductQueryHandle);
         /* A failed operation has no retrievable provider result. Unregister
          * before completion can reenter Begin with this same caller block.
          * XAsync still owns the job until its delayed Cleanup callback. */
-        if(FAILED(hr))forget_job(job);
+        if(FAILED(hr)||!required)forget_job(job);
         XAsyncComplete(data->async,hr,SUCCEEDED(hr)?required:0);
         return E_PENDING;
     }
@@ -159,6 +203,11 @@ HRESULT WINAPI provider(XAsyncOp op,const XAsyncProviderData *data) {
         forget_job(job);
         if(abort_job(job))return E_ABORT;
         if(job->kind==Kind::License)std::memcpy(data->buffer,&job->license,sizeof(job->license));
+        else if(job->kind==Kind::Durable) {
+            if(!XodusStoreIsLicenseValid(job->durable))return HRESULT_FROM_WIN32(ERROR_LOGON_FAILURE);
+            *static_cast<XStoreLicenseHandle*>(data->buffer)=job->durable;job->durable=nullptr;
+        }
+        else if(job->kind==Kind::Balance)std::memcpy(data->buffer,&job->balance,sizeof(job->balance));
         else if(job->kind==Kind::LicenseToken)std::memcpy(data->buffer,job->token,job->token_size);
         else {
             try {
@@ -197,8 +246,8 @@ HRESULT begin(std::unique_ptr<Job> job,XAsyncBlock *async) {
                  * before old Cleanup; retain only pending/successful results. */
                 SIZE_T required=0;
                 const HRESULT status=XAsyncGetResultSize(async,&required);
-                /* Every successful Store query has a nonempty result. A zero
-                 * size with S_OK also permits caller reinitialization after a
+                /* Successful product/license queries have nonempty results.
+                 * Empty update checks and caller reinitialization after a
                  * completed failure, without retaining the old registry slot. */
                 if(status==E_PENDING||(SUCCEEDED(status)&&required))return E_INVALIDARG;
                 jobs.erase(existing);
@@ -240,6 +289,34 @@ std::shared_ptr<Page> retain_page(void *handle) {
     auto it=pages.find(handle);
     return it==pages.end()?nullptr:it->second;
 }
+}
+
+HRESULT XodusStoreQueryGameAndDlcPackageUpdatesAsync(XStoreContextHandle handle,XAsyncBlock *async) {
+    if(!async)return E_POINTER;
+    try {
+        auto job=std::make_unique<Job>();job->kind=Kind::PackageUpdates;
+        HRESULT hr=XodusStoreContextRetain(handle,&job->context);
+        if(FAILED(hr))return hr;
+        return begin(std::move(job),async);
+    } catch(const std::bad_alloc&) {return E_OUTOFMEMORY;}
+}
+HRESULT XodusStoreQueryGameAndDlcPackageUpdatesResultCount(XAsyncBlock *async,UINT32 *out) {
+    if(out)*out=0;
+    if(!async||!out)return E_POINTER;
+    SIZE_T size=0;HRESULT hr=XAsyncGetResultSize(async,&size);
+    if(FAILED(hr))return hr;
+    // Zero-length success has already released its provider/account state.
+    // This follows XAsync's empty-result contract: callers commonly stop at
+    // ResultCount when there are no updates and never request a result array.
+    return size==0?S_OK:E_INVALIDARG;
+}
+HRESULT XodusStoreQueryGameAndDlcPackageUpdatesResult(XAsyncBlock *async,UINT32 count,XStorePackageUpdate *out) {
+    if(!async)return E_POINTER;
+    if(count)return E_INVALIDARG;
+    (void)out;
+    UINT32 observed=0;HRESULT hr=XodusStoreQueryGameAndDlcPackageUpdatesResultCount(async,&observed);
+    if(FAILED(hr))return hr;
+    return XAsyncGetResult(async,identity(Kind::PackageUpdates),0,nullptr,nullptr);
 }
 
 HRESULT XodusStoreQueryGameLicenseAsync(XStoreContextHandle handle,XAsyncBlock *async) {
@@ -369,6 +446,34 @@ HRESULT XodusStoreQueryProductsAsync(XStoreContextHandle handle,XStoreProductKin
 HRESULT XodusStoreQueryProductsResult(XAsyncBlock *async,XStoreProductQueryHandle *out) {
     if(out)*out=nullptr;
     return get_result(Kind::ExplicitProducts,async,out,sizeof(*out));
+}
+HRESULT XodusStoreQueryConsumableBalanceRemainingAsync(XStoreContextHandle handle,const char *id,XAsyncBlock *async) {
+    if(!async||!id)return E_POINTER;
+    if(strnlen(id,13)!=12 || !std::all_of(id,id+12,[](char c){return (c>='A'&&c<='Z')||(c>='0'&&c<='9');}))
+        return E_INVALIDARG;
+    try {
+        auto job=std::make_unique<Job>();job->kind=Kind::Balance;job->product_ids.emplace_back(id);
+        HRESULT hr=XodusStoreContextRetain(handle,&job->context);
+        if(FAILED(hr))return hr;
+        return begin(std::move(job),async);
+    } catch(const std::bad_alloc&) {return E_OUTOFMEMORY;}
+}
+HRESULT XodusStoreQueryConsumableBalanceRemainingResult(XAsyncBlock *async,XStoreConsumableResult *out) {
+    if(out)*out={};
+    return get_result(Kind::Balance,async,out,sizeof(*out));
+}
+HRESULT XodusStoreAcquireLicenseForDurablesAsync(XStoreContextHandle handle,const char *id,XAsyncBlock *async) {
+    if(!async||!id)return E_POINTER;
+    if(strnlen(id,13)!=12||!std::all_of(id,id+12,[](char c){return(c>='A'&&c<='Z')||(c>='0'&&c<='9');}))return E_INVALIDARG;
+    try {
+        auto job=std::make_unique<Job>();job->kind=Kind::Durable;job->product_ids.emplace_back(id);
+        HRESULT hr=XodusStoreContextRetain(handle,&job->context);if(FAILED(hr))return hr;
+        return begin(std::move(job),async);
+    }catch(const std::bad_alloc&){return E_OUTOFMEMORY;}
+}
+HRESULT XodusStoreAcquireLicenseForDurablesResult(XAsyncBlock *async,XStoreLicenseHandle *out) {
+    if(out)*out=nullptr;
+    return get_result(Kind::Durable,async,out,sizeof(*out));
 }
 HRESULT XodusStoreEnumerateProductsQuery(XStoreProductQueryHandle handle,void *context,XStoreProductQueryCallback *callback) {
     if(!callback)return E_POINTER;

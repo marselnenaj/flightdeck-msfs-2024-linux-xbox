@@ -1,5 +1,8 @@
 # Install the Flightdeck launcher
 
+This guide covers **Flightdeck 0.1.1**, including simulator selection, the Fenix
+panel and managed runtime component updates. See [changes](changelog.md).
+
 Download **Flightdeck-Linux-x86_64.tar.gz** from the
 [releases page](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases)
 and extract it on your Linux computer. This full installer includes the six
@@ -34,10 +37,26 @@ the action, shows progress with Zenity or Tk and reports failures locally. It
 does not silently install if no graphical toolkit or desktop session is available.
 
 This installs the launcher and its setup resources. In setup, choose **New
-installation**, select a new destination and follow the Microsoft sign-in and
+installation**, select **Microsoft Flight Simulator 2024** or **Microsoft Flight Simulator 2020**,
+select a new destination and follow the Microsoft sign-in and
 download steps for your purchased Xbox PC edition. An existing game installation
 is not required. A prepared Wine prefix and existing game directory remain an
 advanced import option.
+
+Each edition gets its own prepared runtime, Wine prefix, download, update history
+and local saves. In **Overview**, choose **MSFS 2024** or **MSFS 2020** to switch
+directly; a missing edition opens its setup form. Flightdeck
+never converts a 2024 installation into 2020 or replaces one with the other.
+Older runtimes without a recorded edition remain MSFS 2024. MSFS 2020's PC Store
+package is available in the public Microsoft catalog. Edition workflows have
+synthetic coverage and live game-license/package probes passed. A startup disc
+prompt was reported; a complete end-to-end installation and flight remain open.
+See the [MSFS 2020 test status](marketplace-collections.md#package-checks-and-the-msfs-2020-disc-prompt).
+
+Microsoft sign-in opens in a separate GTK/WebKitGTK window provided by Xodus.
+It does not use the browser showing Flightdeck's local interface. If the
+sign-in window is not visible, check the desktop's open windows before retrying;
+if setup reports an error, keep the displayed phase and code for diagnosis.
 
 Choose your Microsoft account's Store region from the visible dropdown before
 sign-in. Flightdeck suggests a country from the local timezone or regional
@@ -162,6 +181,22 @@ it; users do not need to manage the HTTP service themselves.
 
 ## Update and rollback
 
+Choose the update that matches what you want to change:
+
+| What to update | Where | What it changes |
+| --- | --- | --- |
+| Flightdeck launcher | Run the installer from a newer Flightdeck package | Interface, setup logic and bundled resources |
+| Managed runtime components | Reopen the updated launcher while idle, or use `flightdeck --refresh-components` | Recognized Store/login components and runtime scripts |
+| MSFS 2024 or 2020 | Select the edition, then **Updates** | Its Store base-game package; previous package retained |
+| Fenix compatibility | **Mods → Fenix A320** | Optional, version-checked runner/profile setup; requires a separate explicit install |
+| Fenix aircraft and liveries | Official Fenix installer/manager | Purchased Fenix software and matching liveries |
+
+Flightdeck's **Updates** page does not update Flightdeck or Fenix. The Fenix
+patch release is independent of the Flightdeck package and is downloaded only
+when requested. A newer patch is adopted through a reviewed Flightdeck release;
+the launcher does not automatically follow GitHub's latest tag.
+[Fenix setup and restore](addons.md#fenix-a320).
+
 Download and extract the newer **Flightdeck-Linux-x86_64.tar.gz**, then open its
 **Install Flightdeck.desktop** or run `./install.sh` again. Source-build users
 can update their prepared checkout instead.
@@ -171,7 +206,40 @@ Alternatively:
 ~/.local/bin/flightdeck --update /absolute/path/to/new/source
 ```
 
-The source bytes, UI assets, six setup runtime scripts and both lock files
+Launchers with the updated wrapper run the installer supplied by the
+selected new package, so a newer package can introduce components that
+the installed installer does not yet recognize. For older installed launchers,
+use `./install.sh` from the new package. Use a package you trust.
+
+On the next Flightdeck start, a newer **full package** automatically applies
+its bundled Store and login components to an existing managed game runtime if
+MSFS and setup are idle. If the game is still running, close it and reopen
+Flightdeck. The runtime status shows a pending update until it succeeds. To
+retry or apply the update from a terminal, run:
+
+```sh
+~/.local/bin/flightdeck --refresh-components
+```
+
+This checks every installed component against the runtime's import manifest,
+checks the new bundle against its release hashes, and updates native files and
+the six runtime scripts together under the runtime lock. Older manifests without
+script hashes migrate only when all existing scripts match a pinned release.
+Script-only updates are detected even if the native files are already current.
+Game files, saves, account data and the Proton
+runner are left in place. A recorded backup restores the old binaries, scripts
+and import manifest if
+you reopen Flightdeck or run the command again after an interruption. Until then, the launcher
+blocks game start. If any old file was changed manually, Flightdeck
+stops without overwriting it. An older development runtime without an import
+manifest cannot be updated in place. Use **Prepare a new runtime** to import its
+existing game files into a separate, managed runtime. A custom component set
+is also preserved by an explicit `--refresh-components` command.
+Launcher rollback does not automatically reverse
+a completed runtime component update.
+
+The source bytes, UI assets, six setup runtime scripts, both runtime lock files
+and the vendored Fenix engine/manifests
 form a reproducible SHA-256 release ID. All inputs are captured before installation.
 Flightdeck installs into a new release directory and atomically switches its
 small installation record after the files and entrypoints are ready. Reported

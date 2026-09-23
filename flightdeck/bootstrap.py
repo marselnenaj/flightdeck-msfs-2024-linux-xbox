@@ -27,7 +27,9 @@ import urllib.error
 import urllib.request
 import zipfile
 
+from . import __version__
 from .i18n import message
+from . import games
 from .setup import (ARTIFACTS, CONNECTED_STORAGE_FEATURE, artifact_names,
                     SetupError, SetupCancelled, data_home, digest,
                     interrupted, path_input, _copy_file, _publish)
@@ -99,7 +101,11 @@ def preflight(data, *, source_root=None, notify=None, cancel=None):
         raise SetupError(capability["reason"])
     source, lockfile = paths(source_root)
     lock = json.loads(lockfile.read_text())
-    destination = path_input(data.get("destination_path") or str(data_home() / "flightdeck/runtimes/msfs2024"), "Zielordner", exists=False)
+    try:
+        game = games.select(data.get("game_id", "msfs2024"))
+    except ValueError as error:
+        raise SetupError(str(error)) from None
+    destination = path_input(data.get("destination_path") or str(data_home() / "flightdeck/runtimes" / game.id), "Zielordner", exists=False)
     market = data.get("market", "US")
     if not isinstance(market, str) or not re.fullmatch("[A-Z]{2}", market):
         raise SetupError("Bitte einen Ländercode mit zwei Großbuchstaben wählen, zum Beispiel AT.")
@@ -139,7 +145,7 @@ def preflight(data, *, source_root=None, notify=None, cancel=None):
         for key, label in (("platform", "Linux und Anmeldefenster"), ("space", "Mindestens 100 GiB freier Speicher"),
                            ("components", "Geprüfte Installationskomponenten"), ("media", "Videowiedergabe (MP4/H.264)")):
             notify("bootstrap", label, None, {"id": key, "label": label, "ok": True, "detail": "Geprüft"})
-    inputs = {"mode": "install", "market": market, "local_saves": data.get("local_saves", False),
+    inputs = {"mode": "install", "game_id": game.id, "market": market, "local_saves": data.get("local_saves", False),
               "destination_path": str(destination)}
     return BootstrapPlan(inputs, destination, lock, source, native)
 
@@ -248,7 +254,7 @@ def download(url, expected, target, *, cancel=None, progress=None):
     fd, temporary = tempfile.mkstemp(prefix=".download-", dir=target.parent)
     try:
         with os.fdopen(fd, "wb") as output:
-            request = urllib.request.Request(url, headers={"User-Agent": "Flightdeck/0.1.0"})
+            request = urllib.request.Request(url, headers={"User-Agent": f"Flightdeck/{__version__}"})
             # No cookies, credentials, shell or user-supplied URL.
             with urllib.request.build_opener(HTTPSOnlyRedirect()).open(request, timeout=30) as response:
                 if not response.url.startswith("https://"):

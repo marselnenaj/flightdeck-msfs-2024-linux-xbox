@@ -2,40 +2,16 @@ diff --git a/Cargo.lock b/Cargo.lock
 index b14a82f..b6c145a 100644
 --- a/Cargo.lock
 +++ b/Cargo.lock
-@@ -3358,6 +3358,7 @@ dependencies = [
-  "ntfs",
-  "num_enum",
-  "reqwest 0.13.4",
+@@ -3360,0 +3361 @@ dependencies = [
 + "sha2 0.11.0",
-  "thiserror 2.0.20",
-  "tokio",
-  "tokio-util",
-@@ -4634,10 +4635,12 @@ dependencies = [
-  "tokio",
-  "tokio-native-tls",
-  "tokio-rustls 0.24.1",
+@@ -4636,0 +4638 @@ dependencies = [
 + "tokio-util",
-  "tower-service",
-  "url",
-  "wasm-bindgen",
-  "wasm-bindgen-futures",
+@@ -4640,0 +4643 @@ dependencies = [
 + "wasm-streams 0.4.2",
-  "web-sys",
-  "webpki-roots",
-  "winreg",
-@@ -4682,7 +4685,7 @@ dependencies = [
-  "url",
-  "wasm-bindgen",
-  "wasm-bindgen-futures",
+@@ -4685 +4688 @@ dependencies = [
 - "wasm-streams",
 + "wasm-streams 0.5.0",
-  "web-sys",
- ]
- 
-@@ -6345,6 +6348,19 @@ dependencies = [
-  "unicode-ident",
- ]
- 
+@@ -6347,0 +6351,13 @@ dependencies = [
 +[[package]]
 +name = "wasm-streams"
 +version = "0.4.2"
@@ -49,105 +25,51 @@ index b14a82f..b6c145a 100644
 + "web-sys",
 +]
 +
- [[package]]
- name = "wasm-streams"
- version = "0.5.0"
-@@ -7154,11 +7170,13 @@ dependencies = [
-  "quick-xml 0.42.0",
-  "rand 0.10.2",
-  "reqwest 0.13.4",
+@@ -7156,0 +7173 @@ dependencies = [
 + "ron",
-  "rsa",
-  "serde",
-  "serde_json",
-  "sha2 0.11.0",
-  "smbios-lib",
+@@ -7161,0 +7179 @@ dependencies = [
 + "tempfile",
-  "thiserror 2.0.20",
-  "tokio",
-  "tracing",
-@@ -7188,6 +7206,7 @@ dependencies = [
-  "reqwest 0.13.4",
-  "rustix",
-  "serde_json",
+@@ -7190,0 +7209 @@ dependencies = [
 + "sha2 0.11.0",
-  "tao",
-  "tempfile",
-  "tokio",
-@@ -7202,15 +7221,22 @@ dependencies = [
- name = "xodus-service"
- version = "0.1.0"
- dependencies = [
+@@ -7204,0 +7224 @@ dependencies = [
 + "base64 0.23.1",
-  "chrono",
-  "console-subscriber",
+@@ -7206,0 +7227 @@ dependencies = [
 + "openssl",
-  "quick-xml 0.42.0",
+@@ -7207,0 +7229,2 @@ dependencies = [
 + "rand 0.10.2",
 + "reqwest 0.11.27",
-  "reqwest 0.13.4",
+@@ -7208,0 +7232 @@ dependencies = [
 + "serde",
-  "serde_json",
+@@ -7209,0 +7234 @@ dependencies = [
 + "sha2 0.11.0",
-  "tokio",
-  "tokio-util",
-  "tracing",
-  "tracing-subscriber",
+@@ -7213,0 +7239 @@ dependencies = [
 + "xal",
-  "xodus",
- ]
- 
 diff --git a/crates/msixvc/Cargo.toml b/crates/msixvc/Cargo.toml
 index d68d8e1..6768fa2 100644
 --- a/crates/msixvc/Cargo.toml
 +++ b/crates/msixvc/Cargo.toml
-@@ -5,6 +5,7 @@ edition = "2024"
- rust-version = { workspace = true }
- 
- [dependencies]
+@@ -7,0 +8 @@ rust-version = { workspace = true }
 +sha2 = "0.11.0"
- msixvc-common = { path = "../msixvc-common" }
- 
- tokio = { workspace = true }
 diff --git a/crates/msixvc/src/streaming.rs b/crates/msixvc/src/streaming.rs
 index 824f9c2..7d15570 100644
 --- a/crates/msixvc/src/streaming.rs
 +++ b/crates/msixvc/src/streaming.rs
-@@ -202,7 +202,7 @@ impl<'t> AsyncRead for HttpRead<'t> {
- enum CacheReadState {
-     Idle,
-     Seeking { offset: u64 },
+@@ -205 +205 @@ enum CacheReadState {
 -    Reading { started_len: usize },
 +    Reading,
- }
- 
- #[derive(Clone, Copy, Debug)]
-@@ -210,14 +210,16 @@ enum CacheWriteState {
-     Idle,
-     Seeking { offset: u64 },
-     Writing,
+@@ -212,0 +213,2 @@ enum CacheWriteState {
 +    Flushing,
 +    Failed,
- }
- 
+@@ -215 +217 @@ enum CacheWriteState {
 -pub struct PrefixCacheFile<R> {
 +pub struct PrefixCacheFile<R, W = File> {
-     upstream: R,
-     len: u64,
-     pos: u64,
-     cache_reader: File,
+@@ -220 +222 @@ pub struct PrefixCacheFile<R> {
 -    cache_writer: File,
 +    cache_writer: W,
-     cached_len: u64,
-     pending_seek: Option<u64>,
-     pending_chunk: Option<Vec<u8>>,
-@@ -247,7 +249,17 @@ where
-             .open(cache_path)
-             .await?;
-         let cache_reader = OpenOptions::new().read(true).open(cache_path).await?;
+@@ -249,0 +252,2 @@ where
 +        Self::with_cache(upstream, len, cache_reader, cache_writer)
 +    }
- 
+@@ -250,0 +255,8 @@ where
 +    /// Accept separate, already safely opened cache handles. The caller owns
 +    /// their path policy; both must refer to the same empty regular file.
 +    pub fn with_cache(
@@ -156,13 +78,7 @@ index 824f9c2..7d15570 100644
 +        cache_reader: File,
 +        cache_writer: File,
 +    ) -> std::io::Result<Self> {
-         Ok(Self {
-             upstream,
-             len,
-@@ -265,6 +277,18 @@ where
-         })
-     }
- 
+@@ -267,0 +280,12 @@ where
 +    pub async fn sync_cache(&mut self) -> std::io::Result<()> {
 +        use tokio::io::AsyncWriteExt;
 +        self.cache_writer.flush().await?;
@@ -175,24 +91,12 @@ index 824f9c2..7d15570 100644
 +    R: AsyncRead + Unpin,
 +    W: AsyncWrite + AsyncSeek + Unpin,
 +{
-     pub fn len(&self) -> u64 {
-         self.len
-     }
-@@ -304,9 +328,7 @@ where
-                                     "cache seek completed at unexpected position",
-                                 )));
-                             }
+@@ -307,3 +331 @@ where
 -                            self.cache_read_state = CacheReadState::Reading {
 -                                started_len: buf.filled().len(),
 -                            };
 +                            self.cache_read_state = CacheReadState::Reading;
-                         }
-                         Poll::Ready(Err(err)) => {
-                             self.cache_read_state = CacheReadState::Idle;
-@@ -314,11 +336,22 @@ where
-                         }
-                     }
-                 }
+@@ -317,2 +339,8 @@ where
 -                CacheReadState::Reading { started_len } => {
 -                    match AsyncRead::poll_read(Pin::new(&mut self.cache_reader), cx, buf) {
 +                CacheReadState::Reading => {
@@ -203,8 +107,7 @@ index 824f9c2..7d15570 100644
 +                    let limit = available.min(buf.remaining() as u64) as usize;
 +                    let mut limited = buf.take(limit);
 +                    match AsyncRead::poll_read(Pin::new(&mut self.cache_reader), cx, &mut limited) {
-                         Poll::Pending => return Poll::Pending,
-                         Poll::Ready(Ok(())) => {
+@@ -321 +349,6 @@ where
 -                            let read = buf.filled().len() - started_len;
 +                            let read = limited.filled().len();
 +                            // AsyncRead guarantees that the filled range is initialized.
@@ -212,15 +115,9 @@ index 824f9c2..7d15570 100644
 +                                buf.assume_init(read);
 +                            }
 +                            buf.advance(read);
-                             self.cache_read_state = CacheReadState::Idle;
-                             if read == 0 {
-                                 return Poll::Ready(Err(Error::new(
-@@ -399,14 +432,11 @@ where
-                         }
-                         Poll::Ready(Ok(written)) => {
-                             self.pending_chunk_offset += written;
+@@ -402 +434,0 @@ where
 -                            self.cached_len += written as u64;
-                             self.cache_write_pos += written as u64;
+@@ -404,6 +436,4 @@ where
 -                            if self.pending_chunk_offset >= chunk.len() {
 -                                self.pending_chunk = None;
 -                                self.pending_chunk_offset = 0;
@@ -231,13 +128,7 @@ index 824f9c2..7d15570 100644
 +                            // completes. Publish no new reader-visible prefix
 +                            // until poll_flush confirms the same write finished.
 +                            self.cache_write_state = CacheWriteState::Flushing;
-                         }
-                         Poll::Ready(Err(err)) => {
-                             self.cache_write_state = CacheWriteState::Idle;
-@@ -414,6 +444,29 @@ where
-                         }
-                     }
-                 }
+@@ -416,0 +447,23 @@ where
 +                CacheWriteState::Flushing => {
 +                    match AsyncWrite::poll_flush(Pin::new(&mut self.cache_writer), cx) {
 +                        Poll::Pending => return Poll::Pending,
@@ -261,46 +152,20 @@ index 824f9c2..7d15570 100644
 +                CacheWriteState::Failed => {
 +                    return Poll::Ready(Err(Error::other("cache write previously failed")));
 +                }
-             }
-         }
-     }
-@@ -450,9 +503,10 @@ where
-     }
- }
- 
+@@ -453 +506 @@ where
 -impl<R> AsyncRead for PrefixCacheFile<R>
 +impl<R, W> AsyncRead for PrefixCacheFile<R, W>
- where
-     R: AsyncRead + Unpin,
+@@ -455,0 +509 @@ where
 +    W: AsyncWrite + AsyncSeek + Unpin,
- {
-     fn poll_read(
-         mut self: Pin<&mut Self>,
-@@ -495,7 +549,7 @@ where
- 
-             match self.as_mut().poll_flush_pending_chunk(cx) {
-                 Poll::Ready(Ok(())) => {
+@@ -498 +552 @@ where
 -                    if self.pending_chunk.is_some() {
 +                    if self.pending_chunk.is_some() || self.cached_len >= target_end {
-                         continue;
-                     }
-                 }
-@@ -518,9 +572,10 @@ where
-     }
- }
- 
+@@ -521 +575 @@ where
 -impl<R> AsyncSeek for PrefixCacheFile<R>
 +impl<R, W> AsyncSeek for PrefixCacheFile<R, W>
- where
-     R: AsyncRead + Unpin,
+@@ -523,0 +578 @@ where
 +    W: AsyncWrite + AsyncSeek + Unpin,
- {
-     fn start_seek(mut self: Pin<&mut Self>, position: SeekFrom) -> std::io::Result<()> {
-         let next = match position {
-@@ -546,18 +601,27 @@ where
-         Ok(())
-     }
- 
+@@ -549,5 +604,4 @@ where
 -    fn poll_complete(
 -        mut self: Pin<&mut Self>,
 -        _cx: &mut Context<'_>,
@@ -310,14 +175,9 @@ index 824f9c2..7d15570 100644
 +        let Some(next) = self.pending_seek else {
 +            return Poll::Ready(Ok(self.pos));
 +        };
-         if next > self.len {
+@@ -554,0 +609 @@ where
 +            self.pending_seek = None;
-             return Poll::Ready(Err(Error::new(
-                 ErrorKind::InvalidInput,
-                 "seek past remote end",
-             )));
-         }
- 
+@@ -560,0 +616,9 @@ where
 +        // A cancelled read can leave Tokio's file operation in flight. Drain it
 +        // before resetting our reader state and starting a different cache seek.
 +        match AsyncSeek::poll_complete(Pin::new(&mut self.cache_reader), cx) {
@@ -327,13 +187,7 @@ index 824f9c2..7d15570 100644
 +        }
 +        self.cache_read_state = CacheReadState::Idle;
 +        self.pending_seek = None;
-         self.pos = next;
-         Poll::Ready(Ok(self.pos))
-     }
-@@ -840,6 +904,251 @@ mod tests {
-         PrefixCacheFile::new(http, len, cache).await.unwrap()
-     }
- 
+@@ -842,0 +907,245 @@ mod tests {
 +    // Model Tokio File's accepted-but-not-yet-visible write, while exercising
 +    // the production PrefixCacheFile state machine and a real independent reader.
 +    struct DelayedWriter {
@@ -579,41 +433,17 @@ index 824f9c2..7d15570 100644
 +            });
 +    }
 +
-     #[tokio::test]
-     async fn cached_prefix_read_completes() {
-         let body = test_body();
 diff --git a/crates/msixvc/src/xvd.rs b/crates/msixvc/src/xvd.rs
 index b74a7ae..d0993ca 100644
 --- a/crates/msixvc/src/xvd.rs
 +++ b/crates/msixvc/src/xvd.rs
-@@ -16,6 +16,7 @@ use tokio::task::block_in_place;
- use tokio::time::{sleep, timeout};
- use tokio_util::io::SyncIoBridge;
- use uuid::Uuid;
+@@ -18,0 +19 @@ use uuid::Uuid;
 +use sha2::{Digest, Sha256};
- use zerocopy::IntoBytes;
- 
- use crate::crypt::{TweakGenerator, decrypt_page_xts};
-@@ -855,6 +856,7 @@ impl XvdFile {
-                 }
-                 let chunk = pending.split_to(4096);
-                 page.copy_from_slice(&chunk);
+@@ -857,0 +859 @@ impl XvdFile {
 +                verify_segment_page(sfile, page_in_section - page_start, &page)?;
-                 let to_write_remaining = remaining.min(PAGE_SIZE as u64) as usize;
-                 let to_write = if let Some(tweak) = &tweak {
-                     let tweak = tweak.with_data_unit(match &s.unwrap().data_units {
-@@ -960,6 +962,7 @@ impl XvdFile {
-                 sfile.length,
-             );
-             i.read_exact(&mut page).await?;
+@@ -962,0 +965 @@ impl XvdFile {
 +            verify_segment_page(sfile, page_in_section - page_start, &page)?;
-             let to_write = min(
-                 PAGE_SIZE,
-                 sfile.length as usize
-@@ -1044,3 +1047,28 @@ impl XvdFile {
-             .await
-     }
- }
+@@ -1046,0 +1050,25 @@ impl XvdFile {
 +
 +// XVD data hashes cover each full raw 4096-byte page before decryption and are
 +// truncated SHA-256 (20 bytes; the following 4 bytes encode the data unit).
@@ -643,29 +473,17 @@ diff --git a/crates/xodus/Cargo.toml b/crates/xodus/Cargo.toml
 index fa1033c..a780402 100644
 --- a/crates/xodus/Cargo.toml
 +++ b/crates/xodus/Cargo.toml
-@@ -19,6 +19,8 @@ quick-xml = { version = "0.42.0", features = ["serialize", "overlapped-lists"] }
- rand = "0.10.2"
- aes = "0.9.2"
- keyring-core = { version = "1.0.0", features = ["sample"] }
+@@ -21,0 +22,2 @@ keyring-core = { version = "1.0.0", features = ["sample"] }
 +ron = { version = "0.12.0", optional = true }
 +tempfile = { version = "3.27.0", optional = true }
- zerocopy = { version = "0.8.56", features = ["derive"] }
- bergshamra-c14n = "0.8.0"
- hmac = "0.13.0"
-@@ -53,4 +55,4 @@ ed25519-dalek = "3.0.0"
- prost-build = "0.14.4"
- 
- [features]
+@@ -56 +58 @@ prost-build = "0.14.4"
 -key-chain-file = []
 +key-chain-file = ["dep:ron", "dep:tempfile"]
 diff --git a/crates/xodus/proto/xodus/common.proto b/crates/xodus/proto/xodus/common.proto
-index c7741a6..f545faf 100644
+index c7741a6..de11f28 100644
 --- a/crates/xodus/proto/xodus/common.proto
 +++ b/crates/xodus/proto/xodus/common.proto
-@@ -8,4 +8,14 @@ enum XodusMessageType {
-     PONG = 2;
-     MSA_TOKEN_REQUEST=3;
-     MSA_TOKEN_RESPONSE=4;
+@@ -10,0 +11,14 @@ enum XodusMessageType {
 +    STORE_ACCOUNT_CONTEXT_REQUEST=5;
 +    STORE_ACCOUNT_CONTEXT_RESPONSE=6;
 +    STORE_GAME_LICENSE_REQUEST=7;
@@ -676,28 +494,22 @@ index c7741a6..f545faf 100644
 +    STORE_LICENSE_TOKEN_RESPONSE=12;
 +    STORE_COLLECTIONS_REQUEST=13;
 +    STORE_COLLECTIONS_RESPONSE=14;
- }
++    STORE_INVENTORY_REQUEST=15;
++    STORE_INVENTORY_RESPONSE=16;
++    STORE_PACKAGE_UPDATES_REQUEST=17;
++    STORE_PACKAGE_UPDATES_RESPONSE=18;
 diff --git a/crates/xodus/src/api/live/mod.rs b/crates/xodus/src/api/live/mod.rs
 index f9abc32..ec4fdf6 100644
 --- a/crates/xodus/src/api/live/mod.rs
 +++ b/crates/xodus/src/api/live/mod.rs
-@@ -76,7 +76,7 @@ pub async fn exchange_device_token(
-             let token = collection.security_tokens.remove(0);
-             Ok(token)
-         }
+@@ -79 +79 @@ pub async fn exchange_device_token(
 -        b => unimplemented!("Exchange token supports only singular token right now {b:?}"),
 +        _ => unimplemented!("Exchange token returned an unsupported response"),
-     }
- }
- 
 diff --git a/crates/xodus/src/models/xgameruntime/xuser.rs b/crates/xodus/src/models/xgameruntime/xuser.rs
 index 10d2158..6b6ec06 100644
 --- a/crates/xodus/src/models/xgameruntime/xuser.rs
 +++ b/crates/xodus/src/models/xgameruntime/xuser.rs
-@@ -18,3 +18,39 @@ pub struct MSATokenResponse {
-     pub device_rps: String,
-     pub device_expiry: i64,
- }
+@@ -20,0 +21,36 @@ pub struct MSATokenResponse {
 +
 +impl MSATokenResponse {
 +    /// Broker-issued RPS tickets only. Device failure does not turn a valid
@@ -961,15 +773,11 @@ diff --git a/crates/xodus/src/secrets.rs b/crates/xodus/src/secrets.rs
 index dba6b2f..e56ec8a 100644
 --- a/crates/xodus/src/secrets.rs
 +++ b/crates/xodus/src/secrets.rs
-@@ -1,14 +1,16 @@
- pub static SERVICE_NAME: &str = "Xodus Service";
- 
+@@ -2,0 +3,3 @@ pub static SERVICE_NAME: &str = "Xodus Service";
 +#[cfg(feature = "key-chain-file")]
 +mod file;
 +
- pub fn init_secrets() -> Result<(), keyring_core::Error> {
-     #[cfg(feature = "key-chain-file")]
-     {
+@@ -6,6 +9,5 @@ pub fn init_secrets() -> Result<(), keyring_core::Error> {
 -        let store = keyring_core::sample::Store::new_with_backing(
 -            secrets_backing_file()
 -                .to_str()
@@ -981,13 +789,7 @@ index dba6b2f..e56ec8a 100644
 +        // changes made by another CLI or service process.
 +        file::initialize(&secrets_backing_file())
 +            .map_err(|err| keyring_core::Error::PlatformFailure(Box::new(err)))?;
-     }
- 
-     #[cfg(not(feature = "key-chain-file"))]
-@@ -35,19 +37,86 @@ pub fn init_secrets() -> Result<(), keyring_core::Error> {
-     Ok(())
- }
- 
+@@ -38,2 +40,14 @@ pub fn init_secrets() -> Result<(), keyring_core::Error> {
 -pub fn get_entry(user: &str) -> Result<keyring_core::Entry, keyring_core::Error> {
 -    keyring_core::Entry::new(SERVICE_NAME, user)
 +pub(crate) fn with_entry<T>(
@@ -1004,24 +806,13 @@ index dba6b2f..e56ec8a 100644
 +        let _ = write;
 +        operation(&keyring_core::Entry::new(SERVICE_NAME, user)?)
 +    }
- }
- 
- pub fn destroy_secrets() {
+@@ -42,0 +57 @@ pub fn destroy_secrets() {
 +    #[cfg(not(feature = "key-chain-file"))]
-     keyring_core::unset_default_store();
- }
- 
- #[cfg(feature = "key-chain-file")]
- fn secrets_backing_file() -> std::path::PathBuf {
+@@ -47,0 +63,3 @@ fn secrets_backing_file() -> std::path::PathBuf {
 +    if let Some(path) = std::env::var_os("XODUS_KEYRING_FILE") {
 +        return path.into();
 +    }
-     std::env::var_os("HOME")
-         .or_else(|| std::env::var_os("USERPROFILE"))
-         .map(std::path::PathBuf::from)
-         .unwrap_or_else(std::env::temp_dir)
-         .join(".xodus-keyring.ron")
- }
+@@ -53,0 +72,51 @@ fn secrets_backing_file() -> std::path::PathBuf {
 +
 +#[cfg(feature = "key-chain-file")]
 +fn prepare_private_backing_file(path: &std::path::Path) -> std::io::Result<()> {
@@ -1077,10 +868,7 @@ diff --git a/crates/xodus/src/tokens/backend/keychain.rs b/crates/xodus/src/toke
 index 6aa6cde..3937a17 100644
 --- a/crates/xodus/src/tokens/backend/keychain.rs
 +++ b/crates/xodus/src/tokens/backend/keychain.rs
-@@ -4,19 +4,32 @@ pub struct KeychainBackend;
- 
- impl TokenBackend for KeychainBackend {
-     fn get(&self, key: &str) -> Result<Option<Vec<u8>>, TokenStoreError> {
+@@ -7,6 +7 @@ impl TokenBackend for KeychainBackend {
 -        let entry = crate::secrets::get_entry(key)?;
 -        match entry.get_secret() {
 -            Ok(bytes) => Ok(Some(bytes)),
@@ -1088,14 +876,10 @@ index 6aa6cde..3937a17 100644
 -            Err(e) => Err(e.into()),
 -        }
 +        crate::secrets::with_entry(key, false, read_entry)
-     }
- 
-     fn set(&self, key: &str, value: &[u8]) -> Result<(), TokenStoreError> {
+@@ -16 +11 @@ impl TokenBackend for KeychainBackend {
 -        Ok(crate::secrets::get_entry(key)?.set_secret(value)?)
 +        crate::secrets::with_entry(key, true, |entry| Ok(entry.set_secret(value)?))
-     }
- 
-     fn remove(&self, key: &str) -> Result<(), TokenStoreError> {
+@@ -20 +15,19 @@ impl TokenBackend for KeychainBackend {
 -        Ok(crate::secrets::get_entry(key)?.delete_credential()?)
 +        crate::secrets::with_entry(key, true, |entry| Ok(entry.delete_credential()?))
 +    }
@@ -1116,25 +900,14 @@ index 6aa6cde..3937a17 100644
 +        Ok(bytes) => Ok(Some(bytes)),
 +        Err(keyring_core::Error::NoEntry) => Ok(None),
 +        Err(err) => Err(err.into()),
-     }
- }
 diff --git a/crates/xodus/src/tokens/device.rs b/crates/xodus/src/tokens/device.rs
 index ec363e4..80a5314 100644
 --- a/crates/xodus/src/tokens/device.rs
 +++ b/crates/xodus/src/tokens/device.rs
-@@ -11,7 +11,7 @@ use crate::tokens::manager::TokenManager;
- pub async fn ensure_device_credentials(client: &reqwest::Client, tokens: &TokenManager) {
-     match tokens.get_device_license() {
-         Err(_) => provision_device(client, tokens).await,
+@@ -14 +14 @@ pub async fn ensure_device_credentials(client: &reqwest::Client, tokens: &TokenM
 -        Ok(license) if tokens.get_device_sts_token().is_err() => {
 +        Ok(license) if !device_token_is_current(tokens.get_device_sts_token().ok().as_ref()) => {
-             reauthenticate_device(client, tokens, license).await
-         }
-         Ok(_) => {}
-@@ -85,3 +85,48 @@ fn save_device_sts_token(
-         .save_device_token(key_name, token)
-         .expect("Failed to save device token");
- }
+@@ -87,0 +88,45 @@ fn save_device_sts_token(
 +
 +// A persisted credential is not evidence that its STS ticket is still valid.
 +// Reuse the device's existing identity/reauthentication path after expiry.
@@ -1184,10 +957,7 @@ diff --git a/crates/xodus/src/tokens/manager.rs b/crates/xodus/src/tokens/manage
 index aeb9897..749b956 100644
 --- a/crates/xodus/src/tokens/manager.rs
 +++ b/crates/xodus/src/tokens/manager.rs
-@@ -168,13 +168,15 @@ impl TokenManager {
-         address: String,
-         token: Token,
-     ) -> Result<(), TokenStoreError> {
+@@ -171,8 +171,10 @@ impl TokenManager {
 -        let mut tokens: HashMap<String, Token> = match backend.get(key)? {
 -            Some(bytes) if !bytes.is_empty() => {
 -                serde_json::from_slice::<TokenStore>(&bytes)?.tokens
@@ -1206,16 +976,11 @@ index aeb9897..749b956 100644
 +            tokens.insert(address.clone(), token.clone());
 +            Ok(serde_json::to_vec(&TokenStore { tokens })?)
 +        })
-     }
- }
 diff --git a/crates/xodus/src/tokens/store.rs b/crates/xodus/src/tokens/store.rs
 index 76d2329..d218ecb 100644
 --- a/crates/xodus/src/tokens/store.rs
 +++ b/crates/xodus/src/tokens/store.rs
-@@ -4,6 +4,14 @@ pub trait TokenBackend: Send + Sync {
-     fn get(&self, key: &str) -> Result<Option<Vec<u8>>, TokenStoreError>;
-     fn set(&self, key: &str, value: &[u8]) -> Result<(), TokenStoreError>;
-     fn remove(&self, key: &str) -> Result<(), TokenStoreError>;
+@@ -6,0 +7,8 @@ pub trait TokenBackend: Send + Sync {
 +
 +    fn update(
 +        &self,
@@ -1224,65 +989,64 @@ index 76d2329..d218ecb 100644
 +    ) -> Result<(), TokenStoreError> {
 +        self.set(key, &update(self.get(key)?)?)
 +    }
- }
- 
- pub trait ExpiringTokenBackend: TokenBackend {
 diff --git a/crates/xodus-cli/Cargo.toml b/crates/xodus-cli/Cargo.toml
 index 7b71cb7..fc2958e 100644
 --- a/crates/xodus-cli/Cargo.toml
 +++ b/crates/xodus-cli/Cargo.toml
-@@ -5,6 +5,7 @@ edition = "2024"
- default-run = "xodus-cli"
- 
- [dependencies]
+@@ -7,0 +8 @@ default-run = "xodus-cli"
 +sha2 = "0.11.0"
- xodus = { path = "../xodus" }
- msixvc = { path = "../msixvc" }
- eappx = { git = "https://github.com/tuxuser/eappx-rs" }
 diff --git a/crates/xodus-cli/src/commands/extract.rs b/crates/xodus-cli/src/commands/extract.rs
 index 7d6264d..b87dd03 100644
 --- a/crates/xodus-cli/src/commands/extract.rs
 +++ b/crates/xodus-cli/src/commands/extract.rs
-@@ -19,6 +19,9 @@ pub async fn run(
-         false,
-         None,
-         Some(market),
+@@ -21,0 +22,3 @@ pub async fn run(
 +        false,
 +        None,
 +        None,
-     )
-     .await
- }
 diff --git a/crates/xodus-cli/src/commands/login.rs b/crates/xodus-cli/src/commands/login.rs
-index 281ef9c..6062f35 100644
+index 281ef9c..e65cf9d 100644
 --- a/crates/xodus-cli/src/commands/login.rs
 +++ b/crates/xodus-cli/src/commands/login.rs
-@@ -27,11 +27,16 @@ pub async fn run(client: &reqwest::Client, tokens: &TokenManager) -> ExitCode {
-         Some(soap::BodyContent::RequestSecurityTokenResponse(token)) => vec![*token],
-         None => {
-             eprintln!("Didn't log in");
+@@ -14 +14,7 @@ pub async fn run(client: &reqwest::Client, tokens: &TokenManager) -> ExitCode {
+-    let token = tokens.get_device_sts_token().unwrap();
++    let token = match tokens.get_device_sts_token() {
++        Ok(token) => token,
++        Err(_) => {
++            eprintln!("Microsoft sign-in preparation failed");
++            return ExitCode::from(71);
++        }
++    };
+@@ -20,3 +26,7 @@ pub async fn run(client: &reqwest::Client, tokens: &TokenManager) -> ExitCode {
+-    let output = webview::run_sessions(handler)
+-        .expect("failed to login")
+-        .flatten();
++    let output = match webview::run_sessions(handler) {
++        Ok(output) => output.flatten(),
++        Err(_) => {
++            eprintln!("Microsoft sign-in window or flow failed");
++            return ExitCode::from(70);
++        }
++    };
+@@ -30 +40 @@ pub async fn run(client: &reqwest::Client, tokens: &TokenManager) -> ExitCode {
 -            vec![]
 +            return ExitCode::FAILURE;
-         }
-         _ => unreachable!(),
-     };
- 
+@@ -34,0 +45,5 @@ pub async fn run(client: &reqwest::Client, tokens: &TokenManager) -> ExitCode {
 +    if issued_tokens.is_empty() {
 +        eprintln!("Login did not issue any credentials");
 +        return ExitCode::FAILURE;
 +    }
 +
-     for token in issued_tokens {
-         let address = token.applies_to.endpoint_reference.address.clone();
-         let token = token.into();
-@@ -43,6 +48,7 @@ pub async fn run(client: &reqwest::Client, tokens: &TokenManager) -> ExitCode {
-         tokens.save_user_token(address, token).unwrap();
-     }
- 
+@@ -43 +58,4 @@ pub async fn run(client: &reqwest::Client, tokens: &TokenManager) -> ExitCode {
+-        tokens.save_user_token(address, token).unwrap();
++        if tokens.save_user_token(address, token).is_err() {
++            eprintln!("Microsoft credentials could not be stored");
++            return ExitCode::from(72);
++        }
+@@ -45,0 +64 @@ pub async fn run(client: &reqwest::Client, tokens: &TokenManager) -> ExitCode {
 +    println!("Login completed; credentials stored.");
-     ExitCode::SUCCESS
- }
- 
+@@ -165 +184 @@ impl webview::SessionHandler for LoginHandler {
+-                    .unwrap();
++                    .map_err(|_| std::io::Error::other("Microsoft account could not be stored"))?;
 diff --git a/crates/xodus-cli/src/commands/package_info.rs b/crates/xodus-cli/src/commands/package_info.rs
 new file mode 100644
 index 0000000..8225209
@@ -1494,18 +1258,14 @@ diff --git a/crates/xodus-cli/src/commands/run.rs b/crates/xodus-cli/src/command
 index bc62549..ac300ec 100644
 --- a/crates/xodus-cli/src/commands/run.rs
 +++ b/crates/xodus-cli/src/commands/run.rs
-@@ -256,5 +256,5 @@ pub async fn run(
- 
-     cleanup().await;
- 
+@@ -259 +259 @@ pub async fn run(
 -    ExitCode::from(status.code().map(|c| c as u8).unwrap_or(0))
 +    ExitCode::from(crate::process_status::shell_exit_code(status))
- }
 diff --git a/crates/xodus-cli/src/commands/streaming.rs b/crates/xodus-cli/src/commands/streaming.rs
 index 6d6640c..b01f166 100644
 --- a/crates/xodus-cli/src/commands/streaming.rs
 +++ b/crates/xodus-cli/src/commands/streaming.rs
-@@ -1,7 +1,15 @@
+@@ -1 +1,6 @@
 -use std::collections::HashMap;
 +#[path = "streaming_progress.rs"]
 +mod streaming_progress;
@@ -1513,23 +1273,15 @@ index 6d6640c..b01f166 100644
 +mod streaming_resume;
 +use sha2::{Digest, Sha256};
 +use std::collections::{HashMap, HashSet};
- use std::path::Path;
- use std::process::ExitCode;
- use std::vec;
+@@ -4,0 +10,3 @@ use std::vec;
 +use streaming_progress::Progress;
 +use streaming_resume::Resume;
 +use tokio::io::AsyncWriteExt;
- 
- use fs2::available_space;
- use futures_util::{StreamExt, stream};
-@@ -38,9 +46,37 @@ pub async fn run(
-     try_skip_ntfs: bool,
-     parallel: Option<usize>,
-     market: Option<String>,
+@@ -40,0 +49,3 @@ pub async fn run(
 +    resume_files: bool,
 +    expect_package: Option<String>,
 +    progress_fd: Option<i32>,
- ) -> ExitCode {
+@@ -41,0 +53,25 @@ pub async fn run(
 +    if progress_fd.is_some() && !resume_files {
 +        return ExitCode::FAILURE;
 +    }
@@ -1555,34 +1307,18 @@ index 6d6640c..b01f166 100644
 +        return ExitCode::FAILURE;
 +    }
 +    let mut package_identity = None;
-     let (tx, rx) = tokio::sync::mpsc::channel::<ProgressEvent>(256);
+@@ -43 +79 @@ pub async fn run(
 -    if source.starts_with("file://") {
 +    let success = if source.starts_with("file://") {
-         let fsrc = source.strip_prefix("file://").unwrap_or_default();
-         let f = match File::open(fsrc).await {
-             Ok(f) => f,
-@@ -63,13 +99,16 @@ pub async fn run(
-             try_skip_ntfs,
-             parallel,
-             market,
+@@ -65,0 +102,2 @@ pub async fn run(
 +            resume_files,
 +            package_identity,
-             f,
-             l,
-             &source,
-             &tx,
-             rx,
+@@ -70,0 +109 @@ pub async fn run(
 +            &machine_progress,
-         )
+@@ -72 +111 @@ pub async fn run(
 -        .await;
 +        .await
-     } else {
-         let vurl = if source.starts_with("http://") || source.starts_with("https://") {
-             source
-@@ -105,6 +144,17 @@ pub async fn run(
-                 eprintln!("No .msixvc file found");
-                 return ExitCode::FAILURE;
-             };
+@@ -107,0 +147,11 @@ pub async fn run(
 +            if resume_files {
 +                package_identity = authenticated_package_identity(&package, file);
 +                if package_identity.is_none() {
@@ -1594,96 +1330,53 @@ index 6d6640c..b01f166 100644
 +                // Never mix a newly selected package with an earlier approved update.
 +                return ExitCode::from(78);
 +            }
-             format!(
-                 "{}{}",
-                 file.cdn_root_paths.first().unwrap(),
-@@ -139,16 +189,23 @@ pub async fn run(
-             try_skip_ntfs,
-             parallel,
-             market,
+@@ -141,0 +192,2 @@ pub async fn run(
 +            resume_files,
 +            package_identity,
-             http_file,
-             l,
-             url,
-             &tx,
-             rx,
+@@ -146,0 +199 @@ pub async fn run(
 +            &machine_progress,
-         )
+@@ -148,2 +201,2 @@ pub async fn run(
 -        .await;
 -    }
 +        .await
 +    };
- 
+@@ -151 +204,5 @@ pub async fn run(
 -    ExitCode::SUCCESS
 +    if success {
 +        ExitCode::SUCCESS
 +    } else {
 +        ExitCode::FAILURE
 +    }
- }
- 
- async fn run_cli_reader<Reader>(
-@@ -158,12 +215,15 @@ async fn run_cli_reader<Reader>(
-     try_skip_ntfs: bool,
-     parallel: Option<usize>,
-     market: Option<String>,
+@@ -160,0 +218,2 @@ async fn run_cli_reader<Reader>(
 +    resume_files: bool,
 +    package_identity: Option<String>,
-     reader: Reader,
-     l: u64,
-     url: &str,
-     tx: &Sender<ProgressEvent>,
-     mut rx: Receiver<ProgressEvent>,
+@@ -166 +225,2 @@ async fn run_cli_reader<Reader>(
 -) -> ()
 +    machine_progress: &Progress,
 +) -> bool
- where
-     Reader: AsyncRead + Unpin,
- {
-@@ -217,10 +277,13 @@ where
-         try_skip_ntfs,
-         parallel,
-         market,
+@@ -219,0 +280,2 @@ where
 +        resume_files,
 +        package_identity,
-         reader,
-         l,
-         url,
-         tx,
+@@ -223,0 +286 @@ where
 +        machine_progress,
-     )
-     .await
- }
-@@ -232,24 +295,42 @@ async fn run_reader<Reader>(
-     try_skip_ntfs: bool,
-     parallel: Option<usize>,
-     market: Option<String>,
+@@ -234,0 +298,2 @@ async fn run_reader<Reader>(
 +    resume_files: bool,
 +    package_identity: Option<String>,
-     reader: Reader,
-     l: u64,
-     url: &str,
-     tx: &Sender<ProgressEvent>,
+@@ -239 +304,2 @@ async fn run_reader<Reader>(
 -) -> ()
 +    machine_progress: &Progress,
 +) -> bool
- where
-     Reader: AsyncRead + Unpin,
- {
+@@ -243 +309,4 @@ where
 -    let out: &Path = Path::new(&destination);
 +    let original_out = Path::new(&destination);
 +    std::fs::create_dir_all(original_out).expect("ok");
 +    let resume =
 +        resume_files.then(|| Resume::open(original_out).expect("resume destination rejected"));
- 
+@@ -245 +314,2 @@ where
 -    std::fs::create_dir_all(out).expect("ok");
 +    let anchored = resume.as_ref().map(Resume::root_path);
 +    let out: &Path = anchored.as_deref().unwrap_or(original_out);
- 
-     let cache_path = out.join(".xodus-streaming-tmp.msixvc");
-     let final_path = out.join(".xodus-streaming.msixvc");
- 
+@@ -250,3 +320,14 @@ where
 -    let mut remote_file = streaming::PrefixCacheFile::new(reader, l, cache_path.clone())
 -        .await
 -        .expect("no err");
@@ -1701,13 +1394,7 @@ index 6d6640c..b01f166 100644
 +            .await
 +            .expect("no err")
 +    };
-     let remote_xvd = XvdFile::parse(&mut remote_file).await.expect("no err");
-     let mut rfiles: HashMap<String, SegmentFile> = HashMap::new();
-     let mut lfiles: HashMap<String, SegmentFile> = HashMap::new();
-@@ -281,11 +362,79 @@ where
-         rfiles.extend(sfiles);
-     }
- 
+@@ -284,5 +365,73 @@ where
 -    let file = OpenOptions::new()
 -        .read(true)
 -        .open(final_path.to_owned())
@@ -1786,99 +1473,42 @@ index 6d6640c..b01f166 100644
 +            .await
 +            .ok()
 +    };
- 
-     if let Some(mut file) = file {
-         let xvd = XvdFile::parse(&mut file).await.expect("no err");
-@@ -315,7 +464,7 @@ where
-     .await;
-     if let Err(err) = license {
-         eprintln!("{}", err);
+@@ -318 +467 @@ where
 -        return;
 +        return false;
-     }
-     let (key, game_splicense) = license.unwrap();
-     if game_splicense.content_keys.len() != 1 {
-@@ -323,10 +472,10 @@ where
-             "unexpected number of content keys {}",
-             game_splicense.content_keys.len()
-         );
+@@ -326 +475 @@ where
 -        return;
 +        return false;
-     }
-     let Some((_, content_key)) = game_splicense.content_keys.into_iter().next() else {
+@@ -329 +478 @@ where
 -        return;
 +        return false;
-     };
- 
-     let full_key = content_key.unpack(&key).expect("failed to unpack");
-@@ -334,13 +483,16 @@ where
-     let total_size = rfiles
-         .iter()
-         .filter(|(k, v1)| {
+@@ -336,0 +486,3 @@ where
 +            if resume_files {
 +                return !complete.contains(*k);
 +            }
-             if let Some(v2) = lfiles.get(*k) {
-                 v1.data_hashs != v2.data_hashs || v1.data_hashs.is_empty()
-             } else {
-                 true
-             }
-         })
+@@ -343 +495 @@ where
 -        .map(|(_, v)| v.length)
 +        .map(|(_, v)| output_length(v))
-         .sum();
- 
-     let required_free_space = total_size;
-@@ -352,7 +504,7 @@ where
-                 out.display(),
-                 err
-             );
+@@ -355 +507 @@ where
 -            return;
 +            return false;
-         }
-     };
- 
-@@ -364,7 +516,7 @@ where
-             available_free_space,
-             total_size
-         );
+@@ -367 +519 @@ where
 -        return;
 +        return false;
-     }
- 
-     tx.send(ProgressEvent::UpdateRemaining {
-@@ -375,10 +527,14 @@ where
-     .ok();
- 
-     let remote_xvd_ref = &remote_xvd;
+@@ -377,0 +530 @@ where
 +    let resume_ref = resume.as_ref();
-     stream::iter(
-         rfiles
-             .iter()
-             .filter(|(k, v1)| {
+@@ -381,0 +535,3 @@ where
 +                if resume_files {
 +                    return !complete.contains(*k);
 +                }
-                 if let Some(v2) = lfiles.get(*k) {
-                     v1.data_hashs != v2.data_hashs || v1.data_hashs.is_empty()
-                 } else {
-@@ -390,7 +546,11 @@ where
-                 content: SegmentFile {
-                     offset: v.offset,
-                     length: v.length,
+@@ -393 +549,5 @@ where
 -                    data_hashs: vec![],
 +                    data_hashs: if resume_files {
 +                        v.data_hashs.clone()
 +                    } else {
 +                        vec![]
 +                    },
-                     keep_encrypted: v.keep_encrypted,
-                 },
-             })
-@@ -400,20 +560,26 @@ where
-         let tx = tx.clone();
-         let client = client.clone();
-         async move {
+@@ -403,11 +563,15 @@ where
 -            let target_file = out.join(job.name.replace("\\", "/"));
 -            if let Some(folder) = target_file.parent() {
 -                std::fs::create_dir_all(folder).expect("ok");
@@ -1905,18 +1535,11 @@ index 6d6640c..b01f166 100644
 +                    .await
 +                    .expect("ok")
 +            };
-             let mut lp = 0;
+@@ -414,0 +579 @@ where
 +            machine_progress.start(id, output_length(&job.content));
- 
-             let progress = |pos, _| {
+@@ -416,0 +582 @@ where
 +                machine_progress.advance(id, pos);
-                 if tx
-                     .try_send(ProgressEvent::Advanced {
-                         id,
-@@ -425,8 +591,13 @@ where
-                 }
-             };
-             let path = job.name.to_owned();
+@@ -428,2 +594,7 @@ where
 -            let shown = if path.len() > 30 {
 -                format!("...{}", &path[path.len() - 27..])
 +            let shown = if path.chars().count() > 30 {
@@ -1926,21 +1549,11 @@ index 6d6640c..b01f166 100644
 +                        .skip(path.chars().count() - 27)
 +                        .collect::<String>()
 +                )
-             } else {
-                 path.clone()
-             };
-@@ -444,18 +615,260 @@ where
-                     .extract_file(&mut i, &mut fout, &job.content, *full_key, progress)
-                     .await
-                     .expect("msg");
+@@ -447 +617,0 @@ where
 -                tx.send(ProgressEvent::Finished { id }).await.ok();
-             } else {
-                 remote_xvd_ref
-                     .download_file_http(&client, url, &mut fout, &job.content, *full_key, progress)
-                     .await
-                     .expect("msg");
+@@ -453 +622,0 @@ where
 -                tx.send(ProgressEvent::Finished { id }).await.ok();
-             }
+@@ -454,0 +624,12 @@ where
 +            fout.flush().await.expect("file flush failed");
 +            if let Some(r) = resume_ref {
 +                fout.sync_all().await.expect("file sync failed");
@@ -1953,10 +1566,7 @@ index 6d6640c..b01f166 100644
 +                machine_progress.finish(id);
 +            }
 +            tx.send(ProgressEvent::Finished { id }).await.ok();
-         }
-     })
-     .await;
- 
+@@ -459,2 +640,234 @@ where
 -    std::fs::remove_file(&final_path).ok();
 -    std::fs::rename(&cache_path, &final_path).expect("ok");
 +    if let Some(r) = &resume {
@@ -2193,7 +1803,6 @@ index 6d6640c..b01f166 100644
 +        assert!(!expected_revision_matches(Some("a"), Some("b")));
 +        assert!(!expected_revision_matches(Some("a"), None));
 +    }
- }
 diff --git a/crates/xodus-cli/src/commands/streaming_progress.rs b/crates/xodus-cli/src/commands/streaming_progress.rs
 new file mode 100644
 index 0000000..778517a
@@ -3192,42 +2801,24 @@ diff --git a/crates/xodus-cli/src/commands.rs b/crates/xodus-cli/src/commands.rs
 index dc75156..fa0e9b9 100644
 --- a/crates/xodus-cli/src/commands.rs
 +++ b/crates/xodus-cli/src/commands.rs
-@@ -9,3 +9,5 @@ pub mod logout;
- pub mod run;
- pub mod splicense;
- pub mod streaming;
+@@ -11,0 +12,2 @@ pub mod streaming;
 +
 +pub mod package_info;
 diff --git a/crates/xodus-cli/src/main.rs b/crates/xodus-cli/src/main.rs
 index cf0db1d..4fef0a1 100644
 --- a/crates/xodus-cli/src/main.rs
 +++ b/crates/xodus-cli/src/main.rs
-@@ -9,6 +9,8 @@ use xodus::tokens::TokenManager;
- mod commands;
- mod license;
- mod package;
+@@ -11,0 +12,2 @@ mod package;
 +#[cfg(unix)]
 +mod process_status;
- mod webview;
- 
- #[derive(Subcommand)]
-@@ -50,6 +52,12 @@ enum SubCommand {
-         #[arg(short, long, help = "Path to a keyfile with content decryption keys")]
-         key_file: Option<String>,
-     },
+@@ -52,0 +55,6 @@ enum SubCommand {
 +    /// Read authenticated package version metadata without URLs, keys or a download.
 +    PackageInfo {
 +        product: String,
 +        #[arg(short, long)]
 +        market: Option<String>,
 +    },
-     Login,
-     Logout {
-         #[arg(long, default_value_t = false, help = "Remove device license")]
-@@ -65,6 +73,17 @@ enum SubCommand {
-             help = "Attempt to skip downloading NTFS metadata to be faste while missing some files"
-         )]
-         try_skip_ntfs: bool,
+@@ -67,0 +76,11 @@ enum SubCommand {
 +        #[arg(
 +            long,
 +            default_value_t = false,
@@ -3239,47 +2830,20 @@ index cf0db1d..4fef0a1 100644
 +        /// Numeric output-payload progress on an inherited nonblocking pipe.
 +        #[arg(long, requires = "resume_files")]
 +        progress_fd: Option<i32>,
-         #[arg(short, long)]
-         parallel: Option<usize>,
-         #[arg(short, long)]
-@@ -145,7 +164,6 @@ async fn main() -> ExitCode {
-     }
-     let client = reqwest::ClientBuilder::new()
-         .user_agent(format!("xodus-cli/{}", env!("CARGO_PKG_VERSION")))
+@@ -148 +166,0 @@ async fn main() -> ExitCode {
 -        .connection_verbose(true)
-         .build()
-         .unwrap();
-     let args = CliArgs::parse();
-@@ -187,6 +205,9 @@ async fn main() -> ExitCode {
-             )
-             .await
-         }
+@@ -189,0 +208,3 @@ async fn main() -> ExitCode {
 +        SubCommand::PackageInfo { product, market } => {
 +            commands::package_info::run(&client, &tokens, product, market).await
 +        }
-         SubCommand::Login => commands::login::run(&client, &tokens).await,
-         SubCommand::Logout { device } => commands::logout::run(&tokens, device).await,
-         SubCommand::Extract {
-@@ -212,6 +233,9 @@ async fn main() -> ExitCode {
-             source,
-             destination,
-             try_skip_ntfs,
+@@ -214,0 +236,3 @@ async fn main() -> ExitCode {
 +            resume_files,
 +            expect_package,
 +            progress_fd,
-             market,
-             parallel,
-         } => {
-@@ -223,6 +247,9 @@ async fn main() -> ExitCode {
-                 try_skip_ntfs,
-                 parallel,
-                 market,
+@@ -225,0 +250,3 @@ async fn main() -> ExitCode {
 +                resume_files,
 +                expect_package,
 +                progress_fd,
-             )
-             .await
-         }
 diff --git a/crates/xodus-cli/src/process_status.rs b/crates/xodus-cli/src/process_status.rs
 new file mode 100644
 index 0000000..4bd1833
@@ -3321,14 +2885,27 @@ index 0000000..4bd1833
 +        assert_eq!(shell_exit_code(status), 143);
 +    }
 +}
+diff --git a/crates/xodus-cli/src/webview.rs b/crates/xodus-cli/src/webview.rs
+index f761a90..129950b 100644
+--- a/crates/xodus-cli/src/webview.rs
++++ b/crates/xodus-cli/src/webview.rs
+@@ -381 +381,4 @@ fn create_session<T: SessionHandler>(
+-        builder.build_gtk(window.default_vbox().unwrap()).unwrap()
++        let container = window.default_vbox().ok_or_else(|| {
++            std::io::Error::other("login window has no GTK container")
++        })?;
++        builder.build_gtk(container)?
+@@ -384 +387 @@ fn create_session<T: SessionHandler>(
+-    let webview = builder.build(&window).unwrap();
++    let webview = builder.build(&window)?;
+@@ -387,0 +391,2 @@ fn create_session<T: SessionHandler>(
++    window.set_visible(true);
++    window.set_focus();
 diff --git a/crates/xodus-service/Cargo.toml b/crates/xodus-service/Cargo.toml
-index 8546c78..84750af 100644
+index 8546c78..04f3619 100644
 --- a/crates/xodus-service/Cargo.toml
 +++ b/crates/xodus-service/Cargo.toml
-@@ -15,6 +15,25 @@ console-subscriber = { workspace = true, optional = true }
- quick-xml = { version = "0.42.0", features = ["serialize", "overlapped-lists"] }
- tokio-util = "0.7.19"
- serde_json = "1.0.151"
+@@ -17,0 +18,7 @@ serde_json = "1.0.151"
 +serde = { version = "1.0.229", features = ["derive"] }
 +sha2 = "0.11.0"
 +rand = "0.10.2"
@@ -3336,41 +2913,17 @@ index 8546c78..84750af 100644
 +openssl = "0.10.81"
 +reqwest11 = { package = "reqwest", version = "0.11.27", features = ["json", "stream"] }
 +xal = { git = "https://github.com/xodus-gaming/xal-rs", rev = "6aa2420f8f0d5e6f7460ff13f399037583a942f4", version = "0.1.3" }
- 
- [features]
- tokio_console = ["dep:console-subscriber"]
-+store-ipc-fixture = []
-+store-license-probe = []
-+
-+[[bin]]
-+name = "store-ipc-fixture"
-+path = "src/bin/store-ipc-fixture.rs"
-+required-features = ["store-ipc-fixture"]
-+
-+[[bin]]
-+name = "store-license-probe"
-+path = "src/bin/store-license-probe.rs"
-+required-features = ["store-license-probe"]
 diff --git a/crates/xodus-service/src/connection/xml.rs b/crates/xodus-service/src/connection/xml.rs
-index 8ce765b..4bb73bd 100644
+index 8ce765b..df34fbc 100644
 --- a/crates/xodus-service/src/connection/xml.rs
 +++ b/crates/xodus-service/src/connection/xml.rs
-@@ -23,8 +23,9 @@ pub async fn handle(
- 
-     let out_buf = match parse_message(context, message_type, buffer).await {
-         Ok(buf) => buf,
+@@ -26,2 +26,3 @@ pub async fn handle(
 -        Err(err) => {
 -            tracing::error!("Failed parsing message: {err}");
 +        Err(_) => {
 +            // Parser errors can contain input excerpts, including auth material.
 +            tracing::error!("Failed parsing IPC message");
-             vec![]
-         }
-     };
-@@ -40,10 +41,68 @@ pub async fn parse_message(
- ) -> Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>> {
-     match message_type {
-         XodusMessageType::Ping => Ok(buffer),
+@@ -42,0 +44,94 @@ pub async fn parse_message(
 +        XodusMessageType::StoreAccountContextRequest => {
 +            let tokens = context.tokens().clone();
 +            context.store_account.response(&buffer, &tokens)
@@ -3431,42 +2984,55 @@ index 8ce765b..4bb73bd 100644
 +            }
 +            Ok(store_collections::encode(result))
 +        }
-         XodusMessageType::MsaTokenRequest => {
++        XodusMessageType::StoreInventoryRequest => {
++            use crate::{store_inventory,store_license::Status};
++            let request=match store_inventory::parse_request(&buffer) {
++                Ok(request)=>request,
++                Err(status)=>return Ok(store_inventory::encode(Err(status))),
++            };
++            let tokens=context.tokens().clone();
++            if !context.store_account.validate_context(&request.context,&tokens) {
++                context.store_inventory.clear();
++                return Ok(store_inventory::encode(Err(Status::Unavailable)));
++            }
++            let result=context.store_inventory.query(&request,tokens.clone()).await;
++            if !context.store_account.validate_context(&request.context,&tokens) {
++                context.store_inventory.clear();
++                return Ok(store_inventory::encode(Err(Status::Unavailable)));
++            }
++            Ok(store_inventory::encode(result))
++        }
++        XodusMessageType::StorePackageUpdatesRequest => {
++            use crate::{store_package_updates, store_license::Status};
++            let request=match store_package_updates::parse_request(&buffer) {
++                Ok(request)=>request,
++                Err(status)=>return Ok(store_package_updates::encode(Err(status))),
++            };
++            let tokens=context.tokens().clone();
++            if !context.store_account.validate_context(&request.context,&tokens) {
++                return Ok(store_package_updates::encode(Err(Status::Unavailable)));
++            }
++            let result=store_package_updates::query(request.clone(),tokens.clone()).await;
++            if !context.store_account.validate_context(&request.context,&tokens) {
++                return Ok(store_package_updates::encode(Err(Status::Unavailable)));
++            }
++            Ok(store_package_updates::encode(result))
++        }
+@@ -44 +138,0 @@ pub async fn parse_message(
 -            tracing::debug!("Raw buffer: {buffer:?}");
-             let string_buf = std::str::from_utf8(&buffer)?;
+@@ -46 +139,0 @@ pub async fn parse_message(
 -            tracing::debug!("String buffer: {string_buf:?}");
-             let req = quick_xml::de::from_str::<MSATokenRequest>(string_buf)?;
-             let Token::Legacy(token) = context.tokens().get_user_sts_token()? else {
-                 return Ok(vec![]);
-@@ -53,12 +112,12 @@ pub async fn parse_message(
-             } else {
-                 "xboxlive.signin"
-             };
+@@ -56 +149 @@ pub async fn parse_message(
 -            let device_token = context.device_token.as_ref().unwrap();
 +            let device_token = context.device_token.as_ref().ok_or("Missing broker device ticket")?;
-             let device_token_resp = xodus::api::live::exchange_device_token(
-                 &context.client,
-                 device_token.clone(),
-                 "{28C08266-F973-4AE6-FFE4-409B249F138F}".to_string(),
+@@ -61 +154 @@ pub async fn parse_message(
 -                "scope=service::user.auth.xboxlive.com::MBI_SSL".to_owned(),
 +                "scope=service::user.auth.xboxlive.com::MBI_SSL&api-version=2.0".to_owned(),
-                 Some(soap::PolicyReference::token_broker()),
-             )
-             .await;
-@@ -104,7 +163,8 @@ pub async fn parse_message(
-                             address
-                         };
-                         if let Err(err) = context.tokens().save_user_token(address, sts) {
+@@ -107 +200,2 @@ pub async fn parse_message(
 -                            tracing::warn!("Failed to persist refreshed STS token: {err}");
 +                            let _ = err;
 +                            tracing::warn!("Failed to persist refreshed STS token");
-                         }
-                     }
-                     let token = collection.security_tokens.remove(0);
-@@ -113,18 +173,15 @@ pub async fn parse_message(
-                     let Token::Compact(user_token) = token else {
-                         return Ok(vec![]);
-                     };
+@@ -116,8 +210,4 @@ pub async fn parse_message(
 -                    let payload = MSATokenResponse {
 -                        token: user_token,
 -                        expiry: expiry.timestamp(),
@@ -3479,60 +3045,38 @@ index 8ce765b..4bb73bd 100644
 +                        user_token, expiry.timestamp(), ms_device_rps_token,
 +                        chrono::Utc::now().timestamp(),
 +                    )?;
-                     let payload = quick_xml::se::to_string(&payload)?;
+@@ -124,0 +215 @@ pub async fn parse_message(
 +                    if payload.len() > u16::MAX as usize { return Err("MSA response exceeds IPC frame".into()); }
-                     Ok(payload.as_bytes().to_vec())
-                 }
+@@ -127 +218 @@ pub async fn parse_message(
 -                _ => todo!("Error handling sill sucks"),
 +                _ => Err("MSA broker did not issue requested ticket".into()),
-             }
-         }
-         _ => Err("Unimplemented".into()),
 diff --git a/crates/xodus-service/src/main.rs b/crates/xodus-service/src/main.rs
-index 392bd90..2b05a7c 100644
+index 392bd90..6764024 100644
 --- a/crates/xodus-service/src/main.rs
 +++ b/crates/xodus-service/src/main.rs
-@@ -11,6 +11,10 @@ use xodus::tokens::TokenManager;
- 
- mod connection;
- mod simple_context;
+@@ -13,0 +14,6 @@ mod simple_context;
 +mod store_account;
 +mod store_license;
 +mod store_license_token;
 +mod store_collections;
- mod utils;
- 
- const XML_MAGIC: u32 = 0x58445358;
-@@ -79,4 +83,5 @@ async fn main() {
-     }
- 
-     _ = tokio::fs::remove_file(socket_path).await;
++mod store_inventory;
++mod store_package_updates;
+@@ -81,0 +88 @@ async fn main() {
 +    xodus::secrets::destroy_secrets();
- }
 diff --git a/crates/xodus-service/src/simple_context.rs b/crates/xodus-service/src/simple_context.rs
-index 2900465..6e53ab8 100644
+index 2900465..1143911 100644
 --- a/crates/xodus-service/src/simple_context.rs
 +++ b/crates/xodus-service/src/simple_context.rs
-@@ -9,6 +9,9 @@ pub struct SimpleContext {
-     pub client: reqwest::Client,
-     pub device_token: Option<LegacyToken>,
-     tokens: Arc<TokenManager>,
+@@ -11,0 +12,4 @@ pub struct SimpleContext {
 +    pub store_account: crate::store_account::BrokerStoreAccount,
 +    pub store_license: crate::store_license::LicenseCache,
 +    pub store_collections: crate::store_collections::Broker,
- }
- 
- impl SimpleContext {
-@@ -23,6 +26,9 @@ impl SimpleContext {
-             client,
-             device_token: Some(device_token),
-             tokens,
++    pub store_inventory: crate::store_inventory::Broker,
+@@ -25,0 +30,4 @@ impl SimpleContext {
 +            store_account: Default::default(),
 +            store_license: Default::default(),
 +            store_collections: Default::default(),
-         }
-     }
- 
++            store_inventory: Default::default(),
 diff --git a/crates/xodus-service/src/store_account.rs b/crates/xodus-service/src/store_account.rs
 new file mode 100644
 index 0000000..9962e13
@@ -4012,10 +3556,10 @@ index 0000000..056ef65
 +}
 diff --git a/crates/xodus-service/src/store_collections/model.rs b/crates/xodus-service/src/store_collections/model.rs
 new file mode 100644
-index 0000000..0a76fda
+index 0000000..eb2fb48
 --- /dev/null
 +++ b/crates/xodus-service/src/store_collections/model.rs
-@@ -0,0 +1,614 @@
+@@ -0,0 +1,628 @@
 +//! Narrow consumer-collection evidence. Never infer shared ownership or balances.
 +use crate::store_license::Status;
 +use serde_json::Value;
@@ -4130,6 +3674,11 @@ index 0000000..0a76fda
 +            }
 +        })
 +}
++// MicrosoftGame.config supports both legacy 16-digit hexadecimal MSA IDs
++// and newer GUIDs. Preserve the title's exact ID for the token exchange.
++pub fn valid_app_id(s: &str) -> bool {
++    valid_guid(s) || (s.len() == 16 && s.bytes().all(|b| b.is_ascii_hexdigit()))
++}
 +pub fn validate(request: &Request) -> Result<(), Status> {
 +    if request.context.len() != 64
 +        || !request
@@ -4138,7 +3687,7 @@ index 0000000..0a76fda
 +            .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
 +        || !valid_id(&request.store_id, 12)
 +        || request.title_id == 0
-+        || !valid_guid(&request.msa_app_id)
++        || !valid_app_id(&request.msa_app_id)
 +        || request.products.is_empty()
 +        || request.products.len() > 100
 +    {
@@ -4390,6 +3939,15 @@ index 0000000..0a76fda
 +mod tests {
 +    use super::*;
 +    use serde_json::json;
++    #[test]
++    fn both_microsoft_application_id_formats_are_supported() {
++        assert!(valid_app_id("000000001234ABCD"));
++        assert!(valid_app_id("00000000-1111-2222-3333-444444444444"));
++        for bad in ["", "000000001234ABCD&", "000000001234ABCG", "123", "{00000000-1111-2222-3333-444444444444}"] {
++            assert!(!valid_app_id(bad));
++        }
++        let mut r=request();r.msa_app_id="000000001234ABCD".into();assert!(validate(&r).is_ok());
++    }
 +    fn request() -> Request {
 +        Request {
 +            context: "a".repeat(64),
@@ -4632,13 +4190,13 @@ index 0000000..0a76fda
 +}
 diff --git a/crates/xodus-service/src/store_collections.rs b/crates/xodus-service/src/store_collections.rs
 new file mode 100644
-index 0000000..bfa83f2
+index 0000000..95f95a8
 --- /dev/null
 +++ b/crates/xodus-service/src/store_collections.rs
 @@ -0,0 +1,328 @@
 +//! Account-bound, read-only exact-SKU consumer Collections evidence.
 +//! Shared entitlements and whole-title inventory are intentionally not asserted.
-+mod auth;
++pub(crate) mod auth;
 +pub(crate) mod model;
 +use crate::store_license::Status;
 +use model::{Request, Snapshot, Wanted};
@@ -4964,6 +4522,505 @@ index 0000000..bfa83f2
 +        assert_eq!(body["productSkuIds"][0]["productId"], request.store_id);
 +    }
 +}
+diff --git a/crates/xodus-service/src/store_inventory.rs b/crates/xodus-service/src/store_inventory.rs
+new file mode 100644
+index 0000000..9311f9e
+--- /dev/null
++++ b/crates/xodus-service/src/store_inventory.rs
+@@ -0,0 +1,493 @@
++//! Current Store account's direct and satisfying entitlements for this title.
++//! Exhaust the authenticated library before filtering; catalog visibility is
++//! never evidence of ownership. Device-shared entitlements are not covered.
++use crate::store_collections::{
++    auth,
++    model::{self, Item, Record, Snapshot},
++};
++use crate::store_license::{self, Status};
++use quick_xml::{Reader, events::Event};
++use serde::Deserialize;
++use serde_json::{Value, json};
++use std::{
++    collections::{BTreeMap, BTreeSet},
++    sync::Arc,
++    time::{Duration, Instant},
++};
++use xodus::tokens::TokenManager;
++
++#[derive(Clone, Deserialize, PartialEq, Eq)]
++#[serde(
++    rename = "StoreInventoryRequest",
++    rename_all = "PascalCase",
++    deny_unknown_fields
++)]
++pub struct Request {
++    pub context: String,
++    pub store_id: String,
++    pub title_id: u32,
++    pub msa_app_id: String,
++    pub market: String,
++    pub kinds: u32,
++    pub page_size: usize,
++    #[serde(default)]
++    pub continuation: String,
++}
++fn context_id(s: &str) -> bool {
++    s.len() == 64
++        && s.bytes()
++            .all(|c| c.is_ascii_digit() || (b'a'..=b'f').contains(&c))
++}
++pub fn parse_request(bytes: &[u8]) -> Result<Request, Status> {
++    let bytes = bytes.strip_suffix(&[0]).unwrap_or(bytes);
++    if bytes.is_empty() || bytes.len() > 2048 || bytes.contains(&0) {
++        return Err(Status::InvalidRequest);
++    }
++    let mut reader = Reader::from_reader(bytes);
++    let mut depth = 0;
++    let mut root = false;
++    loop {
++        match reader.read_event().map_err(|_| Status::InvalidRequest)? {
++            Event::Start(e) => {
++                if e.attributes().next().is_some() || depth > 1 {
++                    return Err(Status::InvalidRequest);
++                }
++                if depth == 0 {
++                    if root || e.name().as_ref() != "StoreInventoryRequest" {
++                        return Err(Status::InvalidRequest);
++                    }
++                    root = true;
++                } else if ![
++                    "Context",
++                    "StoreId",
++                    "TitleId",
++                    "MsaAppId",
++                    "Market",
++                    "Kinds",
++                    "PageSize",
++                    "Continuation",
++                ]
++                .contains(&e.name().as_ref())
++                {
++                    return Err(Status::InvalidRequest);
++                }
++                depth += 1;
++            }
++            Event::End(_) => {
++                if depth == 0 {
++                    return Err(Status::InvalidRequest);
++                }
++                depth -= 1;
++            }
++            Event::Text(t) if depth == 2 || t.as_ref().chars().all(|c| c.is_ascii_whitespace()) => {
++                ()
++            }
++            Event::Eof => break,
++            _ => return Err(Status::InvalidRequest),
++        }
++    }
++    if !root || depth != 0 {
++        return Err(Status::InvalidRequest);
++    }
++    let r: Request = quick_xml::de::from_reader(bytes).map_err(|_| Status::InvalidRequest)?;
++    if !context_id(&r.context)
++        || !model::valid_id(&r.store_id, 12)
++        || r.title_id == 0
++        || !model::valid_app_id(&r.msa_app_id)
++        || r.market.len() != 2
++        || !r.market.bytes().all(|c| c.is_ascii_uppercase())
++        || r.kinds == 0
++        || r.kinds & !31 != 0
++        || !(1..=100).contains(&r.page_size)
++        || (!r.continuation.is_empty() && !context_id(&r.continuation))
++    {
++        return Err(Status::InvalidRequest);
++    }
++    Ok(r)
++}
++pub struct Page {
++    pub snapshot: Snapshot,
++    pub continuation: String,
++}
++struct Pending {
++    request: Request,
++    items: Vec<Item>,
++    observed_at: i64,
++    expires_at: i64,
++    created: Instant,
++    cursor: String,
++    offset: usize,
++}
++#[derive(Default)]
++pub struct Broker {
++    pending: Vec<Pending>,
++}
++impl Broker {
++    pub fn clear(&mut self) {
++        self.pending.clear();
++    }
++    pub async fn query(&mut self, r: &Request, tokens: Arc<TokenManager>) -> Result<Page, Status> {
++        self.pending.retain(|p| {
++            p.created.elapsed() < Duration::from_secs(30)
++                && p.expires_at > chrono::Utc::now().timestamp()
++        });
++        if !r.continuation.is_empty() {
++            let index = self
++                .pending
++                .iter()
++                .position(|p| p.cursor == r.continuation && same_query(&p.request, r))
++                .ok_or(Status::Expired)?;
++            let result = take_page(&mut self.pending[index]);
++            self.pending.retain(|p| p.offset < p.items.len());
++            return result;
++        }
++        let pending = tokio::time::timeout(Duration::from_secs(35), collect(r, tokens))
++            .await
++            .map_err(|_| Status::Timeout)??;
++        if self.pending.len() >= 8 {
++            return Err(Status::Unavailable);
++        }
++        self.pending.push(pending);
++        let result = take_page(self.pending.last_mut().ok_or(Status::Error)?);
++        self.pending.retain(|p| p.offset < p.items.len());
++        result
++    }
++}
++fn same_query(a: &Request, b: &Request) -> bool {
++    a.context == b.context
++        && a.store_id == b.store_id
++        && a.title_id == b.title_id
++        && a.msa_app_id == b.msa_app_id
++        && a.market == b.market
++        && a.kinds == b.kinds
++        && a.page_size == b.page_size
++}
++fn token() -> String {
++    rand::random::<[u8; 32]>()
++        .iter()
++        .map(|b| format!("{b:02x}"))
++        .collect()
++}
++fn take_page(p: &mut Pending) -> Result<Page, Status> {
++    let now = chrono::Utc::now().timestamp();
++    if p.expires_at <= now || p.observed_at > now || p.created.elapsed() >= Duration::from_secs(30)
++    {
++        return Err(Status::Expired);
++    }
++    let start = p.offset;
++    let mut end = start;
++    let mut products = BTreeSet::new();
++    while end < p.items.len() {
++        let id = &p.items[end].store_id[..12];
++        if !products.contains(id) && products.len() == p.request.page_size {
++            break;
++        }
++        products.insert(id.to_owned());
++        end += 1;
++    }
++    // Bound XML frames as well as product count, never split one product's SKUs.
++    if end - start > 100 {
++        return Err(Status::Unsupported);
++    }
++    let continuation = if end < p.items.len() {
++        token()
++    } else {
++        String::new()
++    };
++    let page = Page {
++        snapshot: Snapshot {
++            items: p.items[start..end].to_vec(),
++            absent: vec![],
++            unknown: vec![],
++            observed_at: p.observed_at,
++            expires_at: p.expires_at,
++        },
++        continuation: continuation.clone(),
++    };
++    // Only advance after proving that the complete frame fits the IPC contract.
++    encode_page(&page)?;
++    p.offset = end;
++    p.cursor = continuation;
++    Ok(page)
++}
++fn active_items(records: Vec<Record>, kinds: u32, now: i64) -> Result<Vec<Item>, Status> {
++    let mut items = BTreeMap::<String, Item>::new();
++    for r in records {
++        if !r.active
++            || r.item.end_date <= now
++            || r.item.start_date > now
++            || r.item.kind & kinds == 0
++        {
++            continue;
++        }
++        if r.item.acquired_date > now {
++            return Err(Status::Unsupported);
++        }
++        if let Some(old) = items.get(&r.item.store_id) {
++            if old != &r.item {
++                return Err(Status::Unsupported);
++            }
++        } else {
++            items.insert(r.item.store_id.clone(), r.item);
++        }
++    }
++    Ok(items.into_values().collect())
++}
++fn associated(value: &Value, product: &str, parent: &str) -> Result<bool, Status> {
++    let p = &value["Product"];
++    if p["ProductId"].as_str() != Some(product) {
++        return Err(Status::Unsupported);
++    }
++    if product == parent {
++        return Ok(true);
++    }
++    let markets = p["MarketProperties"]
++        .as_array()
++        .ok_or(Status::Unsupported)?;
++    for market in markets {
++        let related = market["RelatedProducts"]
++            .as_array()
++            .ok_or(Status::Unsupported)?;
++        for r in related {
++            if r["RelatedProductId"].as_str() == Some(parent)
++                && r["RelationshipType"].as_str() == Some("addOnParent")
++            {
++                return Ok(true);
++            }
++        }
++    }
++    Ok(false)
++}
++async fn collect(r: &Request, tokens: Arc<TokenManager>) -> Result<Pending, Status> {
++    let binding = model::Request {
++        context: r.context.clone(),
++        store_id: r.store_id.clone(),
++        title_id: r.title_id,
++        msa_app_id: r.msa_app_id.clone(),
++        products: vec![],
++    };
++    let mut session = auth::Session::create(&binding, &tokens).await?;
++    let mut body = json!({"market":"neutral","validityType":"All","maxPageSize":100,"excludeDuplicates":true,"expandSatisfyingItems":true,"entitlementFilters":["*:Game","*:Durable","*:Pass","*:Consumable","*:UnmanagedConsumable"]});
++    let mut pages = model::BatchPages::default();
++    loop {
++        let page = model::parse_page(&session.page(&body).await?)?;
++        if let Some(cursor) = pages.push(page)? {
++            body["continuationToken"] = Value::String(cursor);
++        } else {
++            break;
++        }
++    }
++    let now = chrono::Utc::now().timestamp();
++    let (records, parent_expiry) = pages.finish(&r.store_id, now)?;
++    let mut items = active_items(records, r.kinds, now)?;
++    let roots = items
++        .iter()
++        .map(|i| i.store_id[..12].to_owned())
++        .collect::<BTreeSet<_>>();
++    let client = reqwest::Client::builder()
++        .timeout(Duration::from_secs(12))
++        .redirect(reqwest::redirect::Policy::none())
++        .build()
++        .map_err(|_| Status::Error)?;
++    let mut allowed = BTreeSet::new();
++    let mut workers = tokio::task::JoinSet::new();
++    let mut roots = roots.into_iter();
++    loop {
++        while workers.len() < 4 {
++            let Some(product) = roots.next() else {
++                break;
++            };
++            let client = client.clone();
++            let market = r.market.clone();
++            let parent = r.store_id.clone();
++            workers.spawn(async move {
++                let value = store_license::fetch_catalogue(&client, &product, &market).await?;
++                Ok::<_, Status>((product.clone(), associated(&value, &product, &parent)?))
++            });
++        }
++        match workers.join_next().await {
++            Some(result) => {
++                let (id, yes) = result.map_err(|_| Status::Error)??;
++                if yes {
++                    allowed.insert(id);
++                }
++            }
++            None => break,
++        }
++    }
++    items.retain(|i| allowed.contains(&i.store_id[..12]));
++    let now = chrono::Utc::now().timestamp();
++    let expires_at = items.iter().map(|i| i.end_date).fold(
++        session.expires_at.min(parent_expiry).min(now + 30),
++        i64::min,
++    );
++    if expires_at <= now {
++        return Err(Status::Expired);
++    }
++    Ok(Pending {
++        request: r.clone(),
++        items,
++        observed_at: now,
++        expires_at,
++        created: Instant::now(),
++        cursor: String::new(),
++        offset: 0,
++    })
++}
++fn encode_page(p: &Page) -> Result<Vec<u8>, Status> {
++    let s = Snapshot {
++        items: p.snapshot.items.clone(),
++        absent: vec![],
++        unknown: vec![],
++        observed_at: p.snapshot.observed_at,
++        expires_at: p.snapshot.expires_at,
++    };
++    let xml =
++        String::from_utf8(crate::store_collections::encode(Ok(s))).map_err(|_| Status::Error)?;
++    if !xml.contains("<Status>Available</Status>") {
++        return Err(Status::Expired);
++    }
++    let xml = xml.replace(
++        "</StoreCollectionsResponse>",
++        &format!(
++            "<Continuation>{}</Continuation></StoreCollectionsResponse>",
++            p.continuation
++        ),
++    );
++    if xml.len() > u16::MAX as usize {
++        return Err(Status::Unsupported);
++    }
++    Ok(xml.into_bytes())
++}
++pub fn encode(result: Result<Page, Status>) -> Vec<u8> {
++    match result.and_then(|p| encode_page(&p)) {
++        Ok(bytes) => bytes,
++        Err(status) => crate::store_collections::encode(Err(status)),
++    }
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++    fn request() -> Request {
++        Request {
++            context: "a".repeat(64),
++            store_id: "GAME1234EFGH".into(),
++            title_id: 1,
++            msa_app_id: "00000000-1111-2222-3333-444444444444".into(),
++            market: "US".into(),
++            kinds: 2,
++            page_size: 1,
++            continuation: String::new(),
++        }
++    }
++    fn item(id: &str) -> Item {
++        Item {
++            store_id: id.into(),
++            kind: 2,
++            acquired_date: 1,
++            start_date: 1,
++            end_date: i64::MAX,
++            quantity: 1,
++            is_trial: false,
++            trial_time_remaining_in_seconds: 0,
++            campaign_id: None,
++            developer_offer_id: None,
++        }
++    }
++    #[test]
++    fn entitled_items_ignore_expired_and_reject_conflicts() {
++        let good = item("ADDN1234EFGH/0001");
++        let mut expired = good.clone();
++        expired.end_date = 2;
++        let result = active_items(
++            vec![
++                Record {
++                    item: good.clone(),
++                    active: true,
++                },
++                Record {
++                    item: expired,
++                    active: true,
++                },
++            ],
++            2,
++            3,
++        )
++        .unwrap();
++        assert_eq!(result.len(), 1);
++        let mut other = good.clone();
++        other.acquired_date = 2;
++        assert!(
++            active_items(
++                vec![
++                    Record {
++                        item: good,
++                        active: true
++                    },
++                    Record {
++                        item: other,
++                        active: true
++                    }
++                ],
++                2,
++                3
++            )
++            .is_err()
++        );
++    }
++    #[test]
++    fn title_association_is_exact_and_independent_of_purchase_visibility() {
++        let v = json!({"Product":{"ProductId":"ADDN1234EFGH","MarketProperties":[{"RelatedProducts":[{"RelationshipType":"addOnParent","RelatedProductId":"GAME1234EFGH"}]}]}});
++        assert!(associated(&v, "ADDN1234EFGH", "GAME1234EFGH").unwrap());
++        assert!(!associated(&v, "ADDN1234EFGH", "OTHR1234EFGH").unwrap());
++        assert!(associated(&v, "OTHR1234EFGH", "GAME1234EFGH").is_err());
++    }
++    #[test]
++    fn pages_keep_product_skus_together_and_expire() {
++        let now = chrono::Utc::now().timestamp();
++        let mut p = Pending {
++            request: request(),
++            items: vec![
++                item("ADDN1234EFGH/0001"),
++                item("ADDN1234EFGH/0002"),
++                item("NEXT1234EFGH/0001"),
++            ],
++            observed_at: now,
++            expires_at: now + 30,
++            created: Instant::now(),
++            cursor: String::new(),
++            offset: 0,
++        };
++        let first = take_page(&mut p).unwrap();
++        assert_eq!(first.snapshot.items.len(), 2);
++        assert!(context_id(&first.continuation));
++        let second = take_page(&mut p).unwrap();
++        assert_eq!(second.snapshot.items.len(), 1);
++        assert!(second.continuation.is_empty());
++        p.expires_at = now;
++        assert!(matches!(take_page(&mut p), Err(Status::Expired)));
++    }
++    #[test]
++    fn request_binding_and_xml_are_strict() {
++        let xml = format!(
++            "<StoreInventoryRequest><Context>{}</Context><StoreId>GAME1234EFGH</StoreId><TitleId>1</TitleId><MsaAppId>00000000-1111-2222-3333-444444444444</MsaAppId><Market>US</Market><Kinds>2</Kinds><PageSize>1</PageSize></StoreInventoryRequest>",
++            "a".repeat(64)
++        );
++        assert!(parse_request(xml.as_bytes()).is_ok());
++        for bad in [
++            xml.replace("<Kinds>2", "<Kinds>32"),
++            xml.replace("<PageSize>1", "<PageSize>0"),
++            xml.replace(
++                "</StoreInventoryRequest>",
++                "<Context>x</Context></StoreInventoryRequest>",
++            ),
++            format!("{xml}{xml}"),
++        ] {
++            assert!(parse_request(bad.as_bytes()).is_err());
++        }
++        let mut other = request();
++        other.context = "b".repeat(64);
++        assert!(!same_query(&request(), &other));
++    }
++}
 diff --git a/crates/xodus-service/src/store_license/verified_token.rs b/crates/xodus-service/src/store_license/verified_token.rs
 new file mode 100644
 index 0000000..081cd62
@@ -5115,10 +5172,10 @@ index 0000000..081cd62
 +}
 diff --git a/crates/xodus-service/src/store_license.rs b/crates/xodus-service/src/store_license.rs
 new file mode 100644
-index 0000000..fac2942
+index 0000000..7926fcc
 --- /dev/null
 +++ b/crates/xodus-service/src/store_license.rs
-@@ -0,0 +1,252 @@
+@@ -0,0 +1,328 @@
 +//! Genuine PC full-game licenses from Microsoft-signed v8 tokens. No inventory,
 +//! trial emulation, offline fallback, token refresh writes or purchase operations.
 +#[path="store_license/verified_token.rs"]pub(crate) mod verified_token;
@@ -5133,7 +5190,10 @@ index 0000000..fac2942
 +
 +#[derive(Clone,Deserialize)]
 +#[serde(rename="StoreGameLicenseRequest",rename_all="PascalCase",deny_unknown_fields)]
-+pub struct Request {pub context:String,pub store_id:String,pub package_family_name:String,pub market:String}
++pub struct Request {
++    pub context:String,pub store_id:String,pub package_family_name:String,pub market:String,
++    #[serde(default)] pub durable_store_id:Option<String>,
++}
 +
 +#[derive(Clone,Copy,Serialize,Debug,PartialEq,Eq)]
 +pub enum Status {Unavailable,Expired,NotLicensed,Unsupported,InvalidRequest,Error,Timeout}
@@ -5174,7 +5234,7 @@ index 0000000..fac2942
 +            Event::Start(e)=>{
 +                if e.attributes().next().is_some() || depth>1 {return Err(Status::InvalidRequest);}
 +                if depth==0 {if e.name().as_ref()!="StoreGameLicenseRequest" {return Err(Status::InvalidRequest);}roots+=1;}
-+                else if !["Context","StoreId","PackageFamilyName","Market"].contains(&e.name().as_ref()) {return Err(Status::InvalidRequest);}
++                else if !["Context","StoreId","PackageFamilyName","Market","DurableStoreId"].contains(&e.name().as_ref()) {return Err(Status::InvalidRequest);}
 +                depth+=1;
 +            },
 +            Event::End(_)=>{if depth==0{return Err(Status::InvalidRequest);}depth-=1;},
@@ -5190,7 +5250,8 @@ index 0000000..fac2942
 +        || request.store_id.len()!=12 || !request.store_id.bytes().all(|b|b.is_ascii_uppercase()||b.is_ascii_digit())
 +        || request.market.len()!=2 || !request.market.bytes().all(|b|b.is_ascii_uppercase())
 +        || request.package_family_name.is_empty() || request.package_family_name.len()>255
-+        || !request.package_family_name.bytes().all(|b|b.is_ascii_alphanumeric()||b==b'_'||b==b'.'||b==b'-') {return Err(Status::InvalidRequest);}
++        || !request.package_family_name.bytes().all(|b|b.is_ascii_alphanumeric()||b==b'_'||b==b'.'||b==b'-')
++        || request.durable_store_id.as_ref().is_some_and(|id| id==&request.store_id || id.len()!=12 || !id.bytes().all(|b| b.is_ascii_uppercase()||b.is_ascii_digit())) {return Err(Status::InvalidRequest);}
 +    Ok(request)
 +}
 +
@@ -5211,12 +5272,13 @@ index 0000000..fac2942
 +    pub async fn query(&mut self,request:&Request,tokens:Arc<TokenManager>)->Result<GameLicense,Status> {
 +        let key=(request.context.clone(),request.store_id.clone(),request.package_family_name.clone(),request.market.clone());
 +        let now=chrono::Utc::now().timestamp();
-+        if let Some(c)=&self.cached {
++        if let Some(c)=self.cached.as_ref().filter(|_|request.durable_store_id.is_none()) {
 +            if c.key==key && c.observation.observed_instant.elapsed()<Duration::from_secs(60)
 +                && now>=c.observation.observed_at && now<c.observation.jwt_expires_at
 +                && now<c.observation.license.expiration_date {return Ok(c.observation.license.clone());}
 +        }
 +        self.cached=None;
++        let cacheable=request.durable_store_id.is_none();
 +        let request=request.clone();
 +        // Existing token helpers may panic on an unsupported server response;
 +        // isolate that as failure and keep the request/connection state alive.
@@ -5228,7 +5290,7 @@ index 0000000..fac2942
 +            Err(_)=>{worker.abort_all();while worker.join_next().await.is_some() {}return Err(Status::Timeout);},
 +        };
 +        let out=observed.license.clone();
-+        self.cached=Some(Cached{key,observation:observed});
++        if cacheable {self.cached=Some(Cached{key,observation:observed});}
 +        Ok(out)
 +    }
 +}
@@ -5261,9 +5323,10 @@ index 0000000..fac2942
 +    let client=reqwest::Client::builder().timeout(Duration::from_secs(15)).redirect(reqwest::redirect::Policy::none()).build().map_err(|_|Status::Error)?;
 +    let (device_ms,user_ms,puid)=acquire_msa_tokens(&client,tokens).await?;
 +    let nonce=verified_token::nonce().map_err(|_|Status::Error)?;
-+    let token=xodus::licensing::content::get_license_token(&client,device_ms,user_ms,puid,request.store_id.clone(),vec![request.store_id.clone()],nonce.clone()).await.map_err(|_|Status::Error)?;
++    let product=request.durable_store_id.as_ref().unwrap_or(&request.store_id);
++    let token=xodus::licensing::content::get_license_token(&client,device_ms,user_ms,puid,request.store_id.clone(),vec![product.clone()],nonce.clone()).await.map_err(|_|Status::Error)?;
 +    let verified=verified_token::verify(&client,&token,&nonce).await.map_err(|stage|{tracing::warn!(stage,"Store license verification failed");Status::Error})?;
-+    let catalogue=fetch_catalogue(&client,&request.store_id,&request.market).await?;
++    let catalogue=fetch_catalogue(&client,product,&request.market).await?;
 +    let now=chrono::Utc::now().timestamp();
 +    let license=map_verified_license(&verified,&catalogue,request,now)?;
 +    Ok(Observation{license,_candidates:verified.products,jwt_expires_at:verified.expires_at,observed_at:now,observed_instant:Instant::now()})
@@ -5273,11 +5336,46 @@ index 0000000..fac2942
 +    // Catalogue I/O can outlive a short token or overlap a clock adjustment.
 +    // Check the signed validity interval again before publishing any result.
 +    if now>=verified.expires_at || now<verified.not_before {return Err(Status::Expired);}
++    if request.durable_store_id.is_some() {return map_durable_license(verified,catalogue,request,now);}
 +    map_full_license(&verified.products,catalogue,request,now)
 +}
 +
-+async fn fetch_catalogue(client:&reqwest::Client,product:&str,market:&str)->Result<Value,Status> {
-+    let mut response=client.get(format!("https://displaycatalog.mp.microsoft.com/v7.0/products/{product}?market={market}&languages=en-US")).send().await.map_err(|_|Status::Error)?.error_for_status().map_err(|_|Status::Error)?;
++fn map_durable_license(verified:&verified_token::VerifiedToken,catalogue:&Value,request:&Request,now:i64)->Result<GameLicense,Status> {
++    let target=request.durable_store_id.as_ref().ok_or(Status::InvalidRequest)?;
++    let p=&catalogue["Product"];
++    if p["ProductId"].as_str()!=Some(target) || p["ProductKind"].as_str()!=Some("Durable") {return Err(Status::Unsupported);}
++    let markets=p["MarketProperties"].as_array().ok_or(Status::Unsupported)?;
++    if !markets.iter().any(|m|m["RelatedProducts"].as_array().is_some_and(|r|r.iter().any(|r|
++        r["RelationshipType"].as_str()==Some("addOnParent") && r["RelatedProductId"].as_str()==Some(&request.store_id)))) {return Err(Status::Unsupported);}
++    if verified.products.iter().any(|p|p.product_id!=*target && p.product_id!=request.store_id) {return Err(Status::Error);}
++    let skus=p["DisplaySkuAvailabilities"].as_array().ok_or(Status::Unsupported)?;
++    let mut candidates=Vec::new();
++    for grant in verified.products.iter().filter(|p|p.product_id==*target && p.ends_at>now) {
++        let matching=skus.iter().filter(|s|s["Sku"]["SkuId"].as_str()==Some(&grant.sku_id)).collect::<Vec<_>>();
++        if matching.len()!=1 {return Err(Status::Unsupported);}
++        let sku=&matching[0]["Sku"];let props=&sku["Properties"];
++        if sku["SkuType"].as_str()!=Some("full") || props["IsTrial"].as_bool()!=Some(false)
++            || props["IsPreOrder"].as_bool()!=Some(false) || props["IsBundle"].as_bool()!=Some(false) {return Err(Status::Unsupported);}
++        candidates.push(grant);
++    }
++    candidates.sort_by(|a,b|b.ends_at.cmp(&a.ends_at).then_with(||a.sku_id.cmp(&b.sku_id)));
++    // Absence is not a claim about device-shared rights. No usable online
++    // license is returned unless Microsoft signed a current exact grant.
++    let selected=candidates.first().ok_or(Status::Unavailable)?;
++    let sku_store_id=format!("{}/{}",selected.product_id,selected.sku_id);
++    // A native handle must renew this online observation. It is never an
++    // offline license and cannot outlive the signed JWT or product grant.
++    let expiration_date=selected.ends_at.min(verified.expires_at).min(now+60);
++    let revision=Sha256::digest(format!("xodus-durable-digital-v1\0{sku_store_id}\0{expiration_date}").as_bytes()).iter().map(|b|format!("{b:02x}")).collect();
++    Ok(GameLicense{sku_store_id,is_active:true,is_trial_owned_by_this_user:false,is_disc_license:false,is_trial:false,trial_time_remaining_in_seconds:0,trial_unique_id:String::new(),expiration_date,revision})
++}
++
++pub(crate) async fn fetch_catalogue(client:&reqwest::Client,product:&str,market:&str)->Result<Value,Status> {
++    let response=client.get(format!("https://displaycatalog.mp.microsoft.com/v7.0/products/{product}?market={market}&languages=en-US")).send().await.map_err(|_|Status::Error)?;
++    if std::env::var_os("XODUS_COLLECTIONS_DIAGNOSTICS").is_some() {
++        eprintln!("[collections-broker] stage=catalog http={}",response.status().as_u16());
++    }
++    let mut response=response.error_for_status().map_err(|_|Status::Error)?;
 +    let mut bytes=Vec::new();
 +    while let Some(chunk)=response.chunk().await.map_err(|_|Status::Error)? {if bytes.len()+chunk.len()>4*1024*1024{return Err(Status::Error);}bytes.extend_from_slice(&chunk);}
 +    serde_json::from_slice(&bytes).map_err(|_|Status::Error)
@@ -5318,7 +5416,7 @@ index 0000000..fac2942
 +mod tests {
 +    use super::*;
 +    use serde_json::json;
-+    fn request()->Request {Request{context:"a".repeat(64),store_id:"ABCD1234EFGH".into(),package_family_name:"Test.Game_publisher".into(),market:"AT".into()}}
++    fn request()->Request {Request{context:"a".repeat(64),store_id:"ABCD1234EFGH".into(),package_family_name:"Test.Game_publisher".into(),market:"AT".into(),durable_store_id:None}}
 +    fn catalogue()->Value {
 +        let sku=|id|json!({"Sku":{"SkuId":id,"SkuType":"full","Properties":{"IsTrial":false,"IsPreOrder":false,"IsBundle":false,"FulfillmentType":"MSIXVC","Packages":[{"PackageFamilyName":"Test.Game_publisher","PackageFormat":"MSIXVC","ContentId":"12345678-1234-1234-1234-123456789abc","PlatformDependencies":[{"PlatformName":"Windows.Desktop"}]}]}}});
 +        json!({"Product":{"ProductId":"ABCD1234EFGH","DisplaySkuAvailabilities":[sku("0001"),sku("0002")]}})
@@ -5361,6 +5459,41 @@ index 0000000..fac2942
 +        assert!(matches!(map_verified_license(&verified,&catalogue(),&request(),100),Err(Status::Expired)));
 +        assert!(matches!(map_verified_license(&verified,&catalogue(),&request(),9),Err(Status::Expired)));
 +    }
++    fn durable_fixture()->(Request,Value,verified_token::VerifiedToken) {
++        let mut r=request();r.durable_store_id=Some("OTHER1234567".into());
++        let mut c=catalogue();c["Product"]["ProductId"]=json!("OTHER1234567");c["Product"]["ProductKind"]=json!("Durable");
++        c["Product"]["MarketProperties"]=json!([{"RelatedProducts":[{"RelationshipType":"addOnParent","RelatedProductId":r.store_id}]}]);
++        let v=verified_token::VerifiedToken{products:vec![verified_token::Product{product_id:"OTHER1234567".into(),sku_id:"0001".into(),ends_at:500}],expires_at:300,not_before:10};
++        (r,c,v)
++    }
++    #[test]
++    fn durable_requires_exact_signed_grant_and_title_association() {
++        let (r,mut c,mut v)=durable_fixture();
++        let good=map_verified_license(&v,&c,&r,100).unwrap();
++        assert_eq!(good.sku_store_id,"OTHER1234567/0001");assert_eq!(good.expiration_date,160);
++        c["Product"]["MarketProperties"][0]["RelatedProducts"][0]["RelatedProductId"]=json!("FOREIGN12345");
++        assert!(matches!(map_verified_license(&v,&c,&r,100),Err(Status::Unsupported)));
++        let (_,c,_)=durable_fixture();v.products.clear();
++        assert!(matches!(map_verified_license(&v,&c,&r,100),Err(Status::Unavailable)));
++    }
++    #[test]
++    fn durable_never_extends_signed_dates_or_accepts_wrong_product_kinds() {
++        let (r,mut c,mut v)=durable_fixture();v.expires_at=130;
++        assert_eq!(map_verified_license(&v,&c,&r,100).unwrap().expiration_date,130);
++        v.products[0].ends_at=120;
++        assert_eq!(map_verified_license(&v,&c,&r,100).unwrap().expiration_date,120);
++        assert!(matches!(map_verified_license(&v,&c,&r,120),Err(Status::Unavailable)));
++        v.products[0].ends_at=500;c["Product"]["ProductKind"]=json!("UnmanagedConsumable");
++        assert!(matches!(map_verified_license(&v,&c,&r,100),Err(Status::Unsupported)));
++        let (_,mut c,_)=durable_fixture();c["Product"]["DisplaySkuAvailabilities"][0]["Sku"]["Properties"]["IsTrial"]=json!(true);
++        assert!(matches!(map_verified_license(&v,&c,&r,100),Err(Status::Unsupported)));
++    }
++    #[test]
++    fn durable_request_is_optional_bounded_and_distinct_from_the_game() {
++        let xml=format!("<StoreGameLicenseRequest><Context>{}</Context><StoreId>ABCD1234EFGH</StoreId><PackageFamilyName>Test.Game_publisher</PackageFamilyName><Market>AT</Market><DurableStoreId>OTHER1234567</DurableStoreId></StoreGameLicenseRequest>","a".repeat(64));
++        assert_eq!(parse_request(xml.as_bytes()).unwrap().durable_store_id.as_deref(),Some("OTHER1234567"));
++        for bad in [xml.replace("OTHER1234567","ABCD1234EFGH"),xml.replace("OTHER1234567","../wrong"),xml.replace("</DurableStoreId>","</DurableStoreId><DurableStoreId>OTHER1234567</DurableStoreId>")]{assert!(parse_request(bad.as_bytes()).is_err());}
++    }
 +    #[tokio::test]
 +    async fn valid_cache_needs_no_credentials_but_never_survives_expiry_or_clear() {
 +        let now=chrono::Utc::now().timestamp();let r=request();let mut cache=LicenseCache::default();
@@ -5373,10 +5506,10 @@ index 0000000..fac2942
 +}
 diff --git a/crates/xodus-service/src/store_license_token.rs b/crates/xodus-service/src/store_license_token.rs
 new file mode 100644
-index 0000000..8ec42a8
+index 0000000..f672735
 --- /dev/null
 +++ b/crates/xodus-service/src/store_license_token.rs
-@@ -0,0 +1,221 @@
+@@ -0,0 +1,250 @@
 +//! Receipt acquisition, not an entitlement decision. The original Microsoft JWT
 +//! and caller challenge have no Debug implementations and must never be logged.
 +use crate::store_license::{acquire_msa_tokens, verified_token, Status};
@@ -5509,13 +5642,30 @@ index 0000000..8ec42a8
 +    let (device, user, puid) = acquire_msa_tokens(&client, tokens).await?;
 +    // Forward order, duplicates and the exact developer string. Never substitute
 +    // GameLicense's generated nonce or silently add the parent to this array.
-+    let token = xodus::licensing::content::get_license_token(&client, device, user, puid,
-+        request.store_id.clone(), request.product_ids.clone(), request.custom_developer_string.clone())
-+        .await.map_err(|_| Status::Error)?;
-+    if !wire_token(&token) { return Err(Status::Error); }
-+    let verified = verified_token::verify(&client, &token, &request.custom_developer_string).await
-+        .map_err(|stage| { tracing::warn!(stage, "Store receipt verification failed"); Status::Error })?;
-+    receipt(token, &verified, request, chrono::Utc::now().timestamp())
++    for attempt in 0..3 {
++        let token = xodus::licensing::content::get_license_token(&client, device.clone(), user.clone(), puid.clone(),
++            request.store_id.clone(), request.product_ids.clone(), request.custom_developer_string.clone())
++            .await.map_err(|_| Status::Error)?;
++        if !wire_token(&token) { return Err(Status::Error); }
++        let verified = verified_token::verify(&client, &token, &request.custom_developer_string).await
++            .map_err(|stage| { tracing::warn!(stage, "Store receipt verification failed"); Status::Error })?;
++        let now = chrono::Utc::now().timestamp();
++        let result = receipt(token, &verified, request, now)?;
++        // Downloads can race the service's license renewal. Repeat the real
++        // read for explicitly requested products with only expired grants.
++        // Never alter the signed receipt, retry missing ownership, or cache a
++        // developer challenge. The existing deadline/cancellation bounds us.
++        if attempt==2 || !needs_refresh(&verified, request, now) { return Ok(result); }
++        tokio::time::sleep(Duration::from_millis(if attempt==0 {350} else {1000})).await;
++    }
++    Err(Status::Error)
++}
++
++fn needs_refresh(verified:&verified_token::VerifiedToken, request:&Request, now:i64)->bool {
++    request.product_ids.iter().any(|id| {
++        verified.products.iter().any(|p| &p.product_id==id && p.ends_at<=now) &&
++        !verified.products.iter().any(|p| &p.product_id==id && p.ends_at>now)
++    })
 +}
 +
 +fn wire_token(token: &str) -> bool {
@@ -5596,5 +5746,458 @@ index 0000000..8ec42a8
 +        for challenge in ["first", "second"] {
 +            assert!(matches!(query(parse_request(xml(challenge, "").as_bytes()).unwrap(), tokens.clone()).await, Err(Status::Unavailable)));
 +        }
++    }
++    #[test]
++    fn refresh_only_expired_requested_products_without_a_valid_alternative() {
++        let request=parse_request(xml("same-challenge","<ProductId>OTHER1234567</ProductId>").as_bytes()).unwrap();
++        let mut verified=verified_token::VerifiedToken {products:vec![],not_before:0,expires_at:1000};
++        assert!(!needs_refresh(&verified,&request,100));
++        verified.products.push(verified_token::Product {product_id:request.store_id.clone(),sku_id:"0001".into(),ends_at:1});
++        assert!(!needs_refresh(&verified,&request,100));
++        verified.products.push(verified_token::Product {product_id:"OTHER1234567".into(),sku_id:"0001".into(),ends_at:100});
++        assert!(needs_refresh(&verified,&request,100));
++        verified.products.push(verified_token::Product {product_id:"OTHER1234567".into(),sku_id:"0002".into(),ends_at:101});
++        assert!(!needs_refresh(&verified,&request,100));
++    }
++}
+diff --git a/crates/xodus-service/src/store_package_updates.rs b/crates/xodus-service/src/store_package_updates.rs
+new file mode 100644
+index 0000000..6db4aa1
+--- /dev/null
++++ b/crates/xodus-service/src/store_package_updates.rs
+@@ -0,0 +1,435 @@
++//! Online check of Flightdeck's single registered MSIXVC base package.
++//! No installed DLC is inferred from ownership. Newer revisions remain an
++//! explicit error until update-policy metadata and package installation exist.
++use crate::store_license::{self, Status};
++use quick_xml::{Reader, events::Event};
++use serde::Deserialize;
++use serde_json::Value;
++use std::{collections::BTreeSet, sync::Arc, time::Duration};
++use xodus::{
++    models::{live::ExchangeUserTokenOutcome, secrets::Token, soap},
++    tokens::TokenManager,
++};
++
++#[derive(Clone, Deserialize)]
++#[serde(
++    rename = "StorePackageUpdatesRequest",
++    rename_all = "PascalCase",
++    deny_unknown_fields
++)]
++pub struct Request {
++    pub context: String,
++    pub store_id: String,
++    pub package_family_name: String,
++    pub market: String,
++    pub version: String,
++    pub scope: String,
++}
++#[derive(Debug, PartialEq, Eq)]
++pub enum Outcome {
++    Current,
++    DifferentRevision,
++}
++fn version(s: &str) -> Option<[u16; 4]> {
++    let parts = s.split('.').collect::<Vec<_>>();
++    if parts.len() != 4 {
++        return None;
++    }
++    let mut out = [0; 4];
++    for (i, p) in parts.iter().enumerate() {
++        if p.is_empty() || p.len() > 5 || !p.bytes().all(|c| c.is_ascii_digit()) {
++            return None;
++        }
++        out[i] = p.parse().ok()?;
++    }
++    Some(out)
++}
++fn uuid(s: &str) -> bool {
++    s.len() == 36
++        && s.bytes().enumerate().all(|(i, b)| {
++            if [8, 13, 18, 23].contains(&i) {
++                b == b'-'
++            } else {
++                b.is_ascii_hexdigit()
++            }
++        })
++}
++pub fn parse_request(bytes: &[u8]) -> Result<Request, Status> {
++    let bytes = bytes.strip_suffix(&[0]).unwrap_or(bytes);
++    if bytes.is_empty() || bytes.len() > 2048 || bytes.contains(&0) {
++        return Err(Status::InvalidRequest);
++    }
++    let mut reader = Reader::from_reader(bytes);
++    let mut depth = 0;
++    let mut roots = 0;
++    loop {
++        match reader.read_event().map_err(|_| Status::InvalidRequest)? {
++            Event::Start(e) => {
++                if e.attributes().next().is_some() || depth > 1 {
++                    return Err(Status::InvalidRequest);
++                }
++                if depth == 0 {
++                    if e.name().as_ref() != "StorePackageUpdatesRequest" {
++                        return Err(Status::InvalidRequest);
++                    }
++                    roots += 1;
++                } else if ![
++                    "Context",
++                    "StoreId",
++                    "PackageFamilyName",
++                    "Market",
++                    "Version",
++                    "Scope",
++                ]
++                .contains(&e.name().as_ref())
++                {
++                    return Err(Status::InvalidRequest);
++                }
++                depth += 1;
++            }
++            Event::End(_) => {
++                if depth == 0 {
++                    return Err(Status::InvalidRequest);
++                }
++                depth -= 1;
++            }
++            Event::Text(t) if depth == 2 || t.as_ref().chars().all(|c| c.is_ascii_whitespace()) => {
++                ()
++            }
++            Event::Eof => break,
++            _ => return Err(Status::InvalidRequest),
++        }
++    }
++    if roots != 1 || depth != 0 {
++        return Err(Status::InvalidRequest);
++    }
++    let r: Request = quick_xml::de::from_reader(bytes).map_err(|_| Status::InvalidRequest)?;
++    if r.context.len() != 64
++        || !r
++            .context
++            .bytes()
++            .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
++        || r.store_id.len() != 12
++        || !r
++            .store_id
++            .bytes()
++            .all(|b| b.is_ascii_uppercase() || b.is_ascii_digit())
++        || r.package_family_name.is_empty()
++        || r.package_family_name.len() > 64
++        || !r
++            .package_family_name
++            .bytes()
++            .all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'.' || b == b'-')
++        || r.market.len() != 2
++        || !r.market.bytes().all(|b| b.is_ascii_uppercase())
++        || version(&r.version).is_none()
++        || r.scope != "FlightdeckBaseGameOnlyV1"
++    {
++        return Err(Status::InvalidRequest);
++    }
++    Ok(r)
++}
++pub fn encode(result: Result<Outcome, Status>) -> Vec<u8> {
++    let status = match result {
++        Ok(Outcome::Current) => "Current".into(),
++        Ok(Outcome::DifferentRevision) => "DifferentRevision".into(),
++        Err(s) => format!("{s:?}"),
++    };
++    format!("<StorePackageUpdatesResponse><Status>{status}</Status></StorePackageUpdatesResponse>")
++        .into_bytes()
++}
++fn content_id(c: &Value, r: &Request) -> Result<String, Status> {
++    let p = &c["Product"];
++    if p["ProductId"].as_str() != Some(&r.store_id) || p["ProductKind"].as_str() != Some("Game") {
++        return Err(Status::Unsupported);
++    }
++    let mut ids = BTreeSet::new();
++    for item in p["DisplaySkuAvailabilities"]
++        .as_array()
++        .ok_or(Status::Unsupported)?
++    {
++        let sku = &item["Sku"];
++        let properties = &sku["Properties"];
++        if sku["SkuType"] != "full"
++            || properties["IsTrial"] != false
++            || properties["IsPreOrder"] != false
++            || properties["IsBundle"] != false
++        {
++            continue;
++        }
++        for package in properties["Packages"]
++            .as_array()
++            .ok_or(Status::Unsupported)?
++        {
++            if package["PackageFamilyName"].as_str() == Some(&r.package_family_name)
++                && package["PackageFormat"] == "MSIXVC"
++                && package["PlatformDependencies"]
++                    .as_array()
++                    .is_some_and(|v| v.iter().any(|v| v["PlatformName"] == "Windows.Desktop"))
++            {
++                let id = package["ContentId"]
++                    .as_str()
++                    .filter(|s| uuid(s))
++                    .ok_or(Status::Unsupported)?;
++                ids.insert(id.to_ascii_lowercase());
++            }
++        }
++    }
++    if ids.len() != 1 {
++        return Err(Status::Unsupported);
++    }
++    Ok(ids.into_iter().next().ok_or(Status::Unsupported)?)
++}
++fn classify(p: &Value, content: &str, installed: &str) -> Result<Outcome, Status> {
++    if p["PackageFound"] != true
++        || p["ContentId"]
++            .as_str()
++            .map(str::to_ascii_lowercase)
++            .as_deref()
++            != Some(content)
++        || p["UpdatePredownload"] != false
++    {
++        return Err(Status::Unsupported);
++    }
++    let revision = p["VersionId"].as_str().ok_or(Status::Unsupported)?;
++    let raw = p["Version"].as_str().ok_or(Status::Unsupported)?;
++    let latest = if let Some(v) = version(raw) {
++        if !uuid(revision) {
++            return Err(Status::Unsupported);
++        }
++        v
++    } else {
++        let (v, id) = raw.rsplit_once('.').ok_or(Status::Unsupported)?;
++        if revision != raw || !uuid(id) {
++            return Err(Status::Unsupported);
++        }
++        version(v).ok_or(Status::Unsupported)?
++    };
++    let files = p["PackageFiles"].as_array().ok_or(Status::Unsupported)?;
++    let images = files
++        .iter()
++        .filter(|f| {
++            f["FileName"]
++                .as_str()
++                .is_some_and(|s| s.ends_with(".msixvc"))
++        })
++        .collect::<Vec<_>>();
++    if images.len() != 1 {
++        return Err(Status::Unsupported);
++    }
++    let file = images[0];
++    if file["ContentId"]
++        .as_str()
++        .map(str::to_ascii_lowercase)
++        .as_deref()
++        != Some(content)
++        || file["VersionId"].as_str() != Some(revision)
++        || !file["FileSize"]
++            .as_u64()
++            .is_some_and(|n| n > 0 && n < 8 * 1024u64.pow(4))
++    {
++        return Err(Status::Unsupported);
++    }
++    let installed = version(installed).ok_or(Status::InvalidRequest)?;
++    // Neither server rollback nor a future installation becomes "no updates".
++    Ok(if latest == installed {
++        Outcome::Current
++    } else {
++        Outcome::DifferentRevision
++    })
++}
++async fn observe(r: &Request, tokens: &TokenManager) -> Result<Outcome, Status> {
++    let client = reqwest::Client::builder()
++        .timeout(Duration::from_secs(12))
++        .redirect(reqwest::redirect::Policy::none())
++        .build()
++        .map_err(|_| Status::Error)?;
++    let catalogue = store_license::fetch_catalogue(&client, &r.store_id, &r.market).await?;
++    let content = content_id(&catalogue, r)?;
++    let Token::Legacy(device) = tokens
++        .get_device_sts_token()
++        .map_err(|_| Status::Unavailable)?
++    else {
++        return Err(Status::Unavailable);
++    };
++    let Token::Legacy(user) = tokens
++        .get_user_sts_token()
++        .map_err(|_| Status::Unavailable)?
++    else {
++        return Err(Status::Unavailable);
++    };
++    let exchange = xodus::api::live::exchange_user_token(
++        &client,
++        user,
++        "USERNAME".into(),
++        device,
++        None,
++        Some("Silent".into()),
++        "{d6d5a677-0872-4ab0-9442-bb792fce85c5}".into(),
++        &[(
++            "user.auth.xboxlive.com".into(),
++            Some(soap::PolicyReference::mbi_ssl()),
++        )],
++    )
++    .await
++    .map_err(|_| Status::Unavailable)?;
++    let issued = match exchange {
++        ExchangeUserTokenOutcome::Issued(
++            soap::BodyContent::RequestSecurityTokenResponseCollection(mut c),
++        ) if c.security_tokens.len() == 1 => c.security_tokens.remove(0),
++        ExchangeUserTokenOutcome::Issued(soap::BodyContent::RequestSecurityTokenResponse(r)) => *r,
++        _ => return Err(Status::Unavailable),
++    };
++    if chrono::DateTime::parse_from_rfc3339(&issued.lifetime.expires)
++        .map_err(|_| Status::Unsupported)?
++        .timestamp()
++        <= chrono::Utc::now().timestamp()
++    {
++        return Err(Status::Expired);
++    }
++    let Token::Compact(rps) = Token::from(issued) else {
++        return Err(Status::Unsupported);
++    };
++    let user = xodus::api::xbox::authenticate_xbox_user(&client, rps)
++        .await
++        .map_err(|_| Status::Unavailable)?;
++    if user.not_after <= chrono::Utc::now() {
++        return Err(Status::Expired);
++    }
++    let auth =
++        xodus::api::xbox::request_xsts_token(&client, user.token, "http://update.xboxlive.com")
++            .await
++            .map_err(|_| Status::Unavailable)?;
++    if auth.not_after <= chrono::Utc::now() || auth.token.is_empty() {
++        return Err(Status::Expired);
++    }
++    let uhs = auth
++        .user_hash()
++        .filter(|s| !s.is_empty())
++        .ok_or(Status::Unsupported)?;
++    let response = client
++        .get(format!(
++            "https://packagespc.xboxlive.com/GetBasePackage/{content}"
++        ))
++        .header("x-xbl-contract-version", "3")
++        .header("Authorization", format!("XBL3.0 x={uhs};{}", auth.token))
++        .send()
++        .await
++        .map_err(|_| Status::Error)?;
++    let mut response = response.error_for_status().map_err(|_| Status::Error)?;
++    let mut bytes = Vec::new();
++    while let Some(chunk) = response.chunk().await.map_err(|_| Status::Error)? {
++        if bytes.len() + chunk.len() > 2 * 1024 * 1024 {
++            return Err(Status::Unsupported);
++        }
++        bytes.extend_from_slice(&chunk);
++    }
++    let value = serde_json::from_slice(&bytes).map_err(|_| Status::Unsupported)?;
++    classify(&value, &content, &r.version)
++}
++pub async fn query(r: Request, tokens: Arc<TokenManager>) -> Result<Outcome, Status> {
++    let mut workers = tokio::task::JoinSet::new();
++    workers.spawn(async move { observe(&r, &tokens).await });
++    match tokio::time::timeout(Duration::from_secs(35), workers.join_next()).await {
++        Ok(Some(Ok(result))) => result,
++        Ok(_) => Err(Status::Error),
++        Err(_) => {
++            workers.abort_all();
++            while workers.join_next().await.is_some() {}
++            Err(Status::Timeout)
++        }
++    }
++}
++#[cfg(test)]
++mod tests {
++    use super::*;
++    use serde_json::json;
++    const ID: &str = "11111111-2222-4333-8444-555555555555";
++    fn request() -> Request {
++        Request {
++            context: "a".repeat(64),
++            store_id: "GAME1234EFGH".into(),
++            package_family_name: "Test.Game_publisher".into(),
++            market: "AT".into(),
++            version: "1.2.3.4".into(),
++            scope: "FlightdeckBaseGameOnlyV1".into(),
++        }
++    }
++    fn package() -> Value {
++        let revision = format!("1.2.3.4.{ID}");
++        json!({"PackageFound":true,"ContentId":ID,"Version":revision,"VersionId":revision,"UpdatePredownload":false,"PackageFiles":[{"FileName":"game.msixvc","FileSize":4096,"ContentId":ID,"VersionId":revision,"KeyBlob":"PRIVATE_KEY","RelativeUrl":"PRIVATE_URL"}]})
++    }
++    #[test]
++    fn revisions_are_compared_without_guessing_update_policy() {
++        let p = package();
++        assert_eq!(classify(&p, ID, "1.2.3.4").unwrap(), Outcome::Current);
++        for s in ["1.2.3.3", "1.2.3.5"] {
++            assert_eq!(classify(&p, ID, s).unwrap(), Outcome::DifferentRevision);
++        }
++    }
++    #[test]
++    fn malformed_or_unavailable_is_never_current() {
++        for (key, value) in [
++            ("PackageFound", json!(false)),
++            ("ContentId", json!("other")),
++            ("UpdatePredownload", json!(true)),
++            ("VersionId", json!(ID)),
++            ("Version", json!("1.2")),
++            ("PackageFiles", json!([])),
++        ] {
++            let mut p = package();
++            p[key] = value;
++            assert!(classify(&p, ID, "1.2.3.4").is_err());
++        }
++        for (key, value) in [
++            ("FileSize", json!(0)),
++            ("VersionId", json!(ID)),
++            ("ContentId", json!("other")),
++        ] {
++            let mut p = package();
++            p["PackageFiles"][0][key] = value;
++            assert!(classify(&p, ID, "1.2.3.4").is_err());
++        }
++    }
++    #[test]
++    fn scope_and_xml_are_strict() {
++        let r = request();
++        let xml = format!(
++            "<StorePackageUpdatesRequest><Context>{}</Context><StoreId>{}</StoreId><PackageFamilyName>{}</PackageFamilyName><Market>AT</Market><Version>1.2.3.4</Version><Scope>FlightdeckBaseGameOnlyV1</Scope></StorePackageUpdatesRequest>",
++            r.context, r.store_id, r.package_family_name
++        );
++        assert!(parse_request(xml.as_bytes()).is_ok());
++        for bad in [
++            xml.replace("FlightdeckBaseGameOnlyV1", "all"),
++            xml.replace("1.2.3.4", "65536.2.3.4"),
++            xml.replace("</Version>", "</Version><Version>1.2.3.4</Version>"),
++            format!("<!DOCTYPE x>{xml}"),
++            format!("{xml}{xml}"),
++            xml.replace("<Market>", "<Market value='x'>"),
++        ] {
++            assert!(parse_request(bad.as_bytes()).is_err());
++        }
++    }
++    #[test]
++    fn no_package_secrets_in_result() {
++        assert_eq!(
++            String::from_utf8(encode(Ok(Outcome::Current))).unwrap(),
++            "<StorePackageUpdatesResponse><Status>Current</Status></StorePackageUpdatesResponse>"
++        );
++        assert!(
++            !String::from_utf8(encode(Err(Status::Error)))
++                .unwrap()
++                .contains("PRIVATE")
++        );
++    }
++    #[test]
++    fn exact_pc_package_required() {
++        let r = request();
++        let package = json!({"PackageFamilyName":r.package_family_name,"PackageFormat":"MSIXVC","ContentId":ID,"PlatformDependencies":[{"PlatformName":"Windows.Desktop"}]});
++        let mut c = json!({"Product":{"ProductId":r.store_id,"ProductKind":"Game","DisplaySkuAvailabilities":[{"Sku":{"SkuType":"full","Properties":{"IsTrial":false,"IsPreOrder":false,"IsBundle":false,"Packages":[package]}}}]}});
++        assert_eq!(content_id(&c, &r).unwrap(), ID);
++        c["Product"]["DisplaySkuAvailabilities"][0]["Sku"]["Properties"]["Packages"][0]["PackageFamilyName"] =
++            json!("Wrong_family");
++        assert!(content_id(&c, &r).is_err());
 +    }
 +}

@@ -64,6 +64,7 @@ export function createUpdates({request,getStatus,isOnline,getSetupJob,isReserved
   }
   function render() {
     const job=data?.job,allowed=actions();
+    $('update-game-name').textContent=getStatus()?.runtime.game_name||'Microsoft Flight Simulator 2024';
     $('update-title').textContent=updateTitle(data);
     $('update-installed').textContent=data?.installed_version||t('Nicht bekannt');
     $('update-latest').textContent=data?.latest_version||t('Noch nicht geprüft');

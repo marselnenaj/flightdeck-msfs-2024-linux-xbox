@@ -14,8 +14,10 @@ import json
 from pathlib import Path
 import re
 import tarfile
+import tomllib
 
 ROOT = Path(__file__).resolve().parents[1]
+VERSION = tomllib.loads((ROOT / "pyproject.toml").read_text())["project"]["version"]
 NATIVE_FEATURES = ("connected-storage-read-v1", "connected-storage-sync-v1")
 CLI_FEATURES = ("streaming-resume-files-v1", "package-info-json-v1",
                 "streaming-integrity-index-v1", "streaming-progress-v1")
@@ -49,11 +51,11 @@ def license_files(folder):
 def notices(args):
     graph = json.loads(args.graph.read_text())
     supplements = json.loads((args.supplements / "manifest.json").read_text())["files"]
-    sections = ["Flightdeck 0.1.0 native compatibility components\n\n"
+    sections = [f"Flightdeck {VERSION} native compatibility components\n\n"
                 "The launcher is MIT; native components retain their own licenses.\n"
                 "Xodus CLI/service: GPL-3.0-only. WineGDK builtin, Flightdeck proxy and ConnectedStorage helper: LGPL-2.1-or-later.\n"
                 "Complete corresponding sources, Cargo dependencies and rebuild scripts are supplied in\n"
-                "flightdeck-native-sources-0.1.0.tar.gz alongside this release.\n"
+                f"flightdeck-native-sources-{VERSION}.tar.gz alongside this release.\n"
                 "You may modify and replace these components, including for debugging modifications.\n"
                 "The Proton runner, Linux system libraries and game are not contained in this package.\n"]
     inventory = []
@@ -158,7 +160,7 @@ def create(args):
     notice, inventory = notices(args)
     native_files["THIRD-PARTY-NOTICES.txt"] = notice
     native_files["manifest.json"] = (json.dumps({"format": 1, "files": manifest["files"]}, indent=2) + "\n").encode()
-    artifact = args.output / "flightdeck-compat-0.1.0-linux-x86_64.tar.gz"
+    artifact = args.output / f"flightdeck-compat-{VERSION}-linux-x86_64.tar.gz"
     archive(artifact, native_files)
     (args.output / "THIRD-PARTY-NOTICES.txt").write_bytes(notice)
     (args.output / "dependency-inventory.json").write_text(json.dumps(inventory, indent=2) + "\n")
@@ -182,7 +184,7 @@ def create(args):
     sources["THIRD-PARTY-NOTICES.txt"] = notice
     sources["dependency-inventory.json"] = args.output / "dependency-inventory.json"
     sources["BUILDING.md"] = ROOT / "BUILDING.md"
-    sources["README.md"] = b"""# Flightdeck 0.1.0 corresponding native sources
+    sources["README.md"] = f"""# Flightdeck {VERSION} corresponding native sources
 
 This archive supplies the patched WineGDK source, patched Xodus CLI/service,
 Flightdeck native proxy and ConnectedStorage helper, all locked Cargo
@@ -210,8 +212,8 @@ signature restriction prevents modified components. Keep applicable notices.
 The native executable build requires glibc 2.39 or newer, GTK 3, WebKitGTK 4.1,
 OpenSSL 3 and a Linux Secret Service provider. Linux system libraries and the
 separately downloaded upstream Proton runner are not distributed in this archive.
-"""
-    source_archive = args.output / "flightdeck-native-sources-0.1.0.tar.gz"
+""".encode()
+    source_archive = args.output / f"flightdeck-native-sources-{VERSION}.tar.gz"
     archive(source_archive, sources)
     result = {"format": 1, "native_sha256": sha(artifact), "notice_sha256": hashlib.sha256(notice).hexdigest(),
               "source_sha256": sha(source_archive), "source_files": len(sources), "dependency_packages": len(inventory),

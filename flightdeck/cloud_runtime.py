@@ -28,6 +28,7 @@ from urllib.parse import unquote, quote
 import xml.etree.ElementTree as ET
 
 from . import bootstrap, cloud_prefix
+from . import games
 from .cloud_storage import CloudStorageClient, CloudStorageError, Request, Response, Scope
 from .game_install import _stop_owned
 from .mods import _read
@@ -44,7 +45,8 @@ def _cancel(cancel):
 
 
 def _config(runtime):
-    game = Path(runtime) / "games/MSFS2024"
+    spec = games.for_runtime(runtime)
+    game = games.path(runtime)
     path = game / "MicrosoftGame.Config"
     if not path.exists():
         path = game / "MicrosoftGame.config"
@@ -59,7 +61,7 @@ def _config(runtime):
             if len(nodes) != 1:
                 raise ValueError()
             return nodes[0]
-        if root.tag.rsplit("}", 1)[-1] != "Game" or one("StoreId").text != "9P38D19T7LRV":
+        if root.tag.rsplit("}", 1)[-1] != "Game" or one("StoreId").text != spec.store_id:
             raise ValueError()
         title = one("TitleId").text or ""
         if not re.fullmatch(r"[0-9A-Fa-f]{1,8}", title):

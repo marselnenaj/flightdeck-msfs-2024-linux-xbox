@@ -6,6 +6,7 @@
 #include "StoreContext.h"
 #include "StoreQueries.h"
 #include "StoreLicenseEvents.h"
+#include "StoreDurableLicense.h"
 #include "StoreCatalogProvider.h"
 #include <atomic>
 #include <xstore.h>
@@ -13,6 +14,8 @@ namespace {
 using Acquire=HRESULT(WINAPI*)(void **);
 using Release=void(WINAPI*)(void *);
 using QueryLicense=HRESULT(WINAPI*)(void *,volatile LONG *,XStoreGameLicense *);
+using CheckUpdates=HRESULT(WINAPI*)(void *,volatile LONG *);
+using QueryDurable=HRESULT(WINAPI*)(void *,const char *,volatile LONG *,XStoreGameLicense *);
 using QueryProducts=HRESULT(WINAPI*)(void *,UINT32,UINT32,const char *,volatile LONG *,XodusStoreProductPage **);
 using ReleasePage=void(WINAPI*)(XodusStoreProductPage *);
 using QueryToken=HRESULT(WINAPI*)(void *,const char *const *,SIZE_T,const char *,volatile LONG *,char **,SIZE_T *);
@@ -21,7 +24,8 @@ using QueryExplicit=HRESULT(WINAPI*)(void *,UINT32,const char *const *,SIZE_T,
 using QueryCollections=HRESULT(WINAPI*)(void *,const XodusStoreCollectionRequestItem *,SIZE_T,volatile LONG *,XodusStoreCollectionSnapshot **);
 using ReleaseCollections=void(WINAPI*)(XodusStoreCollectionSnapshot *);
 using GetTitleStoreId=HRESULT(WINAPI*)(char *);
-struct AccountRef { void *owned; Release release; QueryLicense license; QueryProducts products; ReleasePage release_page; QueryToken token; QueryExplicit explicit_products; QueryCollections collections; ReleaseCollections release_collections; GetTitleStoreId title_store_id; };
+using QueryInventory=HRESULT(WINAPI*)(void *,UINT32,UINT32,const char *,const char *,volatile LONG *,XodusStoreCollectionSnapshot **);
+struct AccountRef { void *owned; Release release; QueryLicense license; QueryProducts products; ReleasePage release_page; QueryToken token; QueryExplicit explicit_products; QueryCollections collections; ReleaseCollections release_collections; GetTitleStoreId title_store_id; QueryInventory inventory; QueryDurable durable; CheckUpdates updates; };
 HRESULT WINAPI acquire_account(void *,void **out) {
     if(!out)return E_POINTER; *out=nullptr;
     HMODULE module=GetModuleHandleW(L"xodus_store_test.dll");
@@ -37,7 +41,10 @@ HRESULT WINAPI acquire_account(void *,void **out) {
         reinterpret_cast<QueryExplicit>(GetProcAddress(module,"XodusStoreQueryProducts")),
         reinterpret_cast<QueryCollections>(GetProcAddress(module,"XodusStoreQueryCollections")),
         reinterpret_cast<ReleaseCollections>(GetProcAddress(module,"XodusStoreReleaseCollections")),
-        reinterpret_cast<GetTitleStoreId>(GetProcAddress(module,"XodusStoreGetTitleStoreId"))};
+        reinterpret_cast<GetTitleStoreId>(GetProcAddress(module,"XodusStoreGetTitleStoreId")),
+        reinterpret_cast<QueryInventory>(GetProcAddress(module,"XodusStoreQueryInventory")),
+        reinterpret_cast<QueryDurable>(GetProcAddress(module,"XodusStoreQueryDurableLicense")),
+        reinterpret_cast<CheckUpdates>(GetProcAddress(module,"XodusStoreCheckPackageUpdates"))};
     if(!reference)return E_OUTOFMEMORY;
     HRESULT hr=acquire(&reference->owned);
     if(FAILED(hr)||!reference->owned){if(reference->owned)release(reference->owned);delete reference;return FAILED(hr)?hr:E_UNEXPECTED;}
@@ -55,8 +62,17 @@ HRESULT WINAPI query_license(void *,void *value,volatile LONG *cancelled,XStoreG
 HRESULT WINAPI query_products(void *,void *value,UINT32 kinds,UINT32 size,const char *cursor,
     volatile LONG *cancelled,XodusStoreProductPage **out) {
     auto reference=static_cast<AccountRef*>(value);
-    if(!reference||!reference->products||!reference->release_page)return E_NOTIMPL;
-    return reference->products(reference->owned,kinds,size,cursor,cancelled,out);
+    if(out)*out=nullptr;
+    if(!reference||!reference->inventory||!reference->release_collections||!reference->title_store_id)return E_NOTIMPL;
+    char parent[13]{};
+    HRESULT hr=reference->title_store_id(parent);
+    if(FAILED(hr))return hr;
+    std::string market,language;
+    hr=xodus_catalog::catalog_locale(&market,&language);
+    if(FAILED(hr))return hr;
+    static xodus_catalog::CatalogReader catalog;
+    const xodus_catalog::InventoryProvider provider{reference->inventory,reference->release_collections};
+    return xodus_catalog::query_entitled(catalog,provider,reference->owned,parent,market,language,kinds,size,cursor,cancelled,out);
 }
 void WINAPI release_product_page(void *,XodusStoreProductPage *page) {
     if(xodus_catalog::release_coin_page(page))return;
@@ -89,7 +105,17 @@ HRESULT WINAPI query_explicit_products(void *,void *value,UINT32 kinds,const cha
     const xodus_catalog::CollectionsProvider provider{reference->collections,reference->release_collections};
     return xodus_catalog::query_coins(catalog,provider,reference->owned,parent,market,language,kinds,ids,count,actions,action_count,cursor,cancelled,out);
 }
-const XodusStoreAccountProvider account_provider{nullptr,acquire_account,release_account,query_license,query_products,release_product_page,query_token,release_token,query_explicit_products};
+HRESULT WINAPI query_durable(void *,void *value,const char *id,volatile LONG *cancelled,XStoreGameLicense *out) {
+    auto reference=static_cast<AccountRef*>(value);
+    if(!reference||!reference->durable)return E_NOTIMPL;
+    return reference->durable(reference->owned,id,cancelled,out);
+}
+HRESULT WINAPI check_updates(void *,void *value,volatile LONG *cancelled) {
+    auto reference=static_cast<AccountRef*>(value);
+    if(!reference||!reference->updates)return E_NOTIMPL;
+    return reference->updates(reference->owned,cancelled);
+}
+const XodusStoreAccountProvider account_provider{nullptr,acquire_account,release_account,query_license,query_products,release_product_page,query_token,release_token,query_explicit_products,query_durable,check_updates};
 void unsupported(const char *name) {
     static std::atomic<unsigned> count{0};
     if(count.fetch_add(1)<64)std::fprintf(stderr,"[xodus-store] %s hr=80004001\n",name);
@@ -125,6 +151,17 @@ static void diagnose_product_query(UINT32 kinds,const char *const *ids,SIZE_T co
                 call,static_cast<unsigned long long>(index),identifier);
     }
 }
+static void diagnose_unsupported_store_id(const char *method,const char *value) {
+    // A separate budget keeps a later purchase/license attempt visible even
+    // when startup has already exhausted the generic unsupported-call budget.
+    static std::atomic<unsigned> calls{0};
+    if(calls.fetch_add(1)>=32)return;
+    char identifier[18];
+    if(diagnostic_store_id(value,identifier))
+        std::fprintf(stderr,"[xodus-store] %s store_id=%s hr=80004001\n",method,identifier);
+    else
+        std::fprintf(stderr,"[xodus-store] %s store_id=invalid hr=80004001\n",method);
+}
 /* End product-query diagnostics. */
 class Store final : public IXStoreImpl6 {
     std::atomic<ULONG> refs{1};
@@ -157,8 +194,8 @@ public:
     void WINAPI XStoreCloseProductsQueryHandle(XStoreProductQueryHandle productQueryHandle) override { XodusStoreCloseProductsQueryHandle(productQueryHandle); }
     HRESULT WINAPI XStoreAcquireLicenseForPackageAsync(const XStoreProductQueryHandle productQueryHandle, const char *packageIdentifier, XAsyncBlock *async) override { unsupported("XStoreAcquireLicenseForPackageAsync");return E_NOTIMPL; }
     HRESULT WINAPI XStoreAcquireLicenseForPackageResult(XAsyncBlock *async, XStoreLicenseHandle *storeLicenseHandle) override { unsupported("XStoreAcquireLicenseForPackageResult");return E_NOTIMPL; }
-    BOOLEAN WINAPI XStoreIsLicenseValid(const XStoreLicenseHandle storeLicenseHandle) override { unsupported("XStoreIsLicenseValid");return FALSE; }
-    void WINAPI XStoreCloseLicenseHandle(XStoreLicenseHandle storeLicenseHandle) override { unsupported("XStoreCloseLicenseHandle"); }
+    BOOLEAN WINAPI XStoreIsLicenseValid(const XStoreLicenseHandle storeLicenseHandle) override { return XodusStoreIsLicenseValid(storeLicenseHandle); }
+    void WINAPI XStoreCloseLicenseHandle(XStoreLicenseHandle storeLicenseHandle) override { XodusStoreCloseLicenseHandle(storeLicenseHandle); }
     HRESULT WINAPI XStoreCanAcquireLicenseForStoreIdAsync(const XStoreContextHandle storeContextHandle, const char *storeProductId, XAsyncBlock *async) override { unsupported("XStoreCanAcquireLicenseForStoreIdAsync");return E_NOTIMPL; }
     HRESULT WINAPI XStoreCanAcquireLicenseForStoreIdResult(XAsyncBlock *async, XStoreCanAcquireLicenseResult *storeCanAcquireLicense) override { unsupported("XStoreCanAcquireLicenseForStoreIdResult");return E_NOTIMPL; }
     HRESULT WINAPI XStoreCanAcquireLicenseForPackageAsync(const XStoreContextHandle storeContextHandle, const char *packageIdentifier, XAsyncBlock *async) override { unsupported("XStoreCanAcquireLicenseForPackageAsync");return E_NOTIMPL; }
@@ -168,8 +205,8 @@ public:
     HRESULT WINAPI XStoreQueryAddOnLicensesAsync(const XStoreContextHandle storeContextHandle, XAsyncBlock *async) override { unsupported("XStoreQueryAddOnLicensesAsync");return E_NOTIMPL; }
     HRESULT WINAPI XStoreQueryAddOnLicensesResultCount(XAsyncBlock *async, UINT32 *count) override { unsupported("XStoreQueryAddOnLicensesResultCount");return E_NOTIMPL; }
     HRESULT WINAPI XStoreQueryAddOnLicensesResult(XAsyncBlock *async, UINT32 count, XStoreAddonLicense *addOnLicenses) override { unsupported("XStoreQueryAddOnLicensesResult");return E_NOTIMPL; }
-    HRESULT WINAPI XStoreQueryConsumableBalanceRemainingAsync(const XStoreContextHandle storeContextHandle, const char *storeProductId, XAsyncBlock *async) override { unsupported("XStoreQueryConsumableBalanceRemainingAsync");return E_NOTIMPL; }
-    HRESULT WINAPI XStoreQueryConsumableBalanceRemainingResult(XAsyncBlock *async, XStoreConsumableResult *consumableResult) override { unsupported("XStoreQueryConsumableBalanceRemainingResult");return E_NOTIMPL; }
+    HRESULT WINAPI XStoreQueryConsumableBalanceRemainingAsync(const XStoreContextHandle storeContextHandle, const char *storeProductId, XAsyncBlock *async) override { return XodusStoreQueryConsumableBalanceRemainingAsync(storeContextHandle,storeProductId,async); }
+    HRESULT WINAPI XStoreQueryConsumableBalanceRemainingResult(XAsyncBlock *async, XStoreConsumableResult *consumableResult) override { return XodusStoreQueryConsumableBalanceRemainingResult(async,consumableResult); }
     HRESULT WINAPI XStoreReportConsumableFulfillmentAsync(const XStoreContextHandle storeContextHandle, const char *storeProductId, UINT32 quantity, GUID trackingId, XAsyncBlock *async) override { unsupported("XStoreReportConsumableFulfillmentAsync");return E_NOTIMPL; }
     HRESULT WINAPI XStoreReportConsumableFulfillmentResult(XAsyncBlock *async, XStoreConsumableResult *consumableResult) override { unsupported("XStoreReportConsumableFulfillmentResult");return E_NOTIMPL; }
     HRESULT WINAPI XStoreGetUserCollectionsIdAsync(const XStoreContextHandle storeContextHandle, const char *serviceTicket, const char *publisherUserId, XAsyncBlock *async) override { unsupported("XStoreGetUserCollectionsIdAsync");return E_NOTIMPL; }
@@ -184,15 +221,15 @@ public:
     HRESULT WINAPI __PADDING__() override { unsupported("__PADDING__");return E_NOTIMPL; }
     HRESULT WINAPI __PADDING_2__() override { unsupported("__PADDING_2__");return E_NOTIMPL; }
     HRESULT WINAPI __PADDING_3__() override { unsupported("__PADDING_3__");return E_NOTIMPL; }
-    HRESULT WINAPI XStoreShowPurchaseUIAsync(const XStoreContextHandle storeContextHandle, const char *storeId, const char *name, const char *extendedJsonData, XAsyncBlock *async) override { unsupported("XStoreShowPurchaseUIAsync");return E_NOTIMPL; }
+    HRESULT WINAPI XStoreShowPurchaseUIAsync(const XStoreContextHandle storeContextHandle, const char *storeId, const char *name, const char *extendedJsonData, XAsyncBlock *async) override { diagnose_unsupported_store_id("XStoreShowPurchaseUIAsync",storeId);return E_NOTIMPL; }
     HRESULT WINAPI XStoreShowPurchaseUIResult(XAsyncBlock *async) override { unsupported("XStoreShowPurchaseUIResult");return E_NOTIMPL; }
     HRESULT WINAPI XStoreShowRateAndReviewUIAsync(const XStoreContextHandle storeContextHandle, XAsyncBlock *async) override { unsupported("XStoreShowRateAndReviewUIAsync");return E_NOTIMPL; }
     HRESULT WINAPI XStoreShowRateAndReviewUIResult(XAsyncBlock *async, XStoreRateAndReviewResult *result) override { unsupported("XStoreShowRateAndReviewUIResult");return E_NOTIMPL; }
     HRESULT WINAPI XStoreShowRedeemTokenUIAsync(const XStoreContextHandle storeContextHandle, const char *token, const char **allowedStoreIds, SIZE_T allowedStoreIdsCount, BOOLEAN disallowCsvRedemption, XAsyncBlock *async) override { unsupported("XStoreShowRedeemTokenUIAsync");return E_NOTIMPL; }
     HRESULT WINAPI XStoreShowRedeemTokenUIResult(XAsyncBlock *async) override { unsupported("XStoreShowRedeemTokenUIResult");return E_NOTIMPL; }
-    HRESULT WINAPI XStoreQueryGameAndDlcPackageUpdatesAsync(const XStoreContextHandle storeContextHandle, XAsyncBlock *async) override { unsupported("XStoreQueryGameAndDlcPackageUpdatesAsync");return E_NOTIMPL; }
-    HRESULT WINAPI XStoreQueryGameAndDlcPackageUpdatesResultCount(XAsyncBlock *async, UINT32 *count) override { unsupported("XStoreQueryGameAndDlcPackageUpdatesResultCount");return E_NOTIMPL; }
-    HRESULT WINAPI XStoreQueryGameAndDlcPackageUpdatesResult(XAsyncBlock *async, UINT32 count, XStorePackageUpdate *packageUpdates) override { unsupported("XStoreQueryGameAndDlcPackageUpdatesResult");return E_NOTIMPL; }
+    HRESULT WINAPI XStoreQueryGameAndDlcPackageUpdatesAsync(const XStoreContextHandle storeContextHandle, XAsyncBlock *async) override { return XodusStoreQueryGameAndDlcPackageUpdatesAsync(storeContextHandle,async); }
+    HRESULT WINAPI XStoreQueryGameAndDlcPackageUpdatesResultCount(XAsyncBlock *async, UINT32 *count) override { return XodusStoreQueryGameAndDlcPackageUpdatesResultCount(async,count); }
+    HRESULT WINAPI XStoreQueryGameAndDlcPackageUpdatesResult(XAsyncBlock *async, UINT32 count, XStorePackageUpdate *packageUpdates) override { return XodusStoreQueryGameAndDlcPackageUpdatesResult(async,count,packageUpdates); }
     HRESULT WINAPI XStoreDownloadPackageUpdatesAsync(XStoreContextHandle storeContextHandle, const char **packageIdentifiers, SIZE_T packageIdentifiersCount, XAsyncBlock *async) override { unsupported("XStoreDownloadPackageUpdatesAsync");return E_NOTIMPL; }
     HRESULT WINAPI XStoreDownloadPackageUpdatesResult(XAsyncBlock *async) override { unsupported("XStoreDownloadPackageUpdatesResult");return E_NOTIMPL; }
     HRESULT WINAPI XStoreDownloadAndInstallPackageUpdatesAsync(const XStoreContextHandle storeContextHandle, const char **packageIdentifiers, SIZE_T packageIdentifiersCount, XAsyncBlock *async) override { unsupported("XStoreDownloadAndInstallPackageUpdatesAsync");return E_NOTIMPL; }
@@ -203,11 +240,11 @@ public:
     HRESULT WINAPI XStoreQueryPackageIdentifier(const char *storeId, SIZE_T size, char *packageIdentifier) override { unsupported("XStoreQueryPackageIdentifier");return E_NOTIMPL; }
     HRESULT WINAPI XStoreRegisterGameLicenseChanged(XStoreContextHandle storeContextHandle, XTaskQueueHandle queue, void *context, XStoreGameLicenseChangedCallback *callback, XTaskQueueRegistrationToken *token) override { return XodusStoreRegisterGameLicenseChanged(storeContextHandle,queue,context,callback,token); }
     BOOLEAN WINAPI XStoreUnregisterGameLicenseChanged(XStoreContextHandle storeContextHandle, XTaskQueueRegistrationToken token, BOOLEAN wait) override { return XodusStoreUnregisterGameLicenseChanged(storeContextHandle,token,wait); }
-    HRESULT WINAPI XStoreRegisterPackageLicenseLost(XStoreLicenseHandle storeLicenseHandle, XTaskQueueHandle queue, void *context, XStorePackageLicenseLostCallback *callback, XTaskQueueRegistrationToken *token) override { unsupported("XStoreRegisterPackageLicenseLost");return E_NOTIMPL; }
-    BOOLEAN WINAPI XStoreUnregisterPackageLicenseLost(XStoreLicenseHandle licenseHandle, XTaskQueueRegistrationToken token, BOOLEAN wait) override { unsupported("XStoreUnregisterPackageLicenseLost");return FALSE; }
+    HRESULT WINAPI XStoreRegisterPackageLicenseLost(XStoreLicenseHandle storeLicenseHandle, XTaskQueueHandle queue, void *context, XStorePackageLicenseLostCallback *callback, XTaskQueueRegistrationToken *token) override { return XodusStoreRegisterPackageLicenseLost(storeLicenseHandle,queue,context,callback,token); }
+    BOOLEAN WINAPI XStoreUnregisterPackageLicenseLost(XStoreLicenseHandle licenseHandle, XTaskQueueRegistrationToken token, BOOLEAN wait) override { return XodusStoreUnregisterPackageLicenseLost(licenseHandle,token,wait); }
     BOOLEAN WINAPI XStoreIsAvailabilityPurchasable(const XStoreAvailability availability) override { unsupported("XStoreIsAvailabilityPurchasable");return FALSE; }
-    HRESULT WINAPI XStoreAcquireLicenseForDurablesAsync(const XStoreContextHandle storeContextHandle, const char *storeId, XAsyncBlock *async) override { unsupported("XStoreAcquireLicenseForDurablesAsync");return E_NOTIMPL; }
-    HRESULT WINAPI XStoreAcquireLicenseForDurablesResult(XAsyncBlock *async, XStoreLicenseHandle *storeLicenseHandle) override { unsupported("XStoreAcquireLicenseForDurablesResult");return E_NOTIMPL; }
+    HRESULT WINAPI XStoreAcquireLicenseForDurablesAsync(const XStoreContextHandle storeContextHandle, const char *storeId, XAsyncBlock *async) override { return XodusStoreAcquireLicenseForDurablesAsync(storeContextHandle,storeId,async); }
+    HRESULT WINAPI XStoreAcquireLicenseForDurablesResult(XAsyncBlock *async, XStoreLicenseHandle *storeLicenseHandle) override { return XodusStoreAcquireLicenseForDurablesResult(async,storeLicenseHandle); }
     HRESULT WINAPI XStoreShowAssociatedProductsUIAsync(const XStoreContextHandle storeContextHandle, const char *storeId, XStoreProductKind productKinds, XAsyncBlock *async) override { unsupported("XStoreShowAssociatedProductsUIAsync");return E_NOTIMPL; }
     HRESULT WINAPI XStoreShowAssociatedProductsUIResult(XAsyncBlock *async) override { unsupported("XStoreShowAssociatedProductsUIResult");return E_NOTIMPL; }
     HRESULT WINAPI XStoreShowProductPageUIAsync(const XStoreContextHandle storeContextHandle, const char *storeId, XAsyncBlock *async) override { unsupported("XStoreShowProductPageUIAsync");return E_NOTIMPL; }

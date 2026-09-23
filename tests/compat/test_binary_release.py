@@ -76,12 +76,12 @@ class BinaryReleaseTests(unittest.TestCase):
 
     def test_six_binaries_and_full_corresponding_sources_are_preserved(self):
         self.create()
-        with tarfile.open(self.args.output / 'flightdeck-compat-0.1.0-linux-x86_64.tar.gz') as archive:
+        with tarfile.open(self.args.output / f'flightdeck-compat-{release.VERSION}-linux-x86_64.tar.gz') as archive:
             self.assertEqual(set(archive.getnames()), release.NATIVE_FILES | {'manifest.json', 'THIRD-PARTY-NOTICES.txt'})
             helper = archive.getmember('bin/flightdeck-connected-storage.exe')
             self.assertEqual(helper.mode, 0o755)
             self.assertEqual(sha(archive.extractfile(helper).read()), self.hashes[helper.name])
-        with tarfile.open(self.args.output / 'flightdeck-native-sources-0.1.0.tar.gz') as archive:
+        with tarfile.open(self.args.output / f'flightdeck-native-sources-{release.VERSION}.tar.gz') as archive:
             for name, data in self.sources.items():
                 self.assertEqual(archive.extractfile(name).read(), data)
             self.assertEqual(archive.extractfile('build-compat.sh').read(), (REPO / 'scripts/build-compat.sh').read_bytes())

@@ -7,6 +7,11 @@ It loads the cloud state before starting the simulator, keeps local backups,
 and uploads changes after the game exits. Cloud support remains experimental.
 The Xbox profile signed into the game determines which saves are used.
 
+With Flightdeck 0.1.1's edition selection, the selected runtime determines the
+game's cloud identity, helper profile and local backups. MSFS 2020 and MSFS 2024
+saves are not interchangeable. The new 2020 path still needs end-to-end gameplay
+validation; see [release status](changelog.md).
+
 ## Just start the simulator
 
 1. Install the current full Flightdeck package and select **Start simulator**.
@@ -98,6 +103,13 @@ These files contain private data and must not be included in issues, source
 exports or release archives. Xbox tokens, signatures and temporary upload URLs
 stay inside the native helper and are not exposed to the launcher page.
 Do not manually copy downloaded blobs over `state.bin`; the formats differ.
+
+When relocating an existing runtime, keep its complete `private/` directory
+together and finish the game and cloud transfer first. A copied
+`local-saves/` directory alone can contain baseline references whose receipts
+and backups still live in the original runtime. Flightdeck cannot validate that
+comparison state until those matching records are present. Preserve their exact
+bytes and private permissions; downloaded cloud snapshots cannot replace them.
 
 ## Verification
 

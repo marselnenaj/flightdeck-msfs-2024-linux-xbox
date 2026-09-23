@@ -22,18 +22,25 @@ const englishChecks = [
   {id:'runner',label:'Compatibility runtime',ok:true,detail:'Wine runner and Xbox service are available.'},
   {id:'saves',label:'Local save storage',ok:true,detail:'Local storage enabled for cloud sync and backups.'},
 ];
-const localizeChecks=(items,language)=>language==='en'?items.map(item=>englishChecks.find(other=>other.id===item.id)??item):items;
+const localizeChecks=(items,language)=>language==='en'?items.map(item=>{
+  const translated=englishChecks.find(other=>other.id===item.id);
+  return translated&&item.id==='game'&&item.detail.includes('2020')
+    ? {...translated,detail:'MSFS 2020 and MicrosoftGame.Config are present.'}
+    : translated??item;
+}):items;
 const autoIdle=()=>({enabled:true,state:'idle',phase:null,message:'',error_code:null,can_retry:false,can_play_local:false,can_cancel:false,request_id:null,last_synced_at:null,conflict:false,summary:null});
 const autoRequest='123456781234423482341234567890ab';
 let automaticFixture=false;
 let status = {
   app:{name:'Flightdeck',version:'0.1.0'},cloud:autoIdle(),
-  runtime:{configured:true,path:'/opt/flightdeck-fixture/MSFS2024',ready:true,checks},
+  runtime:{configured:true,path:'/opt/flightdeck-fixture/MSFS2024',game_id:'msfs2024',game_name:'Microsoft Flight Simulator 2024',ready:true,checks},
+  versions:{msfs2024:{path:'/opt/flightdeck-fixture/MSFS2024',installed:true,ready:true},
+    msfs2020:{path:'/opt/flightdeck-fixture/MSFS2020',installed:true,ready:true}},
   game:{state:'stopped',managed:false,can_start:true,can_stop:false,started_at:null,exit_code:null},
   saves:{mode:'local',available:true,bytes:24576,files:3,backups:1,can_backup:true,last_backup:{name:'save-backup-test.zip',created_at:'2026-09-17T16:00:00Z'}},
   support:{level:'experimental',cloud_saves:false},csrf_token:csrf,
 };
-let apiUnavailable = false, failNext = false, nextCheckState = 'ready';
+let apiUnavailable = false, failNext = false, nextCheckState = 'ready', switchDelay = 0;
 let statusBarrier = null, releaseStatus = null, statusWaiting = false;
 const apiRequests = [];
 const posts = [], externalRequests = [], errors = [], results = [];
@@ -41,11 +48,12 @@ let discovered=[{name:'Microsoft Flight Simulator 2024',path:'/synthetic/path wi
 let setup = {available:true,install_available:false,prepare_available:true,state:'idle',job:null,defaults:{mode:'existing',runtime_path:status.runtime.path,market:'AT',local_saves:true,destination_path:'/synthetic/new-msfs'}};
 let mods={state:'ready',message:'',folder_path:'/synthetic/Community',can_open:true,mods:[],count:0,scanned_count:0,limited:false};
 let modsUnavailable=false;
+let fenix={state:'available',installed:false,configured:false,settings_ready:false,idle:true,fenix_installed:false,manager_installed:false,can_restore:false,can_change:true,job:null};
 let gameUpdate={integrity:{available:true,can_check:true,result:null},can_repair:true,available:true,installed_version:'1.8.16.0',latest_version:null,update_available:null,can_check:true,can_start:false,can_rollback:false,auth_required:false};
 let updateUnavailable=false,updateDelay=0,updateReplies=0,updateWaiting=false,updateBarrier=null,releaseUpdate=null;
 let cloudData={available:true,mode:'download_and_import',sync_supported:false,can_check:true,can_download:true,can_prepare_import:true,can_import:false,can_cancel:false,plan:null,job:null};
 let cloudReplies=0,cloudUnavailable=false,cloudBarrier=null,releaseCloud=null,cloudWaiting=false;
-const files = new Set(['cloud-saves.js','manrope-variable.woff2','updates.js','mods.js','index.html','styles.css','app.js','setup.js','state.js','i18n.js','mark.svg','flight-panorama.png']);
+const files = new Set(['fenix.js','cloud-saves.js','manrope-variable.woff2','updates.js','mods.js','index.html','styles.css','app.js','setup.js','state.js','i18n.js','mark.svg','flight-panorama.png','flight-panorama-2020.png']);
 const server = createServer(async (req,res) => {
   const url = new URL(req.url, 'http://localhost');
   if (url.pathname.startsWith('/api/')) {
@@ -58,13 +66,25 @@ const server = createServer(async (req,res) => {
       if (url.pathname === '/api/setup') {res.end(JSON.stringify({...setup,job:setup.job?{...setup.job,checks:localizeChecks(setup.job.checks,language),message:language==='en'?'Synthetic files checked.':setup.job.message}:null}));return;}
       if (url.pathname === '/api/game-update') {if(updateDelay)await sleep(updateDelay);if(updateBarrier){updateWaiting=true;await updateBarrier;}updateReplies++;if(updateUnavailable){res.writeHead(503);res.end(JSON.stringify({ok:false,error:'Synthetic update status unavailable'}));return;}res.end(JSON.stringify({...gameUpdate,job:setup.job?.mode==='update'?setup.job:null}));return;}
       if (url.pathname === '/api/cloud-saves') {if(cloudBarrier){cloudWaiting=true;await cloudBarrier;}cloudReplies++;if(cloudUnavailable){res.writeHead(404);res.end(JSON.stringify({ok:false,error:'Synthetic cloud component unavailable'}));return;}res.end(JSON.stringify({...cloudData,automatic:status.cloud}));return;}
+      if (url.pathname === '/api/fenix') {res.end(JSON.stringify({...fenix,runtime_path:status.runtime.path,busy:status.game.state!=='stopped',can_change:fenix.can_change&&status.game.state==='stopped'}));return;}
       if (url.pathname === '/api/mods') {if(modsUnavailable){res.writeHead(503);res.end(JSON.stringify({ok:false,error:'Synthetic inventory unavailable'}));return;}res.end(JSON.stringify(mods));return;}
-      if (url.pathname === '/api/diagnostics') {res.end(JSON.stringify({summary:{Runtime:'Bereit',Speichermodus:'Lokal',Experimentell:true},checks,generated_at:'2026-09-17T17:00:00Z',csrf_token:csrf,private_log:'MUST-NOT-EXPORT'}));return;}
+      if (url.pathname === '/api/diagnostics') {res.end(JSON.stringify({summary:{Runtime:'Bereit',Speichermodus:'Lokal',Experimentell:true,store_calls:[{method:'XStoreShowPurchaseUIAsync',hresult:'80004001'}]},checks,generated_at:'2026-09-17T17:00:00Z',csrf_token:csrf,private_log:'MUST-NOT-EXPORT'}));return;}
     } else if (req.method === 'POST') {
       let body = ''; for await (const chunk of req) body += chunk;
       posts.push({path:url.pathname,token:req.headers['x-flightdeck-token'],body:JSON.parse(body)});
       if (req.headers['x-flightdeck-token'] !== csrf) {res.writeHead(403);res.end(JSON.stringify({ok:false,error:'Missing fixture CSRF'}));return;}
       if (failNext) {failNext = false;res.writeHead(400);res.end(JSON.stringify({ok:false,error:'<img src=x onerror="window.injected=1"> Backend-Fehler'}));return;}
+      if (url.pathname === '/api/fenix/install') {assert.deepEqual(JSON.parse(body),{bundle_path:''});fenix={...fenix,can_change:false,job:{state:'running',message:'Synthetic Fenix setup'}};res.end(JSON.stringify({ok:true,job_id:'fenix-fixture'}));return;}
+      if (url.pathname === '/api/fenix/configure') {assert.deepEqual(JSON.parse(body),{});fenix={...fenix,configured:true,job:{state:'complete',operation:'configure',message:'Synthetic displays configured'}};res.end(JSON.stringify({ok:true,job_id:'fenix-configure-fixture'}));return;}
+      if (url.pathname === '/api/game/select') {
+        if (switchDelay) await sleep(switchDelay);
+        const gameId=JSON.parse(body).game_id;
+        assert.ok(status.versions[gameId]?.ready);
+        status.runtime={...status.runtime,path:status.versions[gameId].path,game_id:gameId,
+          game_name:gameId==='msfs2020'?'Microsoft Flight Simulator 2020':'Microsoft Flight Simulator 2024',
+          checks:checks.map(item=>item.id==='game'?{...item,detail:`MSFS ${gameId==='msfs2020'?'2020':'2024'} und MicrosoftGame.Config vorhanden.`}:item)};
+        res.end(JSON.stringify({ok:true}));return;
+      }
       if (['/api/cloud-saves/check','/api/cloud-saves/download','/api/cloud-saves/prepare-import'].includes(url.pathname)) {assert.deepEqual(JSON.parse(body),{});const operation=url.pathname.split('/').at(-1);cloudData={...cloudData,can_check:false,can_download:false,can_cancel:true,job:{id:'cloud-'+operation,operation,state:'running',message:'Synthetic cloud request running.',result:null}};res.end(JSON.stringify({ok:true,job_id:cloudData.job.id}));return;}
       if (url.pathname === '/api/cloud-saves/import') {assert.deepEqual(JSON.parse(body),{plan_id:cloudData.plan.id,choice:'cloud'});cloudData={...cloudData,plan:null,can_import:false,can_cancel:true,job:{id:'cloud-import',operation:'import',state:'running',message:'',result:null}};res.end(JSON.stringify({ok:true,job_id:'cloud-import'}));return;}
       if (url.pathname === '/api/cloud-saves/upload') {assert.deepEqual(JSON.parse(body),{plan_id:cloudData.plan.id,choice:'local'});cloudData={...cloudData,plan:null,can_upload:false,can_cancel:true,job:{id:'cloud-upload',operation:'upload',state:'running',message:'',result:null}};res.end(JSON.stringify({ok:true,job_id:'cloud-upload'}));return;}
@@ -92,7 +112,7 @@ const server = createServer(async (req,res) => {
       if (url.pathname === '/api/game-update/start') {assert.equal(JSON.parse(body).check_id,setup.job.id);setup.job={...setup.job,state:'installing',phase:'download',can_pause:true,can_resume:false,progress:null};gameUpdate.can_start=false;status.game.can_start=false;res.end(JSON.stringify({ok:true,job:setup.job}));return;}
       if (url.pathname === '/api/game-update/rollback') {assert.deepEqual(JSON.parse(body),{});gameUpdate={...gameUpdate,installed_version:'1.8.16.0',can_rollback:false};res.end(JSON.stringify({ok:true}));return;}
       if (url.pathname === '/api/setup/pick') {res.end(JSON.stringify({ok:true,field:JSON.parse(body).field,cancelled:false,path:'/synthetic/native-picked'}));return;}
-      if (url.pathname === '/api/setup/check') {setup.job={id:'check-1',mode:JSON.parse(body).mode,market:JSON.parse(body).market,state:nextCheckState,phase:'checked',message:'Synthetische Dateien geprüft.',progress:nextCheckState==='checking'?null:100,checks};setup.state=nextCheckState;status.game.can_start=nextCheckState==='failed';res.end(JSON.stringify({ok:true,job:setup.job}));return;}
+      if (url.pathname === '/api/setup/check') {const input=JSON.parse(body);setup.job={id:'check-1',mode:input.mode,market:input.market,game_id:input.game_id,runtime_path:nextCheckState==='ready'?(input.destination_path||input.runtime_path):undefined,state:nextCheckState,phase:'checked',message:'Synthetische Dateien geprüft.',progress:nextCheckState==='checking'?null:100,checks};setup.state=nextCheckState;status.game.can_start=nextCheckState==='failed';res.end(JSON.stringify({ok:true,job:setup.job}));return;}
       if (url.pathname === '/api/setup/start') {assert.equal(JSON.parse(body).check_id,setup.job.id);setup.job={...setup.job,state:setup.job.mode==='install'?'installing':'complete',phase:setup.job.mode==='install'?'authentication':'complete',progress:null,message:'Runtime verbunden.'};setup.state=setup.job.state;status.runtime.ready=true;status.runtime.configured=true;status.game.can_start=true;res.end(JSON.stringify({ok:true,job:setup.job}));return;}
       if (url.pathname === '/api/setup/pause') {assert.equal(JSON.parse(body).job_id,setup.job.id);setup.job={...setup.job,phase:'pausing',can_pause:false,can_resume:false};res.end(JSON.stringify({ok:true,job:setup.job}));return;}
       if (url.pathname === '/api/setup/resume') {assert.equal(JSON.parse(body).job_id,setup.job.id);setup.job={...setup.job,phase:'download',can_pause:true,can_resume:false};res.end(JSON.stringify({ok:true,job:setup.job}));return;}
@@ -182,10 +202,66 @@ try {
   await check('No CSRF rendered',`!document.documentElement.outerHTML.includes(${JSON.stringify(csrf)})`);
   await check('Desktop has no overflow',`document.documentElement.scrollWidth <= innerWidth`);
   await screenshot('overview-desktop.png');
+  await check('Both game versions are directly visible with 2024 selected',`document.getElementById('version-msfs2024').getAttribute('aria-pressed')==='true' && !document.getElementById('version-msfs2020').disabled && getComputedStyle(document.querySelector('.launch-art-2024')).backgroundImage.includes('flight-panorama.png')`);
+  const recordSwitch = async target => evaluate(`new Promise(resolve => {
+    const frames = [], start = performance.now();
+    const sample = () => {
+      const panel = document.querySelector('.launch-panel').getBoundingClientRect();
+      const button = document.getElementById('launch-button');
+      frames.push({time:performance.now()-start, top:panel.top, height:panel.height,
+        buttonTop:button.getBoundingClientRect().top, buttonOpacity:Number(getComputedStyle(button).opacity),
+        indicator:document.getElementById('game-status-use').getAttribute('href'),
+        notice:!document.getElementById('notice').hidden});
+      if (performance.now()-start < 1300) requestAnimationFrame(sample); else resolve(frames);
+    };
+    sample();document.getElementById(${JSON.stringify(target)}).click();
+  })`);
+  switchDelay = 180;
+  const switchFrames = await recordSwitch('version-msfs2020');
+  switchDelay = 0;
+  await writeFile(join(artifacts,'switch-frames.json'),JSON.stringify(switchFrames,null,2));
+  assert.ok(switchFrames.length>10);
+  for (const key of ['top','height','buttonTop']) {
+    assert.ok(Math.max(...switchFrames.map(f=>f[key]))-Math.min(...switchFrames.map(f=>f[key]))<1,
+      `Switch moves ${key} instead of keeping the layout stable`);
+  }
+  assert.ok(switchFrames.every(f=>f.buttonOpacity===1 && f.indicator==='#i-check-circle' && !f.notice),
+    'Switch flashes the launch control, readiness indicator or success banner');
+  results.push('Delayed game switch keeps every sampled hero/control position stable without dimming or banner shifts');
+  await until(()=>evaluate(`document.getElementById('version-msfs2020').getAttribute('aria-pressed')==='true' && !document.getElementById('version-msfs2024').disabled`),'2020 switch did not render');
+  assert.equal(posts.at(-1).path,'/api/game/select');assert.deepEqual(posts.at(-1).body,{game_id:'msfs2020'});assert.equal(posts.at(-1).token,csrf);
+  await check('One click switches to 2020 with its own artwork and amber accent',`document.body.dataset.game==='msfs2020' && getComputedStyle(document.querySelector('.launch-art-2020')).backgroundImage.includes('flight-panorama-2020.png') && getComputedStyle(document.body).getPropertyValue('--accent').trim()==='#f5c873' && document.getElementById('launch-game-name').textContent==='Microsoft Flight Simulator 2020'`);
+  await check('Game switch crossfades the prepared artwork',`getComputedStyle(document.querySelector('.launch-art-2020')).transitionProperty.includes('opacity') && getComputedStyle(document.querySelector('.launch-art-2020')).transitionDuration!=='0s' && document.querySelectorAll('.launch-art[aria-hidden=true]').length===2`);
+  await until(()=>evaluate(`getComputedStyle(document.querySelector('.launch-art-2020')).opacity==='1' && document.querySelector('.launch-panel').getAnimations({subtree:true}).length===0`),'Game transition did not settle');
+  await check('Only the selected title is visible and announced',`getComputedStyle(document.querySelector('.launch-title-2020')).opacity==='1' && getComputedStyle(document.querySelector('.launch-title-2024')).opacity==='0' && document.getElementById('launch-game-name').textContent==='Microsoft Flight Simulator 2020' && document.getElementById('version-announcement').textContent.includes('Simulator gewechselt')`);
+  await click('version-msfs2024');
+  await until(()=>evaluate(`document.body.dataset.game==='msfs2024' && Number(getComputedStyle(document.querySelector('.launch-art-2020')).opacity)<.9 && Number(getComputedStyle(document.querySelector('.launch-art-2020')).opacity)>.1`),'Reverse transition did not crossfade');
+  await click('version-msfs2020');
+  await until(()=>evaluate(`document.body.dataset.game==='msfs2020' && document.querySelector('.launch-panel').getAnimations({subtree:true}).length===0`),'Interrupted switch did not settle');
+  await check('Reversing during the crossfade settles on one title without moving or dimming controls',`getComputedStyle(document.querySelector('.launch-title-2020')).opacity==='1' && getComputedStyle(document.querySelector('.launch-title-2024')).opacity==='0' && document.querySelector('.launch-content').getAnimations().length===0 && getComputedStyle(document.getElementById('launch-button')).opacity==='1' && document.getElementById('notice').hidden`);
+  await refresh(`document.body.dataset.game==='msfs2020'`);
+  await check('Unchanged polling preserves settled artwork and does not restart animation',`document.querySelector('.launch-content').getAnimations().length===0 && document.querySelector('.launch-art-2020').getAnimations().length===0`);
+  await check('2020 installation checks identify the selected version',`document.getElementById('overview-checks').textContent.includes('MSFS 2020') && !document.getElementById('overview-checks').textContent.includes('MSFS 2024')`);
+  await screenshot('overview-2020-desktop.png');
+  await call('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
+  await check('2020 switch and artwork fit mobile width',`document.documentElement.scrollWidth<=innerWidth && document.getElementById('version-msfs2020').getAttribute('aria-pressed')==='true' && getComputedStyle(document.querySelector('.launch-art-2020')).backgroundImage.includes('flight-panorama-2020.png')`);
+  await screenshot('overview-2020-mobile.png');
+  await call('Emulation.setDeviceMetricsOverride',{width:1536,height:1024,deviceScaleFactor:1,mobile:false});
+  await call('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'reduce'}]});
+  await click('version-msfs2024');
+  await until(()=>evaluate(`document.getElementById('version-msfs2024').getAttribute('aria-pressed')==='true'`),'2024 switch did not render');
+  await check('2024 restores its own artwork and accent',`document.body.dataset.game==='msfs2024' && getComputedStyle(document.querySelector('.launch-art-2024')).backgroundImage.includes('flight-panorama.png') && getComputedStyle(document.body).getPropertyValue('--accent').trim()==='#64e7f2'`);
+  await check('Reduced motion switches immediately without title or background movement',`getComputedStyle(document.querySelector('.launch-art-2020')).opacity==='0' && getComputedStyle(document.querySelector('.launch-title-2024')).opacity==='1' && getComputedStyle(document.querySelector('.launch-title-2020')).opacity==='0' && document.querySelector('.launch-panel').getAnimations({subtree:true}).length===0`);
+  const beforeFailure=await evaluate(`document.querySelector('.launch-panel').getBoundingClientRect().top`);
+  failNext=true;
+  await click('version-msfs2020');
+  await until(()=>evaluate(`!document.getElementById('notice').hidden && !document.getElementById('version-msfs2020').disabled`),'Failed switch did not show feedback');
+  await check('Failed switch preserves the confirmed game and reports the error without shifting the layout',`document.body.dataset.game==='msfs2024' && document.getElementById('version-msfs2024').getAttribute('aria-pressed')==='true' && document.getElementById('notice').classList.contains('error') && !document.getElementById('notice').querySelector('img') && document.querySelector('.launch-panel').getBoundingClientRect().top===${beforeFailure}`);
+  await call('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'no-preference'}]});
   await click('launch-button');
   await until(()=>evaluate(`document.getElementById('game-state').textContent === 'Simulator läuft' && !document.getElementById('launch-button').disabled`),'Launch transition failed');
   assert.equal(posts.at(-1).path,'/api/launch');assert.equal(posts.at(-1).token,csrf);results.push('Launch sends exact local JSON + CSRF and reflects backend');
-  await check('Running disables runtime configuration',`document.getElementById('config-button').disabled`);
+  await check('Running disables runtime configuration and game switching',`document.getElementById('config-button').disabled && document.getElementById('version-msfs2020').disabled`);
   await click('launch-button');
   await until(()=>evaluate(`document.getElementById('game-state').textContent === 'Bereit zum Start' && !document.getElementById('launch-button').disabled`),'Stop transition failed');
   assert.equal(posts.at(-1).path,'/api/stop');results.push('Stop uses managed session API');
@@ -243,6 +319,20 @@ try {
   await until(()=>evaluate(`!document.getElementById('config-button').disabled`),'Install capability not applied');
   await check('Install enables cloud sync and local backups by default',`!document.getElementById('setup-install-fields').hidden && !!document.getElementById('install-save-policy') && !document.getElementById('install-local-saves') && !document.getElementById('setup-advanced').open`);
   await check('Suggested region is a visible native dropdown outside collapsed folder settings',`document.getElementById('install-destination-summary').textContent==='/synthetic/new-msfs' && document.getElementById('install-market').tagName==='SELECT' && document.getElementById('install-market').selectedOptions[0].textContent==='Österreich (AT)' && !document.getElementById('install-market').closest('details') && !document.getElementById('install-location').open && document.getElementById('install-market').getBoundingClientRect().height>0`);
+  setup.directory_picker=true;await route('overview');await route('installation');
+  await until(()=>evaluate(`!document.getElementById('install-destination-pick').hidden`),'Install folder button did not appear');
+  await evaluate(`document.getElementById('install-destination').value='/synthetic/msfs2024';document.getElementById('setup-game-id').value='msfs2020';document.getElementById('setup-game-id').dispatchEvent(new Event('change'))`);
+  await check('Changing the edition moves the suggested destination to its own folder',`document.getElementById('install-destination').value==='/synthetic/msfs2020'`);
+  const beforeInstallPick=posts.length;await click('install-destination-pick');
+  await until(()=>evaluate(`document.getElementById('install-destination').value==='/synthetic/native-picked/msfs2020'`),'New edition destination was not chosen');
+  assert.equal(posts.at(-1).path,'/api/setup/pick');assert.deepEqual(posts.at(-1).body,{field:'destination_path',initial:'/synthetic'});
+  assert.equal(posts.length,beforeInstallPick+1);results.push('Folder picker selects a parent and creates an edition-specific new destination');
+  nextCheckState='ready';await click('config-button');
+  await until(()=>evaluate(`!document.getElementById('setup-start').disabled`),'MSFS 2020 preflight did not become ready');
+  await check('MSFS 2020 ready step shows its exact new folder apart from connected MSFS 2024',`document.getElementById('setup-target-path').textContent==='/synthetic/native-picked/msfs2020' && document.getElementById('setup-target-label').textContent.includes('MSFS 2020') && document.getElementById('current-path').textContent==='/opt/flightdeck-fixture/MSFS2024'`);
+  assert.equal(posts.at(-1).body.game_id,'msfs2020');assert.equal(posts.at(-1).body.destination_path,'/synthetic/native-picked/msfs2020');
+  await click('setup-cancel');await until(()=>evaluate(`!document.getElementById('setup-reset').hidden`),'MSFS 2020 ready job did not cancel');await click('setup-reset');setup.job=null;setup.state='idle';
+  await evaluate(`document.getElementById('setup-game-id').value='msfs2024';document.getElementById('setup-game-id').dispatchEvent(new Event('change'));document.getElementById('install-destination').value='/synthetic/new-msfs';document.getElementById('install-destination').dispatchEvent(new Event('input'))`);
   const beforeRegionSelection=posts.length;
   await evaluate(`document.getElementById('install-market').focus()`);
   await call('Input.dispatchKeyEvent',{type:'keyDown',key:'ArrowDown',code:'ArrowDown',windowsVirtualKeyCode:40});
@@ -282,8 +372,10 @@ try {
   await evaluate(`document.getElementById('install-market').value='DE';document.getElementById('install-market').dispatchEvent(new Event('change',{bubbles:true}))`);
   const installPostStart=posts.length;
   await click('config-button');await until(()=>evaluate(`!document.getElementById('setup-start').disabled && document.getElementById('setup-start').getClientRects().length>0`),'Install preflight not ready');
+  await check('Ready install shows its new target and labels the old connected runtime separately',`document.getElementById('setup-target-path').textContent==='/synthetic/new-msfs' && document.getElementById('setup-target-label').textContent.includes('MSFS 2024') && document.querySelector('.setup-current').textContent.includes('Aktuell verbunden:') && document.getElementById('current-path').textContent==='/opt/flightdeck-fixture/MSFS2024'`);
+  assert.equal(posts.at(-1).body.destination_path,'/synthetic/new-msfs');
   assert.deepEqual(posts.slice(installPostStart).map(post=>post.path),['/api/setup/check']);
-  assert.deepEqual(posts.at(-1).body,{mode:'install',market:'DE',local_saves:true,destination_path:'/synthetic/new-msfs'});results.push('Install preflight sends the explicitly selected region and actual location without starting login');
+  assert.deepEqual(posts.at(-1).body,{mode:'install',market:'DE',local_saves:true,game_id:'msfs2024',destination_path:'/synthetic/new-msfs'});results.push('Install preflight sends the explicitly selected edition, region and actual location without starting login');
   await evaluate(`window.regionReloadPending=true`);await call('Page.reload');
   await until(()=>evaluate(`!window.regionReloadPending && document.getElementById('setup-start')?.getClientRects().length>0 && !document.getElementById('setup-start').disabled`),'Ready plan did not return after reload');
   await check('Reloaded ready plan keeps its actual region instead of the suggested default',`document.getElementById('install-market').value==='DE' && document.getElementById('install-market').disabled && document.getElementById('install-market').selectedOptions[0].textContent==='Deutschland (DE)'`);
@@ -657,6 +749,7 @@ try {
   await route('diagnostics');await click('diagnostic-refresh');
   await until(()=>evaluate(`!document.getElementById('diagnostic-download').disabled`),'Diagnostics unavailable');
   await check('Diagnostic export excludes status/CSRF/extra fields',`!document.getElementById('diagnostic-json').textContent.includes(${JSON.stringify(csrf)}) && !document.getElementById('diagnostic-json').textContent.includes('MUST-NOT-EXPORT')`);
+  await check('Store failures appear as method and HRESULT without product or account details',`document.getElementById('diagnostic-summary').textContent.includes('Store-API-Aufrufe') && document.getElementById('diagnostic-summary').textContent.includes('XStoreShowPurchaseUIAsync') && document.getElementById('diagnostic-summary').textContent.includes('80004001')`);
   await call('Browser.setDownloadBehavior',{behavior:'allow',downloadPath:join(temp,'downloads')});await click('diagnostic-download');
   await until(async()=>{try{return(await readdir(join(temp,'downloads'))).includes('flightdeck-diagnose.json');}catch{return false;}},'Download missing');
   const exported=JSON.parse(await readFile(join(temp,'downloads/flightdeck-diagnose.json'),'utf8'));
@@ -690,6 +783,58 @@ try {
   await until(()=>evaluate(queryLanguageReady),'Query language did not override saved preference');
   await check('CLI query language overrides and persists the saved language',`document.getElementById('language-select').value==='de' && localStorage.getItem('flightdeck-language')==='de'`);
   assert.ok(apiRequests.length>0 && apiRequests.every(r=>['de','en'].includes(r.language)));results.push('Every synthetic API request includes an explicit supported Accept-Language');
+
+  status.runtime={...status.runtime,path:status.versions.msfs2020.path,game_id:'msfs2020',game_name:'Microsoft Flight Simulator 2020'};
+  discovered=[{name:'Microsoft Flight Simulator 2024',game_id:'msfs2024',path:'/synthetic/msfs2024',ready:true,configured:false,checks},
+    {name:'Microsoft Flight Simulator 2020',game_id:'msfs2020',path:'/synthetic/msfs2020',ready:true,configured:true,checks}];
+  await route('overview');await refresh(`document.getElementById('launch-game-name').textContent==='Microsoft Flight Simulator 2020'`);
+  await check('Selected 2020 version stays visible in the switch and hero',`document.getElementById('selected-game-name').textContent==='Microsoft Flight Simulator 2020' && document.getElementById('version-msfs2020').getAttribute('aria-pressed')==='true' && getComputedStyle(document.querySelector('.launch-art-2020')).backgroundImage.includes('flight-panorama-2020.png')`);
+  await route('updates');await check('Updates display the selected 2020 edition',`document.getElementById('update-game-name').textContent==='Microsoft Flight Simulator 2020'`);
+  await route('installation');await click('setup-discover');await until(()=>evaluate(`document.getElementById('discovery-results').textContent.includes('Microsoft Flight Simulator 2020')`),'2020 runtime was not discovered');
+  await check('Both prepared editions are listed for selection',`document.getElementById('discovery-results').textContent.includes('Microsoft Flight Simulator 2024') && document.getElementById('discovery-results').textContent.includes('Microsoft Flight Simulator 2020')`);
+  status.versions.msfs2024={path:'',installed:false,ready:false};
+  await route('overview');await refresh(`document.getElementById('version-msfs2024-state').textContent==='Installieren'`);
+  await click('version-msfs2024');
+  await check('Missing edition opens its own install form in one click',`location.hash==='#installation' && document.getElementById('setup-game-id').value==='msfs2024' && !document.getElementById('setup-install-fields').hidden`);
+
+  // Fenix: current runtime, stopped/running permissions, reservation and error text.
+  status.runtime={...status.runtime,path:'/fixture/fenix-msfs2024',game_id:'msfs2024',game_name:'Microsoft Flight Simulator 2024'};
+  await refresh(`document.getElementById('launch-game-name').textContent==='Microsoft Flight Simulator 2024'`);
+  await route('mods');await click('fenix-refresh');
+  await until(()=>evaluate(`!document.getElementById('fenix-install').disabled`),'Fenix install unavailable');
+  await check('Fenix has no installer execution before a selected EXE',`document.getElementById('fenix-installer').disabled && document.getElementById('fenix-configure').disabled`);
+  await check('Fenix initial step is explicit and never called ready',`document.getElementById('fenix-state').textContent==='Einrichtung noch nicht abgeschlossen' && document.getElementById('fenix-next').textContent.includes('Schritt 1 von 4') && document.getElementById('fenix-step-1').getAttribute('aria-current')==='step' && document.getElementById('fenix-overview').hidden`);
+  await evaluate(`document.getElementById('fenix-card').scrollIntoView({block:'start'})`);await screenshot('fenix-setup-desktop.png');
+  await click('fenix-install');await until(()=>evaluate(`document.getElementById('fenix-state').textContent.includes('läuft')`),'Fenix progress missing');
+  await check('Fenix job reserves launch and all competing mutations',`document.getElementById('launch-button').disabled && document.getElementById('fenix-install').disabled && document.getElementById('fenix-restore').disabled`);
+  fenix={...fenix,can_change:true,job:{state:'failed',message:'<img src=x onerror="window.fenixInjected=1"> fixture error'}};
+  await click('fenix-refresh');await until(()=>evaluate(`document.getElementById('fenix-message').textContent.includes('fixture error')`),'Fenix error missing');
+  await check('Fenix errors render as text without markup execution',`!window.fenixInjected && !document.querySelector('#fenix-message img')`);
+  fenix={...fenix,state:'installed',installed:true,fenix_installed:true,manager_installed:true,idle:false,can_change:false,job:{state:'complete',operation:'installer',message:'Synthetic installer exited'}};
+  await click('fenix-refresh');await until(()=>evaluate(`!document.getElementById('fenix-busy').hidden`),'Open Fenix window explanation missing');
+  await check('An exited installer with an open app is not complete and explains disabled controls',`document.getElementById('fenix-state').textContent==='Einrichtung noch nicht abgeschlossen' && document.getElementById('fenix-next').textContent.includes('Schritt 3 von 4') && document.getElementById('fenix-configure').disabled && document.getElementById('fenix-busy').textContent.includes('Windows-Anwendung')`);
+  await evaluate(`document.getElementById('fenix-card').scrollIntoView({block:'start'})`);await screenshot('fenix-waiting-desktop.png');
+  fenix={...fenix,idle:true,can_change:true,settings_ready:true};await click('fenix-refresh');
+  await until(()=>evaluate(`!document.getElementById('fenix-configure').disabled`),'Final Fenix setup step unavailable');
+  await check('Fenix points to finish setup after initial settings exist',`document.getElementById('fenix-next').textContent.includes('Schritt 4 von 4') && document.getElementById('fenix-step-4').getAttribute('aria-current')==='step' && document.getElementById('fenix-busy').hidden`);
+  await click('fenix-configure');await until(()=>evaluate(`document.getElementById('fenix-state').textContent==='Fenix ist startbereit'`),'Fenix ready confirmation missing');
+  await check('Completed Fenix setup confirms startup and shutdown without claiming account activation',`document.getElementById('fenix-next').textContent.includes('automatisch mit dem Spiel') && document.getElementById('fenix-next').textContent.includes('beim Beenden') && document.querySelectorAll('#fenix-steps [data-status=done]').length===4 && document.getElementById('fenix-step-3').textContent.includes('Lizenz prüft Fenix selbst')`);
+  await evaluate(`document.getElementById('fenix-card').scrollIntoView({block:'start'})`);await screenshot('fenix-ready-desktop.png');
+  await click('fenix-overview');await check('Ready Fenix leads back to the normal simulator launch',`location.hash==='#overview' && !document.getElementById('view-overview').hidden`);
+  await route('mods');await language('en');await call('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
+  await evaluate(`document.getElementById('fenix-card').scrollIntoView({block:'start'})`);
+  await check('Ready Fenix message is translated and fits mobile width',`document.documentElement.scrollWidth<=innerWidth && document.getElementById('fenix-state').textContent==='Fenix is ready to fly' && document.getElementById('fenix-next').textContent.includes('closes when you exit')`);await screenshot('fenix-ready-mobile.png');
+  await language('de');await call('Emulation.setDeviceMetricsOverride',{width:1536,height:1024,deviceScaleFactor:1,mobile:false});
+  fenix={...fenix,state:'legacy',manager_installed:true,job:null};await click('fenix-refresh');
+  await until(()=>evaluate(`!document.getElementById('fenix-manager').disabled && !document.getElementById('fenix-legacy').hidden`),'Legacy livery manager inaccessible');
+  await check('Legacy local patch offers its manager without replacement',`document.getElementById('fenix-install').disabled && !document.getElementById('fenix-legacy').hidden`);
+  status.game={...status.game,state:'running'};await refresh(`document.getElementById('game-state').textContent.length>0`);await click('fenix-refresh');
+  await until(()=>evaluate(`document.getElementById('fenix-manager').disabled`),'Running simulator must block manager');
+  status.game={...status.game,state:'stopped'};fenix={...fenix,state:'available',installed:false,configured:false,settings_ready:false,fenix_installed:false,manager_installed:false};await refresh(`document.getElementById('game-state').textContent.length>0`);await click('fenix-refresh');
+  await language('en');await call('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
+  await evaluate(`document.getElementById('fenix-card').scrollIntoView({block:'start'})`);
+  await check('Fenix setup is translated and fits mobile width',`document.documentElement.scrollWidth<=innerWidth && document.getElementById('fenix-install').textContent==='Install patch'`);await screenshot('fenix-setup-mobile.png');
+  await language('de');
 
   // Real backend, entirely separate empty state directory, no runtime and no POSTs.
   realBackend=spawn('python',['-m','flightdeck','--state-dir',join(temp,'empty-backend-state'),'--no-browser'],{cwd:resolve(base,'..'),env:{...process.env,XDG_DATA_HOME:join(temp,'empty-data')},stdio:['ignore','pipe','pipe']});

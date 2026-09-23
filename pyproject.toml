@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "flightdeck-linux"
-version = "0.1.0"
+version = "0.1.1"
 description = "Experimental local launcher and source integration for MSFS Xbox PC on Linux"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -21,14 +21,14 @@ Repository = "https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox"
 Issues = "https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/issues"
 
 [tool.setuptools]
-packages = ["flightdeck", "flightdeck.ui"]
+packages = ["flightdeck", "flightdeck.ui", "flightdeck._fenix"]
 include-package-data = true
 
 [tool.setuptools.package-dir]
 "flightdeck.ui" = "ui"
 
 [tool.setuptools.package-data]
-"flightdeck.ui" = ["*.html", "*.css", "*.js", "*.svg", "flight-panorama.png", "manrope-variable.woff2", "OFL-Manrope.txt"]
+"flightdeck.ui" = ["*.html", "*.css", "*.js", "*.svg", "flight-panorama.png", "flight-panorama-2020.png", "manrope-variable.woff2", "OFL-Manrope.txt"]
 
 [tool.setuptools.cmdclass]
 build_py = "build_support.BuildWithResources"

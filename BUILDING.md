@@ -76,15 +76,19 @@ python3 tests/compat/run-native.py --suite store --stage build/compat \
 
 The default `--suite all` builds and runs the core, synchronous bridge and
 asynchronous GameSave tests, the Python/native save-format interchange test,
-plus four Store tests. Each test uses its own new
+plus six Store tests. Each test uses its own new
 Wine prefix. `--suite gamesave` selects storage and interchange tests; `--suite store`
-selects the query lifecycle test and three catalog/mapper tests. The narrower
+selects explicit product queries, Durable license handles, base-package update
+queries and three catalog/mapper tests. The narrower
 `--suite catalog` selects only the catalog parser, parallel reader and coin
 provider/mapper.
 
 The lifecycle checks use a synthetic provider with the real native task queue:
 copied inputs, result ownership, paging, cancellation, callback reentry and
-asynchronous errors. Catalog checks inject local fixtures and mock fetch/Store
+asynchronous errors. Durable-license tests also check expiry, bounded active
+handles, release and delayed result access. Package-update tests cover the
+registered base-game scope and unsupported/error cases.
+Catalog checks inject local fixtures and mock fetch/Store
 functions. They cover bounded concurrency, cache separation, cancellation,
 regional offers, exact SKU joins, unknown/expired ownership and output lifetime.
 The fixtures are handwritten synthetic data; these tests do not fetch catalog
@@ -101,3 +105,26 @@ pretend that its smaller clean test suite reproduces every integration run.
 
 See [the runtime contract](docs/runtime.md) to prepare a local installation from
 the built artifacts and user-owned runner, package and Wine prefix.
+
+## Optional Fenix patch
+
+The Fenix Wine overlay has a separate source/build pipeline in
+[fenix-a320-linux-patch](https://github.com/marselnenaj/fenix-a320-linux-patch/blob/main/BUILDING.md).
+It is not one of the six native components above. Flightdeck vendors its MIT
+installer engine and pins the separately downloaded Wine payload. A normal
+Flightdeck build does not compile or bundle Fenix/Microsoft software.
+
+After building and verifying a new patch release, maintainers import its engine
+and manifests with:
+
+```sh
+python3 scripts/sync-fenix.py /absolute/path/to/fenix-a320-linux-patch
+python3 -m unittest discover -s tests -p 'test_fenix.py' -v
+node --test ui/tests/fenix.test.mjs
+```
+
+Review the imported engine, `compat/fenix/bundle.json` and
+`compat/fenix/release.json` together. Publish the exact ZIP and corresponding
+sources at the pinned public GitHub release URL before publishing a Flightdeck
+package that depends on it. Replacing an existing ZIP with different bytes
+breaks the pinned checksum. See the [release checklist](docs/contributing.md#fenix-patch-releases).

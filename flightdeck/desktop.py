@@ -79,7 +79,7 @@ def release_identity():
     paths = list(package.glob("*.py"))
     ui = package / "ui" if (package / "ui").is_dir() else root / "ui"
     paths += [ui / name for name in ("index.html", "app.js", "setup.js", "mods.js", "updates.js", "cloud-saves.js", "i18n.js", "state.js",
-                                    "styles.css", "mark.svg", "flight-panorama.png", "manrope-variable.woff2", "OFL-Manrope.txt")]
+                                    "styles.css", "mark.svg", "flight-panorama.png", "flight-panorama-2020.png", "manrope-variable.woff2", "OFL-Manrope.txt")]
     resources = package / "resources"
     if resources.is_dir():
         paths += list((resources / "runtime").glob("*"))
@@ -239,7 +239,9 @@ def verified_service(root, record=None):
     return record
 
 
-def ensure_service(state_dir, runtime=None, port=0, *, timeout=15):
+def ensure_service(state_dir, runtime=None, port=0, *, timeout=60):
+    # A new release may verify and replace the native runtime before its
+    # loopback service becomes ready. Give that bounded local operation time.
     root = state_directory(state_dir)
     identity = release_identity()
     with lock_file(root / START_LOCK, wait=timeout):

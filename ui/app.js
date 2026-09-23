@@ -1,20 +1,40 @@
 import {t, locale, plural, getLanguage, setLanguage, applyTranslations} from './i18n.js';
 import {createSetup} from './setup.js';
 import {createMods} from './mods.js';
+import {createFenix} from './fenix.js';
 import {createUpdates} from './updates.js';
 import {createCloudSaves} from './cloud-saves.js';
 import {VIEWS, stringValue, normalizeStatus, normalizeChecks, formatBytes, formatCount, formatDate, gamePresentation, actionPermissions, diagnosticValue, automaticBusy} from './state.js';
 
 const $ = id => document.getElementById(id);
-const state = {status: null, online: false, pending: null, view: 'overview', report: null, reportLoading: false};
+const state = {status: null, online: false, pending: null, pendingGame: null, view: 'overview', report: null, reportLoading: false};
 let statusRequest = null;
 let setupReserved = false;
 let setupController = null;
 let modsController = null;
+let fenixController = null;
+let fenixReserved = false;
 let updatesController = null;
 let updateReserved = false;
 let cloudReserved = false;
 let cloudController = null;
+// Decode both scenes before the first switch. Keep the decoded images alive;
+// an opacity-zero CSS background alone may defer decoding until it is shown.
+const gameArtwork = ['flight-panorama.png', 'flight-panorama-2020.png'].map(source => {
+  const image = new Image(); image.src = new URL(source, import.meta.url); return image;
+});
+const artworkReady = Promise.all(gameArtwork.map(image => image.decode().catch(() => {})));
+
+function renderGameTheme(gameId) {
+  const previous = document.body.dataset.game;
+  if (previous === gameId) return;
+  document.body.dataset.game = gameId;
+  // Paint the initial selection before enabling transitions. Status polls
+  // keep the existing layers and focus; only a changed game animates.
+  if (!document.body.classList.contains('game-theme-ready')) {
+    requestAnimationFrame(() => requestAnimationFrame(() => document.body.classList.add('game-theme-ready')));
+  }
+}
 
 function text(id, value) { if ($(id).textContent !== value) $(id).textContent = value; }
 
@@ -82,11 +102,13 @@ function renderChecks(target, checks, empty = t('Noch keine Prüfergebnisse verf
 }
 
 function renderStatus() {
+  document.body.classList.toggle('game-switch-pending', state.pending === 'switch');
   modsController?.render();
+  fenixController?.render();
   updatesController?.render();
   cloudController?.render();
   const status = state.status;
-  const permissions = actionPermissions(status, state.online, state.pending || setupReserved || updateReserved || cloudReserved);
+  const permissions = actionPermissions(status, state.online, state.pending || fenixReserved || setupReserved || updateReserved || cloudReserved);
   const game = gamePresentation(status, state.online);
   const connected = state.online && !!status;
   text('service-notice', status?.service?.message || '');
@@ -95,8 +117,9 @@ function renderStatus() {
   text('connection-label', connected ? t('Lokaler Dienst verbunden') : t('Lokaler Dienst nicht erreichbar'));
   text('game-state', game.label);
   text('launch-detail', game.detail);
-  $('game-status-icon').classList.toggle('ready',permissions.start || status?.game.state==='running');
-  $('game-status-use').setAttribute('href',permissions.start?'#i-check-circle':status?.game.state==='running'?'#i-pulse':'#i-info');
+  const ready = connected && status.runtime.ready && status.game.state === 'stopped' && status.game.can_start;
+  $('game-status-icon').classList.toggle('ready',ready || status?.game.state==='running');
+  $('game-status-use').setAttribute('href',ready?'#i-check-circle':status?.game.state==='running'?'#i-pulse':'#i-info');
   $('connection-icon').setAttribute('href',connected?'#i-check-circle':'#i-info');
   $('launch-icon').setAttribute('href', `#i-${game.icon}`);
   text('launch-label', state.pending === 'launch' ? t('Start wird angefordert …') : state.pending === 'stop' ? t('Beenden angefordert …') : game.action);
@@ -104,7 +127,20 @@ function renderStatus() {
   $('backup-button').disabled = !permissions.backup;
   text('backup-label', state.pending === 'backup' ? t('Backup wird erstellt …') : t('Backup erstellen'));
   $('refresh-status').disabled = !!state.pending;
+  const canSwitch = connected && status?.game.state === 'stopped' && !state.pending &&
+    !fenixReserved && !setupReserved && !updateReserved && !cloudReserved && !automaticBusy(status);
+  for (const gameId of ['msfs2024','msfs2020']) {
+    const button=$('version-'+gameId), item=status?.versions?.[gameId];
+    const active=!!status?.runtime.configured && status.runtime.game_id===gameId;
+    const selecting=state.pending === 'switch' && state.pendingGame === gameId;
+    button.setAttribute('aria-pressed',String(active));
+    button.setAttribute('aria-busy',String(selecting));
+    button.disabled=!canSwitch||active;
+    text('version-'+gameId+'-state',selecting?t('Wechselt …'):!connected?t('Wird geprüft …'):active?t('Aktiv'):item?.ready?t('Wechseln'):item?.installed?t('Einrichtung nötig'):t('Installieren'));
+  }
   if (!status) return;
+
+  renderGameTheme(status.runtime.configured ? status.runtime.game_id : '');
 
   text('app-version', status.app.version ? `${status.app.name} ${status.app.version}` : t('Flightdeck für Linux'));
   const started = formatDate(status.game.started_at);
@@ -114,6 +150,8 @@ function renderStatus() {
   renderChecks('overview-checks', status.runtime.checks);
   renderChecks('installation-checks', status.runtime.checks);
   text('current-path', status.runtime.path || t('Noch kein Ordner verbunden.'));
+  text('launch-game-name', status.runtime.configured ? status.runtime.game_name : 'Microsoft Flight Simulator');
+  text('selected-game-name', status.runtime.configured ? status.runtime.game_name : '');
 
   const saves = status.saves;
   text('overview-save-value', saves.available ? t('Lokaler Speicher aktiv') : t('Lokaler Speicher nicht verfügbar'));
@@ -146,17 +184,26 @@ async function refreshStatus() {
 
 async function mutate(action, path, body = {}) {
   if (state.pending || !state.online || !state.status?.csrf_token) return;
-  state.pending = action; showNotice(''); renderStatus(); setupController?.render();
+  state.pending = action;
+  state.pendingGame = action === 'switch' ? body.game_id : null;
+  text('version-announcement', '');
+  showNotice(''); renderStatus(); setupController?.render();
   try {
     await request(path, {method: 'POST', body, token: state.status.csrf_token});
-    const messages = {launch: t('Start angefordert. Der aktuelle Zustand wird geprüft.'), stop: t('Beenden angefordert. Der aktuelle Zustand wird geprüft.'), backup: t('Das lokale Backup wurde erstellt.'), config: t('Runtime-Pfad gespeichert. Die Installation wird geprüft.')};
-    showNotice(messages[action]);
+    if (action === 'switch') {
+      await artworkReady;
+      text('version-announcement', t('Simulator gewechselt. Du kannst ihn jetzt starten.'));
+    } else {
+      const messages = {launch: t('Start angefordert. Der aktuelle Zustand wird geprüft.'), stop: t('Beenden angefordert. Der aktuelle Zustand wird geprüft.'), backup: t('Das lokale Backup wurde erstellt.'), config: t('Runtime-Pfad gespeichert. Die Installation wird geprüft.')};
+      showNotice(messages[action]);
+    }
   } catch (error) { showNotice(error.message, true); }
   finally {
     // Complete a previous poll before requesting a status newer than the mutation.
     if (statusRequest) await statusRequest;
     await refreshStatus();
     state.pending = null;
+    state.pendingGame = null;
     renderStatus(); setupController?.render();
   }
 }
@@ -172,7 +219,7 @@ function setView() {
   }
   document.title = `${t(VIEWS[state.view])} · Flightdeck`;
   if (state.view === 'installation') void setupController?.poll();
-  if (state.view === 'mods') void modsController?.load();
+  if (state.view === 'mods') { void modsController?.load(); void fenixController?.load(); }
   if (state.view === 'updates') void updatesController?.load();
   if (state.view === 'saves') void cloudController?.load();
 }
@@ -189,7 +236,7 @@ async function loadDiagnostics() {
     }
     // Explicit allowlist: never export status, CSRF or unrelated response fields.
     state.report = {summary: raw.summary, checks: raw.checks, generated_at: raw.generated_at ?? null};
-    const summaryLabels = {run_found: t('Spielsitzung gefunden'), auth_http: t('Xbox-Anmeldung · HTTP-Status'), local_save_init: t('Lokaler Spielstandspeicher'), exit: t('Letztes Sitzungsende')};
+    const summaryLabels = {run_found: t('Spielsitzung gefunden'), auth_http: t('Xbox-Anmeldung · HTTP-Status'), local_save_init: t('Lokaler Spielstandspeicher'), store_calls: t('Store-API-Aufrufe'), exit: t('Letztes Sitzungsende')};
     const rows = Object.entries(state.report.summary).slice(0, 100).map(([key, value]) => {
       const row = document.createElement('div');
       const term = document.createElement('dt'); term.textContent = summaryLabels[key] ?? key;
@@ -210,14 +257,28 @@ async function loadDiagnostics() {
 }
 
 $('launch-button').addEventListener('click', () => {
-  const permissions = actionPermissions(state.status, state.online, state.pending || setupReserved || updateReserved || cloudReserved);
+  const permissions = actionPermissions(state.status, state.online, state.pending || fenixReserved || setupReserved || updateReserved || cloudReserved);
   if (permissions.stop) void mutate('stop', '/api/stop');
   else if (permissions.start) void mutate('launch', '/api/launch');
   else if (permissions.setup) location.hash = 'installation';
 });
+for (const gameId of ['msfs2024','msfs2020']) {
+  $('version-'+gameId).addEventListener('click',()=>{
+    const status=state.status;
+    if (!state.online||!status||state.pending||fenixReserved||setupReserved||updateReserved||cloudReserved||automaticBusy(status)||status.game.state!=='stopped')return;
+    if (status.runtime.configured&&status.runtime.game_id===gameId)return;
+    const version=status.versions[gameId];
+    if (version.ready) void mutate('switch','/api/game/select',{game_id:gameId});
+    else {
+      if (version.installed) setupController?.chooseExisting(version.path);
+      else setupController?.chooseInstall(gameId);
+      location.hash='installation';
+    }
+  });
+}
 $('refresh-status').addEventListener('click', () => void refreshStatus());
 $('backup-button').addEventListener('click', () => {
-  if (actionPermissions(state.status, state.online, state.pending || setupReserved || updateReserved || cloudReserved).backup) void mutate('backup', '/api/saves/backup');
+  if (actionPermissions(state.status, state.online, state.pending || fenixReserved || setupReserved || updateReserved || cloudReserved).backup) void mutate('backup', '/api/saves/backup');
 });
 $('diagnostic-refresh').addEventListener('click', () => void loadDiagnostics());
 $('diagnostic-copy').addEventListener('click', async () => {
@@ -240,10 +301,11 @@ window.addEventListener('flightdeck-languagechange', () => {
 window.addEventListener('hashchange', setView);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) void refreshStatus(); });
 applyTranslations();
-setupController = createSetup({request,getStatus:()=>state.status,isOnline:()=>state.online && !state.pending && !updateReserved && !cloudReserved && !automaticBusy(state.status),renderChecks,notice:showNotice,refreshStatus,changed:reserved=>{setupReserved=reserved;renderStatus();}});
-modsController = createMods({request,getStatus:()=>state.status,isOnline:()=>state.online&&!state.pending,isReserved:()=>setupReserved||updateReserved||cloudReserved||automaticBusy(state.status),notice:showNotice});
-updatesController = createUpdates({request,getStatus:()=>state.status,isOnline:()=>state.online&&!state.pending,getSetupJob:()=>setupController.job(),isReserved:()=>setupReserved||cloudReserved||automaticBusy(state.status),refreshStatus,refreshSetup:()=>setupController.poll(),renderChecks,changed:value=>{updateReserved=value;setupController?.render();renderStatus();}});
-cloudController = createCloudSaves({request,getStatus:()=>state.status,isOnline:()=>state.online&&!state.pending,isReserved:()=>setupReserved||updateReserved,refreshStatus,changed:value=>{cloudReserved=value;setupController?.render();renderStatus();}});
+setupController = createSetup({request,getStatus:()=>state.status,isOnline:()=>state.online && !state.pending && !fenixReserved && !updateReserved && !cloudReserved && !automaticBusy(state.status),renderChecks,notice:showNotice,refreshStatus,changed:reserved=>{setupReserved=reserved;renderStatus();}});
+fenixController = createFenix({request,getStatus:()=>state.status,isOnline:()=>state.online&&!state.pending,isReserved:()=>setupReserved||updateReserved||cloudReserved||automaticBusy(state.status),refreshStatus,notice:showNotice,changed:value=>{fenixReserved=value;renderStatus();}});
+modsController = createMods({request,getStatus:()=>state.status,isOnline:()=>state.online&&!state.pending,isReserved:()=>fenixReserved||setupReserved||updateReserved||cloudReserved||automaticBusy(state.status),notice:showNotice});
+updatesController = createUpdates({request,getStatus:()=>state.status,isOnline:()=>state.online&&!state.pending,getSetupJob:()=>setupController.job(),isReserved:()=>fenixReserved||setupReserved||cloudReserved||automaticBusy(state.status),refreshStatus,refreshSetup:()=>setupController.poll(),renderChecks,changed:value=>{updateReserved=value;setupController?.render();renderStatus();}});
+cloudController = createCloudSaves({request,getStatus:()=>state.status,isOnline:()=>state.online&&!state.pending,isReserved:()=>fenixReserved||setupReserved||updateReserved,refreshStatus,changed:value=>{cloudReserved=value;setupController?.render();renderStatus();}});
 setView();
 void refreshStatus().then(()=>{setupController.render();void updatesController.load();});
 setInterval(() => { if (!document.hidden && !state.pending) void refreshStatus(); }, 3000);

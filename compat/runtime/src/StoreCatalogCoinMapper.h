@@ -16,10 +16,11 @@ HRESULT plan_coins(const std::vector<Product> &catalog,
                    const std::vector<std::string> &actions,
                    const std::string &parent, const std::string &market,
                    const std::string &language, INT64 now, CoinPlan *out,
-                   std::vector<XodusStoreCollectionRequestItem> *requests);
+                   std::vector<XodusStoreCollectionRequestItem> *requests,
+                   bool entitled = false);
 HRESULT coin_page(const CoinPlan &plan,
                   const XodusStoreCollectionSnapshot *collection, INT64 now,
-                  XodusStoreProductPage **out);
+                  XodusStoreProductPage **out, const char *continuation = nullptr);
 // Returns false for a page owned by another provider. Never dereferences it.
 bool release_coin_page(XodusStoreProductPage *page);
 } // namespace xodus_catalog

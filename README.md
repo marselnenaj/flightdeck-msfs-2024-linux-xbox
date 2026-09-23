@@ -3,12 +3,13 @@
 </p>
 <h1 align="center">Flightdeck</h1>
 <p align="center">
-  A Linux launcher for the Xbox PC edition of Microsoft Flight Simulator 2024.
+  A Linux launcher for the Xbox PC editions of Microsoft Flight Simulator 2024 and 2020.
 </p>
 <p align="center">
   <a href="#get-started"><strong>Get started</strong></a> &nbsp;·&nbsp;
   <a href="docs/addons.md">Add-ons</a> &nbsp;·&nbsp;
   <a href="docs/game-updates.md">Game updates</a> &nbsp;·&nbsp;
+  <a href="docs/changelog.md">Changes</a> &nbsp;·&nbsp;
   <a href="BUILDING.md">Build from source</a> &nbsp;·&nbsp;
   <a href="docs/readme.de.md">Deutsch</a>
 </p>
@@ -16,11 +17,21 @@
 ![Original Flightdeck aircraft artwork](ui/flight-panorama.png)
 
 Flightdeck installs and launches your **purchased Xbox PC / Microsoft Store copy
-of MSFS 2024** on your Linux computer through Wine/Proton. Sign in with your
+of MSFS 2024 or 2020** on your Linux computer through Wine/Proton. Sign in with your
 Microsoft account, download the game and start it from one application.
 
-**Experimental.** Local simulator execution and a controlled takeoff have been
-observed, and online multiplayer has been reported working on Linux. Automatic Xbox cloud saves are experimental. [See the current evidence below.](#compatibility)
+**Flightdeck 0.1.1** adds simulator selection, guided Fenix setup and managed
+runtime component updates. Download the
+[full installer](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.1)
+to update an existing launcher. The optional Fenix patch is downloaded through
+**Mods → Fenix A320**. See the [changes](docs/changelog.md).
+
+**Experimental.** MSFS 2024 local simulator execution and a controlled takeoff have been
+observed, and online multiplayer has been reported working on Linux. The MSFS 2020
+path has synthetic workflow tests and live license/package checks. A startup disc
+prompt was reported; a complete installation and flight remain unverified.
+Automatic Xbox cloud saves are experimental.
+[See the current evidence below.](#compatibility)
 
 ## Get started
 
@@ -33,7 +44,7 @@ may ask you to trust this local launcher.
 
 **2. Install your game**
 
-Choose **Install MSFS**, check the destination and select **Sign in & install**.
+Choose **Install MSFS**, select 2024 or 2020, check the destination and select **Sign in & install**.
 Use the Microsoft account that owns the PC edition. Flightdeck prepares the
 Wine environment, downloads the licensed game through Xodus and connects it to
 the launcher.
@@ -42,6 +53,9 @@ the launcher.
 
 Open **Flightdeck** and launch MSFS. The local background service starts
 automatically. You do not need to start a server or leave a terminal open.
+Choose **MSFS 2024** or **MSFS 2020** on the overview to switch directly
+between prepared editions. If one is missing, its button opens setup.
+Each edition keeps its own runtime, Wine prefix, updates and local saves.
 
 Windows, the Xbox app, Microsoft Store and a previous MSFS installation are
 not required. Your purchased PC license and an Internet connection are required.
@@ -66,7 +80,12 @@ is the fallback.
 - [Build your own components](BUILDING.md)
 
 `./install.sh` performs the same user-local installation from a terminal. Run
-it from a newer extracted package to update Flightdeck. `flightdeck --rollback`
+it from a newer extracted package to update Flightdeck. In 0.1.1, opening the
+updated launcher also refreshes recognized managed runtime components while the
+game and setup are idle. Custom component sets and launch scripts are preserved.
+[Launcher and runtime updates](docs/install.md#update-and-rollback) are separate
+from downloading the game or installing the optional Fenix patch.
+`flightdeck --rollback`
 restores the previous **launcher**; `flightdeck --uninstall` removes its managed
 files while preserving the runtime, settings and saves. No `sudo` is needed.
 Installing missing Linux system packages may require administrator rights.
@@ -82,10 +101,12 @@ Installing missing Linux system packages may require administrator rights.
 | Area | What you can do |
 | :--- | :--- |
 | **Install** | Sign in, choose a destination and download your purchased PC edition, with received MB/GB and percentage when the total is known. |
+| **Simulator selection** | Switch between separate MSFS 2024 and MSFS 2020 installations from the overview. |
 | **Pause & resume** | Keep completed, verified download files and resume the active installation session. |
 | **Game updates** | Compare the installed Store package with the current release, then download and activate a checked version. Keep the previous version for rollback. |
 | **Verify & repair** | Check game files against the original download checksums. Prepare a full repair when files are missing or damaged, including at the same game version. |
 | **Mods** | Open the real Community folder and see installed package names, versions and creators. |
+| **Fenix A320** | Download the pinned Linux patch, run your official Fenix installer, configure cockpit displays and open the livery manager. MSFS 2024 only. |
 | **Local saves** | Keep local save data and create backups while the simulator is stopped. |
 | **Xbox cloud saves** | Use the cloud state before play and upload changes after exit, with local backups and conflict recovery. Experimental. |
 | **Diagnostics** | Export selected checks without raw game logs, account tokens or save contents. |
@@ -113,15 +134,16 @@ installation; it does not replace your separate Community folder or saves.
 
 | Area | Current evidence |
 | :--- | :--- |
-| **Simulator** | Cockpit reached and one controlled takeoff completed on a development system. |
+| **MSFS 2024 simulator** | Cockpit reached and one controlled takeoff completed on a development system. |
+| **MSFS 2020 simulator** | Install, update, rollback and edition switching pass synthetic tests; live game-license and package checks passed. A startup disc prompt was reported and its resolution is unverified. End-to-end installation and flight remain open. |
 | **Local saves** | Persistence across restarts and local backup tested. |
 | **Free Store content** | Free-content downloads succeeded in a user test. |
-| **Paid Marketplace purchases** | Checkout and complete DLC inventory are not yet verified. |
+| **Owned Marketplace content** | Account-owned add-ons can be enumerated and supported Durable licenses use genuine signed grants. Full DLC coverage and the MSFS 2024 Aviator Upgrade remain unverified. Paid checkout and device-shared DLC rights are unsupported. [Scope](docs/marketplace-collections.md) |
 | **Multiplayer** | Online multiplayer reported working on Linux. Group invitations still need separate testing. |
 | **Xbox cloud saves** | Automatic start/exit sync, local backups and conflict recovery implemented. Native cloud read/write tested; cross-device gameplay verification remains pending. [Details](docs/cloud-saves.md) |
 | **FlyByWire A32NX** | MSFS 2024 Stable 2024.1.0 installed and recognized. In-game flight test remains open. |
 | **SimBridge** | HTTP health, Web MCDU, WebSocket and terrain initialization tested under Wine. Simulator connection remains unverified. |
-| **Fenix A320** | Official installation of 2.4.0.4720 completed with Wine/.NET adjustments; the Community package is recognized. Companion startup and aircraft operation remain unverified. |
+| **Fenix A320** | Optional installer with Wine fixes, CPU displays, Legacy readouts and restore. Cockpit rendering verified with 2.4.0.4720; full-flight testing pending. See [Fenix setup](docs/addons.md#fenix-a320). |
 
 The first-install and update workflows have component, synthetic full-flow and
 browser tests. A complete fresh MSFS download, runtime setup, pause/resume and
@@ -153,6 +175,7 @@ alone.
 | Guide | Covers |
 | :--- | :--- |
 | [Install](docs/install.md) | Requirements, setup and launcher maintenance |
+| [Changes](docs/changelog.md) | Flightdeck 0.1.1, released packages and current test evidence |
 | [Cloud saves](docs/cloud-saves.md) · [Deutsch](docs/cloud-saves.de.md) | Automatic sync, conflict recovery, backups and current limits |
 | [Game maintenance](docs/game-updates.md) | Updates, file verification, full repair and rollback |
 | [Add-ons](docs/addons.md) · [Deutsch](docs/addons.de.md) | Community packages, FlyByWire, SimBridge and Fenix |

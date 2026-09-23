@@ -6,6 +6,9 @@ not contain Microsoft game files, a Wine prefix, account data, Linux system
 libraries or the upstream Proton runner. The Git repository and source-only
 archive still exclude compiled runtime binaries.
 
+The current package is Flightdeck **0.1.1**. See
+[release changes](changelog.md) before choosing an archive.
+
 The release pins in `compat/bootstrap.lock.json` bind the component archive,
 every executable/library and the notice file to SHA256 checksums. The installer
 accepts only these eight native files. Bootstrap rechecks executable hashes
@@ -23,7 +26,7 @@ locations so personal checkout/Cargo-cache paths are not embedded in the package
 The checked source manifest connects each patched source to its build artifacts.
 
 `scripts/binary-release.py` creates both the native archive and its matching
-`flightdeck-native-sources-0.1.0.tar.gz`. The source archive contains full patched
+`flightdeck-native-sources-0.1.1.tar.gz`. The source archive contains full patched
 WineGDK and Xodus sources, proxy and cloud-helper sources, all 686 locked Cargo vendor packages,
 the source manifest, original notices and an offline Cargo configuration. The
 reviewed Linux normal/build dependency graph contains 505 packages. This is a
@@ -60,6 +63,26 @@ file. Those declarations, author metadata, original README and a labeled MIT
 reference text are retained without inventing copyright ownership or dates.
 These upstream attribution omissions are recorded in
 `license-supplements/manifest.json` in the corresponding-source archive.
+
+## Separate Fenix payload
+
+Flightdeck's Fenix panel includes the MIT installer engine and fixed manifests.
+The optional Wine overlay is downloaded from
+[Fenix patch releases](https://github.com/marselnenaj/fenix-a320-linux-patch/releases)
+only when requested, with its ZIP hash checked against `compat/fenix/release.json`
+and its payload files checked against `compat/fenix/bundle.json`.
+
+Patch **0.1.0-preview.1** contains nine replacement Wine modules, an MIT window
+helper and launch integration, plus complete Wine sources, patches and build
+instructions. The derived Wine components retain LGPL-2.1-or-later. That ZIP and
+its corresponding-source archive are separate from Flightdeck's six native
+components and source package. Fenix aircraft, proprietary executables, fonts,
+accounts and copied profiles are excluded. Microsoft prerequisites are fetched
+from Microsoft with pinned checksums; the user obtains the official Fenix
+installer through their account.
+
+[User workflow](addons.md#fenix-a320) ·
+[Maintainer import and release checks](contributing.md#fenix-patch-releases)
 
 ## Runner and platform limits
 
