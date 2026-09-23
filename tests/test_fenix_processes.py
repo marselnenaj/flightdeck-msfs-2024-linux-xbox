@@ -27,7 +27,7 @@ class FenixProcessTests(unittest.TestCase):
                 child.kill()
             child.wait(timeout=3)
 
-    def process(self, name, *, other=False, stubborn=False):
+    def process(self, name, *, other=False, stubborn=False, arguments=()):
         ready = Path(self.temp.name) / f"ready-{len(self.children)}"
         closed = ready.with_name(ready.name + "-closed")
         code = """
@@ -36,12 +36,13 @@ from pathlib import Path
 def stop(number, frame):
     Path(sys.argv[2]).write_text(str(number)); raise SystemExit(0)
 signal.signal(signal.SIGUSR1, stop)
+signal.signal(signal.SIGINT, stop)
 signal.signal(signal.SIGTERM, signal.SIG_IGN if sys.argv[3]=='stubborn' else stop)
 Path(sys.argv[1]).touch()
 while True: time.sleep(.01)
 """
         prefix = self.root / ("other-prefix" if other else "local/msfs-prefix")
-        child = subprocess.Popen([name, "-c", code, str(ready), str(closed), "stubborn" if stubborn else "normal"],
+        child = subprocess.Popen([name, "-c", code, str(ready), str(closed), "stubborn" if stubborn else "normal", *arguments],
             executable=sys.executable, env={**os.environ, "WINEPREFIX": str(prefix)},
             stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
         self.children.append(child)
@@ -82,6 +83,35 @@ while True: time.sleep(.01)
         self.assertIsNone(game.poll())
         self.assertFalse(closed.exists())
 
+    def test_orphaned_fenix_webviews_are_detected_and_stopped_without_other_webviews(self):
+        directory = r"C:\ProgramData\Fenix\App\WebView2\EBWebView"
+        owned = [self.process("msedgewebview2.exe", arguments=("--webview-exe-name=FenixApp.exe",))[0],
+                 self.process("msedgewebview2.exe", arguments=("--type=crashpad-handler", "--user-data-dir=" + directory))[0]]
+        survivors = [self.process("msedgewebview2.exe", other=True, arguments=("--user-data-dir=" + directory,))[0],
+                     self.process("msedgewebview2.exe", arguments=("--webview-exe-name=OtherAircraft.exe",))[0],
+                     self.process("msedgewebview2.exe", arguments=("--user-data-dir=" + directory + "-other",))[0],
+                     self.process("OtherAircraft.exe", arguments=("--user-data-dir=" + directory,))[0]]
+        wine = self.root / "runner/files/bin/wine"
+        wine.parent.mkdir(parents=True)
+        arguments = self.root / "taskkill-arguments"
+        wine.write_text("#!" + sys.executable + "\nfrom pathlib import Path\n"
+                       + f"Path({str(arguments)!r}).touch()\n")
+        wine.chmod(0o700)
+        self.assertEqual(fenix_processes.status(self.root), (True, False))
+        fenix_processes.stop(self.root)
+        self.assertTrue(all(child.wait(timeout=2) == 0 for child in owned))
+        self.assertTrue(all(child.poll() is None for child in survivors))
+        self.assertFalse(arguments.exists(), "Shared WebView executable must never be taskkilled by name")
+        self.assertEqual(fenix_processes.status(self.root), (False, False))
+
+    def test_webview_flags_accept_quoted_paths_and_case_without_matching_unrelated_apps(self):
+        name = r'"C:\Edge\msedgewebview2.exe"'
+        directory = r'"C:/ProgramData/FENIX/App/WebView2/EBWebView/"'
+        self.assertEqual(fenix_processes.process_name([name, "--user-data-dir", directory]), fenix_processes.WEBVIEW)
+        for args in ([name], [name, "--webview-exe-name=FenixApp.exe.other"],
+                     [name, "--user-data-dir=C:/Other/Fenix/App/WebView2/EBWebView"]):
+            self.assertEqual(fenix_processes.process_name(args), "msedgewebview2.exe")
+
     def test_stuck_helper_is_killed_without_waiting_indefinitely(self):
         child, closed = self.process("FenixDisplay.exe", stubborn=True)
         start = time.monotonic()
@@ -89,6 +119,19 @@ while True: time.sleep(.01)
         self.assertEqual(child.wait(timeout=2), -signal.SIGKILL)
         self.assertFalse(closed.exists())
         self.assertLess(time.monotonic() - start, 8)
+
+    def test_remaining_wine_server_is_closed_only_without_other_applications(self):
+        server, closed = self.process("wineserver")
+        unrelated, _ = self.process("OtherAircraft.exe")
+        other_server, _ = self.process("wineserver", other=True)
+        fenix_processes.stop(self.root)
+        self.assertIsNone(server.poll())
+        self.assertFalse(closed.exists())
+        unrelated.terminate(); unrelated.wait(timeout=2)
+        fenix_processes.stop(self.root)
+        self.assertEqual(server.wait(timeout=2), 0)
+        self.assertEqual(int(closed.read_text()), signal.SIGINT)
+        self.assertIsNone(other_server.poll())
 
 
 if __name__ == "__main__": unittest.main()

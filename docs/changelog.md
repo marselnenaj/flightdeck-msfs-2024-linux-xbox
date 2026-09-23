@@ -1,5 +1,13 @@
 # Changes and release status
 
+## Unreleased
+
+- **Open Fenix** is available for existing local Fenix installations.
+- Closing Fenix also cleans up its WebView helpers, including after a manager
+  crash, so a later start is not blocked by leftover processes.
+- **Stop Fenix** stays visible and shows when Fenix has stopped.
+- Opening Fenix no longer creates an extra blank Wine notification-area window.
+
 ## 0.1.2 — 23 September 2026
 
 [Download Flightdeck 0.1.2](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.2).

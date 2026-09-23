@@ -145,15 +145,20 @@ class FenixManager:
                 self.job.update(state="complete", stopping=False, message="Fenix wurde beendet." if self.stop_requested.is_set() else {
                     "install": "Patch installiert. Installiere jetzt Fenix mit dem offiziellen Installer.",
                     "installer": "Installer beendet. Prüfe die nächsten Schritte oben; die Fenix-Einrichtung ist noch nicht automatisch abgeschlossen.",
-                    "open": "Fenix-Fenster geschlossen. Wende jetzt die Anzeige-Einstellungen an.",
+                    "open": "Fenix wurde geschlossen.",
                     "configure": "Anzeigen und automatischer Fenix-Start sind eingerichtet.",
                     "manager": "Fenix-Manager geschlossen.",
                     "restore": "Das Profil vor dem Patch wurde wiederhergestellt.",
                     "stop": "Fenix wurde beendet.",
                 }[operation])
         except Exception as error:
+            message = str(error)
+            if isinstance(error, subprocess.CalledProcessError) and operation in {"open", "manager"}:
+                message = ("Der Fenix-Installer/Livery-Manager wurde unerwartet beendet. Details stehen im lokalen Fenix-Protokoll."
+                           if operation == "manager" else
+                           "Fenix wurde unerwartet beendet. Details stehen im lokalen Fenix-Protokoll.")
             with self.lock:
-                self.job.update(state="failed", stopping=False, message=str(error)[:1500])
+                self.job.update(state="failed", stopping=False, message=message[:1500])
         finally:
             self.launcher.release_setup()
 
@@ -185,7 +190,10 @@ class FenixManager:
                 if self.stop_requested.is_set():
                     continue
                 self.job["app_exited"] = True
-                return result
+            # A crashed WebView host leaves GPU/crashpad children alive. Keep
+            # the runtime lease until they have gone, including on normal close.
+            fenix_processes.stop(root, self._progress)
+            return result
 
     def stop(self):
         unavailable = "Fenix kann gerade nicht beendet werden. Beende MSFS und laufende Installationen zuerst."

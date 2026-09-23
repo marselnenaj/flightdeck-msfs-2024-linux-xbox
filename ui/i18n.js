@@ -530,6 +530,7 @@ export const catalogs = Object.freeze({
     "Diese Installation wird gerade verwendet. Beende MSFS oder die andere laufende Einrichtung, bevor du Fenix änderst.": "Diese Installation wird gerade verwendet. Beende MSFS oder die andere laufende Einrichtung, bevor du Fenix änderst.",
     "Fenix beenden": "Fenix beenden",
     "Fenix läuft": "Fenix läuft",
+    "Fenix ist beendet": "Fenix ist beendet",
     "Fenix wird beendet …": "Fenix wird beendet …"
   },
   "en": {
@@ -1062,6 +1063,7 @@ export const catalogs = Object.freeze({
     "Diese Installation wird gerade verwendet. Beende MSFS oder die andere laufende Einrichtung, bevor du Fenix änderst.": "This installation is in use. Close MSFS or the other active setup before changing Fenix.",
     "Fenix beenden": "Stop Fenix",
     "Fenix läuft": "Fenix is running",
+    "Fenix ist beendet": "Fenix is stopped",
     "Fenix wird beendet …": "Stopping Fenix…"
   }
 });

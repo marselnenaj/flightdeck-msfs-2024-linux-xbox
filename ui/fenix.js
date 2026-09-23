@@ -6,7 +6,7 @@ export function fenixPermissions(data, status, enabled) {
   return {
     install:idle&&data.state==='available',
     installer:idle&&data.installed===true,
-    open:idle&&data.installed===true&&data.fenix_installed===true,
+    open:idle&&data.fenix_installed===true&&(data.installed===true||data.state==='legacy'),
     manager:idle&&data.manager_installed===true&&(data.installed===true||data.state==='legacy'),
     configure:idle&&data.installed===true&&data.fenix_installed===true&&data.settings_ready===true,
     restore:idle&&data.can_restore===true,
@@ -57,6 +57,8 @@ export function createFenix({request,getStatus,isOnline,isReserved,changed,refre
   function render() {
     const allowed=permissions();
     for(const action of ['install','installer','open','manager','configure','restore','stop'])$('fenix-'+action).disabled=!allowed[action];
+    $('fenix-open-existing').disabled=!allowed.open;
+    $('fenix-open-existing').hidden=data?.state!=='legacy';
     $('fenix-installer').disabled||=!$('fenix-installer-path').value.trim();
     $('fenix-pick-installer').disabled=pending||active||!isOnline();
     $('fenix-pick-bundle').disabled=pending||active||!isOnline();
@@ -81,8 +83,8 @@ export function createFenix({request,getStatus,isOnline,isReserved,changed,refre
     $('fenix-message').textContent=stringValue(data?.job?.message||data?.message,'',1500);
     $('fenix-error').textContent=error;$('fenix-error').hidden=!error;
     $('fenix-busy').textContent=t(progress.busy);$('fenix-busy').hidden=!progress.busy;
-    $('fenix-app-controls').hidden=!fresh||data?.fenix_running!==true;
-    $('fenix-app-state').textContent=t(data?.job?.stopping?'Fenix wird beendet …':'Fenix läuft');
+    $('fenix-app-controls').hidden=!fresh||!(data?.fenix_installed||data?.manager_installed||data?.fenix_running);
+    $('fenix-app-state').textContent=t(data?.job?.stopping?'Fenix wird beendet …':data?.fenix_running?'Fenix läuft':'Fenix ist beendet');
     $('fenix-legacy').hidden=data?.state!=='legacy';
     $('fenix-card').setAttribute('aria-busy',String(active));
   }
@@ -118,6 +120,7 @@ export function createFenix({request,getStatus,isOnline,isReserved,changed,refre
     render();
   }
   for(const operation of ['install','installer','open','manager','configure','restore','stop'])$('fenix-'+operation).addEventListener('click',()=>void action(operation));
+  $('fenix-open-existing').addEventListener('click',()=>void action('open'));
   for(const kind of ['installer','bundle'])$('fenix-pick-'+kind).addEventListener('click',()=>void pick(kind));
   $('fenix-installer-path').addEventListener('input',render);
   $('fenix-refresh').addEventListener('click',()=>void load());

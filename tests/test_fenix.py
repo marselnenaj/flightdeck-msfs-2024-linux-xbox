@@ -31,6 +31,45 @@ class FakeLauncher:
 
 
 class FenixTests(unittest.TestCase):
+    def test_crashed_app_cleans_helpers_before_releasing_runtime(self):
+        from contextlib import contextmanager
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            launcher = FakeLauncher(root)
+            manager = fenix.FenixManager(launcher)
+            cleaning, finish = threading.Event(), threading.Event()
+            lease = []
+            @contextmanager
+            def locked(runtime):
+                lease.append(runtime)
+                try: yield runtime
+                finally: lease.pop()
+            def app(runtime, executable, progress, *, manager, wait):
+                with locked(runtime):
+                    child = subprocess.Popen([sys.executable, "-c", "raise SystemExit(82)"])
+                    result = wait(child)
+                    if result: raise subprocess.CalledProcessError(result, ["FenixApp.exe"])
+            def stop(runtime, progress):
+                self.assertEqual(lease, [runtime])
+                self.assertTrue(launcher.setup_busy)
+                cleaning.set()
+                self.assertTrue(finish.wait(3))
+            with patch.object(fenix.core, "windows_app", side_effect=app), \
+                 patch.object(fenix.fenix_processes, "stop", side_effect=stop):
+                try:
+                    manager.start("manager", {})
+                    self.assertTrue(cleaning.wait(2))
+                    self.assertTrue(launcher.setup_busy)
+                    self.assertTrue(manager.job["app_exited"])
+                    with self.assertRaises(LauncherError): manager.start("open", {})
+                finally:
+                    finish.set()
+                    manager.worker.join(3)
+                self.assertFalse(manager.worker.is_alive())
+                self.assertEqual(manager.job["state"], "failed")
+                self.assertFalse(launcher.setup_busy)
+                self.assertEqual(lease, [])
+
     def test_stop_keeps_interactive_reservation_until_all_helpers_are_closed(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

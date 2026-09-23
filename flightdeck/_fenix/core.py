@@ -320,6 +320,7 @@ def graphics_and_fonts(prefix, runner, wine):
         atomic(contained(prefix, "drive_c/windows/Fonts/" + name), source.read_bytes(), 0o644)
         wine.reg(r"HKLM\Software\Microsoft\Windows NT\CurrentVersion\Fonts", family + " (TrueType)", name)
     wine.reg(r"HKCU\Software\Microsoft\Avalon.Graphics", "DisableHWAcceleration", "1", "REG_DWORD")
+    wine.reg(r"HKCU\Software\Wine\Explorer", "ShowSystray", "0", "REG_DWORD")
 
 
 def xml_settings(path, changes):
@@ -563,7 +564,7 @@ def windows_app(runtime, executable=None, progress=lambda _: None, *, manager=Fa
             if state.get("state") != "installed":
                 raise PatchError("Install the compatibility patch first.")
             verify_installed(root, state)
-        elif not manager or not (root / "private/fenix-compat.json").is_file():
+        elif executable or not (root / "private/fenix-compat.json").is_file():
             raise PatchError("Install the compatibility patch first.")
         prefix = root / "local/msfs-prefix"
         if executable:
@@ -581,6 +582,10 @@ def windows_app(runtime, executable=None, progress=lambda _: None, *, manager=Fa
         path = root / "private/fenix-app.log"
         fd = os.open(path, os.O_CREAT | os.O_APPEND | os.O_WRONLY | os.O_NOFOLLOW, 0o600)
         try:
+            # Wine's fallback notification area otherwise becomes a separate
+            # blank window on desktops without an XEmbed tray. Scope to this
+            # runtime; the main Fenix UI remains available through Flightdeck.
+            Wine(prefix, runner, fd).reg(r"HKCU\Software\Wine\Explorer", "ShowSystray", "0", "REG_DWORD")
             progress("Fenix is open. Complete its setup or sign-in, then close the application to continue.")
             args = [str(runner / "files/bin/wine"), str(app)]
             options = dict(cwd=app.parent, env=wine_env(prefix, runner), stdin=subprocess.DEVNULL,

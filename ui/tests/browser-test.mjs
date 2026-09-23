@@ -826,7 +826,11 @@ try {
   await click('fenix-stop');await until(()=>posts.at(-1)?.path==='/api/fenix/stop','Fenix stop request missing');
   await language('de');await call('Emulation.setDeviceMetricsOverride',{width:1536,height:1024,deviceScaleFactor:1,mobile:false});
   await until(()=>evaluate(`!document.getElementById('fenix-configure').disabled`),'Final Fenix setup step unavailable');
-  await check('Stopping Fenix unlocks finish setup and removes the stop control',`document.getElementById('fenix-next').textContent.includes('Schritt 4 von 4') && document.getElementById('fenix-step-4').getAttribute('aria-current')==='step' && document.getElementById('fenix-busy').hidden && document.getElementById('fenix-app-controls').hidden`);
+  await check('Stopping Fenix unlocks finish setup and leaves a clear stopped control',`document.getElementById('fenix-next').textContent.includes('Schritt 4 von 4') && document.getElementById('fenix-step-4').getAttribute('aria-current')==='step' && document.getElementById('fenix-busy').hidden && !document.getElementById('fenix-app-controls').hidden && document.getElementById('fenix-stop').disabled && document.getElementById('fenix-app-state').textContent==='Fenix ist beendet'`);
+  fenix={...fenix,fenix_running:true,can_stop:true,idle:false,can_change:false,job:{state:'failed',operation:'manager',message:'Synthetic WebView host crash'}};
+  await click('fenix-refresh');await until(()=>evaluate(`!document.getElementById('fenix-stop').disabled`),'Orphaned WebView helper cannot be stopped');
+  await check('A crashed manager still offers stop for its remaining helper processes',`!document.getElementById('fenix-app-controls').hidden && document.getElementById('fenix-manager').disabled && document.getElementById('fenix-message').textContent.includes('WebView host crash')`);
+  await click('fenix-stop');await until(()=>evaluate(`!document.getElementById('fenix-manager').disabled`),'Manager restart stays blocked after helper cleanup');
   await click('fenix-configure');await until(()=>evaluate(`document.getElementById('fenix-state').textContent==='Fenix ist startbereit'`),'Fenix ready confirmation missing');
   await check('Completed Fenix setup confirms startup and shutdown without claiming account activation',`document.getElementById('fenix-next').textContent.includes('automatisch mit dem Spiel') && document.getElementById('fenix-next').textContent.includes('beim Beenden') && document.querySelectorAll('#fenix-steps [data-status=done]').length===4 && document.getElementById('fenix-step-3').textContent.includes('Lizenz prüft Fenix selbst')`);
   await evaluate(`document.getElementById('fenix-card').scrollIntoView({block:'start'})`);await screenshot('fenix-ready-desktop.png');
@@ -835,9 +839,9 @@ try {
   await evaluate(`document.getElementById('fenix-card').scrollIntoView({block:'start'})`);
   await check('Ready Fenix message is translated and fits mobile width',`document.documentElement.scrollWidth<=innerWidth && document.getElementById('fenix-state').textContent==='Fenix is ready to fly' && document.getElementById('fenix-next').textContent.includes('closes when you exit')`);await screenshot('fenix-ready-mobile.png');
   await language('de');await call('Emulation.setDeviceMetricsOverride',{width:1536,height:1024,deviceScaleFactor:1,mobile:false});
-  fenix={...fenix,state:'legacy',manager_installed:true,job:null};await click('fenix-refresh');
+  fenix={...fenix,state:'legacy',installed:false,manager_installed:true,job:null};await click('fenix-refresh');
   await until(()=>evaluate(`!document.getElementById('fenix-manager').disabled && !document.getElementById('fenix-legacy').hidden`),'Legacy livery manager inaccessible');
-  await check('Legacy local patch offers its manager without replacement',`document.getElementById('fenix-install').disabled && !document.getElementById('fenix-legacy').hidden`);
+  await check('Legacy local patch offers main Fenix and its manager without replacement',`document.getElementById('fenix-install').disabled && !document.getElementById('fenix-legacy').hidden && !document.getElementById('fenix-open-existing').hidden && !document.getElementById('fenix-open-existing').disabled && document.getElementById('fenix-open-existing').getBoundingClientRect().width>0`);
   status.game={...status.game,state:'running'};fenix={...fenix,fenix_running:true,can_stop:false};await refresh(`document.getElementById('game-state').textContent.length>0`);await click('fenix-refresh');
   await until(()=>evaluate(`document.getElementById('fenix-manager').disabled`),'Running simulator must block manager');
   await check('Running simulator also blocks the dedicated Fenix stop button',`!document.getElementById('fenix-app-controls').hidden && document.getElementById('fenix-stop').disabled`);
