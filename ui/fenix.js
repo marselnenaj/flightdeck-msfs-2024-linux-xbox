@@ -4,7 +4,7 @@ import {stringValue} from './state.js';
 export function fenixPermissions(data, status, enabled) {
   const idle=enabled&&data?.can_change===true&&data.runtime_path===status?.runtime.path&&status?.game.state==='stopped';
   return {
-    install:idle&&data.state==='available',
+    install:idle&&(data.state==='available'||(data.installed===true&&data.update_available===true)),
     installer:idle&&data.installed===true,
     open:idle&&data.fenix_installed===true&&(data.installed===true||data.state==='legacy'),
     manager:idle&&data.manager_installed===true&&(data.installed===true||data.state==='legacy'),
@@ -57,13 +57,16 @@ export function createFenix({request,getStatus,isOnline,isReserved,changed,refre
   function render() {
     const allowed=permissions();
     for(const action of ['install','installer','open','manager','configure','restore','stop'])$('fenix-'+action).disabled=!allowed[action];
-    $('fenix-open-existing').disabled=!allowed.open;
-    $('fenix-open-existing').hidden=data?.state!=='legacy';
     $('fenix-installer').disabled||=!$('fenix-installer-path').value.trim();
     $('fenix-pick-installer').disabled=pending||active||!isOnline();
     $('fenix-pick-bundle').disabled=pending||active||!isOnline();
     $('fenix-refresh').disabled=loading;
     const progress=fenixProgress(fresh?data:null,getStatus());
+    $('fenix-install').dataset.i18n=data?.update_available?'Patch aktualisieren':'Patch einrichten';
+    $('fenix-install').textContent=t($('fenix-install').dataset.i18n);
+    const openParent=data?.state==='legacy'||(data?.configured&&data?.settings_ready)?$('fenix-app-controls'):$('fenix-step-3');
+    if($('fenix-open').parentElement!==openParent)
+      openParent.insertBefore($('fenix-open'),openParent===$('fenix-app-controls')?$('fenix-stop'):null);
     $('fenix-state').textContent=t(progress.title);
     $('fenix-next').textContent=t(progress.detail);
     $('fenix-summary').classList.toggle('ready',progress.ready);
@@ -120,7 +123,6 @@ export function createFenix({request,getStatus,isOnline,isReserved,changed,refre
     render();
   }
   for(const operation of ['install','installer','open','manager','configure','restore','stop'])$('fenix-'+operation).addEventListener('click',()=>void action(operation));
-  $('fenix-open-existing').addEventListener('click',()=>void action('open'));
   for(const kind of ['installer','bundle'])$('fenix-pick-'+kind).addEventListener('click',()=>void pick(kind));
   $('fenix-installer-path').addEventListener('input',render);
   $('fenix-refresh').addEventListener('click',()=>void load());

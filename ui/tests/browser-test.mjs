@@ -833,6 +833,11 @@ try {
   await click('fenix-stop');await until(()=>evaluate(`!document.getElementById('fenix-manager').disabled`),'Manager restart stays blocked after helper cleanup');
   await click('fenix-configure');await until(()=>evaluate(`document.getElementById('fenix-state').textContent==='Fenix ist startbereit'`),'Fenix ready confirmation missing');
   await check('Completed Fenix setup confirms startup and shutdown without claiming account activation',`document.getElementById('fenix-next').textContent.includes('automatisch mit dem Spiel') && document.getElementById('fenix-next').textContent.includes('beim Beenden') && document.querySelectorAll('#fenix-steps [data-status=done]').length===4 && document.getElementById('fenix-step-3').textContent.includes('Lizenz prüft Fenix selbst')`);
+  fenix={...fenix,update_available:true};await click('fenix-refresh');
+  await until(()=>evaluate(`document.getElementById('fenix-install').textContent==='Patch aktualisieren' && !document.getElementById('fenix-install').disabled`),'Fenix update action unavailable');
+  await check('An existing patch can update while retaining ready aircraft controls',`!document.getElementById('fenix-open').disabled && document.getElementById('fenix-open').parentElement.id==='fenix-app-controls' && document.getElementById('fenix-state').textContent==='Fenix ist startbereit'`);
+  fenix={...fenix,update_available:false};await click('fenix-refresh');
+  await until(()=>evaluate(`document.getElementById('fenix-install').disabled && document.getElementById('fenix-install').textContent==='Patch einrichten'`),'Fenix update state did not clear');
   await evaluate(`document.getElementById('fenix-card').scrollIntoView({block:'start'})`);await screenshot('fenix-ready-desktop.png');
   await click('fenix-overview');await check('Ready Fenix leads back to the normal simulator launch',`location.hash==='#overview' && !document.getElementById('view-overview').hidden`);
   await route('mods');await language('en');await call('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
@@ -841,7 +846,7 @@ try {
   await language('de');await call('Emulation.setDeviceMetricsOverride',{width:1536,height:1024,deviceScaleFactor:1,mobile:false});
   fenix={...fenix,state:'legacy',installed:false,manager_installed:true,job:null};await click('fenix-refresh');
   await until(()=>evaluate(`!document.getElementById('fenix-manager').disabled && !document.getElementById('fenix-legacy').hidden`),'Legacy livery manager inaccessible');
-  await check('Legacy local patch offers main Fenix and its manager without replacement',`document.getElementById('fenix-install').disabled && !document.getElementById('fenix-legacy').hidden && !document.getElementById('fenix-open-existing').hidden && !document.getElementById('fenix-open-existing').disabled && document.getElementById('fenix-open-existing').getBoundingClientRect().width>0`);
+  await check('Legacy local patch offers one main Fenix action and a clearly separate installer',`document.getElementById('fenix-install').disabled && !document.getElementById('fenix-legacy').hidden && !document.getElementById('fenix-open').disabled && document.getElementById('fenix-open').getBoundingClientRect().width>0 && [...document.querySelectorAll('#fenix-card button')].filter(button=>button.textContent==='Fenix öffnen').length===1 && document.getElementById('fenix-manager').textContent==='Installer & Liveries' && document.getElementById('fenix-manager-hint').textContent.includes('separaten Fenix-Manager')`);
   status.game={...status.game,state:'running'};fenix={...fenix,fenix_running:true,can_stop:false};await refresh(`document.getElementById('game-state').textContent.length>0`);await click('fenix-refresh');
   await until(()=>evaluate(`document.getElementById('fenix-manager').disabled`),'Running simulator must block manager');
   await check('Running simulator also blocks the dedicated Fenix stop button',`!document.getElementById('fenix-app-controls').hidden && document.getElementById('fenix-stop').disabled`);

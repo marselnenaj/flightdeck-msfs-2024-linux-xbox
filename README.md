@@ -20,10 +20,10 @@ Flightdeck installs and launches your **purchased Xbox PC / Microsoft Store copy
 of MSFS 2024 or 2020** on your Linux computer through Wine/Proton. Sign in with your
 Microsoft account, download the game and start it from one application.
 
-**Flightdeck 0.1.2** adds a **Stop Fenix** button to the guided Fenix setup.
-It includes 0.1.1's simulator selection and managed
-runtime component updates. Download the
-[full installer](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.2)
+**Flightdeck 0.1.3** fixes Fenix installer startup and invisible mouse pointers,
+and improves opening, stopping and restarting Fenix. **Installer & Liveries** opens the separate
+official manager. Download the
+[full installer](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.3)
 to update an existing launcher. The optional Fenix patch is downloaded through
 **Mods → Fenix A320**. See the [changes](docs/changelog.md).
 
@@ -176,7 +176,7 @@ alone.
 | Guide | Covers |
 | :--- | :--- |
 | [Install](docs/install.md) | Requirements, setup and launcher maintenance |
-| [Changes](docs/changelog.md) | Flightdeck 0.1.2, released packages and current test evidence |
+| [Changes](docs/changelog.md) | Flightdeck 0.1.3, released packages and current test evidence |
 | [Cloud saves](docs/cloud-saves.md) · [Deutsch](docs/cloud-saves.de.md) | Automatic sync, conflict recovery, backups and current limits |
 | [Game maintenance](docs/game-updates.md) | Updates, file verification, full repair and rollback |
 | [Add-ons](docs/addons.md) · [Deutsch](docs/addons.de.md) | Community packages, FlyByWire, SimBridge and Fenix |

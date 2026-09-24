@@ -125,6 +125,12 @@ class FenixManager:
 
     def _run(self, root, operation, data):
         try:
+            # Bring an earlier supported patch forward before opening an app.
+            # The transaction retains the aircraft/profile and the original
+            # restore point; a failed download cannot start the outdated app.
+            if operation in {"installer", "open", "manager", "configure"} and core.snapshot(root).get("update_available"):
+                bundle = obtain_bundle(self.launcher.state_dir / "fenix-bundles", None, self._progress)
+                core.install(root, bundle, self._progress)
             if operation == "install":
                 bundle = obtain_bundle(self.launcher.state_dir / "fenix-bundles", data.get("bundle_path"), self._progress)
                 core.install(root, bundle, self._progress)
@@ -143,7 +149,7 @@ class FenixManager:
                                  wait=(lambda child: self._wait_app(root, child)) if operation in {"open", "manager"} else None)
             with self.lock:
                 self.job.update(state="complete", stopping=False, message="Fenix wurde beendet." if self.stop_requested.is_set() else {
-                    "install": "Patch installiert. Installiere jetzt Fenix mit dem offiziellen Installer.",
+                    "install": "Fenix-Patch eingerichtet. Die nächsten Schritte stehen oben.",
                     "installer": "Installer beendet. Prüfe die nächsten Schritte oben; die Fenix-Einrichtung ist noch nicht automatisch abgeschlossen.",
                     "open": "Fenix wurde geschlossen.",
                     "configure": "Anzeigen und automatischer Fenix-Start sind eingerichtet.",

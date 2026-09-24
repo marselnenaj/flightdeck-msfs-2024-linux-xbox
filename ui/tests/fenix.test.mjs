@@ -12,6 +12,8 @@ test('Fenix actions require a current idle runtime and reconcile permissions',()
   }
   const installed={...value,state:'installed',installed:true,fenix_installed:true,settings_ready:true,manager_installed:true,can_restore:true};
   assert.deepEqual(fenixPermissions(installed,status,true),{install:false,installer:true,open:true,manager:true,configure:true,restore:true,stop:false});
+  assert.equal(fenixPermissions({...installed,update_available:true},status,true).install,true);
+  assert.equal(fenixPermissions({...installed,update_available:true,can_change:false},status,true).install,false);
   assert.deepEqual(fenixPermissions({...value,state:'legacy',manager_installed:true},status,true),{install:false,installer:false,open:false,manager:true,configure:false,restore:false,stop:false});
   assert.equal(fenixPermissions({...value,state:'legacy',fenix_installed:true},status,true).open,true);
   assert.equal(fenixPermissions({...value,state:'committing',can_restore:true},status,true).restore,true);

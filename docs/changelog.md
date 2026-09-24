@@ -1,12 +1,26 @@
 # Changes and release status
 
-## Unreleased
+## 0.1.3 — 24 September 2026
 
+[Download Flightdeck 0.1.3](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.3).
+
+- Repair missing UI-font registrations before opening Fenix applications,
+  fixing installer startup crashes in affected Wine profiles.
+- Restore visible arrow, text and link cursors in the official Fenix Installer
+  and livery manager.
+- Update supported preview.1 patch installations before opening Fenix, retaining
+  aircraft, settings and the original restore point.
+- One **Open Fenix** action opens the main application. The separate
+  **Installer & Liveries** action opens the official installation/livery manager.
 - **Open Fenix** is available for existing local Fenix installations.
 - Closing Fenix also cleans up its WebView helpers, including after a manager
   crash, so a later start is not blocked by leftover processes.
 - **Stop Fenix** stays visible and shows when Fenix has stopped.
 - Opening Fenix no longer creates an extra blank Wine notification-area window.
+
+Native components **0.1.1** are unchanged. Fenix patch **0.1.0-preview.2** adds
+the cursor fix. Install the new full package to update Flightdeck; its Fenix panel
+downloads and verifies the matching patch when needed.
 
 ## 0.1.2 — 23 September 2026
 

@@ -63,15 +63,20 @@ benötigt. Eine Verbindung zum laufenden Simulator ist damit noch nicht bestäti
 
 ## Fenix A320 einrichten
 
-Unter **Mods → Fenix A320** bietet Flightdeck **0.1.2** einen eigenen
+Unter **Mods → Fenix A320** bietet Flightdeck **0.1.3** einen eigenen
 Einrichtungsablauf. Ältere Launcher mit dem [vollständigen Paket](install.md)
 aktualisieren. Derselbe Patch ist auch als
-[eigenständiger Patch-Installer](https://github.com/marselnenaj/fenix-a320-linux-patch/releases/tag/v0.1.0-preview.1)
+[eigenständiger Patch-Installer](https://github.com/marselnenaj/fenix-a320-linux-patch/releases/tag/v0.1.0-preview.2)
 verfügbar.
 
 Der Patch unterstützt MSFS 2024 mit dem festgelegten Xodus-Wine-Runner. Starte
 MSFS 2024 einmal, damit die Benutzereinstellungen angelegt sind. Schließe danach
 MSFS und alle Fenix-Anwendungen.
+
+Vorhandene Patch-Installationen mit preview.1 werden beim Öffnen von Fenix über
+diesen Launcher automatisch aktualisiert. **Patch aktualisieren** startet das
+Update auch direkt. Flugzeug, Einstellungen und der ursprüngliche
+Wiederherstellungspunkt bleiben erhalten; Fenix muss nicht neu installiert werden.
 
 1. **Patch einrichten** lädt das Linux-ZIP aus dem öffentlichen Fenix-GitHub-Release
    und prüft dessen SHA-256. Es erstellt eine eigene Runner-/Profilkopie, bewahrt
@@ -105,7 +110,7 @@ Flightdeck die Fenix-Begleitprozesse dieser Sitzung; hängende Prozesse werden
 nach einer kurzen Wartezeit beendet. Der offizielle Fenix-Installer und andere
 Wine-Profile bleiben davon unberührt.
 
-Dieser Quellstand verwendet Patch **0.1.0-preview.1**. Flightdeck lädt die geprüfte
+Dieser Quellstand verwendet Patch **0.1.0-preview.2**. Flightdeck lädt die geprüfte
 Version aus `compat/fenix/release.json`; ein neueres GitHub-Release wird nicht
 ungeprüft übernommen. Eine Flightdeck-Installation richtet Fenix nicht automatisch
 ein. Für den öffentlichen Patch-Download ist keine GitHub-Anmeldung nötig. Das
@@ -121,8 +126,10 @@ grafische Oberfläche benötigt Python Tk. Flightdecks Fenix-Bereich benötigt k
 
 ### Liveries
 
-**Fenix-Installer / Liveries öffnen** startet den bereits installierten offiziellen
-Manager, sobald Flightdeck ihn im ausgewählten Wine-Profil erkennt. Vorher den
+**Installer & Liveries** startet den bereits installierten offiziellen Manager
+für Flugzeuginstallation, Updates und Liveries. **Fenix öffnen** startet die
+Fenix-Hauptanwendung. Der Manager-Button wird verfügbar, sobald Flightdeck ihn im
+ausgewählten Wine-Profil erkennt. Vorher den
 Simulator und andere Fenix-Anwendungen schließen. Bemalungen müssen zum gekauften
 Flugzeug, Triebwerk und Flügel passen: A320 statt A321, CFM oder IAE sowie mit/ohne
 Sharklets. Eine **A320-CFM-SL**-Livery gehört beispielsweise zur CFM-Sharklets-

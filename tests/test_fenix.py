@@ -31,6 +31,44 @@ class FakeLauncher:
 
 
 class FenixTests(unittest.TestCase):
+    def test_supported_patch_update_finishes_before_opening_apps(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for operation in ("open", "manager", "configure"):
+                with self.subTest(operation=operation):
+                    launcher = FakeLauncher(root)
+                    manager = fenix.FenixManager(launcher)
+                    calls = []
+                    def install(runtime, bundle, progress):
+                        self.assertTrue(launcher.setup_busy)
+                        calls.append("update")
+                    def app(*args, **kwargs):
+                        self.assertEqual(calls, ["update"])
+                        calls.append("app")
+                    with patch.object(fenix.core, "snapshot", return_value={"update_available": True}), \
+                         patch.object(fenix, "obtain_bundle", return_value=root / "bundle"), \
+                         patch.object(fenix.core, "install", side_effect=install), \
+                         patch.object(fenix.core, "windows_app", side_effect=app), \
+                         patch.object(fenix.core, "configure", side_effect=app):
+                        manager.start(operation, {})
+                        manager.worker.join(3)
+                        self.assertEqual(manager.job["state"], "complete")
+                        self.assertEqual(calls, ["update", "app"])
+                        self.assertFalse(launcher.setup_busy)
+
+    def test_failed_patch_update_does_not_start_the_outdated_manager(self):
+        with tempfile.TemporaryDirectory() as directory:
+            launcher = FakeLauncher(Path(directory))
+            manager = fenix.FenixManager(launcher)
+            with patch.object(fenix.core, "snapshot", return_value={"update_available": True}), \
+                 patch.object(fenix, "obtain_bundle", side_effect=fenix.core.PatchError("Download failed")), \
+                 patch.object(fenix.core, "windows_app") as app:
+                manager.start("manager", {})
+                manager.worker.join(3)
+                self.assertEqual(manager.job["state"], "failed")
+                app.assert_not_called()
+                self.assertFalse(launcher.setup_busy)
+
     def test_crashed_app_cleans_helpers_before_releasing_runtime(self):
         from contextlib import contextmanager
         with tempfile.TemporaryDirectory() as directory:

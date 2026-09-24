@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "version": "0.1.0-preview.1",
+  "version": "0.1.0-preview.2",
   "repository": "https://github.com/marselnenaj/fenix-a320-linux-patch",
   "wine_revision": "b1dd32734a34472a28eb5be9922df06e07ac0834",
   "xgameruntime_revision": "64aebcabb8c66121eae25d3bf0ace4b582ebb0da",
@@ -16,18 +16,21 @@
     "files/lib/wine/x86_64-windows/dwrite.dll": "23ee91fef6fd6ba18c067e42c0a385fac7a124f111bd7b4ff42fe4a25c230c2f",
     "files/lib/wine/x86_64-unix/dwrite.so": "2b3cb8b0f9e2710dd92625543670c5167b5a43f9e55ee73c9e9ba2f591146584",
     "files/bin/wine": "041dd0e1ff3f799c4cc155edabf0286ea6fbe53668ab4d6ae57eff3dd7406ae6",
-    "files/lib/wine/x86_64-windows/kernel32.dll": "c56cea8217e7af0f9b88dfcb7d5cb266b9a583a4a3d1e68bba70070b0f47fddf"
+    "files/lib/wine/x86_64-windows/kernel32.dll": "c56cea8217e7af0f9b88dfcb7d5cb266b9a583a4a3d1e68bba70070b0f47fddf",
+    "files/lib/wine/x86_64-unix/win32u.so": "87bf6382ee5f30d950092c9bbccc6d99d072e8c36a841ace59c09269ed235d0a",
+    "files/lib/wine/x86_64-windows/win32u.dll": "03b21ac77b3310b2413b156535709763b15abc7f8467f6cb2e73b79df41de667"
   },
   "files": {
-    "files/lib/wine/x86_64-windows/ntdll.dll": "ba10a88617b5bf46681fe5c9ad80a5e01273f4447bbb25d768c2a847072e0e0b",
-    "files/lib/wine/x86_64-unix/ntdll.so": "cd278141a214aa8026d87cc45d64f7412c21160e1379313badf6966e93651418",
-    "files/bin/wineserver": "dd311c1d99e232f8ed5f6f46fdbca2a7de89d45ab38c7c7619b9ba84a501a905",
-    "files/lib/wine/x86_64-windows/crypt32.dll": "3c63a854bad365fb41267239e13cbf01f393c1c8e88997b6141cd0828d27ea58",
-    "files/lib/wine/x86_64-windows/mmdevapi.dll": "d0f74e5f4ab68cbb335d3a9b240b5041659368832e4daf4528c614e77fbb143e",
-    "files/lib/wine/x86_64-windows/kernelbase.dll": "fa84c057680458f5ec79971621d51605e3d019a60885b37fe4b90a96d6e9ca31",
-    "files/lib/wine/x86_64-windows/d2d1.dll": "7613dc3143c0b20e140a2ec252b7304e7dba5685744e53eae9df06e6e1f75bc8",
-    "files/lib/wine/x86_64-windows/dwrite.dll": "f6779b40a5edb7c4f5ed56d0ba4168760936d3c3ee9c20fe3157fd3e18ba80dc",
-    "files/lib/wine/x86_64-unix/dwrite.so": "069ae14fc3881a79f4f6e0a4ef31b63cc84dcdf5c1564c2e6bb3bff25820a35f"
+    "files/lib/wine/x86_64-windows/ntdll.dll": "0f47b26bc8ed04b2f57e0766912f978cfc19f9671f8a09a8fa23b6681bf86912",
+    "files/lib/wine/x86_64-unix/ntdll.so": "2a95fea049ecfdc535ac86147a76a0d701ce50f1f1785a7389991c1992f902e3",
+    "files/bin/wineserver": "e37f4bb214888a98fd666444d3780203a02c03e8786eb19cc3dbc238eae8b8f7",
+    "files/lib/wine/x86_64-windows/crypt32.dll": "f944c555d33ab128c4a9969e948a1dcbeb14ecd6608577fcf8038f5615852107",
+    "files/lib/wine/x86_64-windows/mmdevapi.dll": "e0d42c5930d04c180eb9527318b5c50d972fab9130f325b9a0feb38a3ab21fda",
+    "files/lib/wine/x86_64-windows/kernelbase.dll": "81b984510263f358f9a42e4df94bae55fb24aed82e3b708f6ce64d2180f8f9cb",
+    "files/lib/wine/x86_64-windows/d2d1.dll": "466cfb00f231214d1e892ee49bfe99b0e41ebf23894f6518e2add3d2e2eba2c6",
+    "files/lib/wine/x86_64-windows/dwrite.dll": "644e786472a8dff7b33f6cc72b712e0133d4339ae8bde11a415001b4298fb869",
+    "files/lib/wine/x86_64-unix/dwrite.so": "c09692c662a874d5496c20a264efd2c348a46c410456576289097d34366f333b",
+    "files/lib/wine/x86_64-unix/win32u.so": "6c66c030cd52d8f80ffc00b83695cfb089ee61e19aff4de50a4614494e9a8571"
   },
   "patches": {
     "fenix-loader-case.patch": "0fcf4be0c989566688d1ed334701cc3461c8609f8101d6f20552634b69f7ad1c",
@@ -39,7 +42,9 @@
     "wine-d2d1-geometry-provider.patch": "870eae9e5b8428a3462392835373746c70f3b6f0cd7af991efabfcae51c35860",
     "wine-d2d1-display-effects.patch": "4a516e6bf9d8a56a22ab5d5c2a888bcacfb9739a158876ac7eeaf02b1563cd1d",
     "wine-completion-wait-lifetime.patch": "027dd095ebe18214cd63dfe4f13c1bf62c7b142bf59cc40ccd8785d339fbeb77",
-    "wine-dwrite-unhinted-outlines.patch": "60fdd6a9bcc3d3964486a0d698d22bf002969a102c30461431347eb798b63dcf"
+    "wine-dwrite-unhinted-outlines.patch": "60fdd6a9bcc3d3964486a0d698d22bf002969a102c30461431347eb798b63dcf",
+    "wine-shared-cursor.patch": "95b7cbae189b0a60c7deaa807b587132058bb98313c5fd8dee462a0f32bf4faf",
+    "wine-protocol-handlers.patch": "a4dbbc299df83cc3e90a778e8d68243a7149e09f0aa8ad8e7cc35ddd2abc43b9"
   },
   "sources": {
     "wine-source.tar.gz": "975df721180fc5f53bfefe47cb34ed251083fef9d3c639af849c7c1f1eec3758",
@@ -71,5 +76,25 @@
     "FenixWindowGuard.exe": "4541ad8c0e02e3df1bd394802af6f9706a7722c3ce5760786813337730354402",
     "launch-msfs.sh": "476a4f5ad75ecc88bd2c16d43aa3e75e50085ee7cb12db90d1aa0087827e9cc8",
     "xodus-wine-launch": "b004808236bd0482b0190d8eaf7a302e9f22b1d850b8fc6d79d732c728804cf1"
+  },
+  "previous_releases": {
+    "0.1.0-preview.1": {
+      "files": {
+        "files/lib/wine/x86_64-windows/ntdll.dll": "ba10a88617b5bf46681fe5c9ad80a5e01273f4447bbb25d768c2a847072e0e0b",
+        "files/lib/wine/x86_64-unix/ntdll.so": "cd278141a214aa8026d87cc45d64f7412c21160e1379313badf6966e93651418",
+        "files/bin/wineserver": "dd311c1d99e232f8ed5f6f46fdbca2a7de89d45ab38c7c7619b9ba84a501a905",
+        "files/lib/wine/x86_64-windows/crypt32.dll": "3c63a854bad365fb41267239e13cbf01f393c1c8e88997b6141cd0828d27ea58",
+        "files/lib/wine/x86_64-windows/mmdevapi.dll": "d0f74e5f4ab68cbb335d3a9b240b5041659368832e4daf4528c614e77fbb143e",
+        "files/lib/wine/x86_64-windows/kernelbase.dll": "fa84c057680458f5ec79971621d51605e3d019a60885b37fe4b90a96d6e9ca31",
+        "files/lib/wine/x86_64-windows/d2d1.dll": "7613dc3143c0b20e140a2ec252b7304e7dba5685744e53eae9df06e6e1f75bc8",
+        "files/lib/wine/x86_64-windows/dwrite.dll": "f6779b40a5edb7c4f5ed56d0ba4168760936d3c3ee9c20fe3157fd3e18ba80dc",
+        "files/lib/wine/x86_64-unix/dwrite.so": "069ae14fc3881a79f4f6e0a4ef31b63cc84dcdf5c1564c2e6bb3bff25820a35f"
+      },
+      "integration": {
+        "FenixWindowGuard.exe": "4541ad8c0e02e3df1bd394802af6f9706a7722c3ce5760786813337730354402",
+        "launch-msfs.sh": "476a4f5ad75ecc88bd2c16d43aa3e75e50085ee7cb12db90d1aa0087827e9cc8",
+        "xodus-wine-launch": "b004808236bd0482b0190d8eaf7a302e9f22b1d850b8fc6d79d732c728804cf1"
+      }
+    }
   }
 }
