@@ -209,7 +209,7 @@ class DesktopTests(unittest.TestCase):
             self.assertEqual(initial, desktop.release_identity())
             (second / "flightdeck/desktop.py").write_text("updated code, same version\n")
             self.assertNotEqual(initial, desktop.release_identity())
-            for name in ("flightdeck/_fenix/core.py", "ui/fenix.js", "compat/fenix/bundle.json",
+            for name in ("scripts/install-launcher.py", "ui/notices.js", "ui/launcher-updates.js", "flightdeck/_fenix/core.py", "ui/fenix.js", "compat/fenix/bundle.json",
                          "compat/fenix/release.json", "flightdeck/resources/fenix/bundle.json",
                          "flightdeck/resources/fenix/release.json"):
                 with self.subTest(resource=name):

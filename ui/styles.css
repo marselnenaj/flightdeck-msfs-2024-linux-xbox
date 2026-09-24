@@ -135,6 +135,7 @@ h2{font-weight:650;letter-spacing:-.7px}
 
 /* Feedback never displaces the simulator switch or launch controls. */
 #notice{position:fixed;z-index:20;right:24px;bottom:24px;width:max-content;max-width:min(560px,calc(100vw - 32px));margin:0;box-shadow:0 12px 38px #0006}
+#notice:not([hidden]){display:flex;align-items:flex-start;gap:18px}#notice [data-notice-message]{overflow-wrap:anywhere}.notice-close{flex:none;display:grid;place-items:center;min-width:30px;min-height:30px;margin:-4px -6px -4px 0;padding:0;border:0;border-radius:6px;background:transparent;color:inherit;font:inherit;font-size:24px;cursor:pointer}.notice-close:hover,.notice-close:focus-visible{background:#ffffff18}.launcher-update-panel{margin-bottom:18px}.update-checked{font-size:12px;margin-top:15px}.release-notes{white-space:pre-wrap;overflow-wrap:anywhere;font-size:14px;line-height:1.65;max-height:320px;overflow:auto;margin-top:16px}.launcher-fenix-link{display:flex;gap:20px;justify-content:space-between;align-items:center;margin:0 0 28px;padding:20px 24px;border:1px solid var(--line);border-radius:16px}.launcher-fenix-link p{font-size:13px;margin:6px 0 0}.launcher-fenix-link .button{flex:none}@media(max-width:620px){.launcher-fenix-link{flex-direction:column;align-items:stretch;padding:18px}.launcher-fenix-link .button{text-align:center}#notice{right:16px;bottom:16px}}
 
 /* Optional Fenix setup shares the existing Add-ons surface. */
 .fenix-card{border:1px solid var(--line,#dce3e8);border-radius:20px;padding:24px;margin:0 0 28px;background:var(--surface,#fff)}

@@ -13,6 +13,28 @@ from flightdeck.server import Handler, Server
 
 
 class ServerTests(unittest.TestCase):
+    def test_launcher_updates_are_localized_and_mutations_require_session_token(self):
+        manager = self.server.launcher.launcher_updates
+        headers = {"Content-Type": "application/json", "X-Flightdeck-Token": self.server.token, "Accept-Language": "en"}
+        code, _, body = self.request("GET", "/api/launcher-update", headers=headers)
+        self.assertEqual(code, 200)
+        self.assertFalse(json.loads(body)["managed"])
+        self.assertIn("official installer", json.loads(body)["unavailable_reason"])
+        for name in ("launcher-updates.js", "notices.js"):
+            self.assertEqual(self.request("GET", "/" + name)[0], 200)
+        for operation in ("check", "install", "rollback", "cancel", "restart"):
+            self.assertEqual(self.request("POST", "/api/launcher-update/" + operation, "{}",
+                                         {"Content-Type": "application/json"})[0], 403)
+        with patch.object(manager, "start", return_value={"ok": True}) as start:
+            self.assertEqual(self.request("POST", "/api/launcher-update/install", '{"check_id":"fixture"}', headers)[0], 200)
+            start.assert_called_once_with("install", "fixture")
+        with patch.object(manager, "cancel", return_value={"ok": True}) as cancel:
+            self.assertEqual(self.request("POST", "/api/launcher-update/cancel", '{"job_id":"fixture"}', headers)[0], 200)
+            cancel.assert_called_once_with("fixture")
+        with patch.object(manager, "restart", return_value={"ok": True}) as restart:
+            self.assertEqual(self.request("POST", "/api/launcher-update/restart", "{}", headers)[0], 200)
+            restart.assert_called_once_with("en")
+
     def test_automatic_cloud_actions_are_bound_to_current_request_and_token(self):
         auto = self.server.launcher.cloud_saves.automation
         headers = {"Content-Type": "application/json", "X-Flightdeck-Token": self.server.token}

@@ -67,16 +67,16 @@ running simulator has not yet been established by this test.
 ### Fenix A320
 
 Open **Mods → Fenix A320** to use the optional compatibility installer in
-Flightdeck **0.1.3**. Update older launchers using the [full package](install.md).
+Flightdeck **0.1.4**. Update older launchers using the [full package](install.md).
 The same patch is also available through the
-[standalone patch installer](https://github.com/marselnenaj/fenix-a320-linux-patch/releases/tag/v0.1.0-preview.2).
+[standalone patch installer](https://github.com/marselnenaj/fenix-a320-linux-patch/releases).
 
 It supports MSFS 2024 with the pinned Xodus Wine runner. It creates an independent
 runner/profile, keeps a backup, verifies release hashes and configures CPU displays,
 Legacy readouts and Fenix autostart. Run MSFS 2024 once to create its user settings,
 then close MSFS and all Fenix applications before setup.
 
-Existing preview.1 patch installations update automatically before opening Fenix
+Existing preview.1/preview.2 patch installations update automatically before opening Fenix
 with this launcher. **Update patch** also starts the update directly. Aircraft,
 settings and the original restore point are retained; Fenix need not be reinstalled.
 
@@ -108,7 +108,7 @@ separately. Flightdeck closes the session's Fenix companions after normal exit,
 a game crash or **Stop**, with a bounded fallback for stuck processes. The
 official Fenix installer and other Wine profiles are excluded from that cleanup.
 
-The source checkout currently pins patch **0.1.0-preview.2**. Flightdeck downloads
+Flightdeck uses patch **0.1.0-preview.3** and downloads
 the reviewed version recorded in `compat/fenix/release.json`, not an arbitrary
 latest release. Installing Flightdeck itself does not install Fenix automatically.
 No GitHub login is needed for the public patch download. Download and activation
@@ -147,7 +147,8 @@ outstanding. Weather radar is unavailable in the CPU renderer. The binary previe
 requires x86_64 Linux and glibc 2.38+; Flightdeck's full native package still requires
 glibc 2.39+. Other Wine/Proton builds, Steam prefixes and MSFS 2020 are outside this
 first patch's scope. The optional window guard runs with the simulator and hides
-matching service/display windows; the main Fenix application remains accessible.
+matching service/display windows. The X11 driver now keeps them off the desktop
+while preserving internal visibility; the main Fenix application remains accessible.
 Opening Fenix manually does not start that guard.
 
 **Existing local Fenix patch** means a previous development setup is detected.
@@ -168,3 +169,11 @@ source/build instructions and a standalone installer:
 
 Fenix/Microsoft software and account data are not part of Flightdeck or the patch
 release. The official Fenix login and license activation remain required.
+
+Patch preview.3 repairs missing routes and excessive stroke joins, installs the
+pinned geometry dependency, hides matching helper windows and automatically
+refreshes stale MCDU startup images after a Display restart. The refresh briefly
+changes the pop-out display preference, then restores it. At maximum brightness
+it uses a DIM/BRT round-trip; MCDU pages and flight-plan data stay unchanged.
+The official live restart check passed. See the patch's
+[display refresh notes](https://github.com/marselnenaj/fenix-a320-linux-patch/blob/main/docs/mcdu-restart.md).

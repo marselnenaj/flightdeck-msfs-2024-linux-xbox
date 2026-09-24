@@ -76,10 +76,10 @@ def release_identity():
     """
     package = Path(__file__).resolve().parent
     root = package.parent
-    paths = list(package.glob("*.py"))
+    paths = list(package.glob("*.py")) + [root / "scripts/install-launcher.py"]
     paths += list((package / "_fenix").glob("*.py"))
     ui = package / "ui" if (package / "ui").is_dir() else root / "ui"
-    paths += [ui / name for name in ("index.html", "app.js", "setup.js", "mods.js", "fenix.js", "updates.js", "cloud-saves.js", "i18n.js", "state.js",
+    paths += [ui / name for name in ("index.html", "app.js", "setup.js", "mods.js", "fenix.js", "updates.js", "launcher-updates.js", "notices.js", "cloud-saves.js", "i18n.js", "state.js",
                                     "styles.css", "mark.svg", "flight-panorama.png", "flight-panorama-2020.png", "manrope-variable.woff2", "OFL-Manrope.txt")]
     resources = package / "resources"
     if resources.is_dir():

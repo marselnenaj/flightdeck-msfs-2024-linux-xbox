@@ -1,6 +1,6 @@
 # Install the Flightdeck launcher
 
-This guide covers **Flightdeck 0.1.3**, including simulator selection, the Fenix
+This guide covers **Flightdeck 0.1.4 (release candidate)**, including simulator selection, the Fenix
 panel and managed runtime component updates. See [changes](changelog.md).
 
 Download **Flightdeck-Linux-x86_64.tar.gz** from the
@@ -185,21 +185,36 @@ Choose the update that matches what you want to change:
 
 | What to update | Where | What it changes |
 | --- | --- | --- |
-| Flightdeck launcher | Run the installer from a newer Flightdeck package | Interface, setup logic and bundled resources |
+| Flightdeck launcher | **Updates → Flightdeck** (from 0.1.4), or run the new package's installer | Interface, setup logic and bundled resources |
 | Managed runtime components | Reopen the updated launcher while idle, or use `flightdeck --refresh-components` | Recognized Store/login components and runtime scripts |
 | MSFS 2024 or 2020 | Select the edition, then **Updates** | Its Store base-game package; previous package retained |
 | Fenix compatibility | **Mods → Fenix A320** | Optional, version-checked runner/profile setup; requires a separate explicit install |
 | Fenix aircraft and liveries | Official Fenix installer/manager | Purchased Fenix software and matching liveries |
 
-Flightdeck's **Updates** page does not update Flightdeck or Fenix. The Fenix
-patch release is independent of the Flightdeck package and is downloaded only
-when requested. A newer patch is adopted through a reviewed Flightdeck release;
-the launcher does not automatically follow GitHub's latest tag.
+From Flightdeck 0.1.4, open **Updates → Flightdeck → Check for updates**.
+The launcher shows the latest stable GitHub release, its version and release
+notes. Choose **Download & install**, then **Restart Flightdeck now** when the
+installation finishes. Downloads show progress and can be cancelled before
+installation begins. The full package's size and SHA256 digest are checked
+before installation. Your settings and game installations remain in place.
+The launcher can check while you play; installation, restart and restoration
+require the game and setup to be idle. GitHub is contacted only when you check
+or download, with no GitHub sign-in required.
+
+If needed, expand **Previous launcher version** in the same card to restore
+the retained installation, then restart. Restoring the launcher does not roll
+back the simulator or Fenix patch.
+
+The Fenix patch is downloaded separately under **Mods → Fenix A320** when
+requested. A newer patch is adopted through a reviewed Flightdeck release;
+the Fenix installer does not automatically follow GitHub's latest patch tag.
 [Fenix setup and restore](addons.md#fenix-a320).
 
-Download and extract the newer **Flightdeck-Linux-x86_64.tar.gz**, then open its
+For Flightdeck versions before 0.1.4, or to install the updater for the first
+time, download and extract the newer **Flightdeck-Linux-x86_64.tar.gz**, then open its
 **Install Flightdeck.desktop** or run `./install.sh` again. Source-build users
-can update their prepared checkout instead.
+can update their prepared checkout instead; in-app installation is available
+only for installations managed by the official installer.
 Alternatively:
 
 ```sh

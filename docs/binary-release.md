@@ -6,7 +6,7 @@ not contain Microsoft game files, a Wine prefix, account data, Linux system
 libraries or the upstream Proton runner. The Git repository and source-only
 archive still exclude compiled runtime binaries.
 
-The current package is Flightdeck **0.1.3**, using the unchanged **0.1.1** native
+The current package is Flightdeck **0.1.4**, using the unchanged **0.1.1** native
 components and their matching source archive. See
 [release changes](changelog.md) before choosing an archive.
 
@@ -73,8 +73,8 @@ The optional Wine overlay is downloaded from
 only when requested, with its ZIP hash checked against `compat/fenix/release.json`
 and its payload files checked against `compat/fenix/bundle.json`.
 
-Patch **0.1.0-preview.2** contains ten replacement Wine modules, an MIT window
-helper and launch integration, plus complete Wine sources, patches and build
+Patch **0.1.0-preview.3** contains eleven replacement Wine modules, MIT window, MCDU refresh
+and dependency-extraction helpers and launch integration, plus complete Wine sources, patches and build
 instructions. The derived Wine components retain LGPL-2.1-or-later. That ZIP and
 its corresponding-source archive are separate from Flightdeck's six native
 components and source package. Fenix aircraft, proprietary executables, fonts,

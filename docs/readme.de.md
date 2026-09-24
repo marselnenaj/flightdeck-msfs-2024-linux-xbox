@@ -20,6 +20,10 @@ Flightdeck installiert und startet deine **gekaufte Xbox-PC-/Microsoft-Store-
 Version von MSFS 2024 oder 2020** unter Linux mit Wine/Proton. Mit dem Microsoft-Konto
 anmelden, das Spiel herunterladen und im Launcher starten.
 
+**In Vorbereitung: 0.1.4** integriert die Korrekturen für Fenix-Routen und
+X11-Hilfsfenster samt vollständiger Installation der Grafikabhängigkeit.
+Die Release-Prüfung läuft noch; siehe [Release-Status](changelog.md).
+
 **Flightdeck 0.1.3** behebt Startprobleme und unsichtbare Mauszeiger im Fenix-Installer
 und verbessert das Öffnen, Beenden und erneute Starten von Fenix. **Installer & Liveries** öffnet
 den separaten offiziellen Manager. Zum Aktualisieren den
@@ -88,6 +92,12 @@ Fehlende Systempakete über die Softwareverwaltung deiner Distribution installie
 
 `./install.sh` führt dieselbe Installation im Benutzerkonto aus. Aus einem
 neueren entpackten Paket gestartet aktualisiert es Flightdeck.
+Ab 0.1.4 geht das auch direkt unter **Updates → Flightdeck → Nach Updates
+suchen**: Änderungen ansehen, **Herunterladen & installieren** wählen und
+anschließend Flightdeck neu starten. Der Download wird geprüft; die vorherige
+Launcher-Version lässt sich im selben Bereich wiederherstellen. Prüfen geht
+auch während eines Flugs, installieren erst bei beendetem Spiel. Für ältere
+Versionen ist einmalig die Installation aus dem neuen Paket nötig.
 In 0.1.1 erhält eine erkannte, verwaltete Spiel-Runtime die neuen geprüften Store-
 und Anmeldekomponenten beim nächsten Flightdeck-Start automatisch, sobald MSFS und
 die Einrichtung beendet sind. Falls das Update noch aussteht, Flightdeck neu

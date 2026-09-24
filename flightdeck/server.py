@@ -41,6 +41,7 @@ class Server(ThreadingHTTPServer):
         return f"http://127.0.0.1:{self.server_port}"
 
     def server_close(self):
+        self.launcher.launcher_updates.close()
         self.launcher.cloud_saves.close()
         self.launcher.setup.close()
         self.launcher.fenix.close()
@@ -113,6 +114,8 @@ class Handler(BaseHTTPRequestHandler):
             elif path == "/api/game-update":
                 from .game_update import snapshot
                 self.reply(200, snapshot(self.server.launcher))
+            elif path == "/api/launcher-update":
+                self.reply(200, self.server.launcher.launcher_updates.snapshot())
             elif path == "/api/cloud-saves":
                 self.reply(200, self.server.launcher.cloud_saves.snapshot())
             elif path == "/api/fenix":
@@ -124,7 +127,7 @@ class Handler(BaseHTTPRequestHandler):
                 self.reply(200, self.server.launcher.setup.snapshot())
             elif path == "/api/setup/discover":
                 self.reply(200, self.server.launcher.setup.discover())
-            elif path in {"/", "/index.html", "/app.js", "/setup.js", "/mods.js", "/fenix.js", "/updates.js", "/cloud-saves.js", "/i18n.js", "/state.js", "/styles.css", "/mark.svg", "/flight-panorama.png", "/flight-panorama-2020.png", "/manrope-variable.woff2"}:
+            elif path in {"/", "/index.html", "/app.js", "/setup.js", "/mods.js", "/fenix.js", "/updates.js", "/launcher-updates.js", "/notices.js", "/cloud-saves.js", "/i18n.js", "/state.js", "/styles.css", "/mark.svg", "/flight-panorama.png", "/flight-panorama-2020.png", "/manrope-variable.woff2"}:
                 name = "index.html" if path == "/" else path[1:]
                 types = {".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".svg": "image/svg+xml", ".png": "image/png", ".woff2": "font/woff2"}
                 file = self.server.ui_root / name
@@ -167,6 +170,12 @@ class Handler(BaseHTTPRequestHandler):
                     launcher.require_open()
             if path == "/api/desktop/refresh":
                 result = self.server.desktop_refresh()
+            elif path in {"/api/launcher-update/check", "/api/launcher-update/install", "/api/launcher-update/rollback"}:
+                result = launcher.launcher_updates.start(path.rsplit("/", 1)[-1], data.get("check_id"))
+            elif path == "/api/launcher-update/cancel":
+                result = launcher.launcher_updates.cancel(data.get("job_id"))
+            elif path == "/api/launcher-update/restart":
+                result = launcher.launcher_updates.restart(language(self.headers.get("Accept-Language")))
             elif path == "/api/config":
                 result = launcher.configure(data.get("runtime_path"))
             elif path == "/api/game/select":

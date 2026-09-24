@@ -44,6 +44,7 @@ def detect_language(environ=None) -> str:
 LANGUAGE = detect_language()
 # German source messages and English translations share named placeholders.
 ENGLISH = {
+    'Flightdeck wurde inzwischen geändert. Bitte den Launcher neu öffnen.': 'Flightdeck has changed since this action started. Reopen the launcher.',
     'Ungültige Schriftdatei oder Lizenz: {name}': 'Invalid font file or license: {name}',
     'Installationspfade dürfen keine Zeilenumbrüche enthalten.': 'Installation paths must not contain line breaks.',
     'Symbolischer Link im Installationspfad: {part}': 'Symbolic link in installation path: {part}',
@@ -586,7 +587,7 @@ def apply_entries(root: Path, old: dict | None, state: dict, entries: dict[str, 
         raise
 
 
-def install(source: Path, root: Path, bin_dir: Path, applications_dir: Path, desktop: bool = True, *, language: str | None = None) -> dict:
+def install(source: Path, root: Path, bin_dir: Path, applications_dir: Path, desktop: bool = True, *, language: str | None = None, expected_current: str | None = None) -> dict:
     language = LANGUAGE if language is None else language
     if language not in {"de", "en"}:
         raise InstallError(tr("Bitte --language de oder --language en wählen."))
@@ -595,6 +596,8 @@ def install(source: Path, root: Path, bin_dir: Path, applications_dir: Path, des
     root, bin_dir, applications_dir = map(absolute, (root, bin_dir, applications_dir))
     with installation_lock(root):
         old = load_installation(root)
+        if expected_current is not None and (not old or old["current"] != expected_current):
+            raise InstallError(tr('Flightdeck wurde inzwischen geändert. Bitte den Launcher neu öffnen.'))
         if old:
             verify_release(root, old["current"])
             bin_dir = Path(old["entries"]["launcher"]["path"]).parent
@@ -661,13 +664,15 @@ def install(source: Path, root: Path, bin_dir: Path, applications_dir: Path, des
         return state
 
 
-def rollback(root: Path, *, language: str | None = None) -> dict:
+def rollback(root: Path, *, language: str | None = None, expected_current: str | None = None) -> dict:
     language = LANGUAGE if language is None else language
     if language not in {"de", "en"}:
         raise InstallError(tr("Bitte --language de oder --language en wählen."))
     root = absolute(root)
     with installation_lock(root):
         old = load_installation(root)
+        if expected_current is not None and (not old or old["current"] != expected_current):
+            raise InstallError(tr('Flightdeck wurde inzwischen geändert. Bitte den Launcher neu öffnen.'))
         if not old or not old.get("previous"):
             raise InstallError(tr('Keine vorherige Launcher-Version für ein Rollback vorhanden.'))
         target = verify_release(root, old["previous"])
@@ -758,6 +763,7 @@ def main(argv=None) -> int:
         desktop.add_argument("--desktop", dest="desktop", action="store_true", default=True, help=tr("Menüeintrag anlegen (Standard)"))
         desktop.add_argument("--no-desktop", dest="desktop", action="store_false", help=tr("Keinen neuen Menüeintrag anlegen"))
         parser.add_argument("--no-launch", action="store_true", help=tr("Oberfläche nach Installation nicht öffnen"))
+        parser.add_argument("--expected-current", help=argparse.SUPPRESS)
         parser.add_argument("--gui", action="store_true", help=tr("Grafischen Installationsdialog öffnen"))
         actions = parser.add_mutually_exclusive_group()
         actions.add_argument("--uninstall", action="store_true", help=tr("Launcher entfernen; Einstellungen und Spielstände behalten"))
@@ -780,8 +786,8 @@ def main(argv=None) -> int:
                     if retained:
                         message += "\n" + tr("Geänderte oder fremde Dateien wurden behalten:\n{paths}", paths="\n".join(retained))
                     return message, None
-                state = rollback(args.data_dir, language=LANGUAGE) if args.rollback else install(
-                    args.source, args.data_dir, args.bin_dir, args.applications_dir, args.desktop, language=LANGUAGE)
+                state = rollback(args.data_dir, language=LANGUAGE, expected_current=args.expected_current) if args.rollback else install(
+                    args.source, args.data_dir, args.bin_dir, args.applications_dir, args.desktop, language=LANGUAGE, expected_current=args.expected_current)
                 launcher = state["entries"]["launcher"]["path"]
                 return tr("Flightdeck installiert: {launcher}\nQuellstand: {release}", launcher=launcher,
                           release=state["current"][:12]), None if args.no_launch else launcher
@@ -797,8 +803,8 @@ def main(argv=None) -> int:
             if retained:
                 print(tr("Geänderte oder fremde Dateien wurden behalten:\n{paths}", paths="\n".join(retained)))
             return 0
-        state = rollback(args.data_dir, language=LANGUAGE) if args.rollback else install(
-            args.source, args.data_dir, args.bin_dir, args.applications_dir, args.desktop, language=LANGUAGE)
+        state = rollback(args.data_dir, language=LANGUAGE, expected_current=args.expected_current) if args.rollback else install(
+            args.source, args.data_dir, args.bin_dir, args.applications_dir, args.desktop, language=LANGUAGE, expected_current=args.expected_current)
         launcher = state["entries"]["launcher"]["path"]
         print(tr("Flightdeck installiert: {launcher}\nQuellstand: {release}", launcher=launcher, release=state["current"][:12]), flush=True)
         print(tr("Update: Installer aus einem neuen Quellpaket erneut ausführen.\nRollback: flightdeck --rollback · Entfernen: flightdeck --uninstall"), flush=True)

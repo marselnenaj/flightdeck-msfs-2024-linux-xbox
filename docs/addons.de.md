@@ -63,24 +63,25 @@ benötigt. Eine Verbindung zum laufenden Simulator ist damit noch nicht bestäti
 
 ## Fenix A320 einrichten
 
-Unter **Mods → Fenix A320** bietet Flightdeck **0.1.3** einen eigenen
+Unter **Mods → Fenix A320** bietet Flightdeck **0.1.4** einen eigenen
 Einrichtungsablauf. Ältere Launcher mit dem [vollständigen Paket](install.md)
 aktualisieren. Derselbe Patch ist auch als
-[eigenständiger Patch-Installer](https://github.com/marselnenaj/fenix-a320-linux-patch/releases/tag/v0.1.0-preview.2)
+[eigenständiger Patch-Installer](https://github.com/marselnenaj/fenix-a320-linux-patch/releases)
 verfügbar.
 
 Der Patch unterstützt MSFS 2024 mit dem festgelegten Xodus-Wine-Runner. Starte
 MSFS 2024 einmal, damit die Benutzereinstellungen angelegt sind. Schließe danach
 MSFS und alle Fenix-Anwendungen.
 
-Vorhandene Patch-Installationen mit preview.1 werden beim Öffnen von Fenix über
+Vorhandene Patch-Installationen mit preview.1 oder preview.2 werden beim Öffnen von Fenix über
 diesen Launcher automatisch aktualisiert. **Patch aktualisieren** startet das
 Update auch direkt. Flugzeug, Einstellungen und der ursprüngliche
 Wiederherstellungspunkt bleiben erhalten; Fenix muss nicht neu installiert werden.
 
 1. **Patch einrichten** lädt das Linux-ZIP aus dem öffentlichen Fenix-GitHub-Release
    und prüft dessen SHA-256. Es erstellt eine eigene Runner-/Profilkopie, bewahrt
-   die bisherige Umgebung auf und installiert bei Bedarf Microsoft .NET Framework 4.8.
+   die bisherige Umgebung auf und installiert bei Bedarf Microsoft .NET Framework 4.8
+   sowie die separat heruntergeladene, geprüfte Geometrie-Abhängigkeit.
 2. Den offiziellen Installer aus dem [Fenix-Konto](https://fenixsim.com/dashboard/)
    herunterladen, seine EXE auswählen und **Installer starten** wählen. Die normale
    Installation samt angebotenen Voraussetzungen im ausgewählten Simulatorprofil
@@ -110,7 +111,7 @@ Flightdeck die Fenix-Begleitprozesse dieser Sitzung; hängende Prozesse werden
 nach einer kurzen Wartezeit beendet. Der offizielle Fenix-Installer und andere
 Wine-Profile bleiben davon unberührt.
 
-Dieser Quellstand verwendet Patch **0.1.0-preview.2**. Flightdeck lädt die geprüfte
+Dieser Quellstand bereitet Patch **0.1.0-preview.3** vor; er ist noch nicht veröffentlicht. Flightdeck lädt die geprüfte
 Version aus `compat/fenix/release.json`; ein neueres GitHub-Release wird nicht
 ungeprüft übernommen. Eine Flightdeck-Installation richtet Fenix nicht automatisch
 ein. Für den öffentlichen Patch-Download ist keine GitHub-Anmeldung nötig. Das
@@ -175,3 +176,11 @@ Wiederherstellung gesperrt.
 [Eigenständiger Installer, Quellcode und Bauanleitung](https://github.com/marselnenaj/fenix-a320-linux-patch).
 Das Paket enthält keine Fenix-/Microsoft-Programme, Flugzeuge oder Kontodaten.
 Anmeldung und Lizenzaktivierung erfolgen wie üblich im offiziellen Fenix-Programm.
+
+Patch preview.3 korrigiert fehlende Routen, überlange Linien und die
+X11-/Xwayland-Hilfsfenster. Nach einem Display-Neustart werden festgehaltene dunkle
+MCDU-Bilder automatisch aufgefrischt. Der Helfer schaltet kurz die Einstellung
+für Pop-out-Anzeigen um und stellt sie wieder her. Bei maximaler Helligkeit
+nutzt er einen DIM/BRT-Wechsel. Seiten und Flugplandaten bleiben unverändert.
+Der offizielle Display-Neustart wurde damit erfolgreich geprüft.
+[Details zum Anzeige-Helfer](https://github.com/marselnenaj/fenix-a320-linux-patch/blob/main/docs/mcdu-restart.md).

@@ -1,5 +1,29 @@
 # Changes and release status
 
+## 0.1.4 — 24 September 2026
+
+- Update Flightdeck directly under **Updates → Flightdeck**: check stable GitHub
+  releases, read release notes, download and install, then restart when ready.
+  Downloads are checked against GitHub's SHA256 digest; the previous launcher
+  version remains available for restoration. Installation requires an idle game.
+- Brief notifications close automatically after six seconds (errors: twelve),
+  pause while hovered or focused, and include a close button. Errors inside
+  update and setup panels remain visible.
+- Integrate Fenix patch **0.1.0-preview.3**: path metrics restore missing routes;
+  correct stroke contours remove excessive lines at acute route joins.
+- Install and verify the separately downloaded Microsoft geometry dependency
+  in fresh profiles and updates from preview.1/preview.2.
+- Keep matching Fenix helper windows off the X11/Xwayland desktop while
+  preserving their internal visibility; retain the fallback window guard.
+- Retain the aircraft, user settings and original restore point during updates.
+
+- Automatically refresh stale MCDU images after Fenix Display restarts, preserving
+  pages and restoring the original display preference and brightness.
+
+Native components **0.1.1** are unchanged. The official Fenix display-restart
+check passed with automatic MCDU recovery. This remains a community Fenix preview;
+a full flight and other aircraft/simulator versions have not been verified.
+
 ## 0.1.3 — 24 September 2026
 
 [Download Flightdeck 0.1.3](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.3).

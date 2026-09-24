@@ -126,6 +126,8 @@ class Launcher:
         self.cloud_saves = CloudSaveManager(self)
         from .fenix import FenixManager
         self.fenix = FenixManager(self)
+        from .launcher_update import LauncherUpdateManager
+        self.launcher_updates = LauncherUpdateManager(self)
 
     @staticmethod
     def validate_runtime(value):

@@ -32,6 +32,8 @@ ENV = {
     "WINEARCH": "win64", "WINEESYNC": "0", "WINEFSYNC": "0",
     "WINE_TRACK_WRITECOPY": "apps:Fenix.exe,FenixSystem.exe,FenixDisplay.exe,FenixCDU.exe,FlightSimulator2024.exe",
     "WINE_D2D1_DISPLAY_EFFECTS": "FenixDisplay.exe;FenixCDU.exe",
+    "WINE_D2D1_GEOMETRY_PROVIDER": "FenixDisplay.exe",
+    "WINE_FENIX_HELPER_WINDOWS": "1",
     "WINE_DWRITE_UNHINTED_OUTLINES": "FenixDisplay.exe;FenixCDU.exe",
     "DOTNET_SYSTEM_GLOBALIZATION_USENLS": "1", "DOTNET_ReadyToRun": "0",
 }
@@ -43,6 +45,16 @@ DOWNLOADS = {
         "https://download.microsoft.com/download/f/3/a/f3a6af84-da23-40a5-8d1c-49cc10c8e76f/NDP48-x86-x64-AllOS-ENU.exe",
         "0a3a390c47e639d0f7fc65b21195fee6b7f65b066f80f70c60fab191d14b7e40"),
 }
+GEOMETRY_DOWNLOADS = {
+    "Windows6.1-KB2670838-x64.msu": (
+        "https://download.microsoft.com/download/1/4/9/14936FE9-4D16-4019-A093-5E00182609EB/Windows6.1-KB2670838-x64.msu",
+        "9fe71e7dcd2280ce323880b075ade6e56c49b68fc702a9b4c0a635f0f1fb9db8"),
+    "msdelta.dll": (
+        "https://msdl.microsoft.com/download/symbols/msdelta.dll/559F38C482000/msdelta.dll",
+        "29c10fb3ffa0e3cfd04c5247c3ed3a975575fad44d8a1e447b23b43213781653"),
+}
+GEOMETRY_SHA256 = "663f1d59ec1c014b9ea47a6cef71b3d43579e9759a82f3ee2cbd80b8c6d9e85f"
+GEOMETRY_PATH = "drive_c/windows/system32/d2d1_geometry.dll"
 
 
 class PatchError(RuntimeError):
@@ -230,7 +242,7 @@ def download(url, destination, expected, progress=lambda _: None, max_size=180 *
 def wine_env(prefix, runner):
     env = dict(os.environ, **ENV, WINEPREFIX=str(prefix), WINEDEBUG="-all",
                WINE=str(runner / "files/bin/wine"), WINESERVER=str(runner / "files/bin/wineserver"))
-    for name in ("WINE_DLL_FILE_MAP", "WINE_D2D1_GEOMETRY_PROVIDER", "WINELOADER", "WINEDLLPATH"):
+    for name in ("WINE_DLL_FILE_MAP", "WINELOADER", "WINEDLLPATH", "WINESERVERSOCKET", "WINEPRELOADRESERVE", "WINELOADERNOEXEC"):
         env.pop(name, None)
     env["WINEDLLOVERRIDES"] = "winemenubuilder.exe=d"
     old = env.get("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS", "")
@@ -305,6 +317,46 @@ def prepare_framework(wine, cache, progress):
         wine.stop()
     if not has_framework(wine.prefix):
         raise PatchError("Microsoft .NET Framework 4.8 was not detected after setup.")
+
+
+def prepare_geometry(wine, cache, bundle, progress):
+    """Install the geometry-only provider in the private staging prefix.
+
+    Rendering stays in Wine. Microsoft packages are downloaded from Microsoft,
+    never redistributed. The x86 file is just the update's delta basis; only
+    the verified x64 geometry DLL is installed, under a separate filename.
+    """
+    target = contained(wine.prefix, GEOMETRY_PATH)
+    if target.is_file() and not target.is_symlink() and digest(target) == GEOMETRY_SHA256:
+        return
+    packages = {}
+    for name, (url, expected) in GEOMETRY_DOWNLOADS.items():
+        progress("Downloading Microsoft geometry dependency: " + name)
+        packages[name] = download(url, cache / name, expected, max_size=16 * 1024 * 1024)
+    helper = regular(bundle / "integration/FenixGeometrySetup.exe")
+    def windows(path):
+        return "Z:" + str(Path(path).resolve()).replace("/", "\\")
+    def checked(path, expected):
+        if digest(regular(path, 32 * 1024 * 1024)) != expected:
+            raise PatchError("Geometry dependency checksum mismatch: " + path.name)
+    with tempfile.TemporaryDirectory(prefix="fenix-geometry-") as directory:
+        work = Path(directory)
+        cabinet = work / "update.cab"
+        progress("Preparing Direct2D geometry for Fenix route rendering …")
+        wine.run(helper, "extract", windows(packages["Windows6.1-KB2670838-x64.msu"]),
+                 "Windows6.1-KB2670838-x64.cab", windows(cabinet), timeout=180)
+        checked(cabinet, "470b9ab769a46bbd1acc5e352156e2173a57cbbff03ff6f950d0989d9a150fbc")
+        for member, expected in (("0", "e74c3bf4727f145ad81d9f1c2674cf6f8bab20acccee9d9c4cf2c375c75aed20"),
+                                 ("1", "1cc95120454739d69a08fddd7e0e0f125e76115c4eba0748db94c7753c84788c")):
+            wine.run(helper, "extract", windows(cabinet), member, windows(work / member), timeout=180)
+            checked(work / member, expected)
+        basis, output = work / "basis.dll", work / "geometry.dll"
+        library = windows(packages["msdelta.dll"])
+        wine.run(helper, "delta", library, "-", windows(work / "0"), windows(basis), timeout=60)
+        checked(basis, "82dc3ddb8c3441ef2de0eb43ed187bc56b747e422a2f240cd33c978356746a7d")
+        wine.run(helper, "delta", library, windows(basis), windows(work / "1"), windows(output), timeout=60)
+        checked(output, GEOMETRY_SHA256)
+        atomic(target, output.read_bytes(), 0o644)
 
 
 def ensure_ui_fonts(prefix, runner, wine):
@@ -479,18 +531,19 @@ def install(runtime, bundle, progress=lambda _: None):
                 drive.unlink()
             drive.symlink_to("../drive_c")
             copy_tree(original_runner, runner)
-            if upgrade is None:
-                logpath = backup / "setup.log"
-                with logpath.open("xb") as log:
-                    logpath.chmod(0o600)
-                    wine = Wine(staged, runner, log)
-                    try:
+            logpath = backup / "setup.log"
+            with logpath.open("xb") as log:
+                logpath.chmod(0o600)
+                wine = Wine(staged, runner, log)
+                try:
+                    if upgrade is None:
                         prepare_framework(wine, root / "private/fenix-downloads", progress)
                         progress("Preparing fonts, graphics dependencies and Fenix settings …")
                         graphics_and_fonts(staged, runner, wine)
                         state["configured"] = configure_prefix(staged)
-                    finally:
-                        wine.stop()
+                    prepare_geometry(wine, root / "private/fenix-downloads", bundle, progress)
+                finally:
+                    wine.stop()
             # Bootstrap native Framework with the unchanged runner first.
             # Publish the overlay only after every staging Wine process exited.
             for name in lock["files"]:
@@ -500,6 +553,10 @@ def install(runtime, bundle, progress=lambda _: None):
                     atomic(contained(staged, "drive_c/windows/system32/" + Path(name).name), data, 0o644)
             atomic(contained(staged, "drive_c/windows/system32/FenixWindowGuard.exe"),
                    (bundle / "integration/FenixWindowGuard.exe").read_bytes(), 0o644)
+            for name in ("FenixMCDURefresh.exe", "fenix-display-refresh.py"):
+                if name in lock["integration"]:
+                    atomic(contained(staged, "drive_c/windows/system32/" + name),
+                           (bundle / "integration" / name).read_bytes(), 0o644)
             ensure_idle(prefix)
             state["state"] = "committing"
             write_json(marker, state)
@@ -540,6 +597,9 @@ def verify_installed(root, state):
     for name, sha in files.items():
         if digest(regular(runner / name)) != sha:
             raise PatchError("Installed patch file changed: " + name)
+    for name, sha in lock.get("prefix_files", {}).items():
+        if digest(regular(contained(root / "local/msfs-prefix", name))) != sha:
+            raise PatchError("Installed Fenix dependency changed: " + name)
 
 
 def restore(runtime, progress=lambda _: None):

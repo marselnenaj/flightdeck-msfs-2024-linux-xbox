@@ -3,6 +3,8 @@ import {createSetup} from './setup.js';
 import {createMods} from './mods.js';
 import {createFenix} from './fenix.js';
 import {createUpdates} from './updates.js';
+import {createLauncherUpdates} from './launcher-updates.js';
+import {createNotices} from './notices.js';
 import {createCloudSaves} from './cloud-saves.js';
 import {VIEWS, stringValue, normalizeStatus, normalizeChecks, formatBytes, formatCount, formatDate, gamePresentation, actionPermissions, diagnosticValue, automaticBusy} from './state.js';
 
@@ -18,6 +20,9 @@ let updatesController = null;
 let updateReserved = false;
 let cloudReserved = false;
 let cloudController = null;
+let launcherUpdatesController = null;
+let launcherUpdateReserved = false;
+const notices = createNotices($('notice'));
 // Decode both scenes before the first switch. Keep the decoded images alive;
 // an opacity-zero CSS background alone may defer decoding until it is shown.
 const gameArtwork = ['flight-panorama.png', 'flight-panorama-2020.png'].map(source => {
@@ -69,9 +74,7 @@ async function request(path, {method = 'GET', body, token, timeout} = {}) {
 }
 
 function showNotice(message, error = false) {
-  text('notice', message);
-  $('notice').className = `notice${error ? ' error' : ''}`;
-  $('notice').hidden = !message;
+  notices.show(message,error);
 }
 
 function renderChecks(target, checks, empty = t('Noch keine Prüfergebnisse verfügbar.')) {
@@ -106,9 +109,10 @@ function renderStatus() {
   modsController?.render();
   fenixController?.render();
   updatesController?.render();
+  launcherUpdatesController?.render();
   cloudController?.render();
   const status = state.status;
-  const permissions = actionPermissions(status, state.online, state.pending || fenixReserved || setupReserved || updateReserved || cloudReserved);
+  const permissions = actionPermissions(status, state.online, state.pending || fenixReserved || setupReserved || updateReserved || cloudReserved || launcherUpdateReserved);
   const game = gamePresentation(status, state.online);
   const connected = state.online && !!status;
   text('service-notice', status?.service?.message || '');
@@ -128,7 +132,7 @@ function renderStatus() {
   text('backup-label', state.pending === 'backup' ? t('Backup wird erstellt …') : t('Backup erstellen'));
   $('refresh-status').disabled = !!state.pending;
   const canSwitch = connected && status?.game.state === 'stopped' && !state.pending &&
-    !fenixReserved && !setupReserved && !updateReserved && !cloudReserved && !automaticBusy(status);
+    !fenixReserved && !setupReserved && !updateReserved && !cloudReserved && !launcherUpdateReserved && !automaticBusy(status);
   for (const gameId of ['msfs2024','msfs2020']) {
     const button=$('version-'+gameId), item=status?.versions?.[gameId];
     const active=!!status?.runtime.configured && status.runtime.game_id===gameId;
@@ -220,7 +224,7 @@ function setView() {
   document.title = `${t(VIEWS[state.view])} · Flightdeck`;
   if (state.view === 'installation') void setupController?.poll();
   if (state.view === 'mods') { void modsController?.load(); void fenixController?.load(); }
-  if (state.view === 'updates') void updatesController?.load();
+  if (state.view === 'updates') {void updatesController?.load();void launcherUpdatesController?.load();}
   if (state.view === 'saves') void cloudController?.load();
 }
 
@@ -296,16 +300,20 @@ $('language-select').addEventListener('change', event => setLanguage(event.targe
 window.addEventListener('flightdeck-languagechange', () => {
   showNotice(''); setView(); renderStatus(); setupController?.render();
   void refreshStatus(); void setupController?.poll(); void updatesController?.load();
+  void launcherUpdatesController?.load();
   if (state.report) void loadDiagnostics();
 });
 window.addEventListener('hashchange', setView);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) void refreshStatus(); });
 applyTranslations();
-setupController = createSetup({request,getStatus:()=>state.status,isOnline:()=>state.online && !state.pending && !fenixReserved && !updateReserved && !cloudReserved && !automaticBusy(state.status),renderChecks,notice:showNotice,refreshStatus,changed:reserved=>{setupReserved=reserved;renderStatus();}});
-fenixController = createFenix({request,getStatus:()=>state.status,isOnline:()=>state.online&&!state.pending,isReserved:()=>setupReserved||updateReserved||cloudReserved||automaticBusy(state.status),refreshStatus,notice:showNotice,changed:value=>{fenixReserved=value;renderStatus();}});
-modsController = createMods({request,getStatus:()=>state.status,isOnline:()=>state.online&&!state.pending,isReserved:()=>fenixReserved||setupReserved||updateReserved||cloudReserved||automaticBusy(state.status),notice:showNotice});
-updatesController = createUpdates({request,getStatus:()=>state.status,isOnline:()=>state.online&&!state.pending,getSetupJob:()=>setupController.job(),isReserved:()=>fenixReserved||setupReserved||cloudReserved||automaticBusy(state.status),refreshStatus,refreshSetup:()=>setupController.poll(),renderChecks,changed:value=>{updateReserved=value;setupController?.render();renderStatus();}});
-cloudController = createCloudSaves({request,getStatus:()=>state.status,isOnline:()=>state.online&&!state.pending,isReserved:()=>fenixReserved||setupReserved||updateReserved,refreshStatus,changed:value=>{cloudReserved=value;setupController?.render();renderStatus();}});
+setupController = createSetup({request,getStatus:()=>state.status,isOnline:()=>state.online && !state.pending && !fenixReserved && !updateReserved && !cloudReserved && !launcherUpdateReserved && !automaticBusy(state.status),renderChecks,notice:showNotice,refreshStatus,changed:reserved=>{setupReserved=reserved;renderStatus();}});
+fenixController = createFenix({request,getStatus:()=>state.status,isOnline:()=>state.online&&!state.pending,isReserved:()=>setupReserved||updateReserved||cloudReserved||launcherUpdateReserved||automaticBusy(state.status),refreshStatus,notice:showNotice,changed:value=>{fenixReserved=value;renderStatus();}});
+modsController = createMods({request,getStatus:()=>state.status,isOnline:()=>state.online&&!state.pending,isReserved:()=>fenixReserved||setupReserved||updateReserved||cloudReserved||launcherUpdateReserved||automaticBusy(state.status),notice:showNotice});
+updatesController = createUpdates({request,getStatus:()=>state.status,isOnline:()=>state.online&&!state.pending,getSetupJob:()=>setupController.job(),isReserved:()=>fenixReserved||setupReserved||cloudReserved||launcherUpdateReserved||automaticBusy(state.status),refreshStatus,refreshSetup:()=>setupController.poll(),renderChecks,changed:value=>{updateReserved=value;setupController?.render();renderStatus();}});
+cloudController = createCloudSaves({request,getStatus:()=>state.status,isOnline:()=>state.online&&!state.pending,isReserved:()=>fenixReserved||setupReserved||updateReserved||launcherUpdateReserved,refreshStatus,changed:value=>{cloudReserved=value;setupController?.render();renderStatus();}});
+launcherUpdatesController = createLauncherUpdates({request,getStatus:()=>state.status,isOnline:()=>state.online&&!state.pending,
+  isReserved:()=>fenixReserved||setupReserved||updateReserved||cloudReserved||automaticBusy(state.status),
+  refreshStatus,notice:showNotice,changed:value=>{launcherUpdateReserved=value;setupController?.render();renderStatus();}});
 setView();
-void refreshStatus().then(()=>{setupController.render();void updatesController.load();});
+void refreshStatus().then(()=>{setupController.render();void updatesController.load();void launcherUpdatesController.load();});
 setInterval(() => { if (!document.hidden && !state.pending) void refreshStatus(); }, 3000);

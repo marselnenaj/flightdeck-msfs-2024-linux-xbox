@@ -51,9 +51,13 @@ let modsUnavailable=false;
 let fenix={state:'available',installed:false,configured:false,settings_ready:false,idle:true,fenix_installed:false,manager_installed:false,can_restore:false,can_change:true,fenix_running:false,can_stop:false,job:null};
 let gameUpdate={integrity:{available:true,can_check:true,result:null},can_repair:true,available:true,installed_version:'1.8.16.0',latest_version:null,update_available:null,can_check:true,can_start:false,can_rollback:false,auth_required:false};
 let updateUnavailable=false,updateDelay=0,updateReplies=0,updateWaiting=false,updateBarrier=null,releaseUpdate=null;
+const launcherDefault=()=>({managed:true,installed_version:'0.1.0',latest_version:null,update_available:null,check_id:null,checked_at:null,notes:'',unavailable_reason:'',pending_restart:false,can_check:true,can_install:false,can_restart:false,can_rollback:false,busy:false,job:null});
+let launcherUpdate=launcherDefault(),launcherRestartFails=false;
+let launcherUnavailable=false,launcherBarrier=null,releaseLauncher=null,launcherWaiting=false;
+
 let cloudData={available:true,mode:'download_and_import',sync_supported:false,can_check:true,can_download:true,can_prepare_import:true,can_import:false,can_cancel:false,plan:null,job:null};
 let cloudReplies=0,cloudUnavailable=false,cloudBarrier=null,releaseCloud=null,cloudWaiting=false;
-const files = new Set(['fenix.js','cloud-saves.js','manrope-variable.woff2','updates.js','mods.js','index.html','styles.css','app.js','setup.js','state.js','i18n.js','mark.svg','flight-panorama.png','flight-panorama-2020.png']);
+const files = new Set(['launcher-updates.js','notices.js','fenix.js','cloud-saves.js','manrope-variable.woff2','updates.js','mods.js','index.html','styles.css','app.js','setup.js','state.js','i18n.js','mark.svg','flight-panorama.png','flight-panorama-2020.png']);
 const server = createServer(async (req,res) => {
   const url = new URL(req.url, 'http://localhost');
   if (url.pathname.startsWith('/api/')) {
@@ -64,6 +68,12 @@ const server = createServer(async (req,res) => {
       if (url.pathname === '/api/status') {if(statusBarrier){statusWaiting=true;await statusBarrier;}res.end(JSON.stringify({...status,runtime:{...status.runtime,checks:localizeChecks(status.runtime.checks,language)}}));return;}
       if (url.pathname === '/api/setup/discover') {res.end(JSON.stringify({ok:true,runtimes:discovered,checked_count:discovered.length,limited:false}));return;}
       if (url.pathname === '/api/setup') {res.end(JSON.stringify({...setup,job:setup.job?{...setup.job,checks:localizeChecks(setup.job.checks,language),message:language==='en'?'Synthetic files checked.':setup.job.message}:null}));return;}
+      if (url.pathname === '/api/launcher-update') {
+        if(launcherBarrier){launcherWaiting=true;await launcherBarrier;}
+        if(launcherUnavailable){res.writeHead(503);res.end(JSON.stringify({ok:false,error:'Synthetic launcher status unavailable'}));return;}
+        const busy=status.game.state!=='stopped';
+        res.end(JSON.stringify({...launcherUpdate,busy,can_install:launcherUpdate.can_install&&!busy,can_restart:launcherUpdate.can_restart&&!busy,can_rollback:launcherUpdate.can_rollback&&!busy}));return;
+      }
       if (url.pathname === '/api/game-update') {if(updateDelay)await sleep(updateDelay);if(updateBarrier){updateWaiting=true;await updateBarrier;}updateReplies++;if(updateUnavailable){res.writeHead(503);res.end(JSON.stringify({ok:false,error:'Synthetic update status unavailable'}));return;}res.end(JSON.stringify({...gameUpdate,job:setup.job?.mode==='update'?setup.job:null}));return;}
       if (url.pathname === '/api/cloud-saves') {if(cloudBarrier){cloudWaiting=true;await cloudBarrier;}cloudReplies++;if(cloudUnavailable){res.writeHead(404);res.end(JSON.stringify({ok:false,error:'Synthetic cloud component unavailable'}));return;}res.end(JSON.stringify({...cloudData,automatic:status.cloud}));return;}
       if (url.pathname === '/api/fenix') {res.end(JSON.stringify({...fenix,runtime_path:status.runtime.path,busy:status.game.state!=='stopped',can_change:fenix.can_change&&status.game.state==='stopped'}));return;}
@@ -74,6 +84,35 @@ const server = createServer(async (req,res) => {
       posts.push({path:url.pathname,token:req.headers['x-flightdeck-token'],body:JSON.parse(body)});
       if (req.headers['x-flightdeck-token'] !== csrf) {res.writeHead(403);res.end(JSON.stringify({ok:false,error:'Missing fixture CSRF'}));return;}
       if (failNext) {failNext = false;res.writeHead(400);res.end(JSON.stringify({ok:false,error:'<img src=x onerror="window.injected=1"> Backend-Fehler'}));return;}
+      if(url.pathname==='/api/launcher-update/check') {
+        assert.deepEqual(JSON.parse(body),{});
+        launcherUpdate={...launcherUpdate,latest_version:launcherUpdate.installed_version==='0.1.5'?'0.1.6':'0.1.5',update_available:true,check_id:'launcher-check-fixture',checked_at:'2026-09-24T20:00:00Z',can_install:launcherUpdate.managed,notes:'New update\n<img src=x onerror="window.launcherInjected=1">',job:null};
+        res.end(JSON.stringify({ok:true}));return;
+      }
+      if(url.pathname==='/api/launcher-update/install') {
+        assert.deepEqual(JSON.parse(body),{check_id:'launcher-check-fixture'});
+        launcherUpdate={...launcherUpdate,can_check:false,can_install:false,job:{id:'launcher-install-fixture',operation:'install',state:'running',phase:'downloading',can_cancel:true,progress:42,received:42000,total:100000,message:'Synthetic verified download'}};
+        res.end(JSON.stringify({ok:true}));return;
+      }
+      if(url.pathname==='/api/launcher-update/cancel') {
+        assert.deepEqual(JSON.parse(body),{job_id:'launcher-install-fixture'});
+        launcherUpdate={...launcherUpdate,can_check:true,can_install:true,job:{...launcherUpdate.job,state:'cancelled',can_cancel:false}};
+        res.end(JSON.stringify({ok:true}));return;
+      }
+      if(url.pathname==='/api/launcher-update/rollback') {
+        assert.deepEqual(JSON.parse(body),{});
+        launcherUpdate={...launcherUpdate,pending_restart:true,can_check:false,can_install:false,can_rollback:false,can_restart:true,job:{id:'rollback-fixture',operation:'rollback',state:'complete',message:'Synthetic previous version ready'}};
+        res.end(JSON.stringify({ok:true}));return;
+      }
+      if(url.pathname==='/api/launcher-update/restart') {
+        assert.deepEqual(JSON.parse(body),{});
+        if(launcherRestartFails){
+          launcherRestartFails=false;launcherUpdate={...launcherUpdate,job:{id:'restart-failed',operation:'restart',state:'failed',error:'Synthetic launcher restart failed'}};
+          res.end(JSON.stringify({ok:true}));return;
+        }
+        status.app.version='0.1.5';launcherUpdate={...launcherDefault(),installed_version:'0.1.5',latest_version:'0.1.5',update_available:false,can_rollback:true};
+        res.end(JSON.stringify({ok:true}));return;
+      }
       if (url.pathname === '/api/fenix/install') {assert.deepEqual(JSON.parse(body),{bundle_path:''});fenix={...fenix,can_change:false,job:{state:'running',message:'Synthetic Fenix setup'}};res.end(JSON.stringify({ok:true,job_id:'fenix-fixture'}));return;}
       if (url.pathname === '/api/fenix/configure') {assert.deepEqual(JSON.parse(body),{});fenix={...fenix,configured:true,job:{state:'complete',operation:'configure',message:'Synthetic displays configured'}};res.end(JSON.stringify({ok:true,job_id:'fenix-configure-fixture'}));return;}
       if (url.pathname === '/api/fenix/stop') {assert.deepEqual(JSON.parse(body),{});fenix={...fenix,fenix_running:false,can_stop:false,idle:true,can_change:true,job:{state:'complete',operation:'open',message:'Fenix wurde beendet.'}};status.game={...status.game,state:'stopped'};res.end(JSON.stringify({ok:true,job_id:'fenix-open-fixture'}));return;}
@@ -266,6 +305,9 @@ try {
   await click('launch-button');
   await until(()=>evaluate(`document.getElementById('game-state').textContent === 'Bereit zum Start' && !document.getElementById('launch-button').disabled`),'Stop transition failed');
   assert.equal(posts.at(-1).path,'/api/stop');results.push('Stop uses managed session API');
+  await check('Action feedback has an accessible close control',`!document.getElementById('notice').hidden && document.querySelector('#notice button').getAttribute('aria-label')==='Hinweis schließen'`);
+  await evaluate(`document.querySelector('#notice button').click()`);
+  await check('Notice can be dismissed immediately',`document.getElementById('notice').hidden`);
   automaticFixture=true;
   const autoBegin=posts.length;
   await click('launch-button');await until(()=>evaluate(`document.getElementById('launch-label').textContent==='Start wird vorbereitet …'`),'Automatic prelaunch did not render');
@@ -492,6 +534,11 @@ try {
   status.runtime.ready=true;status.runtime.configured=true;await refresh(`document.getElementById('game-state').textContent==='Bereit zum Start'`);
   await route('saves');await click('backup-button');
   await until(()=>evaluate(`document.getElementById('save-backups').textContent === '2'`),'Backup status not updated');
+  await until(()=>evaluate(`!document.getElementById('notice').hidden`),'Backup feedback missing');
+  await screenshot('notification-desktop.png');
+  await until(()=>evaluate(`document.getElementById('notice').hidden`),'Success notice did not automatically disappear',8000);
+  results.push('Real success notification automatically disappears after six seconds');
+
   assert.equal(posts.at(-1).path,'/api/saves/backup');results.push('Backup updates only from backend result');
   status.saves.can_backup=false;await refresh(`document.getElementById('backup-button').disabled`);await check('Unavailable backup remains disabled',`document.getElementById('backup-button').disabled`);
   status.saves.can_backup=true;await refresh(`!document.getElementById('backup-button').disabled`);
@@ -856,6 +903,68 @@ try {
   await check('Fenix setup is translated and fits mobile width',`document.documentElement.scrollWidth<=innerWidth && document.getElementById('fenix-install').textContent==='Install patch'`);await screenshot('fenix-setup-mobile.png');
   await language('de');
 
+  // Launcher updates use a separate GitHub workflow, with explicit user actions.
+  await call('Emulation.setDeviceMetricsOverride',{width:1536,height:1024,deviceScaleFactor:1,mobile:false});
+  setup.job=null;status.cloud=autoIdle();cloudData.job=null;status.game={...status.game,state:'stopped',can_start:true};
+  await route('updates');await refresh(`!document.getElementById('launch-button').disabled`);
+  await until(()=>evaluate(`!document.getElementById('launcher-update-check').disabled`),'Launcher update check unavailable');
+  const launcherPosts=()=>posts.filter(p=>p.path.startsWith('/api/launcher-update/'));
+  assert.equal(launcherPosts().length,0);results.push('Launcher never contacts GitHub automatically on startup or entering Updates');
+  await check('Launcher update identity and unknown remote version are visible',`document.getElementById('launcher-update-installed').textContent==='0.1.0' && document.getElementById('launcher-update-latest').textContent==='Noch nicht geprüft'`);
+  launcherWaiting=false;launcherBarrier=new Promise(resolve=>{releaseLauncher=resolve;});
+  await until(()=>launcherWaiting,'Background launcher read did not begin');
+  await click('launcher-update-check');launcherUnavailable=true;launcherBarrier=null;releaseLauncher();
+  await until(()=>evaluate(`document.getElementById('launcher-update-error').textContent==='Synthetic launcher status unavailable'`),'Failed launcher read did not explain the error');
+  assert.equal(launcherPosts().length,0);results.push('Queued launcher check cannot post after a failed in-flight status read');
+  launcherUnavailable=false;
+  await until(()=>evaluate(`!document.getElementById('launcher-update-check').disabled`),'Launcher did not recover after status retry');
+  await click('launcher-update-check');
+  await until(()=>evaluate(`document.getElementById('launcher-update-title').textContent==='Flightdeck 0.1.5 ist verfügbar' && !document.getElementById('launcher-update-install').disabled`),'Available launcher release not rendered');
+  assert.equal(launcherPosts().at(-1).path,'/api/launcher-update/check');
+  await evaluate(`document.getElementById('launcher-update-details').open=true`);
+  await check('GitHub release notes are plain text and cannot inject markup',`document.getElementById('launcher-update-notes').textContent.includes('<img') && !document.querySelector('#launcher-update-notes img') && !window.launcherInjected`);
+  await evaluate(`document.getElementById('launcher-update-card').scrollIntoView({block:'start'})`);await screenshot('launcher-update-desktop.png');
+  status.game={...status.game,state:'running',can_start:false};
+  await until(()=>evaluate(`document.getElementById('launcher-update-install').disabled && !document.getElementById('launcher-update-busy').hidden`),'Running game did not block launcher installation');
+  await check('Running simulator still allows a read-only GitHub update check',`!document.getElementById('launcher-update-check').disabled`);
+  status.game={...status.game,state:'stopped',can_start:true};
+  await until(()=>evaluate(`!document.getElementById('launcher-update-install').disabled`),'Stopped game did not enable update');
+  await click('launcher-update-install');
+  await until(()=>evaluate(`document.getElementById('launcher-update-progress').value===42 && !document.getElementById('launcher-update-cancel').disabled`),'Launcher download progress missing');
+  assert.equal(launcherPosts().at(-1).token,csrf);
+  await check('Launcher install reserves Play, setup, simulator updates and game switch',`document.getElementById('launch-button').disabled && document.getElementById('version-msfs2020').disabled && document.getElementById('update-check').disabled && document.getElementById('config-button').disabled`);
+  await click('launcher-update-cancel');
+  await until(()=>evaluate(`!document.getElementById('launcher-update-install').disabled`),'Cancelled launcher update did not recover');
+  await click('launcher-update-install');
+  await until(()=>evaluate(`!document.getElementById('launcher-update-cancel').hidden`),'Second download missing');
+  launcherRestartFails=true;launcherUpdate={...launcherUpdate,pending_restart:true,can_restart:true,job:{...launcherUpdate.job,state:'complete',can_cancel:false,message:'Synthetic update installed'}};
+  await until(()=>evaluate(`!document.getElementById('launcher-update-restart').disabled`),'Installed update did not offer restart');
+  await click('launcher-update-restart');
+  await until(()=>evaluate(`document.getElementById('launcher-update-error').textContent==='Synthetic launcher restart failed' && !document.getElementById('launcher-update-restart').disabled`),'Failed launcher restart did not allow retry');
+  results.push('Failed launcher restart recovers from waiting and offers an explicit retry');
+  await click('launcher-update-restart');
+  await until(()=>evaluate(`document.getElementById('launcher-update-installed')?.textContent==='0.1.5' && !document.getElementById('launcher-update-rollback-area')?.hidden`),'Restart did not load the installed version');
+  await evaluate(`document.getElementById('launcher-update-rollback-area').open=true`);
+  const beforeLauncherRollback=launcherPosts().length;
+  await click('launcher-update-rollback');await check('Launcher rollback first asks inline',`!document.getElementById('launcher-update-rollback-confirm').hidden`);
+  await click('launcher-update-rollback-no');assert.equal(launcherPosts().length,beforeLauncherRollback);
+  await click('launcher-update-rollback');await click('launcher-update-rollback-yes');
+  await until(()=>launcherPosts().length===beforeLauncherRollback+1,'Confirmed launcher rollback missing');
+  assert.equal(launcherPosts().at(-1).path,'/api/launcher-update/rollback');results.push('Launcher rollback requires inline confirmation and sends no filesystem paths');
+  launcherUpdate={...launcherDefault(),installed_version:'0.1.5',job:{id:'failed-fixture',state:'failed',error:'Synthetic checksum mismatch',message:'Synthetic checksum mismatch'}};
+  await until(()=>evaluate(`document.getElementById('launcher-update-error').textContent==='Synthetic checksum mismatch'`),'Failed update lacks persistent explanation');
+  await check('Failed launcher update stays visible and offers retry',`document.getElementById('launcher-update-check').textContent==='Erneut versuchen' && !document.getElementById('launcher-update-check').disabled`);
+  await click('launcher-update-check');
+  await call('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});await language('en');
+  await until(()=>evaluate(`document.getElementById('launcher-update-title').textContent==='Flightdeck 0.1.6 is available'`),'Launcher update did not translate');
+  await evaluate(`document.getElementById('launcher-update-card').scrollIntoView({block:'start'})`);
+  await check('Launcher update and Fenix link fit mobile width in English',`document.documentElement.scrollWidth<=innerWidth && document.getElementById('launcher-update-install').textContent==='Download & install' && document.querySelector('.launcher-fenix-link a').textContent==='Manage Fenix patch'`);
+  await screenshot('launcher-update-mobile-en.png');
+  launcherUpdate={...launcherDefault(),managed:false,unavailable_reason:'Install with the official installer first.'};
+  await until(()=>evaluate(`!document.getElementById('launcher-update-unmanaged').hidden`),'Unmanaged installation explanation absent');
+  await check('Source checkout explains setup without offering an install',`document.getElementById('launcher-update-install').hidden && !document.getElementById('launcher-update-check').disabled`);
+  launcherUpdate=launcherDefault();await language('de');
+
   // Real backend, entirely separate empty state directory, no runtime and no POSTs.
   realBackend=spawn('python',['-m','flightdeck','--state-dir',join(temp,'empty-backend-state'),'--no-browser'],{cwd:resolve(base,'..'),env:{...process.env,XDG_DATA_HOME:join(temp,'empty-data')},stdio:['ignore','pipe','pipe']});
   let backendOutput='';realBackend.stdout.on('data',chunk=>{backendOutput+=chunk;});
@@ -884,7 +993,7 @@ try {
 } catch(error) {
   console.error(error.stack);console.error(chromeErrors.slice(-2000));process.exitCode=1;
 } finally {
-  releaseCloud?.();releaseUpdate?.();releaseStatus?.();socket?.close();chrome.kill('SIGTERM');realBackend?.kill('SIGTERM');
+  releaseLauncher?.();releaseCloud?.();releaseUpdate?.();releaseStatus?.();socket?.close();chrome.kill('SIGTERM');realBackend?.kill('SIGTERM');
   await new Promise(resolve=>server.close(resolve));
   await sleep(250);await rm(temp,{recursive:true,force:true,maxRetries:5,retryDelay:100});
 }
