@@ -28,7 +28,10 @@ MESSAGES = {
     "conflict": "Auf diesem Rechner und in der Cloud gibt es unterschiedliche Änderungen. Welchen Stand möchtest du verwenden?",
     "authentication": "Die Xbox-Anmeldung ist noch nicht verfügbar. Versuche es erneut oder starte das Spiel zur Anmeldung mit lokalen Spielständen.",
     "failed_before": "Der Cloud-Abgleich konnte nicht abgeschlossen werden. Versuche es erneut oder spiele mit dem gesicherten lokalen Stand.",
-    "failed_after": "Deine Spielstände sind lokal gesichert. Der Cloud-Upload ist noch nicht abgeschlossen; Flightdeck prüft ihn vor dem nächsten Start erneut.",
+    "failed_after": "Deine Spielstände sind lokal gesichert. Versuche den Cloud-Upload erneut oder spiele mit lokalen Spielständen weiter. Der ausstehende Abgleich bleibt erhalten.",
+    "connection": "Die Xbox-Cloud ist gerade nicht erreichbar. Versuche es erneut oder spiele mit lokalen Spielständen weiter.",
+    "lease": "Die Cloud-Sperre ist nicht verfügbar. Beende eine laufende Sitzung auf anderen Geräten und versuche es erneut oder spiele lokal weiter.",
+    "quota": "Der Cloud-Speicher reicht für diese Spielstände nicht aus. Deine lokalen Spielstände bleiben erhalten.",
     "local": "Diese Sitzung verwendet lokale Spielstände. Der Cloud-Abgleich wird beim nächsten Start erneut versucht.",
     "cancelled": "Der Start wurde abgebrochen. Gesicherte Spielstände bleiben erhalten.",
     "cleanup": "Die Spielstände wurden synchronisiert. Die Verbindung konnte nicht vollständig geschlossen werden.",
@@ -36,6 +39,18 @@ MESSAGES = {
 }
 _OFFLINE = "cloud-offline.pending"
 _OFFLINE_BODY = b"Flightdeck local session pending\n"
+_LOCAL_AFTER_ERRORS = {"authentication", "auth_required", "unauthorized", "forbidden",
+                       "lease_lost", "transport", "deadline", "readback", "quota", "failed", "cancelled"}
+
+
+def error_details(error):
+    """Only bounded numeric native results may leave a cloud exception."""
+    result = {}
+    for name, minimum, maximum in (("http_status", 100, 599), ("native_hresult", 0, 2**32 - 1)):
+        value = getattr(error, name, None)
+        if type(value) is int and minimum <= value <= maximum:
+            result[name] = value
+    return result
 
 
 class Attention(Exception):
@@ -120,6 +135,7 @@ class CloudAutomation:
         self.state = "idle"
         self.message = "Cloud-Spielstände werden vor dem Start und nach dem Beenden automatisch abgeglichen."
         self.error_code = None
+        self.error_details = {}
         self.review = None
         self.review_deadline = 0
         self.last_synced_at = None
@@ -147,8 +163,11 @@ class CloudAutomation:
                     "phase": self.phase if current else None,
                     "message": self.message if current else "Cloud-Spielstände werden vor dem Start und nach dem Beenden automatisch abgeglichen.",
                     "error_code": self.error_code if current else None,
-                    "can_retry": attention,
-                    "can_play_local": attention and self.phase == "before_start" and self.error_code != "unsafe_session",
+                    "error_details": dict(self.error_details) if current else {},
+                    "can_retry": attention and self.error_code != "unsafe_session",
+                    "can_play_local": attention and self.review is None and (
+                        self.phase == "before_start" and self.error_code not in {"unsafe_session", "graphics"} or
+                        self.phase == "after_exit" and self.error_code in _LOCAL_AFTER_ERRORS),
                     "can_cancel": active and state == "syncing" and self.phase == "before_start",
                     "request_id": self.request_id if current else None,
                     "last_synced_at": self.last_synced_at if current else None,
@@ -183,6 +202,11 @@ class CloudAutomation:
                 elif action == "play-local":
                     if not status["can_play_local"]:
                         raise LauncherError("Diese lokale Sitzung kann nicht gestartet werden.")
+                    # A new offline game must pass the normal backup, runtime
+                    # lease and orphan-process guard. Retain the old journal:
+                    # subsequent cloud recovery must compare all new progress
+                    # and request a choice if its recorded target has changed.
+                    phase = "before_start"
                 elif action != "retry":
                     raise LauncherError("Diese Cloud-Aktion ist nicht verfügbar.")
             return self._start(phase, local_only=action == "play-local", review=review, choice=choice)
@@ -204,6 +228,7 @@ class CloudAutomation:
             self.runtime, self.request_id, self.phase = runtime, session_id, phase
             self.timings = {}
             self.state, self.error_code, self.review = "syncing", None, None
+            self.error_details = {}
             self.message = MESSAGES["before" if phase == "before_start" else "after"]
             self.cancel = threading.Event()
             self.worker = threading.Thread(target=self._run,
@@ -447,11 +472,14 @@ class CloudAutomation:
                 code = getattr(error, "code", "failed")
                 plan = error.plan if isinstance(error, Attention) else None
                 if self.cancel.is_set(): code = "cancelled"
-                if code not in {"conflict", "authentication", "auth_required", "unauthorized", "forbidden", "cancelled", "invalid_scope", "local_storage", "lease_lost", "changed", "unsafe_session"}:
+                if code not in {"conflict", "authentication", "auth_required", "unauthorized", "forbidden", "cancelled", "invalid_scope", "local_storage", "lease_lost", "changed", "unsafe_session", "transport", "deadline", "readback", "quota", "graphics"}:
                     code = "failed"
                 key = "unsafe_session" if code == "unsafe_session" else "conflict" if plan is not None else "authentication" if code in {"authentication", "auth_required", "unauthorized", "forbidden"} else "cancelled" if code == "cancelled" and active_phase == "before_start" else "failed_before" if active_phase == "before_start" else "failed_after"
+                if plan is None and code in {"transport", "deadline", "lease_lost", "quota"}:
+                    key = "connection" if code in {"transport", "deadline"} else "lease" if code == "lease_lost" else "quota"
                 self._set("idle" if code == "cancelled" and active_phase == "before_start" else "attention",
-                    MESSAGES[key], phase=active_phase, error_code=code, review=plan,
+                    str(error) if code == "graphics" and isinstance(error, LauncherError) else MESSAGES[key],
+                    phase=active_phase, error_code=code, error_details=error_details(error), review=plan,
                     review_deadline=time.monotonic() + 15 * 60)
         finally:
             key = "before_total_seconds" if active_phase == "before_start" else "after_total_seconds"

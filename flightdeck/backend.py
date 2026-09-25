@@ -128,6 +128,9 @@ class Launcher:
         self.fenix = FenixManager(self)
         from .launcher_update import LauncherUpdateManager
         self.launcher_updates = LauncherUpdateManager(self)
+        self.graphics_report = None
+        from .startup_updates import StartupUpdates
+        self.startup_updates = StartupUpdates(self)
 
     @staticmethod
     def validate_runtime(value):
@@ -523,13 +526,26 @@ class Launcher:
                 inherited = (runtime_lock_fd,)
             except (OSError, ValueError, TypeError):
                 raise LauncherError("Die Runtime unterstützt den gesperrten Spielstart nicht.") from None
+        from . import graphics
+        try:
+            if runtime_lock_fd is None:
+                with self.runtime_lock():
+                    environment, report = graphics.prepare(self.runtime)
+            else:
+                environment, report = graphics.prepare(self.runtime)
+            self.graphics_report = (self.runtime, report)
+        except graphics.GraphicsError as error:
+            failure = LauncherError(str(error))
+            failure.code = "graphics"
+            raise failure from None
         log = self.state_dir / "launcher.log"
         flags = os.O_WRONLY | os.O_CREAT | os.O_APPEND | getattr(os, "O_NOFOLLOW", 0)
         fd = os.open(log, flags, 0o600)
         try:
             self.process = subprocess.Popen(command, cwd=self.runtime,
                                             stdin=subprocess.DEVNULL, stdout=fd, stderr=subprocess.STDOUT,
-                                            start_new_session=True, close_fds=True, pass_fds=inherited, umask=0o077)
+                                            start_new_session=True, close_fds=True, pass_fds=inherited, umask=0o077,
+                                            env=environment)
         except OSError:
             raise LauncherError("Das Startprogramm konnte nicht ausgeführt werden.") from None
         finally:
@@ -679,4 +695,11 @@ class Launcher:
                         summary["exit"] = {"code": int(exits[-1][0]), "seconds": float(exits[-1][1])}
                 except OSError:
                     pass
+        cloud = self.cloud_saves.automation.snapshot()
+        summary["cloud_sync"] = {key: cloud[key] for key in ("state", "phase", "error_code", "error_details")}
+        from . import graphics
+        summary["graphics"] = graphics.probe()
+        with self.lock:
+            if self.graphics_report is not None and self.graphics_report[0] == root:
+                summary["graphics"]["last_launch"] = self.graphics_report[1]
         return {"generated_at": utc_now(), "summary": summary, "checks": self.checks()}

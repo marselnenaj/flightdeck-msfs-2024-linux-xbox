@@ -17,7 +17,7 @@ export function normalizeUpdate(raw) {
     installed_version:version(raw.installed_version),latest_version:version(raw.latest_version),
     update_available:typeof raw.update_available==='boolean'?raw.update_available:null,
     can_check:raw.can_check===true,can_start:raw.can_start===true,can_rollback:raw.can_rollback===true,
-    auth_required:raw.auth_required===true,integrity:normalizeIntegrity(raw.integrity),can_repair:raw.can_repair===true,job};
+    auth_required:raw.auth_required===true,background_checking:raw.background_checking===true,startup_error:stringValue(raw.startup_error,'',1200),integrity:normalizeIntegrity(raw.integrity),can_repair:raw.can_repair===true,job};
 }
 
 export function updateActions(data,status,{online=false,fresh=false,pending=false,reserved=false,setupJob=null}={}) {
@@ -42,6 +42,7 @@ export function updateTitle(data) {
   if(job?.operation==='repair'&&job.state==='complete')return t('Reparatur abgeschlossen');
   if(job?.operation==='verify'&&job.state==='complete')return t(data.integrity.result?.healthy===true?'Spieldateien geprüft':'Dateiprüfung abgeschlossen');
   if(!data.available)return t('Updates derzeit nicht verfügbar');
+  if(data.background_checking&&!job)return t('MSFS-Version wird geprüft');
   if(job?.state==='checking')return t('MSFS-Version wird geprüft');
   if(job?.state==='installing')return t(({authentication:'Microsoft-Anmeldung',download:'Update wird heruntergeladen',pausing:'Download wird pausiert',paused:'Download pausiert',verify_update:'Update wird geprüft',switch_update:'Spielversion wird gewechselt'})[job.phase]||'Update wird vorbereitet');
   if(data.auth_required)return t('Anmeldung zum Prüfen erforderlich');
@@ -52,7 +53,7 @@ export function updateTitle(data) {
   return t('Noch nicht nach Updates gesucht');
 }
 
-export function createUpdates({request,getStatus,isOnline,getSetupJob,isReserved,refreshStatus,refreshSetup,renderChecks,changed}) {
+export function createUpdates({request,getStatus,isOnline,getSetupJob,isReserved,refreshStatus,refreshSetup,renderChecks,changed,availableChanged=()=>{}}) {
   const $=id=>document.getElementById(id);
   let data=null,loading=null,foregroundLoading=false,pending=false,fresh=false,error='',actionError='',loadedRuntime,confirmRollback=false;
   let reservation=false;
@@ -64,13 +65,14 @@ export function createUpdates({request,getStatus,isOnline,getSetupJob,isReserved
   }
   function render() {
     const job=data?.job,allowed=actions();
+    availableChanged(current()&&data?.update_available===true);
     $('update-game-name').textContent=getStatus()?.runtime.game_name||'Microsoft Flight Simulator 2024';
     $('update-title').textContent=updateTitle(data);
     $('update-installed').textContent=data?.installed_version||t('Nicht bekannt');
     $('update-latest').textContent=data?.latest_version||t('Noch nicht geprüft');
     $('update-message').textContent=job?.message||(data?.available===false?data.unavailable_reason||t('Für diese Installation ist die Update-Funktion noch nicht verfügbar.')
       :t('Die Prüfung lädt kein Update herunter. Du startest den Download anschließend selbst.'));
-    const failure=actionError||error||job?.error||'';
+    const failure=actionError||error||job?.error||data?.startup_error||'';
     $('update-error').textContent=failure;$('update-error').hidden=!failure;
     $('update-message').hidden=!!failure&&$('update-message').textContent===failure;
     $('update-stale').hidden=!data||current()||foregroundLoading;
@@ -151,6 +153,6 @@ export function createUpdates({request,getStatus,isOnline,getSetupJob,isReserved
   $('update-rollback').addEventListener('click',()=>{if(actions().rollback){confirmRollback=true;render();}});
   $('update-rollback-no').addEventListener('click',()=>{confirmRollback=false;render();});
   $('update-rollback-yes').addEventListener('click',()=>{if(confirmRollback)void mutate('rollback','/api/game-update/rollback');});
-  setInterval(()=>{if(!document.hidden&&!pending&&(location.hash==='#updates'||setupBusy(data?.job)))void load({background:true});},1500);
+  setInterval(()=>{if(!document.hidden&&!pending&&(location.hash==='#updates'||setupBusy(data?.job)||data?.background_checking))void load({background:true});},1500);
   render();return {load,render};
 }

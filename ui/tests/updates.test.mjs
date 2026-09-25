@@ -7,6 +7,13 @@ import {setLanguage} from '../i18n.js';
 const raw=()=>({available:true,installed_version:'1.8.16.0',latest_version:'1.9.0.0',update_available:true,can_check:true,can_start:true,can_rollback:true,auth_required:false,job:{id:'synthetic-update',mode:'update',state:'ready',phase:'package_check',checks:[]}});
 const status=()=>({runtime:{configured:true},game:{state:'stopped'},csrf_token:'fixture-csrf'});
 const opts=()=>({online:true,fresh:true});
+test('background discovery shows progress and availability without download capability',()=>{
+  const checking=normalizeUpdate({...raw(),job:null,can_start:false,background_checking:true});
+  setLanguage('en');assert.equal(updateTitle(checking),'Checking MSFS version');
+  assert.equal(updateActions(checking,status(),opts()).start,false);
+  assert.equal(updateActions({...checking,background_checking:false},status(),opts()).check,true);
+  setLanguage('de');
+});
 test('versions and availability come only from typed backend fields',()=>{
   assert.throws(()=>normalizeUpdate({}));
   const d=normalizeUpdate({...raw(),installed_version:42,latest_version:'',update_available:'false',can_start:'true'});

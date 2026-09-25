@@ -20,16 +20,15 @@ Flightdeck installiert und startet deine **gekaufte Xbox-PC-/Microsoft-Store-
 Version von MSFS 2024 oder 2020** unter Linux mit Wine/Proton. Mit dem Microsoft-Konto
 anmelden, das Spiel herunterladen und im Launcher starten.
 
-**In Vorbereitung: 0.1.4** integriert die Korrekturen für Fenix-Routen und
-X11-Hilfsfenster samt vollständiger Installation der Grafikabhängigkeit.
-Die Release-Prüfung läuft noch; siehe [Release-Status](changelog.md).
-
-**Flightdeck 0.1.3** behebt Startprobleme und unsichtbare Mauszeiger im Fenix-Installer
-und verbessert das Öffnen, Beenden und erneute Starten von Fenix. **Installer & Liveries** öffnet
-den separaten offiziellen Manager. Zum Aktualisieren den
-[vollständigen Installer](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.3)
-verwenden. Der optionale Fenix-Patch wird über **Mods → Fenix A320** geladen.
-[Alle Änderungen](changelog.md).
+**Flightdeck 0.1.5** prüft beim Öffnen automatisch auf Launcher- und Spielupdates.
+Es ergänzt die fehlende NVIDIA-NVAPI-/NGX-Einrichtung und wählt
+auf Rechnern mit integrierter Grafik dieselbe NVIDIA-Karte für DXGI und DirectX 12.
+Nach gescheitertem Cloud-Upload kannst du ausdrücklich lokal weiterspielen;
+Sicherungen und ausstehender Abgleich bleiben erhalten. Der Grafik-Praxistest
+auf dem gemeldeten RTX-4060-/Zorin-System steht noch aus. Aktualisiere unter
+**Updates → Flightdeck** (ab 0.1.4) oder mit dem
+[vollständigen Installer](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.5).
+[Alle Änderungen und Tests](changelog.md).
 
 **Experimentell.** Für MSFS 2024 wurden der lokale Spielstart und ein
 kontrollierter Start mit einem Flugzeug beobachtet. Online-Multiplayer wurde

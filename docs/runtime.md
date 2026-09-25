@@ -86,6 +86,37 @@ download or install graphics, multimedia or system packages.
 
 ## Authentication and launch
 
+### NVIDIA graphics in launcher-managed starts
+
+Flightdeck starts Wine directly, so the launcher prepares the NVIDIA pieces
+normally installed by [the pinned Proton launcher](https://github.com/xodus-gaming/Proton/blob/7c0b435495814349735c913fde78da906aecea52/proton)
+before starting the game, while holding the runtime lock. It installs 32/64-bit
+NVAPI and 64-bit optical flow from that runtime's runner, enables their native
+DLL overrides and DXVK NVAPI, and disables GLVND dispatch-table patching.
+NGX DLLs, when available, come from the installed NVIDIA driver via its loaded
+GLX library directory (or an explicit `NVIDIA_WINE_DLL_DIR`). No driver is
+downloaded or redistributed. These steps also apply to existing runtimes.
+
+Managed copies follow runner and host-driver updates. Their hashes are recorded
+in `private/nvidia-runtime.json`; differing user-supplied DLLs are preserved.
+Missing NGX does not prevent ordinary rendering, but DLSS needs the host NGX
+components. See [DXVK-NVAPI's requirements](https://github.com/jp7677/dxvk-nvapi).
+
+On a machine with one discrete NVIDIA GPU plus integrated graphics, Flightdeck
+selects that NVIDIA device for both DXVK/DXGI and VKD3D. Explicit device filters,
+DLL overrides and NVAPI-disable settings are honored; multiple discrete GPUs
+are not automatically narrowed to one. AMD/Intel-only launch environments are
+unchanged. A failed NVIDIA Vulkan check stops launch with a driver message.
+On Zorin, use the distribution's [NVIDIA driver setup](https://help.zorin.com/docs/hardware/activate-nvidia-drivers/).
+
+**Diagnostics** reports Vulkan adapters, API/driver versions, the desktop session
+type and the last launcher graphics setup result. It omits device UUIDs and raw
+driver logs. The probe runs in a separate process with a deadline and does not
+require `vulkaninfo`. Direct execution of `tools/play-msfs.sh` bypasses this
+launcher preparation and requires an already prepared graphics environment.
+
+### Xbox sign-in and game process
+
 Run the prepared `tools/xodus.sh login` for a normal interactive Microsoft
 login if needed. The broker and CLI use Linux Secret Service on the current
 desktop D-Bus session. No password/token file belongs in the source repository.

@@ -28,6 +28,7 @@ test('retry/local play/cancel/resolve require exact fresh capability and request
  const conflict={...status,cloud:{...status.cloud,conflict:true}};
  assert.equal(automaticActions(conflict,opts).cloud,true);assert.equal(automaticActions(conflict,opts).local,true);assert.equal(automaticActions(conflict,opts)['play-local'],false);
  const after={...status,cloud:{...status.cloud,phase:'after_exit',can_play_local:false}};assert.equal(automaticActions(after,opts)['play-local'],false);
+ assert.equal(automaticActions({...after,cloud:{...after.cloud,can_play_local:true}},opts)['play-local'],true);
  assert.equal(automaticActions({...status,cloud:{...status.cloud,state:'syncing',can_cancel:true}},opts)['cancel-auto'],true);
  assert.equal(automaticActions({...status,game:{state:'external'}},opts).retry,false);
 });

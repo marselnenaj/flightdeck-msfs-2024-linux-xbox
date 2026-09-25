@@ -1,5 +1,32 @@
 # Changes and release status
 
+## 0.1.5 — 25 September 2026
+
+[Download Flightdeck 0.1.5](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.5).
+
+- Check for Flightdeck and selected-simulator updates automatically when the
+  app opens. Show available updates on the overview; background discovery does
+  not reserve the simulator or start downloads/sign-in. Reopening windows is
+  throttled for 30 minutes per running service; manual checks remain available.
+- Prepare NVIDIA graphics before launcher-managed starts: use NVAPI and optical
+  flow from the matching runner, NGX from the installed driver, and Proton's
+  corresponding DLL overrides. Existing managed files follow runner/driver
+  updates; user-supplied DLLs and explicit GPU selections are retained.
+- On NVIDIA plus integrated-graphics systems, select the sole discrete NVIDIA
+  adapter consistently for DXGI and DirectX 12. Report unavailable NVIDIA Vulkan
+  before launch. AMD/Intel-only launch environments are unchanged.
+- Recover from a failed post-exit cloud upload with explicit local play. Keep
+  backups and the pending transaction; require a version choice if later local
+  progress differs from the interrupted upload's target.
+- Include bounded GPU/Vulkan information and numeric cloud error details in
+  diagnostics; distinguish connection, storage-lock and quota failures.
+
+NVIDIA integration and interrupted-sync recovery have isolated regression
+tests. Rendering on the reported RTX 4060/Zorin system still needs verification.
+Validation includes Python regression tests, compatibility packaging tests,
+JavaScript tests and desktop/mobile Chromium checks. Native components remain at
+**0.1.1** and the optional Fenix patch remains **0.1.0-preview.3**.
+
 ## 0.1.4 — 24 September 2026
 
 - Update Flightdeck directly under **Updates → Flightdeck**: check stable GitHub

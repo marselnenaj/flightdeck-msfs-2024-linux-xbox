@@ -18,7 +18,7 @@ import time
 import unittest
 from unittest.mock import patch
 
-from flightdeck import backend
+from flightdeck import backend, graphics
 
 
 FAKE_LAUNCHER = r'''
@@ -49,6 +49,9 @@ class BackendTests(unittest.TestCase):
         self.state = self.base / "state"
         self.launcher = backend.Launcher(self.state, str(self.runtime))
         self.children = []
+        hardware = patch.object(graphics, "nvidia_present", return_value=False)
+        hardware.start()
+        self.addCleanup(hardware.stop)
 
     def tearDown(self):
         children = self.children + [self.launcher.process]
@@ -220,6 +223,34 @@ class BackendTests(unittest.TestCase):
                 self.launcher.launch()
         self.assertNotIn("synthetic private detail", str(result.exception))
         self.assertFalse(self.launcher.status()["game"]["managed"])
+
+    def test_graphics_preparation_holds_runtime_lock_and_reaches_game_process(self):
+        script = self.runtime / "tools/play-msfs.sh"
+        script.write_text(script.read_text().replace(
+            '(root / "private/ready").write_text(str(os.getpid()))',
+            '(root / "private/ready").write_text(os.environ["DXVK_ENABLE_NVAPI"])'))
+        def prepare(runtime):
+            self.assertEqual(runtime, self.runtime)
+            self.assert_competitor_blocked()
+            return dict(os.environ, DXVK_ENABLE_NVAPI="synthetic-nvapi"), {"nvidia": "ready"}
+        with patch.object(graphics, "prepare", side_effect=prepare):
+            self.launcher.launch()
+        self.wait_for(lambda: (self.runtime / "private/ready").exists())
+        self.assertEqual((self.runtime / "private/ready").read_text(), "synthetic-nvapi")
+        with patch.object(graphics, "probe", return_value={"status": "ready", "devices": []}):
+            summary = self.launcher.diagnostics()["summary"]
+        self.assertEqual(summary["graphics"]["last_launch"], {"nvidia": "ready"})
+        self.assertEqual(set(summary["cloud_sync"]), {"state", "phase", "error_code", "error_details"})
+
+    def test_graphics_failure_prevents_spawn_and_releases_runtime(self):
+        with patch.object(graphics, "prepare", side_effect=graphics.GraphicsError("Synthetic graphics failure")):
+            with self.assertRaises(backend.LauncherError) as error:
+                self.launcher.launch()
+        self.assertEqual(error.exception.code, "graphics")
+        self.assertIsNone(self.launcher.process)
+        self.assertFalse((self.runtime / "private/ready").exists())
+        with self.external_lock():
+            pass
 
     def test_lock_symlink_does_not_offer_start_or_backup(self):
         self.enable_saves()

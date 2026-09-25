@@ -44,6 +44,8 @@ let apiUnavailable = false, failNext = false, nextCheckState = 'ready', switchDe
 let statusBarrier = null, releaseStatus = null, statusWaiting = false;
 const apiRequests = [];
 const posts = [], externalRequests = [], errors = [], results = [];
+const startupRequests = [], consoleIssues = [];
+let startupFixture = true;
 let discovered=[{name:'Microsoft Flight Simulator 2024',path:'/synthetic/path with spaces',ready:true,configured:false,checks}];
 let setup = {available:true,install_available:false,prepare_available:true,state:'idle',job:null,defaults:{mode:'existing',runtime_path:status.runtime.path,market:'AT',local_saves:true,destination_path:'/synthetic/new-msfs'}};
 let mods={state:'ready',message:'',folder_path:'/synthetic/Community',can_open:true,mods:[],count:0,scanned_count:0,limited:false};
@@ -78,9 +80,18 @@ const server = createServer(async (req,res) => {
       if (url.pathname === '/api/cloud-saves') {if(cloudBarrier){cloudWaiting=true;await cloudBarrier;}cloudReplies++;if(cloudUnavailable){res.writeHead(404);res.end(JSON.stringify({ok:false,error:'Synthetic cloud component unavailable'}));return;}res.end(JSON.stringify({...cloudData,automatic:status.cloud}));return;}
       if (url.pathname === '/api/fenix') {res.end(JSON.stringify({...fenix,runtime_path:status.runtime.path,busy:status.game.state!=='stopped',can_change:fenix.can_change&&status.game.state==='stopped'}));return;}
       if (url.pathname === '/api/mods') {if(modsUnavailable){res.writeHead(503);res.end(JSON.stringify({ok:false,error:'Synthetic inventory unavailable'}));return;}res.end(JSON.stringify(mods));return;}
-      if (url.pathname === '/api/diagnostics') {res.end(JSON.stringify({summary:{Runtime:'Bereit',Speichermodus:'Lokal',Experimentell:true,store_calls:[{method:'XStoreShowPurchaseUIAsync',hresult:'80004001'}]},checks,generated_at:'2026-09-17T17:00:00Z',csrf_token:csrf,private_log:'MUST-NOT-EXPORT'}));return;}
+      if (url.pathname === '/api/diagnostics') {res.end(JSON.stringify({summary:{Runtime:'Bereit',Speichermodus:'Lokal',Experimentell:true,store_calls:[{method:'XStoreShowPurchaseUIAsync',hresult:'80004001'}],cloud_sync:{state:'attention',phase:'after_exit',error_code:'transport',error_details:{http_status:503}},graphics:{status:'ready',session:'wayland',devices:[{name:'NVIDIA GeForce RTX 4060',vendor_id:4318,type:2,api_version:'1.3.280',driver_version:'580.126.9.0'}]}},checks,generated_at:'2026-09-17T17:00:00Z',csrf_token:csrf,private_log:'MUST-NOT-EXPORT'}));return;}
     } else if (req.method === 'POST') {
       let body = ''; for await (const chunk of req) body += chunk;
+      if(url.pathname==='/api/updates/check-startup') {
+        assert.equal(req.headers['x-flightdeck-token'],csrf);assert.deepEqual(JSON.parse(body),{});
+        startupRequests.push({path:url.pathname});
+        if(startupFixture) {
+          launcherUpdate={...launcherUpdate,latest_version:'0.1.5',update_available:true,check_id:'startup-fixture',checked_at:'2026-09-25T12:00:00Z',can_install:true};
+          gameUpdate={...gameUpdate,latest_version:'1.9.0.0',update_available:true,can_start:false};
+        }
+        res.end(JSON.stringify({ok:true}));return;
+      }
       posts.push({path:url.pathname,token:req.headers['x-flightdeck-token'],body:JSON.parse(body)});
       if (req.headers['x-flightdeck-token'] !== csrf) {res.writeHead(403);res.end(JSON.stringify({ok:false,error:'Missing fixture CSRF'}));return;}
       if (failNext) {failNext = false;res.writeHead(400);res.end(JSON.stringify({ok:false,error:'<img src=x onerror="window.injected=1"> Backend-Fehler'}));return;}
@@ -198,6 +209,7 @@ try {
     const data=JSON.parse(event.data);
     if(data.id){const entry=pending.get(data.id);pending.delete(data.id);if(data.error)entry.reject(new Error(JSON.stringify(data.error)));else entry.resolve(data.result);}
     if(data.method==='Runtime.exceptionThrown')errors.push(data.params.exceptionDetails.text);
+    if(data.method==='Runtime.consoleAPICalled'&&['warning','error','assert'].includes(data.params.type))consoleIssues.push(data.params.type);
     if(data.method==='Network.requestWillBeSent' && ![...allowedOrigins].some(origin=>data.params.request.url.startsWith(origin+'/')) && !data.params.request.url.startsWith('blob:'))externalRequests.push(data.params.request.url);
   });
   const call=(method,params={})=>new Promise((resolve,reject)=>{const id=++serial;pending.set(id,{resolve,reject});socket.send(JSON.stringify({id,method,params}));});
@@ -226,6 +238,18 @@ try {
   await call('Emulation.setDeviceMetricsOverride',{width:1536,height:1024,deviceScaleFactor:1,mobile:false});
   await call('Page.navigate',{url:origin+'/?lang=de'});
   await until(()=>evaluate(`document.getElementById('game-state')?.textContent === 'Bereit zum Start'`),'Ready status absent');
+  await until(()=>evaluate(`!document.getElementById('available-updates').hidden && document.getElementById('available-updates-label').textContent==='Updates für Flightdeck und MSFS sind verfügbar.'`),'Automatic startup update offers missing');
+  await check('Startup checks show available updates on the real overview without blocking play',`location.origin===${JSON.stringify(origin)} && document.title==='Übersicht · Flightdeck' && !document.getElementById('launch-button').disabled && !document.getElementById('view-overview').hidden`);
+  assert.equal(startupRequests.length,1);assert.equal(posts.length,0);results.push('Startup requests only version discovery, never download, login or install');
+  await screenshot('startup-updates-de-desktop.png');
+  await call('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});await language('en');
+  await check('Startup update notice is translated and fits mobile',`document.documentElement.scrollWidth<=innerWidth && document.getElementById('available-updates-label').textContent==='Updates for Flightdeck and MSFS are available.'`);
+  await screenshot('startup-updates-en-mobile.png');
+  await evaluate(`document.querySelector('#available-updates a').click()`);await until(()=>evaluate(`location.hash==='#updates' && document.getElementById('launcher-update-title').textContent==='Flightdeck 0.1.5 is available'`),'Startup notice did not open update actions');
+  await check('Background MSFS discovery requires explicit preflight before download',`document.getElementById('update-start').hidden && !document.getElementById('update-check').disabled`);
+  await refresh(`!document.getElementById('launch-button').disabled`);assert.equal(startupRequests.length,1);results.push('Language, navigation and status refresh do not repeat startup discovery');
+  startupFixture=false;launcherUpdate=launcherDefault();gameUpdate={...gameUpdate,latest_version:null,update_available:null};
+  await call('Emulation.setDeviceMetricsOverride',{width:1536,height:1024,deviceScaleFactor:1,mobile:false});await language('de');await route('overview');
   await check('Save summary pluralizes nonzero counts',`document.getElementById('overview-save-detail').textContent.endsWith('3 Dateien · 1 Backup')`);
   status.saves.files=0;status.saves.backups=0;await refresh(`document.getElementById('save-files').textContent==='0' && document.getElementById('save-backups').textContent==='0'`);
   await check('Save summary pluralizes zero counts',`document.getElementById('overview-save-detail').textContent.endsWith('0 Dateien · 0 Backups')`);
@@ -342,7 +366,16 @@ try {
   await call('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});await check('Automatic conflict actions fit the mobile viewport',`document.documentElement.scrollWidth<=innerWidth`);await screenshot('automatic-conflict-en-mobile.png');
   await click('auto-cloud-local');await until(()=>posts.at(-1)?.body?.choice==='local','Local conflict choice missing');assert.deepEqual(posts.at(-1).body,{request_id:autoRequest,choice:'local'});assert.equal(posts.at(-1).token,csrf);results.push('Both conflict choices use exact request identity and CSRF');
   status.cloud={...autoIdle(),state:'attention',phase:'after_exit',request_id:autoRequest,can_retry:true,error_code:'network'};await refresh(`!document.getElementById('auto-cloud-retry').disabled`);
-  await check('Failed postexit upload only offers retry, never silent success or local play',`document.getElementById('auto-cloud-title').textContent==='Cloud sync needs attention' && document.getElementById('auto-cloud-play-local').hidden && document.getElementById('launch-button').disabled`);
+  await check('Postexit attention without local capability offers no local start',`document.getElementById('auto-cloud-title').textContent==='Cloud sync needs attention' && document.getElementById('auto-cloud-play-local').hidden && document.getElementById('launch-button').disabled`);
+  status.cloud={...status.cloud,error_code:'transport',can_play_local:true,message:'Your saves are backed up locally. Retry the cloud upload or continue with local saves. The pending sync is preserved.'};
+  await refresh(`!document.getElementById('auto-cloud-play-local').disabled && !document.getElementById('auto-cloud-play-local').hidden`);
+  await check('Recoverable postexit failure offers explicit local continuation on mobile',`document.documentElement.scrollWidth<=innerWidth && document.getElementById('launch-button').disabled && document.getElementById('auto-cloud-title').textContent==='Cloud sync needs attention'`);
+  await evaluate(`document.getElementById('auto-cloud-title').scrollIntoView({block:'start'})`);await screenshot('automatic-upload-recovery-en-mobile.png');
+  const localContinuePosts=posts.length;
+  await click('auto-cloud-play-local');await until(()=>evaluate(`document.getElementById('launch-label').textContent==='Stop simulator' && !document.getElementById('launch-button').disabled`),'Postexit local continuation did not start');
+  assert.deepEqual(posts.slice(localContinuePosts).map(p=>({path:p.path,body:p.body})),[{path:'/api/cloud-saves/play-local',body:{request_id:autoRequest}}]);results.push('Postexit local continuation sends exactly one managed local-play request');
+  status.game={state:'stopped',managed:false,can_start:false,can_stop:false};status.cloud={...autoIdle(),state:'attention',phase:'after_exit',request_id:autoRequest,can_retry:true,can_play_local:true,error_code:'transport'};
+  await refresh(`!document.getElementById('auto-cloud-retry').disabled`);
   const beforeStaleAuto=posts.length;
   statusBarrier=new Promise(resolve=>releaseStatus=resolve);statusWaiting=false;
   await click('auto-cloud-retry');await until(()=>statusWaiting,'Automatic action did not request current status');
@@ -798,11 +831,15 @@ try {
   await until(()=>evaluate(`!document.getElementById('diagnostic-download').disabled`),'Diagnostics unavailable');
   await check('Diagnostic export excludes status/CSRF/extra fields',`!document.getElementById('diagnostic-json').textContent.includes(${JSON.stringify(csrf)}) && !document.getElementById('diagnostic-json').textContent.includes('MUST-NOT-EXPORT')`);
   await check('Store failures appear as method and HRESULT without product or account details',`document.getElementById('diagnostic-summary').textContent.includes('Store-API-Aufrufe') && document.getElementById('diagnostic-summary').textContent.includes('XStoreShowPurchaseUIAsync') && document.getElementById('diagnostic-summary').textContent.includes('80004001')`);
+  await check('Graphics and sync diagnostics expose the GPU and numeric failure',`document.getElementById('diagnostic-summary').textContent.includes('Grafik und Vulkan') && document.getElementById('diagnostic-summary').textContent.includes('NVIDIA GeForce RTX 4060') && document.getElementById('diagnostic-summary').textContent.includes('Xbox-Cloud-Abgleich') && document.getElementById('diagnostic-summary').textContent.includes('503')`);
   await call('Browser.setDownloadBehavior',{behavior:'allow',downloadPath:join(temp,'downloads')});await click('diagnostic-download');
   await until(async()=>{try{return(await readdir(join(temp,'downloads'))).includes('flightdeck-diagnose.json');}catch{return false;}},'Download missing');
   const exported=JSON.parse(await readFile(join(temp,'downloads/flightdeck-diagnose.json'),'utf8'));
   assert.deepEqual(Object.keys(exported),['summary','checks','generated_at']);results.push('Actual JSON download is safe report only');
+  assert.equal(exported.summary.cloud_sync.error_details.http_status,503);assert.equal(exported.summary.graphics.devices[0].name,'NVIDIA GeForce RTX 4060');
   await screenshot('diagnostics-desktop.png');
+  await call('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});await check('GPU and cloud diagnostics fit the mobile viewport',`document.documentElement.scrollWidth<=innerWidth`);await screenshot('diagnostics-mobile.png');
+  await call('Emulation.setDeviceMetricsOverride',{width:1536,height:1024,deviceScaleFactor:1,mobile:false});
   status.runtime.checks=[{label:'<img src=x onerror="window.injected=1">',detail:'<script>window.injected=1</script>',ok:false}];await refresh(`document.getElementById('overview-checks').textContent.includes('<img')`);
   await check('Server check strings cannot inject DOM',`!window.injected && document.querySelectorAll('#overview-checks img,#overview-checks script').length===0 && document.getElementById('overview-checks').textContent.includes('<img')`);
   await evaluate(`location.hash='saves'`);failNext=true;await click('backup-button');
@@ -965,8 +1002,9 @@ try {
   await check('Source checkout explains setup without offering an install',`document.getElementById('launcher-update-install').hidden && !document.getElementById('launcher-update-check').disabled`);
   launcherUpdate=launcherDefault();await language('de');
 
-  // Real backend, entirely separate empty state directory, no runtime and no POSTs.
-  realBackend=spawn('python',['-m','flightdeck','--state-dir',join(temp,'empty-backend-state'),'--no-browser'],{cwd:resolve(base,'..'),env:{...process.env,XDG_DATA_HOME:join(temp,'empty-data')},stdio:['ignore','pipe','pipe']});
+  // Real backend and empty state; only the public release lookup is stubbed.
+  const offlineBackend=`from flightdeck import launcher_update\nfrom urllib.error import URLError\ndef offline(): raise URLError('synthetic offline startup')\nlauncher_update.latest_release=offline\nfrom flightdeck.__main__ import main\nmain()`;
+  realBackend=spawn('python',['-c',offlineBackend,'--state-dir',join(temp,'empty-backend-state'),'--no-browser'],{cwd:resolve(base,'..'),env:{...process.env,XDG_DATA_HOME:join(temp,'empty-data')},stdio:['ignore','pipe','pipe']});
   let backendOutput='';realBackend.stdout.on('data',chunk=>{backendOutput+=chunk;});
   await until(()=>/Flightdeck: (http:\/\/127\.0\.0\.1:\d+)/.test(backendOutput),'Real Python backend did not start');
   const backendOrigin=backendOutput.match(/Flightdeck: (http:\/\/127\.0\.0\.1:\d+)/)[1];allowedOrigins.add(backendOrigin);
@@ -987,7 +1025,7 @@ try {
   await route('diagnostics');await click('diagnostic-refresh');
   await until(()=>evaluate(`!document.getElementById('diagnostic-download').disabled`),'Real safe diagnostics failed');
   await check('Real diagnostics render without token fields',`!document.getElementById('diagnostic-json').textContent.includes('csrf_token') && document.getElementById('diagnostic-summary').textContent.includes('Spielsitzung gefunden')`);
-  assert.deepEqual(errors,[]);assert.deepEqual(externalRequests,[]);results.push('No runtime exceptions or external network requests');
+  assert.deepEqual(errors,[]);assert.deepEqual(consoleIssues,[]);assert.deepEqual(externalRequests,[]);results.push('No runtime exceptions, console warnings/errors or external network requests');
   await writeFile(join(artifacts,'browser-results.json'),JSON.stringify({passed:results.length,checks:results,method:'Isolated Chromium CDP, synthetic API mutations and real empty backend reads',viewport:{desktop:[1536,1024],mobile:[390,844]},realRuntimeActions:false},null,2)+'\n');
   console.log(`PASS ${results.length} browser checks; screenshots: ${artifacts}`);
 } catch(error) {

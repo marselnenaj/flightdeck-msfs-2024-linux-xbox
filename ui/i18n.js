@@ -1,6 +1,12 @@
 // Static source-language keys; never use translated text as API fields or HTML.
 export const catalogs = Object.freeze({
   "de": {
+    "Updates anzeigen": "Updates anzeigen",
+    "Updates für Flightdeck und MSFS sind verfügbar.": "Updates für Flightdeck und MSFS sind verfügbar.",
+    "Ein Flightdeck-Update ist verfügbar.": "Ein Flightdeck-Update ist verfügbar.",
+    "Ein MSFS-Update ist verfügbar.": "Ein MSFS-Update ist verfügbar.",
+    "Xbox-Cloud-Abgleich": "Xbox-Cloud-Abgleich",
+    "Grafik und Vulkan": "Grafik und Vulkan",
     "Simulator auswählen": "Simulator auswählen",
     "Installationen verwalten": "Installationen verwalten",
     "Wird geprüft …": "Wird geprüft …",
@@ -566,6 +572,12 @@ export const catalogs = Object.freeze({
     "Der Neustart dauert länger als erwartet. Öffne Flightdeck erneut über das Anwendungsmenü.": "Der Neustart dauert länger als erwartet. Öffne Flightdeck erneut über das Anwendungsmenü."
   },
   "en": {
+    "Updates anzeigen": "View updates",
+    "Updates für Flightdeck und MSFS sind verfügbar.": "Updates for Flightdeck and MSFS are available.",
+    "Ein Flightdeck-Update ist verfügbar.": "A Flightdeck update is available.",
+    "Ein MSFS-Update ist verfügbar.": "An MSFS update is available.",
+    "Xbox-Cloud-Abgleich": "Xbox cloud sync",
+    "Grafik und Vulkan": "Graphics and Vulkan",
     "Simulator auswählen": "Choose simulator",
     "Installationen verwalten": "Manage installations",
     "Wird geprüft …": "Checking…",

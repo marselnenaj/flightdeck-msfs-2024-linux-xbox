@@ -20,16 +20,14 @@ Flightdeck installs and launches your **purchased Xbox PC / Microsoft Store copy
 of MSFS 2024 or 2020** on your Linux computer through Wine/Proton. Sign in with your
 Microsoft account, download the game and start it from one application.
 
-**Upcoming 0.1.4:** integrates Fenix route geometry and X11 helper-window fixes,
-including reproducible setup of the geometry dependency. Release validation is
-still in progress; see the [release status](docs/changelog.md).
-
-**Flightdeck 0.1.3** fixes Fenix installer startup and invisible mouse pointers,
-and improves opening, stopping and restarting Fenix. **Installer & Liveries** opens the separate
-official manager. Download the
-[full installer](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.3)
-to update an existing launcher. The optional Fenix patch is downloaded through
-**Mods → Fenix A320**. See the [changes](docs/changelog.md).
+**Flightdeck 0.1.5** checks for launcher and selected-simulator updates when the
+app opens. It prepares the missing NVIDIA NVAPI/NGX integration and selects
+the same NVIDIA GPU for DXGI and DirectX 12 on systems with integrated graphics.
+Failed cloud uploads now allow explicit local play while preserving backups and
+the pending sync. Rendering on the reported RTX 4060/Zorin system still needs
+verification. Update through **Updates → Flightdeck** (from 0.1.4), or use the
+[full installer](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.5).
+See the [changes and test evidence](docs/changelog.md).
 
 **Experimental.** MSFS 2024 local simulator execution and a controlled takeoff have been
 observed, and online multiplayer has been reported working on Linux. The MSFS 2020
@@ -180,7 +178,7 @@ alone.
 | Guide | Covers |
 | :--- | :--- |
 | [Install](docs/install.md) | Requirements, setup and launcher maintenance |
-| [Changes](docs/changelog.md) | Flightdeck 0.1.4 preparation, released packages and test evidence |
+| [Changes](docs/changelog.md) | Flightdeck 0.1.5, released packages and test evidence |
 | [Cloud saves](docs/cloud-saves.md) · [Deutsch](docs/cloud-saves.de.md) | Automatic sync, conflict recovery, backups and current limits |
 | [Game maintenance](docs/game-updates.md) | Updates, file verification, full repair and rollback |
 | [Add-ons](docs/addons.md) · [Deutsch](docs/addons.de.md) | Community packages, FlyByWire, SimBridge and Fenix |

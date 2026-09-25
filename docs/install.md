@@ -1,7 +1,7 @@
 # Install the Flightdeck launcher
 
-This guide covers **Flightdeck 0.1.4 (release candidate)**, including simulator selection, the Fenix
-panel and managed runtime component updates. See [changes](changelog.md).
+This guide covers **Flightdeck 0.1.5**, including automatic update discovery,
+NVIDIA graphics preparation and cloud-upload recovery. See [changes](changelog.md).
 
 Download **Flightdeck-Linux-x86_64.tar.gz** from the
 [releases page](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases)
@@ -191,15 +191,22 @@ Choose the update that matches what you want to change:
 | Fenix compatibility | **Mods → Fenix A320** | Optional, version-checked runner/profile setup; requires a separate explicit install |
 | Fenix aircraft and liveries | Official Fenix installer/manager | Purchased Fenix software and matching liveries |
 
-From Flightdeck 0.1.4, open **Updates → Flightdeck → Check for updates**.
+Flightdeck 0.1.5 checks for launcher and selected-simulator updates when the app
+opens. Discovery runs in the background without reserving the simulator. A notice
+links to available updates; downloading and installing remain explicit actions.
+Repeated windows share a 30-minute check interval within the same running service.
+An offline or failed check can be retried manually. Microsoft sign-in opens only
+after selecting the sign-in action. Other add-ons retain their own update flows.
+
+For a manual launcher check, open **Updates → Flightdeck → Check for updates**.
 The launcher shows the latest stable GitHub release, its version and release
 notes. Choose **Download & install**, then **Restart Flightdeck now** when the
 installation finishes. Downloads show progress and can be cancelled before
 installation begins. The full package's size and SHA256 digest are checked
 before installation. Your settings and game installations remain in place.
 The launcher can check while you play; installation, restart and restoration
-require the game and setup to be idle. GitHub is contacted only when you check
-or download, with no GitHub sign-in required.
+require the game and setup to be idle. GitHub is contacted for startup/manual
+version checks and requested downloads, with no GitHub sign-in required.
 
 If needed, expand **Previous launcher version** in the same card to restore
 the retained installation, then restart. Restoring the launcher does not roll

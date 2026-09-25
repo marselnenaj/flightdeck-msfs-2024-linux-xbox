@@ -7,9 +7,14 @@ is available in [Flightdeck 0.1.1](changelog.md).
 
 The launcher can explicitly check the installed Microsoft Store / Xbox PC base
 game against current authenticated Store package metadata. It reads the real
-`MicrosoftGame.Config` identity, Store ID and four-part game version. Opening
-the Updates page only reads local state; **Check for updates** makes the online
-request. If sign-in has expired, a separate sign-in action is offered.
+`MicrosoftGame.Config` identity, Store ID and four-part game version. From
+Flightdeck 0.1.5, opening the app also checks the selected simulator in the
+background when idle. This only discovers versions; it does not create an
+install plan, reserve the simulator, download game files or open sign-in.
+Repeated windows share a 30-minute interval within one service. Opening the
+Updates page reads this status; **Check for updates** performs the explicit
+preflight needed before download. If sign-in has expired, a separate sign-in
+action is offered.
 
 This covers the base package and executable version. Additional streamed game
 content and Marketplace content continue to use the MSFS library. Community
@@ -73,6 +78,8 @@ revision changed before download and must be checked again.
 
 The HTTP interface uses `GET /api/game-update` for local state and explicit
 authenticated `POST /api/game-update/check`, `/start` and `/rollback` actions.
+`POST /api/updates/check-startup` starts deduplicated background discovery with
+the same local-session token requirement. Its result cannot authorize an install.
 Checks and downloads use the shared setup job with `mode: update`. Pause,
 resume and cancellation retain the existing setup endpoints and job IDs.
 Completed checks release their runtime reservation; start revalidates and

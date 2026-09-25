@@ -255,6 +255,108 @@ class AutomaticCloudTests(unittest.TestCase):
         self.assertTrue(outcome['conflict'], outcome)
         self.assertEqual(self.spawn_count, 1)
 
+    def test_failed_exit_upload_can_start_offline_without_discarding_pending_progress(self):
+        self.start_game()
+        self.install(state(profile=b'first flight'))
+        self.ops.acquire_status = 503
+        self.game.done.set()
+        failed = self.finish_auto()
+        self.assertEqual(failed['phase'], 'after_exit')
+        self.assertEqual(failed['error_code'], 'transport')
+        self.assertEqual(failed['error_details'], {'http_status': 503})
+        self.assertTrue(failed['can_play_local'])
+        journal = cloud_session.load(self.runtime, SCOPE)
+        self.ops.calls.clear()
+        self.game = Game()
+        self.spawned.clear()
+        self.auto.action('play-local', failed['request_id'])
+        self.assertTrue(self.spawned.wait(3), self.auto.snapshot())
+        self.assertEqual(self.ops.calls, [])
+        self.assertEqual(cloud_session.load(self.runtime, SCOPE), journal)
+        self.install(state(profile=b'second offline flight'))
+        self.game.done.set()
+        self.assertEqual(self.finish_auto()['state'], 'local')
+        self.assertEqual(self.ops.calls, [])
+        self.assertEqual(cloud_session.load(self.runtime, SCOPE), journal)
+        self.assertEqual(self.ops.remote.containers['profile'].blobs['data'], b'cloud')
+        self.assertTrue(any(b'second offline flight' in p.read_bytes()
+                            for p in (self.runtime / 'private/save-backups').rglob('state.bin')))
+        # The old upload target cannot silently overwrite subsequent play.
+        self.ops.acquire_status = 201
+        self.auto.launch()
+        conflict = self.finish_auto()
+        self.assertTrue(conflict['conflict'], conflict)
+        self.assertFalse(conflict['can_play_local'])
+        self.assertEqual(self.local_state().containers['profile'].blobs['data'], b'second offline flight')
+        self.assertFalse({'put', 'delete', 'atom'} & set(self.ops.calls))
+        self.game = Game()
+        self.spawned.clear()
+        self.auto.action('resolve', conflict['request_id'], choice='local')
+        self.assertTrue(self.spawned.wait(3), self.auto.snapshot())
+        self.assertEqual(self.ops.remote.containers['profile'].blobs['data'], b'second offline flight')
+        self.game.done.set()
+        self.assertEqual(self.finish_auto()['state'], 'synced')
+        self.assertIsNone(cloud_session.load(self.runtime, SCOPE))
+
+    def test_partial_cloud_write_then_local_play_requires_fresh_explicit_resolution(self):
+        self.start_game()
+        self.install(state(first=b'a', second=b'b'))
+        put = self.ops.put_container
+        self.ops.put_container = lambda name, *a, **kw: 409 if name == 'second,savedgame' else put(name, *a, **kw)
+        self.game.done.set()
+        failed = self.finish_auto()
+        self.assertTrue(failed['can_play_local'], failed)
+        journal = cloud_session.load(self.runtime, SCOPE)
+        self.ops.calls.clear()
+        self.game = Game()
+        self.spawned.clear()
+        self.auto.action('play-local', failed['request_id'])
+        self.assertTrue(self.spawned.wait(3))
+        self.install(state(first=b'new progress', second=b'b'))
+        self.game.done.set()
+        self.assertEqual(self.finish_auto()['state'], 'local')
+        self.assertEqual(self.ops.calls, [])
+        self.assertEqual(cloud_session.load(self.runtime, SCOPE), journal)
+        self.ops.put_container = put
+        self.auto.launch()
+        conflict = self.finish_auto()
+        self.assertTrue(conflict['conflict'], conflict)
+        self.assertEqual(self.local_state().containers['first'].blobs['data'], b'new progress')
+        self.assertFalse({'put', 'delete', 'atom'} & set(self.ops.calls))
+
+    def test_unsafe_or_wrong_account_exit_cannot_be_bypassed_with_local_play(self):
+        for code in ('unsafe_session', 'invalid_scope', 'local_storage', 'changed', 'graphics'):
+            self.auto.runtime = self.runtime
+            self.auto.request_id = 'current'
+            self.auto.phase = 'after_exit'
+            self.auto.state = 'attention'
+            self.auto.error_code = code
+            self.assertFalse(self.auto.snapshot()['can_play_local'], code)
+            with self.assertRaises(LauncherError):
+                self.auto.action('play-local', 'current')
+        self.assertEqual(self.spawn_count, 0)
+
+    def test_native_cloud_diagnostics_are_numeric_only(self):
+        error = cloud_storage.CloudStorageError('transport')
+        error.http_status = 503
+        error.native_hresult = 0x80072efd
+        error.token = 'must not export'
+        self.assertEqual(cloud_auto.error_details(error), {'http_status': 503, 'native_hresult': 0x80072efd})
+        error.http_status = True
+        error.native_hresult = 'private raw response'
+        self.assertEqual(cloud_auto.error_details(error), {})
+
+    def test_graphics_failure_is_not_misreported_as_a_cloud_connection_failure(self):
+        error = LauncherError('Synthetic graphics prerequisite missing')
+        error.code = 'graphics'
+        with patch.object(self.launcher, '_spawn_reserved', side_effect=error):
+            self.auto.launch()
+            result = self.finish_auto()
+        self.assertEqual(result['error_code'], 'graphics')
+        self.assertEqual(result['message'], str(error))
+        self.assertFalse(result['can_play_local'])
+        self.assertFalse((self.runtime / 'private/cloud-interrupted-process.json').exists())
+
     def test_cancel_before_play_retains_backups_and_never_spawns(self):
         original = self.auto._before
         def cancel(*args, **kwargs):

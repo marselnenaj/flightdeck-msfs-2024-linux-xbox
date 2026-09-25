@@ -13,6 +13,14 @@ from flightdeck.server import Handler, Server
 
 
 class ServerTests(unittest.TestCase):
+    def test_startup_update_check_requires_current_local_session(self):
+        path = "/api/updates/check-startup"
+        self.assertEqual(self.request("POST", path, "{}", {"Content-Type": "application/json"})[0], 403)
+        headers = {"Content-Type": "application/json", "X-Flightdeck-Token": self.server.token}
+        with patch.object(self.server.launcher.startup_updates, "check", return_value={"ok": True}) as check:
+            self.assertEqual(self.request("POST", path, '{"url":"https://foreign.invalid"}', headers)[0], 200)
+            check.assert_called_once_with()
+
     def test_launcher_updates_are_localized_and_mutations_require_session_token(self):
         manager = self.server.launcher.launcher_updates
         headers = {"Content-Type": "application/json", "X-Flightdeck-Token": self.server.token, "Accept-Language": "en"}

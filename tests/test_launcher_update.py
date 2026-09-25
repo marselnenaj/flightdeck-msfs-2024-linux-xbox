@@ -37,6 +37,9 @@ def metadata(payload=b"archive", tag="v0.1.5"):
 
 class UpdateTests(unittest.TestCase):
     def setUp(self):
+        running = patch.object(updates, "__version__", "0.1.4")
+        running.start()
+        self.addCleanup(running.stop)
         self.temp = tempfile.TemporaryDirectory(prefix="flightdeck-update-test-")
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
@@ -188,6 +191,8 @@ class UpdateTests(unittest.TestCase):
             shutil.copytree(ROOT / name, source / name, ignore=shutil.ignore_patterns("__pycache__", "tests", "*.pyc"))
         for name in ("scripts/install-launcher.py", "scripts/install-launcher-gui.py", "compat/upstreams.lock.json", "compat/bootstrap.lock.json", "LICENSE"):
             shutil.copyfile(ROOT / name, source / name)
+        # Keep the simulated installed version stable across real releases.
+        (source / "flightdeck/__init__.py").write_text('__version__ = "0.1.4"\n')
         data = self.root / "data"
         initial = installer.install(source, data, self.root / "bin", self.root / "apps", language="de")
         launcher, manager = self.make_manager()

@@ -41,6 +41,7 @@ class Server(ThreadingHTTPServer):
         return f"http://127.0.0.1:{self.server_port}"
 
     def server_close(self):
+        self.launcher.startup_updates.close()
         self.launcher.launcher_updates.close()
         self.launcher.cloud_saves.close()
         self.launcher.setup.close()
@@ -170,6 +171,8 @@ class Handler(BaseHTTPRequestHandler):
                     launcher.require_open()
             if path == "/api/desktop/refresh":
                 result = self.server.desktop_refresh()
+            elif path == "/api/updates/check-startup":
+                result = launcher.startup_updates.check()
             elif path in {"/api/launcher-update/check", "/api/launcher-update/install", "/api/launcher-update/rollback"}:
                 result = launcher.launcher_updates.start(path.rsplit("/", 1)[-1], data.get("check_id"))
             elif path == "/api/launcher-update/cancel":

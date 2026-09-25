@@ -22,6 +22,34 @@ let cloudReserved = false;
 let cloudController = null;
 let launcherUpdatesController = null;
 let launcherUpdateReserved = false;
+let startupRequest = null;
+const startupChecked = new Set();
+const updateOffers = {launcher:false,game:false};
+
+function renderUpdateNotice(kind, available) {
+  if(kind)updateOffers[kind]=available;
+  $('available-updates').hidden=!updateOffers.launcher&&!updateOffers.game;
+  text('available-updates-label',t(updateOffers.launcher&&updateOffers.game?'Updates für Flightdeck und MSFS sind verfügbar.':updateOffers.launcher?'Ein Flightdeck-Update ist verfügbar.':'Ein MSFS-Update ist verfügbar.'));
+}
+
+async function checkStartupUpdates() {
+  if(startupRequest||!state.online||!state.status?.csrf_token||state.pending)return;
+  const idle=state.status.game.state==='stopped'&&!setupReserved&&!fenixReserved&&!updateReserved&&!cloudReserved&&!launcherUpdateReserved&&!automaticBusy(state.status);
+  const key=idle&&state.status.runtime.path?state.status.runtime.path:'launcher';
+  if(startupChecked.has(key))return;
+  startupChecked.add(key);
+  startupRequest=(async()=>{
+    try {
+      const result=await request('/api/updates/check-startup',{method:'POST',token:state.status.csrf_token});
+      if(result.deferred&&key!=='launcher')startupChecked.delete(key);
+    } catch { /* Manual checks remain available after an offline startup. */ }
+    finally {
+      await Promise.all([updatesController?.load({background:true}),launcherUpdatesController?.load()]);
+      startupRequest=null;
+    }
+  })();
+  return startupRequest;
+}
 const notices = createNotices($('notice'));
 // Decode both scenes before the first switch. Keep the decoded images alive;
 // an opacity-zero CSS background alone may defer decoding until it is shown.
@@ -181,7 +209,7 @@ async function refreshStatus() {
   statusRequest = (async () => {
     try { state.status = normalizeStatus(await request('/api/status')); state.online = true; }
     catch { state.online = false; }
-    finally { renderStatus(); setupController?.render(); statusRequest = null; }
+    finally { renderStatus(); setupController?.render(); statusRequest = null; void checkStartupUpdates(); }
   })();
   return statusRequest;
 }
@@ -234,13 +262,13 @@ async function loadDiagnostics() {
   $('diagnostic-refresh').disabled = true;
   text('diagnostic-refresh-label', t('Bericht wird geladen …'));
   try {
-    const raw = await request('/api/diagnostics');
+    const raw = await request('/api/diagnostics', {timeout:20000});
     if (!raw || typeof raw !== 'object' || !raw.summary || typeof raw.summary !== 'object' || !Array.isArray(raw.checks)) {
       throw new Error(t('Der lokale Dienst hat keinen gültigen Diagnosebericht geliefert.'));
     }
     // Explicit allowlist: never export status, CSRF or unrelated response fields.
     state.report = {summary: raw.summary, checks: raw.checks, generated_at: raw.generated_at ?? null};
-    const summaryLabels = {run_found: t('Spielsitzung gefunden'), auth_http: t('Xbox-Anmeldung · HTTP-Status'), local_save_init: t('Lokaler Spielstandspeicher'), store_calls: t('Store-API-Aufrufe'), exit: t('Letztes Sitzungsende')};
+    const summaryLabels = {run_found: t('Spielsitzung gefunden'), auth_http: t('Xbox-Anmeldung · HTTP-Status'), local_save_init: t('Lokaler Spielstandspeicher'), store_calls: t('Store-API-Aufrufe'), exit: t('Letztes Sitzungsende'), cloud_sync:t('Xbox-Cloud-Abgleich'), graphics:t('Grafik und Vulkan')};
     const rows = Object.entries(state.report.summary).slice(0, 100).map(([key, value]) => {
       const row = document.createElement('div');
       const term = document.createElement('dt'); term.textContent = summaryLabels[key] ?? key;
@@ -298,7 +326,7 @@ $('diagnostic-download').addEventListener('click', () => {
 });
 $('language-select').addEventListener('change', event => setLanguage(event.target.value));
 window.addEventListener('flightdeck-languagechange', () => {
-  showNotice(''); setView(); renderStatus(); setupController?.render();
+  showNotice(''); setView(); renderStatus(); renderUpdateNotice(); setupController?.render();
   void refreshStatus(); void setupController?.poll(); void updatesController?.load();
   void launcherUpdatesController?.load();
   if (state.report) void loadDiagnostics();
@@ -309,10 +337,11 @@ applyTranslations();
 setupController = createSetup({request,getStatus:()=>state.status,isOnline:()=>state.online && !state.pending && !fenixReserved && !updateReserved && !cloudReserved && !launcherUpdateReserved && !automaticBusy(state.status),renderChecks,notice:showNotice,refreshStatus,changed:reserved=>{setupReserved=reserved;renderStatus();}});
 fenixController = createFenix({request,getStatus:()=>state.status,isOnline:()=>state.online&&!state.pending,isReserved:()=>setupReserved||updateReserved||cloudReserved||launcherUpdateReserved||automaticBusy(state.status),refreshStatus,notice:showNotice,changed:value=>{fenixReserved=value;renderStatus();}});
 modsController = createMods({request,getStatus:()=>state.status,isOnline:()=>state.online&&!state.pending,isReserved:()=>fenixReserved||setupReserved||updateReserved||cloudReserved||launcherUpdateReserved||automaticBusy(state.status),notice:showNotice});
-updatesController = createUpdates({request,getStatus:()=>state.status,isOnline:()=>state.online&&!state.pending,getSetupJob:()=>setupController.job(),isReserved:()=>fenixReserved||setupReserved||cloudReserved||launcherUpdateReserved||automaticBusy(state.status),refreshStatus,refreshSetup:()=>setupController.poll(),renderChecks,changed:value=>{updateReserved=value;setupController?.render();renderStatus();}});
+updatesController = createUpdates({request,getStatus:()=>state.status,isOnline:()=>state.online&&!state.pending,getSetupJob:()=>setupController.job(),isReserved:()=>fenixReserved||setupReserved||cloudReserved||launcherUpdateReserved||automaticBusy(state.status),refreshStatus,refreshSetup:()=>setupController.poll(),renderChecks,availableChanged:value=>renderUpdateNotice('game',value),changed:value=>{updateReserved=value;setupController?.render();renderStatus();}});
 cloudController = createCloudSaves({request,getStatus:()=>state.status,isOnline:()=>state.online&&!state.pending,isReserved:()=>fenixReserved||setupReserved||updateReserved||launcherUpdateReserved,refreshStatus,changed:value=>{cloudReserved=value;setupController?.render();renderStatus();}});
 launcherUpdatesController = createLauncherUpdates({request,getStatus:()=>state.status,isOnline:()=>state.online&&!state.pending,
   isReserved:()=>fenixReserved||setupReserved||updateReserved||cloudReserved||automaticBusy(state.status),
+  availableChanged:value=>renderUpdateNotice('launcher',value),
   refreshStatus,notice:showNotice,changed:value=>{launcherUpdateReserved=value;setupController?.render();renderStatus();}});
 setView();
 void refreshStatus().then(()=>{setupController.render();void updatesController.load();void launcherUpdatesController.load();});

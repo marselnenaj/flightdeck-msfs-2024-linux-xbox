@@ -136,6 +136,33 @@ class CloudWriteTests(unittest.TestCase):
         self.assertNotIn('atom', ops.calls)
         self.assertEqual(ops.calls[-1], 'release')
 
+    def test_numeric_native_failure_survives_transaction_wrapping(self):
+        ops = Operations(state())
+        failure = CloudStorageError('transport')
+        failure.http_status, failure.native_hresult = 503, 0x80004005
+        failure.response_body = 'synthetic private response'
+        with patch.object(ops, 'acquire', side_effect=failure):
+            with self.assertRaises(write.CloudWriteError) as error:
+                self.upload(ops, state(one=b'new'))
+        self.assertEqual(error.exception.http_status, 503)
+        self.assertEqual(error.exception.native_hresult, 0x80004005)
+        self.assertFalse(hasattr(error.exception, 'response_body'))
+        self.assertFalse(error.exception.recovery_required)
+
+    def test_lease_and_commit_failures_retain_http_status_and_mutation_facts(self):
+        for during_commit in (False, True):
+            with self.subTest(during_commit=during_commit):
+                ops = Operations(state())
+                if during_commit:
+                    ops.fault = '409'
+                else:
+                    ops.acquire_status = 409
+                with self.assertRaises(write.CloudWriteError) as error:
+                    self.upload(ops, state(one=b'new'))
+                self.assertEqual(error.exception.http_status, 409)
+                self.assertEqual(error.exception.code, 'lease_lost')
+                self.assertEqual(error.exception.recovery_required, during_commit)
+
     def test_renewal_requires_existing_owner(self):
         for status in (201, 409, 403, 500):
             with self.subTest(status=status):

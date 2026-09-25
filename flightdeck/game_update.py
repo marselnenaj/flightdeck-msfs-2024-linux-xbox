@@ -431,6 +431,14 @@ def snapshot(launcher):
             for key in ("latest_version", "update_available", "auth_required"):
                 result[key] = job.get(key, result[key])
             result["can_start"] = result["available"] and not busy and job["state"] == "ready" and (job.get("update_available") is True or job.get("operation") == "repair")
+    if result["job"] is None and result["available"]:
+        discovered = launcher.startup_updates.snapshot(runtime)
+        result["background_checking"] = discovered.get("state") == "checking"
+        result["startup_error"] = discovered.get("error", "")
+        result["auth_required"] = discovered.get("auth_required", False)
+        if discovered.get("installed_version") == result["installed_version"]:
+            for key in ("latest_version", "update_available"):
+                result[key] = discovered.get(key, result[key])
     if not busy:
         try:
             _history(runtime)

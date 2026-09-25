@@ -27,7 +27,7 @@ export function launcherUpdateTitle(data) {
   return t('Noch nicht nach Updates gesucht');
 }
 
-export function createLauncherUpdates({request,getStatus,isOnline,isReserved=()=>false,refreshStatus,changed,notice}) {
+export function createLauncherUpdates({request,getStatus,isOnline,isReserved=()=>false,refreshStatus,changed,notice,availableChanged=()=>{}}) {
   const $=id=>document.getElementById('launcher-update-'+id);
   let data=null,loading=null,pending=false,fresh=false,error='',actionError='',confirmRollback=false,restarting=false,restartStarted=0,reserved=false;
   function render() {
@@ -36,6 +36,7 @@ export function createLauncherUpdates({request,getStatus,isOnline,isReserved=()=
       restarting=false;actionError=data?.job?.error||t('Der Neustart dauert länger als erwartet. Öffne Flightdeck erneut über das Anwendungsmenü.');
     }
     const active=data?.job?.state==='running',allowed=isOnline()&&fresh&&!pending&&!restarting;
+    availableChanged(fresh&&data?.update_available===true&&!data.pending_restart);
     $('title').textContent=launcherUpdateTitle(data);
     $('installed').textContent=data?.installed_version||getStatus()?.app.version||'—';
     $('latest').textContent=data?.latest_version||t('Noch nicht geprüft');

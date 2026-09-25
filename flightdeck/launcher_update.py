@@ -13,6 +13,7 @@ import sys
 import tarfile
 import tempfile
 import threading
+import time
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
 from urllib.request import Request, build_opener, HTTPRedirectHandler
@@ -201,6 +202,7 @@ class LauncherUpdateManager:
         self.job = None
         self.context = None
         self.context_error = ""
+        self.last_check_attempt = None
         try:
             self.context = installation_context()
         except Exception:
@@ -240,6 +242,14 @@ class LauncherUpdateManager:
         with self.lock:
             self.job.update(values)
 
+    def check_on_startup(self):
+        """Opening another window must not repeat the public GitHub request."""
+        with self.launcher.lock, self.lock:
+            if (self.last_check_attempt is not None and time.monotonic() - self.last_check_attempt < 1800
+                    or not self.snapshot()["can_check"]):
+                return
+            self.start("check")
+
     def start(self, operation, check_id=None):
         with self.launcher.lock, self.lock:
             allowed = self.snapshot()
@@ -254,6 +264,7 @@ class LauncherUpdateManager:
             self.cancel_event.clear()
             if operation == "check":
                 self.release = self.check_id = None
+                self.last_check_attempt = time.monotonic()
             self.job = {"id": uuid.uuid4().hex, "operation": operation, "state": "running", "phase": "checking" if operation == "check" else "preparing",
                         "message": "GitHub wird nach Flightdeck-Updates gefragt …" if operation == "check" else "Launcher-Update wird vorbereitet …",
                         "progress": None, "received": 0, "total": None, "error": "", "can_cancel": operation != "rollback"}

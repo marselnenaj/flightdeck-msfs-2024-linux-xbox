@@ -55,6 +55,15 @@ normal start. An authentication failure is never treated as an empty cloud.
 Do not run the same game profile on another device during a session: changes
 there can require a decision before the final upload.
 
+If an upload fails after exiting the game, **Play with local saves** also lets
+you start another backed-up local session instead of repeatedly retrying the
+same upload. The pending transaction remains available. When you next attempt
+cloud sync, further local progress can require an explicit local/cloud version
+choice, including after a partially completed upload. This option is withheld
+when the local state, account scope or game-process safety cannot be established.
+Diagnostics includes the sync phase, error category and available numeric
+HTTP/HRESULT details, without response bodies or account identifiers.
+
 ## Backups and interruptions
 
 Flightdeck keeps backups before play, before local replacements and before

@@ -52,6 +52,14 @@ class CloudWriteError(Exception):
         super().__init__(_ERRORS[code])
 
 
+def _with_diagnostics(target, source):
+    for name, minimum, maximum in (("http_status", 100, 599), ("native_hresult", 0, 2**32 - 1)):
+        value = getattr(source, name, None)
+        if type(value) is int and minimum <= value <= maximum:
+            setattr(target, name, value)
+    return target
+
+
 @dataclass(frozen=True, repr=False)
 class LeaseReply:
     status: int
@@ -153,9 +161,12 @@ class _Write:
         self.mutated_names = set()
         self.owner = None
 
-    def fail(self, code):
-        raise CloudWriteError(code, committed_containers=self.committed,
-                              recovery_required=self.mutation_attempted)
+    def fail(self, code, http_status=None):
+        error = CloudWriteError(code, committed_containers=self.committed,
+                                recovery_required=self.mutation_attempted)
+        if type(http_status) is int and 100 <= http_status <= 599:
+            error.http_status = http_status
+        raise error
 
     def check(self):
         if self.cancel is not None and self.cancel.is_set():
@@ -196,12 +207,12 @@ class _Write:
             self.fail("invalid_response")
         if reply.status in (401, 403):
             self.acquired = False
-            self.fail("authentication")
+            self.fail("authentication", reply.status)
         if reply.status == 409:
             self.acquired = False
-            self.fail("lease_lost")
+            self.fail("lease_lost", reply.status)
         if reply.status not in (200, 201):
-            self.fail("transport")
+            self.fail("transport", reply.status)
         if (not isinstance(reply.owner_change_id, str) or not reply.owner_change_id
                 or len(reply.owner_change_id.encode("utf-8")) > 1024
                 or any(ord(c) < 32 or ord(c) == 127 for c in reply.owner_change_id)
@@ -259,10 +270,10 @@ class _Write:
             self.fail("invalid_response")
         if status == 409:
             self.acquired = False
-            self.fail("lease_lost")
+            self.fail("lease_lost", status)
         if status in (401, 403):
             self.acquired = False
-            self.fail("authentication")
+            self.fail("authentication", status)
         if status not in (200, 201, 204):
             # Non-success can follow a server-side commit, too. The same
             # readback rule provides certainty without a blind HTTP retry.
@@ -343,12 +354,12 @@ def upload(scope: Scope, operations: WriteOperations, read_remote: Callable,
         run.renew()
     except CloudWriteError as error:
         # Rewrap errors from pure input/reader helpers with transaction facts.
-        raise CloudWriteError(error.code, committed_containers=run.committed,
-                              recovery_required=run.mutation_attempted) from None
+        raise _with_diagnostics(CloudWriteError(error.code, committed_containers=run.committed,
+                              recovery_required=run.mutation_attempted), error) from None
     except CloudStorageError as error:
         code = error.code if error.code in _ERRORS else "transport"
-        raise CloudWriteError(code, committed_containers=run.committed,
-                              recovery_required=run.mutation_attempted) from None
+        raise _with_diagnostics(CloudWriteError(code, committed_containers=run.committed,
+                              recovery_required=run.mutation_attempted), error) from None
     except Exception:
         raise CloudWriteError("transport", committed_containers=run.committed,
                               recovery_required=run.mutation_attempted) from None

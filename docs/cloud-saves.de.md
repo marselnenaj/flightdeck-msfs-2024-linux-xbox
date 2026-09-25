@@ -62,6 +62,16 @@ Cloud. Verwende dasselbe Spielprofil währenddessen nicht auf einem anderen
 Gerät: Dortige Änderungen können vor dem abschließenden Upload eine Auswahl
 erforderlich machen.
 
+Scheitert ein Upload nach dem Beenden, kannst du auch dann **Mit lokalen
+Spielständen spielen** wählen. Flightdeck startet eine neue lokal gesicherte
+Sitzung, statt denselben Upload immer wieder vorauszusetzen. Der ausstehende
+Abgleich bleibt erhalten. Beim nächsten Cloud-Versuch kann neuer lokaler
+Fortschritt eine ausdrückliche Auswahl zwischen Cloud und lokalem Stand
+erfordern, auch nach einem teilweise abgeschlossenen Upload. Ist der lokale
+Stand, die Kontozuordnung oder das Ende des Spielprozesses unklar, wird diese
+Option nicht angeboten. Die Diagnose enthält Abgleichphase, Fehlerkategorie
+und verfügbare numerische HTTP-/HRESULT-Angaben ohne Antworttexte oder Kontokennung.
+
 ## Sicherungen und Unterbrechungen
 
 Flightdeck behält Sicherungen vor dem Spielen, vor lokalen Übernahmen und vor
