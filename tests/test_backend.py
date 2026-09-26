@@ -18,7 +18,7 @@ import time
 import unittest
 from unittest.mock import patch
 
-from flightdeck import backend, graphics
+from flightdeck import backend, graphics, graphics_diagnostics
 
 
 FAKE_LAUNCHER = r'''
@@ -89,6 +89,55 @@ class BackendTests(unittest.TestCase):
         (folder / "namespace").mkdir()
         (folder / "namespace/state.bin").write_bytes(b"synthetic saved state\x00\xff")
         return folder
+
+    def test_graphics_preferences_are_scoped_persisted_and_apply_to_next_child(self):
+        wine = self.runtime / "runner/files/bin/wine"
+        wine.parent.mkdir(parents=True)
+        wine.touch()
+        script = self.runtime / "tools/play-msfs.sh"
+        script.write_text(script.read_text().replace('(root / "private/ready").write_text(str(os.getpid()))',
+            '(root / "private/ready").write_text(os.environ["WINE_HIDE_NVIDIA_GPU"] + ":" + os.environ["DXVK_ENABLE_NVAPI"])'))
+        from tests.test_graphics import NVIDIA, IGPU
+        with patch.object(graphics, "nvidia_present", return_value=True), \
+             patch.object(graphics, "probe", return_value={"status": "ready", "devices": [NVIDIA, IGPU]}):
+            self.launcher.configure_graphics(str(self.runtime), "compatibility")
+            fresh = backend.Launcher(self.state)
+            self.assertEqual(fresh.status()["graphics"]["nvidia_mode"], "compatibility")
+            # No service restart is needed: the original instance launches
+            # using the preference that was saved after its construction.
+            self.launcher.launch()
+            deadline = time.monotonic() + 3
+            while not (self.runtime / "private/ready").exists() and time.monotonic() < deadline:
+                time.sleep(.01)
+            self.assertEqual((self.runtime / "private/ready").read_text(), "1:0")
+            with self.assertRaises(backend.LauncherError):
+                self.launcher.configure_graphics(str(self.runtime), "auto")
+
+    def test_graphics_settings_reject_stale_runtime_invalid_mode_and_busy_operations(self):
+        wine = self.runtime / "runner/files/bin/wine"
+        wine.parent.mkdir(parents=True)
+        wine.touch()
+        marker = self.runtime / "private" / graphics.SETTINGS_FILE
+        with patch.object(graphics, "nvidia_present", return_value=True):
+            for runtime, mode in (("/stale", "auto"), (str(self.runtime), "invalid"), (str(self.runtime), {})):
+                with self.subTest(runtime=runtime, mode=mode), self.assertRaises(backend.LauncherError):
+                    self.launcher.configure_graphics(runtime, mode)
+            self.launcher.setup_busy = True
+            with self.assertRaises(backend.LauncherError):
+                self.launcher.configure_graphics(str(self.runtime), "compatibility")
+            self.launcher.setup_busy = False
+            with self.launcher.runtime_lock(), self.assertRaises(backend.LauncherError):
+                self.launcher.configure_graphics(str(self.runtime), "compatibility")
+            self.assertFalse(marker.exists())
+            auto = self.launcher.cloud_saves.automation
+            auto.runtime, auto.state = self.runtime, "syncing"
+            with self.assertRaises(backend.LauncherError):
+                self.launcher.configure_graphics(str(self.runtime), "compatibility")
+            auto.state = "attention"
+            self.launcher.configure_graphics(str(self.runtime), "compatibility")
+            self.assertEqual(graphics.settings(self.runtime)["nvidia_mode"], "compatibility")
+            other = self.make_runtime("other")
+            self.assertEqual(graphics.settings(other)["nvidia_mode"], "auto")
 
     def write_log(self, text, suffix="20260101-120000-Synthetic"):
         run = self.runtime / "private" / ("run-" + suffix)
@@ -223,6 +272,7 @@ class BackendTests(unittest.TestCase):
                 self.launcher.launch()
         self.assertNotIn("synthetic private detail", str(result.exception))
         self.assertFalse(self.launcher.status()["game"]["managed"])
+        self.assertEqual(graphics_diagnostics.load_launch(self.runtime)["state"], "spawn_failed")
 
     def test_graphics_preparation_holds_runtime_lock_and_reaches_game_process(self):
         script = self.runtime / "tools/play-msfs.sh"
@@ -240,15 +290,41 @@ class BackendTests(unittest.TestCase):
         with patch.object(graphics, "probe", return_value={"status": "ready", "devices": []}):
             summary = self.launcher.diagnostics()["summary"]
         self.assertEqual(summary["graphics"]["last_launch"], {"nvidia": "ready"})
+        self.assertEqual(summary["graphics"]["last_start_attempt"]["state"], "spawned")
         self.assertEqual(set(summary["cloud_sync"]), {"state", "phase", "error_code", "error_details"})
 
+    def test_saved_graphics_attempt_remains_visible_after_launcher_restart(self):
+        with patch.object(graphics, "prepare", return_value=(dict(os.environ, DXVK_ENABLE_NVAPI="0"), {"nvidia":"disabled"})):
+            self.launcher.launch()
+        self.wait_for(lambda: (self.runtime / "private/ready").exists())
+        restarted = backend.Launcher(self.base/'restarted-state', str(self.runtime))
+        with patch.object(graphics, "probe", return_value={"status":"ready","devices":[]}):
+            summary = restarted.diagnostics()["summary"]
+        attempt = summary["graphics"]["last_start_attempt"]
+        self.assertEqual(attempt["nvidia"], "disabled")
+        self.assertEqual(attempt["nvapi_mode"], "disabled")
+        self.assertEqual(attempt["state"], "spawned")
+        self.assertEqual(attempt["game_id"], "msfs2024")
+        self.assertEqual(summary["context"]["game_id"], "msfs2024")
+        self.assertEqual(summary["context"]["cloud_sync_scope"], "current_service")
+        self.assertNotIn("last_launch", summary["graphics"])
+
+    def test_graphics_record_write_failure_does_not_prevent_game_launch(self):
+        with patch.object(graphics_diagnostics, "save_launch", return_value=False):
+            self.launcher.launch()
+        self.wait_for(lambda: (self.runtime / "private/ready").exists())
+        self.assertIsNotNone(self.launcher.process)
+
     def test_graphics_failure_prevents_spawn_and_releases_runtime(self):
+        self.launcher.graphics_report = (self.runtime, {"nvidia":"ready"})
         with patch.object(graphics, "prepare", side_effect=graphics.GraphicsError("Synthetic graphics failure")):
             with self.assertRaises(backend.LauncherError) as error:
                 self.launcher.launch()
         self.assertEqual(error.exception.code, "graphics")
         self.assertIsNone(self.launcher.process)
         self.assertFalse((self.runtime / "private/ready").exists())
+        self.assertIsNone(self.launcher.graphics_report)
+        self.assertEqual(graphics_diagnostics.load_launch(self.runtime)["state"], "preparation_failed")
         with self.external_lock():
             pass
 
@@ -277,6 +353,7 @@ class BackendTests(unittest.TestCase):
             "Authorization: Bearer " + secrets[0],
             "xuid=" + secrets[1] + " gamertag=" + secrets[2],
             "https://example.test/path?token=" + secrets[3],
+            "err:vkd3d-proton: VK_ERROR_DEVICE_LOST token=" + secrets[0],
             "xodus-title-auth: host=user.auth.xboxlive.com status=200",
             "xodus-title-auth: host=xsts.auth.xboxlive.com status=401",
             "xodus-title-auth: host=user.auth.xboxlive.com status=200 token=" + secrets[0],
@@ -300,6 +377,7 @@ class BackendTests(unittest.TestCase):
             self.assertNotIn(secret, encoded)
         self.assertNotIn(str(run), encoded)
         self.assertEqual(result["summary"]["auth_http"], [200, 401])
+        self.assertEqual(result["summary"]["graphics"]["log"]["error_symbols"], ["VK_ERROR_DEVICE_LOST"])
         self.assertEqual(result["summary"]["local_save_init"], [
             {"enabled": 1, "sync_on_demand": 0, "hresult": "00000000"},
             {"enabled": 1, "sync_on_demand": 1, "hresult": "80004001"},

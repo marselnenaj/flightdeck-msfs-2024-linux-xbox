@@ -86,6 +86,17 @@ download or install graphics, multimedia or system packages.
 
 ## Authentication and launch
 
+Flightdeck 0.1.6 provides a reversible environment reset and a
+game uninstaller under **Setup**; see the
+[maintenance instructions](install.md#manage-a-game-installation).
+A reset atomically exchanges `local/msfs-prefix` with a freshly prepared prefix.
+The old prefix remains at `local/environment-backup-…/prefix`; the journal in
+`private/environment-reset.json` identifies the last reset that can be undone.
+An interrupted journal publication is recoverable from
+`private/environment-reset-pending.json`. Save storage under `private` is not
+reset. These operations hold the same runtime lease used by game starts and
+reject active Wine/Fenix processes.
+
 ### NVIDIA graphics in launcher-managed starts
 
 Flightdeck starts Wine directly, so the launcher prepares the NVIDIA pieces
@@ -103,17 +114,68 @@ Missing NGX does not prevent ordinary rendering, but DLSS needs the host NGX
 components. See [DXVK-NVAPI's requirements](https://github.com/jp7677/dxvk-nvapi).
 
 On a machine with one discrete NVIDIA GPU plus integrated graphics, Flightdeck
-selects that NVIDIA device for both DXVK/DXGI and VKD3D. Explicit device filters,
-DLL overrides and NVAPI-disable settings are honored; multiple discrete GPUs
-are not automatically narrowed to one. AMD/Intel-only launch environments are
-unchanged. A failed NVIDIA Vulkan check stops launch with a driver message.
-On Zorin, use the distribution's [NVIDIA driver setup](https://help.zorin.com/docs/hardware/activate-nvidia-drivers/).
+selects that NVIDIA device for both DXVK/DXGI and VKD3D. Explicit device selections
+are retained; multiple discrete GPUs are not automatically narrowed to one.
+AMD/Intel-only launch environments are unchanged. A failed NVIDIA Vulkan check
+stops launch with a driver message.
 
-**Diagnostics** reports Vulkan adapters, API/driver versions, the desktop session
-type and the last launcher graphics setup result. It omits device UUIDs and raw
-driver logs. The probe runs in a separate process with a deadline and does not
-require `vulkaninfo`. Direct execution of `tools/play-msfs.sh` bypasses this
-launcher preparation and requires an already prepared graphics environment.
+Flightdeck 0.1.6 adds **Setup → NVIDIA graphics**. Its
+per-installation choice is stored in `private/graphics-settings.json` and read
+for each launcher-managed start. See the [user guide](graphics.md).
+
+- `auto`: prepare the runner's NVIDIA components and retain explicit environment
+  overrides.
+- `compatibility`: disable NVAPI, optical flow and NGX loading for the process;
+  set `WINE_HIDE_NVIDIA_GPU=1` and append `dxgi.hideNvidiaGpu = True` to
+  `DXVK_CONFIG`. This disables DLSS and NVIDIA Frame Generation. Existing DLLs
+  remain on disk and are available again after switching back to Automatic.
+
+Flightdeck also translates `PROTON_HIDE_NVIDIA_GPU=1` for Wine
+and DXGI. `PROTON_DISABLE_NVAPI=1` or `DXVK_ENABLE_NVAPI=0` blocks NVAPI and
+optical-flow loading even when an earlier start installed these libraries.
+The saved Compatibility mode takes precedence over conflicting feature-enabling
+variables. Automatic mode honors inherited variables; remove explicit disable
+settings from the launcher's service environment to use NVIDIA features again.
+Generic Steam launch options do not configure Flightdeck's existing background
+service. Changing the mode in Flightdeck requires no service restart.
+
+The Vulkan check, DXGI/D3D12 adapter selection and GLVND setup also run with
+NVAPI disabled. A single GPU name filter that uniquely matches a Vulkan adapter
+is completed for the other graphics API. Explicit filters for both APIs, UUIDs,
+device indices and ambiguous matches are preserved without guessing.
+
+**Diagnostics** reports Vulkan adapters, API/driver versions and the desktop
+session type. `graphics.status: ready` means that the Linux probe can enumerate
+a hardware adapter; it does not prove that Wine initialized Direct3D or that
+the game rendered. A listed software adapter such as llvmpipe is not evidence
+that the game selected it. The probe runs in a separate process with a deadline
+and does not require `vulkaninfo`.
+
+Flightdeck 0.1.6 provides diagnostics schema 2 with:
+
+- `context`: launcher version, selected simulator, last run-log modification
+  time and `cloud_sync_scope: current_service`. Cloud state describes the current
+  service, not necessarily the recorded game run.
+- `graphics.last_start_attempt`: sanitized launch settings persisted in
+  `private/graphics-launch.json`, including attempt time, launcher version,
+  simulator, preparation/spawn state, requested GPU-filter categories and
+  NVIDIA mode, vendor-hiding flag and NVAPI/DLL override modes. Writing this record is best effort and does not
+  prevent launch. It survives a service restart; the older `last_launch` field
+  exists only in service memory. Neither field proves successful rendering.
+- `graphics.prefix`: read-only comparisons of current graphics DLLs against
+  the selected runner, distinguishing matching native files, known Wine
+  builtins, different files and missing/unavailable files. Known global and
+  game-specific registry override modes are included. NGX presence alone does
+  not establish a working driver bridge or DLSS.
+- `graphics.log`: known component markers and Vulkan/DXGI error symbols found
+  in the bounded first/last log excerpt. Empty results do not rule out a graphics
+  failure or prove a renderer was never loaded.
+
+Compare the attempt and log times: a direct script start or later prefix reset
+may leave an older launcher attempt beside newer logs/files. The export omits
+paths, device UUIDs, arbitrary registry values and raw log lines. Direct
+execution of `tools/play-msfs.sh` bypasses launcher preparation and attempt
+recording and requires an already prepared graphics environment.
 
 ### Xbox sign-in and game process
 

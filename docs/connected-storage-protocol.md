@@ -117,14 +117,10 @@ They do not replace the owner-fencing evidence above. The native write adapter
 must separately validate its atom-allocation, byte-upload and atom-commit flow
 before any production write is enabled.
 
-## Live verification
+## Verification scope
 
-On 18 September 2026, a real MSFS profile accepted the persistent Linux client
-identifier through normal acquisition, repeated ownership checks and release.
-A separate 32-byte synthetic container then exercised atom allocation, byte
-upload, atom commit, container commit, exact readback and deletion. All steps
-succeeded without forcing the lock. The test container was absent afterward;
-the original 18 containers' metadata, atom identities and bytes, and the active
-local saves, remained unchanged. Private account and save data are not included
-in this repository. This verifies the native wire path; a cross-device gameplay
-test remains outstanding.
+The native transport has been tested through lock acquisition, repeated
+ownership checks, release, upload, commit, exact readback and deletion. These
+checks validate the wire protocol; cross-device gameplay remains unverified.
+Account responses and private save data are excluded from source and release
+archives.

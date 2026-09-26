@@ -13,6 +13,30 @@ from flightdeck.server import Handler, Server
 
 
 class ServerTests(unittest.TestCase):
+    def test_graphics_settings_require_session_token_and_bind_to_selected_runtime(self):
+        with patch.object(self.server.launcher, "configure_graphics", return_value={"ok": True}) as configure:
+            body = json.dumps({"runtime_path": "/fixture", "nvidia_mode": "compatibility"})
+            self.assertEqual(self.request("POST", "/api/graphics", body,
+                                         {"Content-Type": "application/json"})[0], 403)
+            configure.assert_not_called()
+            self.assertEqual(self.request("POST", "/api/graphics", body,
+                {"Content-Type": "application/json", "X-Flightdeck-Token": self.server.token})[0], 200)
+            configure.assert_called_once_with("/fixture", "compatibility")
+
+    def test_maintenance_preview_and_confirm_require_current_session(self):
+        manager = self.server.launcher.maintenance
+        headers = {"Content-Type": "application/json", "X-Flightdeck-Token": self.server.token}
+        self.assertEqual(self.request("GET", "/maintenance.js")[0], 200)
+        self.assertEqual(self.request("GET", "/api/maintenance")[0], 200)
+        for action in ("preview", "start", "discard"):
+            self.assertEqual(self.request("POST", "/api/maintenance/" + action, "{}", {"Content-Type":"application/json"})[0], 403)
+        with patch.object(manager, "preview", return_value={"ok":True}) as preview:
+            self.assertEqual(self.request("POST", "/api/maintenance/preview", '{"operation":"reset"}', headers)[0], 200)
+            preview.assert_called_once_with({"operation":"reset"})
+        with patch.object(manager, "start", return_value={"ok":True}) as start:
+            self.assertEqual(self.request("POST", "/api/maintenance/start", '{"job_id":"current","confirmed":true}', headers)[0], 200)
+            start.assert_called_once_with({"job_id":"current","confirmed":True})
+
     def test_startup_update_check_requires_current_local_session(self):
         path = "/api/updates/check-startup"
         self.assertEqual(self.request("POST", path, "{}", {"Content-Type": "application/json"})[0], 403)

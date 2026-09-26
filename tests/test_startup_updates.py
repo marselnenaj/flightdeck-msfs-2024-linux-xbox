@@ -11,6 +11,9 @@ from flightdeck import game_update, launcher_update
 
 class StartupUpdateTests(unittest.TestCase):
     def setUp(self):
+        running = patch.object(launcher_update, "__version__", "0.1.5")
+        running.start()
+        self.addCleanup(running.stop)
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)

@@ -20,21 +20,17 @@ Flightdeck installs and launches your **purchased Xbox PC / Microsoft Store copy
 of MSFS 2024 or 2020** on your Linux computer through Wine/Proton. Sign in with your
 Microsoft account, download the game and start it from one application.
 
-**Flightdeck 0.1.5** checks for launcher and selected-simulator updates when the
-app opens. It prepares the missing NVIDIA NVAPI/NGX integration and selects
-the same NVIDIA GPU for DXGI and DirectX 12 on systems with integrated graphics.
-Failed cloud uploads now allow explicit local play while preserving backups and
-the pending sync. Rendering on the reported RTX 4060/Zorin system still needs
-verification. Update through **Updates → Flightdeck** (from 0.1.4), or use the
-[full installer](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.5).
-See the [changes and test evidence](docs/changelog.md).
+**Current release: [Flightdeck 0.1.6](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.6).**
+It adds selectable NVIDIA graphics modes, improved graphics diagnostics and
+installation maintenance with a reversible Wine environment reset.
+Update through **Updates → Flightdeck** or use the full installer.
+See [NVIDIA graphics](docs/graphics.md) and the [release history](docs/changelog.md).
 
-**Experimental.** MSFS 2024 local simulator execution and a controlled takeoff have been
-observed, and online multiplayer has been reported working on Linux. The MSFS 2020
-path has synthetic workflow tests and live license/package checks. A startup disc
-prompt was reported; a complete installation and flight remain unverified.
-Automatic Xbox cloud saves are experimental.
-[See the current evidence below.](#compatibility)
+**Experimental.** MSFS 2024 has been tested on Linux, including cockpit access
+and takeoff. NVIDIA rendering and stability still require hardware validation;
+results can vary by driver and GPU. MSFS 2020 startup and complete-flight
+compatibility remain unconfirmed. Automatic Xbox cloud saves are experimental.
+[Compatibility and limitations](#compatibility)
 
 ## Get started
 
@@ -137,8 +133,9 @@ installation; it does not replace your separate Community folder or saves.
 
 | Area | Current evidence |
 | :--- | :--- |
-| **MSFS 2024 simulator** | Cockpit reached and one controlled takeoff completed on a development system. |
-| **MSFS 2020 simulator** | Install, update, rollback and edition switching pass synthetic tests; live game-license and package checks passed. A startup disc prompt was reported and its resolution is unverified. End-to-end installation and flight remain open. |
+| **MSFS 2024 simulator** | Cockpit access and takeoff tested on Linux with AMD graphics. Full-flight coverage is incomplete. |
+| **NVIDIA graphics** | Automatic graphics setup and selectable compatibility mode. NVIDIA rendering and flight stability require hardware validation. [Setup and limitations](docs/graphics.md) |
+| **MSFS 2020 simulator** | Installation, updates and license checks are implemented. A startup disc prompt can occur; successful startup and complete-flight compatibility remain unconfirmed. |
 | **Local saves** | Persistence across restarts and local backup tested. |
 | **Free Store content** | Free-content downloads succeeded in a user test. |
 | **Owned Marketplace content** | Account-owned add-ons can be enumerated and supported Durable licenses use genuine signed grants. Full DLC coverage and the MSFS 2024 Aviator Upgrade remain unverified. Paid checkout and device-shared DLC rights are unsupported. [Scope](docs/marketplace-collections.md) |
@@ -148,13 +145,10 @@ installation; it does not replace your separate Community folder or saves.
 | **SimBridge** | HTTP health, Web MCDU, WebSocket and terrain initialization tested under Wine. Simulator connection remains unverified. |
 | **Fenix A320** | Optional installer with Wine fixes, CPU displays, Legacy readouts and restore. Cockpit rendering verified with 2.4.0.4720; full-flight testing pending. See [Fenix setup](docs/addons.md#fenix-a320). |
 
-The first-install and update workflows have component, synthetic full-flow and
-browser tests. A complete fresh MSFS download, runtime setup, pause/resume and
-full file verification have also passed on an Arch Linux workstation using
-separate launcher and account storage. Installation on a fresh operating system
-and reaching the main menu after that fresh game installation remain unverified,
-as does a flight after a real Store update. A package in the mod
-list confirms its local files, not working aircraft systems or activation.
+Installation, download pause/resume and file verification have been tested on
+Arch Linux. Other distributions and a fresh operating-system installation need
+separate validation. A mod-list entry confirms installed files; it does not
+confirm activation or working aircraft systems.
 
 [Add-on installation guide](docs/addons.md) ·
 [Marketplace scope](docs/marketplace-collections.md) ·
@@ -178,7 +172,8 @@ alone.
 | Guide | Covers |
 | :--- | :--- |
 | [Install](docs/install.md) | Requirements, setup and launcher maintenance |
-| [Changes](docs/changelog.md) | Flightdeck 0.1.5, released packages and test evidence |
+| [Changes](docs/changelog.md) | Release history |
+| [NVIDIA graphics](docs/graphics.md) · [Deutsch](docs/graphics.de.md) | Driver requirements, graphics modes and troubleshooting |
 | [Cloud saves](docs/cloud-saves.md) · [Deutsch](docs/cloud-saves.de.md) | Automatic sync, conflict recovery, backups and current limits |
 | [Game maintenance](docs/game-updates.md) | Updates, file verification, full repair and rollback |
 | [Add-ons](docs/addons.md) · [Deutsch](docs/addons.de.md) | Community packages, FlyByWire, SimBridge and Fenix |

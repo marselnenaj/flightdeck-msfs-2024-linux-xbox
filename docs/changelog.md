@@ -1,5 +1,31 @@
 # Changes and release status
 
+## 0.1.6 — 26 September 2026
+
+[Download Flightdeck 0.1.6](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.6).
+
+- Add **Setup → NVIDIA graphics** with Automatic and Compatibility modes,
+  saved separately for each simulator installation and applied on its next
+  start. Compatibility disables NVIDIA-specific features, including DLSS and
+  NVIDIA Frame Generation, while retaining the physical GPU selection.
+- Translate NVIDIA vendor-hiding options for direct Wine/DXGI starts and make
+  NVAPI opt-outs effective even after an earlier NVIDIA-enabled launch.
+- Complete an unambiguous GPU name filter for both DXGI and DirectX 12 while
+  preserving explicit choices and avoiding guesses between multiple GPUs.
+- Extend graphics diagnostics with persistent start settings, graphics-library
+  checks and recognized error codes. These records describe configuration and
+  errors, not successful rendering.
+- Add **Setup → Manage installation** with removal previews, retained data by
+  default, and a reversible Wine environment reset. Active games and setup
+  operations remain protected; pending cloud recovery data is preserved.
+- Update the English and German guides with graphics-mode instructions,
+  installation maintenance and consistent compatibility requirements.
+
+NVIDIA rendering and flight stability still require hardware validation.
+Native components remain **0.1.1** and the optional Fenix patch remains
+**0.1.0-preview.3**. See [NVIDIA graphics](graphics.md) and
+[installation maintenance](install.md#manage-a-game-installation).
+
 ## 0.1.5 — 25 September 2026
 
 [Download Flightdeck 0.1.5](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.5).
@@ -21,11 +47,9 @@
 - Include bounded GPU/Vulkan information and numeric cloud error details in
   diagnostics; distinguish connection, storage-lock and quota failures.
 
-NVIDIA integration and interrupted-sync recovery have isolated regression
-tests. Rendering on the reported RTX 4060/Zorin system still needs verification.
-Validation includes Python regression tests, compatibility packaging tests,
-JavaScript tests and desktop/mobile Chromium checks. Native components remain at
-**0.1.1** and the optional Fenix patch remains **0.1.0-preview.3**.
+NVIDIA rendering is not yet verified across GPU and driver versions. Native
+components remain at **0.1.1** and the optional Fenix patch remains
+**0.1.0-preview.3**.
 
 ## 0.1.4 — 24 September 2026
 
@@ -160,15 +184,9 @@ that the MSFS 2024 Aviator Upgrade works. See the
 ### Validation and remaining limits
 
 Fenix 2.4.0.4720 / MSFS 2024 1.8.16.0 cockpit displays were checked on Hyprland.
-The packaged Wine modules, clean .NET setup, matching/nonmatching helper windows,
-installer recovery and desktop/mobile UI flows have separate tests. The Fenix
-release's GitHub checks and an anonymous download through Flightdeck passed.
-A complete Fenix flight and other desktops remain unverified; CPU displays do
-not provide weather radar. The first patch requires the pinned Xodus runner.
-
-MSFS 2020 workflows have synthetic tests and live license/package probes. A
-startup disc prompt was reported; those probes do not prove its resolution or
-a successful flight. A complete end-to-end MSFS 2020 installation remains open.
+A complete Fenix flight remains unverified; CPU displays do not provide weather
+radar. The first patch requires the pinned Xodus runner. MSFS 2020 can display a
+startup disc prompt, and startup/full-flight compatibility remains unconfirmed.
 Cloud saves remain experimental, with cross-device gameplay validation pending.
 
 ## 0.1.0 — 18 September 2026

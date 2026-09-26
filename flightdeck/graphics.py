@@ -27,10 +27,47 @@ _NVAPI = {
 _FILES = set(_NVAPI) | {"system32/nvngx.dll", "system32/_nvngx.dll"}
 _SELECTORS = ("DXVK_FILTER_DEVICE_NAME", "DXVK_FILTER_DEVICE_UUID",
               "VKD3D_FILTER_DEVICE_NAME", "VKD3D_VULKAN_DEVICE")
+NVIDIA_MODES = {"auto", "compatibility"}
+SETTINGS_FILE = "graphics-settings.json"
 
 
 class GraphicsError(Exception):
     code = "graphics"
+
+
+def settings(runtime):
+    """Per-installation preferences, read again for every start (no service restart)."""
+    try:
+        private = runtime / "private"
+        if private.is_symlink() or not private.is_dir():
+            raise ValueError()
+        fd = os.open(private / SETTINGS_FILE, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+        with os.fdopen(fd, "rb") as source:
+            info = os.fstat(source.fileno())
+            if not stat.S_ISREG(info.st_mode) or info.st_size > 4096:
+                raise ValueError()
+            value = json.loads(source.read(4097))
+        if (not isinstance(value, dict) or value.get("schema") != 1
+                or not isinstance(value.get("nvidia_mode"), str)
+                or value["nvidia_mode"] not in NVIDIA_MODES):
+            raise ValueError()
+        return {"nvidia_mode": value["nvidia_mode"]}
+    except FileNotFoundError:
+        return {"nvidia_mode": "auto"}
+    except (OSError, ValueError) as error:
+        raise GraphicsError("Die Grafikeinstellungen sind ungültig. Bitte unter Einrichtung erneut speichern.") from error
+
+
+def snapshot(runtime):
+    present = nvidia_present()
+    result = {"nvidia_present": present, "available": bool(present and runtime is not None
+              and (runtime / "runner/files/bin/wine").is_file()), "nvidia_mode": "auto", "error": ""}
+    if runtime is not None:
+        try:
+            result.update(settings(runtime))
+        except GraphicsError as error:
+            result["error"] = str(error)
+    return result
 
 
 def _text(value, maximum=256):
@@ -245,6 +282,45 @@ def _overrides(environment):
     environment["WINEDLLOVERRIDES"] = ";".join(entry for entry in entries if entry)
 
 
+def _select_adapter(environment, devices):
+    """Keep DXGI and D3D12 on the same uniquely identified physical adapter."""
+    if not any(environment.get(key) for key in _SELECTORS):
+        discrete = [d for d in devices if d["type"] == 2]
+        if len(discrete) == 1 and discrete[0]["vendor_id"] == 0x10de:
+            environment["DXVK_FILTER_DEVICE_NAME"] = discrete[0]["name"]
+            environment["VKD3D_FILTER_DEVICE_NAME"] = discrete[0]["name"]
+    elif not any(environment.get(key) for key in ("DXVK_FILTER_DEVICE_UUID", "VKD3D_VULKAN_DEVICE")):
+        # A single unambiguous name filter can be completed for the other API.
+        # Never guess the meaning of a UUID/index or overwrite a second choice.
+        for source, target in (("DXVK_FILTER_DEVICE_NAME", "VKD3D_FILTER_DEVICE_NAME"),
+                               ("VKD3D_FILTER_DEVICE_NAME", "DXVK_FILTER_DEVICE_NAME")):
+            if environment.get(source) and not environment.get(target):
+                matched = [d for d in devices if environment[source] in d["name"] and d["type"] != 4]
+                if len(matched) == 1:
+                    # Wine may report a different marketing name than the
+                    # host. Retain the user's working substring, not a newly
+                    # constructed full name from the native probe.
+                    environment[target] = environment[source]
+
+
+def _nvidia_mode(environment, mode):
+    if mode == "compatibility":
+        environment["PROTON_DISABLE_NVAPI"] = "1"
+        environment["DXVK_ENABLE_NVAPI"] = "0"
+        environment["PROTON_HIDE_NVIDIA_GPU"] = "1"
+        # NGX can also be loaded directly by a game. Leave the files intact so
+        # returning to automatic mode restores driver-backed NVIDIA features.
+        entries = [environment.get("WINEDLLOVERRIDES", ""), "nvngx,_nvngx,*nvngx,*_nvngx="]
+        environment["WINEDLLOVERRIDES"] = ";".join(entry for entry in entries if entry)
+    if environment.get("PROTON_HIDE_NVIDIA_GPU", "0") not in {"", "0"}:
+        # The Proton Python launcher normally translates this. Wine itself
+        # never reads PROTON_* options, and DXVK has its own vendor reporting.
+        environment["WINE_HIDE_NVIDIA_GPU"] = "1"
+    if environment.get("WINE_HIDE_NVIDIA_GPU") == "1":
+        config = environment.get("DXVK_CONFIG", "").rstrip(" ;\n")
+        environment["DXVK_CONFIG"] = (config + "; " if config else "") + "dxgi.hideNvidiaGpu = True"
+
+
 def prepare(runtime, environment=None):
     """Called only while holding this runtime's play.lock, before spawning Wine."""
     environment = dict(os.environ if environment is None else environment)
@@ -252,22 +328,33 @@ def prepare(runtime, environment=None):
         return environment, {"nvidia": "custom_runner"}
     if not nvidia_present():
         return environment, {"nvidia": "not_present"}
-    if environment.get("PROTON_DISABLE_NVAPI", "0") not in {"", "0"} or environment.get("DXVK_ENABLE_NVAPI") == "0":
-        return environment, {"nvidia": "disabled"}
+    mode = settings(runtime)["nvidia_mode"]
+    _nvidia_mode(environment, mode)
     report = probe()
     if report["status"] != "ready" or not any(d["vendor_id"] == 0x10de and d["type"] != 4 for d in report["devices"]):
         raise GraphicsError("NVIDIA wurde erkannt, aber Vulkan ist nicht verfügbar. Bitte den empfohlenen NVIDIA-Treiber der Distribution installieren und Linux neu starten.")
+    # Adapter selection and GLVND setup are needed even without NVAPI. An
+    # opt-out must not also change which physical GPU DXGI and D3D12 use.
+    # Keep explicit choices and never guess among multiple discrete GPUs.
+    _select_adapter(environment, report["devices"])
+    report.update(nvidia_mode=mode, hide_nvidia=environment.get("WINE_HIDE_NVIDIA_GPU") == "1")
+    environment.setdefault("__GLVND_DISALLOW_PATCHING", "1")
+    if environment.get("PROTON_DISABLE_NVAPI", "0") not in {"", "0"} or environment.get("DXVK_ENABLE_NVAPI") == "0":
+        # Direct Wine starts do not interpret PROTON_DISABLE_NVAPI. Skipping
+        # installation alone leaves DLLs from previous starts loadable. Block
+        # loading for this process, including app-local/wildcard overrides,
+        # without deleting managed or user-supplied files. Wine's last entry
+        # wins, so an explicit disable also overrides inherited native entries.
+        environment["DXVK_ENABLE_NVAPI"] = "0"
+        entries = [environment.get("WINEDLLOVERRIDES", ""),
+                   "nvapi,nvapi64,nvofapi64,*nvapi,*nvapi64,*nvofapi64="]
+        environment["WINEDLLOVERRIDES"] = ";".join(entry for entry in entries if entry)
+        report["nvidia"] = "disabled"
+        return environment, report
     directory = nvidia_directory(environment)
     custom = _install(runtime, directory)
-    # Honor explicit device choices. On the usual NVIDIA + integrated-GPU PC,
-    # point DXGI and D3D12 at the same sole discrete NVIDIA adapter.
-    discrete = [d for d in report["devices"] if d["type"] == 2]
-    if not any(environment.get(key) for key in _SELECTORS) and len(discrete) == 1 and discrete[0]["vendor_id"] == 0x10de:
-        environment["DXVK_FILTER_DEVICE_NAME"] = discrete[0]["name"]
-        environment["VKD3D_FILTER_DEVICE_NAME"] = discrete[0]["name"]
     _overrides(environment)
     environment.setdefault("DXVK_ENABLE_NVAPI", "1")
-    environment.setdefault("__GLVND_DISALLOW_PATCHING", "1")
     if directory is not None:
         environment["NVIDIA_WINE_DLL_DIR"] = str(directory)
     report.update(nvidia="ready", ngx_available=directory is not None, custom_dlls=custom)

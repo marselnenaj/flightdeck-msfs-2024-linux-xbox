@@ -1,7 +1,7 @@
 """Local launcher API. No account tokens or raw game logs leave this process."""
 from __future__ import annotations
 
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 from datetime import datetime, timezone
 import fcntl
 import hashlib
@@ -131,6 +131,8 @@ class Launcher:
         self.graphics_report = None
         from .startup_updates import StartupUpdates
         self.startup_updates = StartupUpdates(self)
+        from .maintenance import Maintenance
+        self.maintenance = Maintenance(self)
 
     @staticmethod
     def validate_runtime(value):
@@ -233,17 +235,39 @@ class Launcher:
             self.exit_code = None
             return {"ok": True}
 
-    def _require_cloud_idle(self):
+    def _require_cloud_idle(self, *, allow_attention=False):
         manager = getattr(self, "cloud_saves", None)
         if manager is None:
             return
         with manager.automation.lock:
+            automation = manager.automation
+            waiting = (allow_attention and automation.state == "attention"
+                       and not (automation.worker and automation.worker.is_alive()))
             if (manager.automation.runtime == self.runtime and
-                    manager.automation.state in {"syncing", "playing", "attention"}):
+                    manager.automation.state in {"syncing", "playing", "attention"} and not waiting):
                 raise LauncherError("Bitte den Cloud-Abgleich für die aktuelle Version zuerst abschließen.")
         with manager.lock:
             if manager.job_runtime == self.runtime and manager.job and manager.job.get("state") == "running":
                 raise LauncherError("Bitte den laufenden Spielstandvorgang zuerst abschließen.")
+
+    def configure_graphics(self, runtime_path, nvidia_mode):
+        from . import graphics
+        with self.lock:
+            self.require_open()
+            if self.runtime is None or runtime_path != str(self.runtime):
+                raise LauncherError("Die ausgewählte Installation hat sich geändert. Bitte den Status neu laden.")
+            if not isinstance(nvidia_mode, str) or nvidia_mode not in graphics.NVIDIA_MODES:
+                raise LauncherError("Bitte einen gültigen NVIDIA-Modus auswählen.")
+            self._poll()
+            if self.setup_busy or self.process is not None:
+                raise LauncherError("Beende zuerst Spiel, Cloud-Abgleich und laufende Einrichtungen.")
+            self._require_cloud_idle(allow_attention=True)
+            with self.runtime_lock():
+                if not graphics.snapshot(self.runtime)["available"]:
+                    raise LauncherError("Für diese Installation ist keine NVIDIA-Einrichtung verfügbar.")
+                atomic_json(self.runtime / "private" / graphics.SETTINGS_FILE,
+                            {"schema": 1, "nvidia_mode": nvidia_mode})
+            return {"ok": True}
 
     def register_runtime(self, runtime_path):
         """Remember an existing installation without changing the active game."""
@@ -424,6 +448,7 @@ class Launcher:
                 "last_backup": {"name": last.name, "created_at": datetime.fromtimestamp(last.stat().st_mtime, timezone.utc).isoformat()} if last else None}
 
     def status(self):
+        from . import graphics
         with self.lock:
             self._poll()
             owned = self._owned_runtime_operation
@@ -443,6 +468,7 @@ class Launcher:
                     "runtime": {"configured": self.runtime is not None, "path": str(self.runtime) if self.runtime else "", "ready": ready, "checks": checks,
                                 "game_id": selected_game.id if selected_game else "", "game_name": selected_game.name if selected_game else ""},
                     "versions": self.version_runtimes(),
+                    "graphics": graphics.snapshot(self.runtime),
                     "game": {"state": state, "managed": self.process is not None,
                              "can_start": ready and state == "stopped" and not self.setup_busy and not self.desktop_closing, "can_stop": self.process is not None and not self.stopping,
                              "started_at": self.started_at, "exit_code": self.exit_code},
@@ -526,13 +552,21 @@ class Launcher:
                 inherited = (runtime_lock_fd,)
             except (OSError, ValueError, TypeError):
                 raise LauncherError("Die Runtime unterstützt den gesperrten Spielstart nicht.") from None
-        from . import graphics
+        from . import graphics, graphics_diagnostics
+        self.graphics_report = None
+        graphics_at = utc_now()
+        graphics_record = graphics_diagnostics.launch_record(self.runtime, {}, os.environ, state="preparing", at=graphics_at)
         try:
-            if runtime_lock_fd is None:
-                with self.runtime_lock():
+            with self.runtime_lock() if runtime_lock_fd is None else nullcontext():
+                graphics_diagnostics.save_launch(self.runtime, graphics_record)
+                try:
                     environment, report = graphics.prepare(self.runtime)
-            else:
-                environment, report = graphics.prepare(self.runtime)
+                except graphics.GraphicsError:
+                    graphics_record["state"] = "preparation_failed"
+                    graphics_diagnostics.save_launch(self.runtime, graphics_record)
+                    raise
+                graphics_record = graphics_diagnostics.launch_record(self.runtime, report, environment, state="prepared", at=graphics_at)
+                graphics_diagnostics.save_launch(self.runtime, graphics_record)
             self.graphics_report = (self.runtime, report)
         except graphics.GraphicsError as error:
             failure = LauncherError(str(error))
@@ -547,10 +581,14 @@ class Launcher:
                                             start_new_session=True, close_fds=True, pass_fds=inherited, umask=0o077,
                                             env=environment)
         except OSError:
+            graphics_record["state"] = "spawn_failed"
+            graphics_diagnostics.save_launch(self.runtime, graphics_record)
             raise LauncherError("Das Startprogramm konnte nicht ausgeführt werden.") from None
         finally:
             os.close(fd)
         self.started_at = utc_now()
+        graphics_record["state"] = "spawned"
+        graphics_diagnostics.save_launch(self.runtime, graphics_record)
         self.started_monotonic = time.monotonic()
         self.exit_code = None
         self.stopping = False
@@ -652,8 +690,16 @@ class Launcher:
 
     def diagnostics(self):
         """Extract numeric allowlisted outcomes, never raw lines or identities."""
+        from . import graphics, graphics_diagnostics
         summary = {"run_found": False, "auth_http": [], "local_save_init": [], "store_calls": [], "exit": None}
         root = self.runtime
+        try:
+            game_id = games.for_runtime(root).id if root else None
+        except ValueError:
+            game_id = None
+        summary["context"] = {"diagnostics_schema": 2, "launcher_version": __version__, "game_id": game_id,
+                              "cloud_sync_scope": "current_service", "run_log_modified_at": None}
+        graphics_log = None
         if root:
             runs = [p for p in (root / "private").glob("run-*") if re.fullmatch(r"run-\d{8}-\d{6}-[A-Za-z0-9]+", p.name) and p.is_dir() and not p.is_symlink()]
             if runs:
@@ -662,7 +708,8 @@ class Launcher:
                 try:
                     fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
                     with os.fdopen(fd, "rb") as stream:
-                        if not stat.S_ISREG(os.fstat(stream.fileno()).st_mode):
+                        log_info = os.fstat(stream.fileno())
+                        if not stat.S_ISREG(log_info.st_mode):
                             raise OSError("not regular")
                         # Initialization lives near the start; recent exit near
                         # the end. Never load an unbounded private log into RAM.
@@ -670,6 +717,8 @@ class Launcher:
                         stream.seek(max(0, os.fstat(stream.fileno()).st_size - 512 * 1024))
                         text = (first + b"\n" + stream.read(512 * 1024)).decode("utf-8", errors="replace")
                     summary["run_found"] = True
+                    summary["context"]["run_log_modified_at"] = datetime.fromtimestamp(log_info.st_mtime, timezone.utc).isoformat()
+                    graphics_log = graphics_diagnostics.log_summary(text)
                     summary["auth_http"] = sorted(set(int(x) for x in re.findall(r"xodus-title-auth: host=(?:user|device|title|xsts)\.auth\.xboxlive\.com status=(\d{3})\b", text)))
                     summary["local_save_init"] = [{"enabled": int(e), "sync_on_demand": int(s), "hresult": h.lower()} for e, s, h in dict.fromkeys(re.findall(r"\[xodus-gamesave\] local_init enabled=([01]) sync_on_demand=([01]) hr=([0-9a-fA-F]{8})\b", text))]
                     store_methods = {"XStoreCreateContext", "XStoreQueryEntitledProductsAsync",
@@ -693,12 +742,15 @@ class Launcher:
                     exits = re.findall(r"xodus-wine-launch: wine_pid=\d+ exit_code=(\d+) elapsed_seconds=(\d+(?:\.\d+)?)(?=\s|$)", text)
                     if exits:
                         summary["exit"] = {"code": int(exits[-1][0]), "seconds": float(exits[-1][1])}
-                except OSError:
+                except (OSError, ValueError, OverflowError):
                     pass
         cloud = self.cloud_saves.automation.snapshot()
         summary["cloud_sync"] = {key: cloud[key] for key in ("state", "phase", "error_code", "error_details")}
-        from . import graphics
         summary["graphics"] = graphics.probe()
+        summary["graphics"]["log"] = graphics_log
+        if root:
+            summary["graphics"]["prefix"] = graphics_diagnostics.prefix_summary(root)
+            summary["graphics"]["last_start_attempt"] = graphics_diagnostics.load_launch(root)
         with self.lock:
             if self.graphics_report is not None and self.graphics_report[0] == root:
                 summary["graphics"]["last_launch"] = self.graphics_report[1]

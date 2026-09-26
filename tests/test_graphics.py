@@ -107,12 +107,73 @@ class GraphicsTests(unittest.TestCase):
             graphics.prepare(self.runtime, {})
         self.assertEqual(list((self.windows / "system32").iterdir()), [])
 
-    def test_explicit_disable_skips_changes(self):
+    def test_explicit_disable_blocks_nvapi_without_preparing_the_prefix(self):
         for env in ({"PROTON_DISABLE_NVAPI": "1"}, {"DXVK_ENABLE_NVAPI": "0"}):
             result, report = graphics.prepare(self.runtime, env)
-            self.assertEqual(result, env)
+            self.assertEqual(result["DXVK_ENABLE_NVAPI"], "0")
+            self.assertEqual(result["WINEDLLOVERRIDES"], "nvapi,nvapi64,nvofapi64,*nvapi,*nvapi64,*nvofapi64=")
             self.assertEqual(report["nvidia"], "disabled")
-        self.probe.assert_not_called()
+        self.nvidia_directory.assert_not_called()
+        self.assertFalse((self.runtime / "private/nvidia-runtime.json").exists())
+
+    def test_nvapi_opt_out_keeps_the_same_physical_gpu_for_both_graphics_apis(self):
+        # Hybrid systems can have one NVIDIA card and an AMD integrated GPU.
+        # Turning off optional NVIDIA features must not undo adapter selection.
+        enabled, _ = graphics.prepare(self.runtime, {})
+        for flag in ({"PROTON_DISABLE_NVAPI": "1"}, {"DXVK_ENABLE_NVAPI": "0"}):
+            with self.subTest(flag=flag):
+                disabled, report = graphics.prepare(self.runtime, flag)
+                for key in ("DXVK_FILTER_DEVICE_NAME", "VKD3D_FILTER_DEVICE_NAME", "__GLVND_DISALLOW_PATCHING"):
+                    self.assertEqual(disabled.get(key), enabled[key])
+                self.assertEqual(report["devices"], [IGPU, NVIDIA])
+
+    def test_nvapi_opt_out_preserves_explicit_gpu_choices_and_does_not_choose_among_discrete_cards(self):
+        for key in graphics._SELECTORS:
+            with self.subTest(key=key):
+                env = {"DXVK_ENABLE_NVAPI": "0", key: "user choice"}
+                result, _ = graphics.prepare(self.runtime, env)
+                self.assertEqual({k: v for k, v in result.items() if k in graphics._SELECTORS}, {key: "user choice"})
+        self.probe.return_value = {"status": "ready", "devices": [NVIDIA, {**IGPU, "type": 2}]}
+        result, _ = graphics.prepare(self.runtime, {"PROTON_DISABLE_NVAPI": "1"})
+        self.assertFalse(set(result) & set(graphics._SELECTORS))
+
+    def test_nvapi_opt_out_still_checks_nvidia_vulkan_before_starting(self):
+        self.probe.return_value = {"status": "failed", "devices": []}
+        for flag in ({"PROTON_DISABLE_NVAPI": "1"}, {"DXVK_ENABLE_NVAPI": "0"}):
+            with self.subTest(flag=flag), self.assertRaises(graphics.GraphicsError):
+                graphics.prepare(self.runtime, flag)
+        self.assertFalse((self.runtime / "private/nvidia-runtime.json").exists())
+
+    def test_disable_after_enabled_launch_retains_files_and_can_be_reenabled(self):
+        graphics.prepare(self.runtime, {})
+        marker = self.runtime / "private/nvidia-runtime.json"
+        original = {name: (self.windows / name).read_bytes() for name in graphics._FILES}
+        manifest = marker.read_bytes()
+        for flag in ({"PROTON_DISABLE_NVAPI": "1"}, {"DXVK_ENABLE_NVAPI": "0"}):
+            with self.subTest(flag=flag):
+                env = {"WINEDLLOVERRIDES": "xgameruntime=n;NvApi64=n;*nvapi64=n",
+                       "DXVK_FILTER_DEVICE_NAME": NVIDIA["name"], "DXVK_ENABLE_NVAPI": "1", **flag}
+                result, report = graphics.prepare(self.runtime, env)
+                self.assertEqual(result["DXVK_ENABLE_NVAPI"], "0")
+                self.assertEqual(result["WINEDLLOVERRIDES"], env["WINEDLLOVERRIDES"] +
+                                 ";nvapi,nvapi64,nvofapi64,*nvapi,*nvapi64,*nvofapi64=")
+                self.assertEqual(result["DXVK_FILTER_DEVICE_NAME"], NVIDIA["name"])
+                self.assertEqual(report["nvidia"], "disabled")
+                self.assertEqual(marker.read_bytes(), manifest)
+                for name, contents in original.items():
+                    self.assertEqual((self.windows / name).read_bytes(), contents)
+                self.assertNotIn("nvofapi64=", env["WINEDLLOVERRIDES"])
+        result, report = graphics.prepare(self.runtime, {})
+        self.assertEqual(result["DXVK_ENABLE_NVAPI"], "1")
+        self.assertIn("nvapi64=n", result["WINEDLLOVERRIDES"])
+        self.assertEqual(report["nvidia"], "ready")
+
+    def test_disable_preserves_custom_dlls(self):
+        target = self.windows / "system32/nvapi64.dll"
+        target.write_bytes(b"user supplied component")
+        _, report = graphics.prepare(self.runtime, {"PROTON_DISABLE_NVAPI": "1"})
+        self.assertEqual(report["nvidia"], "disabled")
+        self.assertEqual(target.read_bytes(), b"user supplied component")
 
     def test_missing_ngx_does_not_reuse_a_stale_managed_driver_copy(self):
         graphics.prepare(self.runtime, {})
@@ -140,6 +201,88 @@ class GraphicsTests(unittest.TestCase):
         with self.assertRaises(graphics.GraphicsError):
             graphics.prepare(self.runtime, {})
         self.assertEqual(secret.read_text(), "unchanged")
+
+    def test_compatibility_survives_restart_and_returns_to_driver_features(self):
+        # Real files installed by a prior normal start must not make the
+        # process accidentally opt back into NVIDIA features.
+        graphics.prepare(self.runtime, {})
+        before = {name: (self.windows / name).read_bytes() for name in graphics._FILES}
+        settings = self.runtime / "private" / graphics.SETTINGS_FILE
+        settings.write_text(json.dumps({"schema": 1, "nvidia_mode": "compatibility"}))
+        original = {"DXVK_ENABLE_NVAPI": "1", "PROTON_HIDE_NVIDIA_GPU": "0",
+                    "PROTON_FORCE_NVAPI": "1", "WINE_HIDE_NVIDIA_GPU": "0",
+                    "DXVK_CONFIG": "dxgi.maxFrameRate = 60; dxgi.hideNvidiaGpu = False",
+                    "WINEDLLOVERRIDES": "xgameruntime=n;nvapi64=n;nvngx=n"}
+        env, report = graphics.prepare(self.runtime, original)
+        self.assertEqual(env["DXVK_ENABLE_NVAPI"], "0")
+        self.assertEqual(env["WINE_HIDE_NVIDIA_GPU"], "1")
+        self.assertTrue(env["DXVK_CONFIG"].endswith("; dxgi.hideNvidiaGpu = True"))
+        self.assertIn("dxgi.maxFrameRate = 60", env["DXVK_CONFIG"])
+        from flightdeck.graphics_diagnostics import environment_overrides
+        overrides = environment_overrides(env)
+        for name in ("nvapi64", "nvapi", "nvofapi64", "nvngx", "_nvngx", "*nvapi64", "*nvngx"):
+            self.assertEqual(overrides[name], "disabled")
+        self.assertEqual(report["nvidia_mode"], "compatibility")
+        self.assertTrue(report["hide_nvidia"])
+        self.assertEqual({name: (self.windows / name).read_bytes() for name in graphics._FILES}, before)
+        self.assertEqual(original["DXVK_ENABLE_NVAPI"], "1")
+        settings.write_text(json.dumps({"schema": 1, "nvidia_mode": "auto"}))
+        restored, report = graphics.prepare(self.runtime, {})
+        self.assertEqual(restored["DXVK_ENABLE_NVAPI"], "1")
+        self.assertNotIn("WINE_HIDE_NVIDIA_GPU", restored)
+        self.assertNotIn("DXVK_CONFIG", restored)
+        self.assertFalse(report["hide_nvidia"])
+
+    def test_proton_hide_option_is_translated_for_wine_and_dxgi(self):
+        for flag in ("PROTON_HIDE_NVIDIA_GPU", "WINE_HIDE_NVIDIA_GPU"):
+            with self.subTest(flag=flag):
+                env, report = graphics.prepare(self.runtime, {flag: "1"})
+                self.assertEqual(env["WINE_HIDE_NVIDIA_GPU"], "1")
+                self.assertEqual(env["DXVK_CONFIG"], "dxgi.hideNvidiaGpu = True")
+                self.assertTrue(report["hide_nvidia"])
+        env, report = graphics.prepare(self.runtime, {"PROTON_HIDE_NVIDIA_GPU": "0"})
+        self.assertNotIn("WINE_HIDE_NVIDIA_GPU", env)
+        self.assertNotIn("DXVK_CONFIG", env)
+
+    def test_unique_partial_gpu_selection_is_completed_for_the_other_api(self):
+        for selected, missing in (("DXVK_FILTER_DEVICE_NAME", "VKD3D_FILTER_DEVICE_NAME"),
+                                  ("VKD3D_FILTER_DEVICE_NAME", "DXVK_FILTER_DEVICE_NAME")):
+            with self.subTest(selected=selected):
+                env, _ = graphics.prepare(self.runtime, {selected: "RTX 4060"})
+                self.assertEqual(env[selected], "RTX 4060")
+                self.assertEqual(env[missing], "RTX 4060")
+                self.probe.return_value = {"status": "ready", "devices": [NVIDIA, {**NVIDIA, "name": "NVIDIA GeForce RTX 4060 Ti"}]}
+                env, _ = graphics.prepare(self.runtime, {selected: "RTX 4060"})
+                self.assertNotIn(missing, env)
+                self.probe.return_value = {"status": "ready", "devices": [NVIDIA, IGPU]}
+
+    def test_gpu_selection_is_not_tied_to_a_specific_nvidia_model(self):
+        for name in ("NVIDIA GeForce GTX 1660", "NVIDIA GeForce RTX 3060", "NVIDIA GeForce RTX 4060",
+                     "NVIDIA GeForce RTX 5090", "NVIDIA RTX A4000"):
+            with self.subTest(name=name):
+                self.probe.return_value = {"status": "ready", "devices": [IGPU, {**NVIDIA, "name": name}]}
+                env, _ = graphics.prepare(self.runtime, {})
+                self.assertEqual(env["DXVK_FILTER_DEVICE_NAME"], name)
+                self.assertEqual(env["VKD3D_FILTER_DEVICE_NAME"], name)
+
+    def test_settings_are_bounded_validated_and_never_follow_symlinks(self):
+        target = self.runtime / "private" / graphics.SETTINGS_FILE
+        self.assertEqual(graphics.settings(self.runtime), {"nvidia_mode": "auto"})
+        for value in ([], {"schema": 1, "nvidia_mode": {}}, {"schema": 1, "nvidia_mode": "untrusted"},
+                      {"schema": 2, "nvidia_mode": "auto"}):
+            target.write_text(json.dumps(value))
+            with self.subTest(value=value), self.assertRaises(graphics.GraphicsError):
+                graphics.prepare(self.runtime, {})
+        target.write_text("x" * 4097)
+        with self.assertRaises(graphics.GraphicsError):
+            graphics.settings(self.runtime)
+        target.unlink()
+        outside = self.root / "outside.json"
+        outside.write_text('{"schema":1,"nvidia_mode":"compatibility"}')
+        target.symlink_to(outside)
+        with self.assertRaises(graphics.GraphicsError):
+            graphics.settings(self.runtime)
+        self.assertTrue(graphics.snapshot(self.runtime)["error"])
 
 
 class GraphicsProbeTests(unittest.TestCase):

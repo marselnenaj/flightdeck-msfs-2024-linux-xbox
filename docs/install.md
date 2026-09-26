@@ -1,7 +1,8 @@
 # Install the Flightdeck launcher
 
-This guide covers **Flightdeck 0.1.5**, including automatic update discovery,
-NVIDIA graphics preparation and cloud-upload recovery. See [changes](changelog.md).
+This guide covers **Flightdeck 0.1.6**, including selectable NVIDIA graphics
+modes, installation maintenance, automatic update checks and cloud-upload recovery. See
+[changes](changelog.md) and [NVIDIA graphics](graphics.md).
 
 Download **Flightdeck-Linux-x86_64.tar.gz** from the
 [releases page](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases)
@@ -48,10 +49,10 @@ and local saves. In **Overview**, choose **MSFS 2024** or **MSFS 2020** to switc
 directly; a missing edition opens its setup form. Flightdeck
 never converts a 2024 installation into 2020 or replaces one with the other.
 Older runtimes without a recorded edition remain MSFS 2024. MSFS 2020's PC Store
-package is available in the public Microsoft catalog. Edition workflows have
-synthetic coverage and live game-license/package probes passed. A startup disc
-prompt was reported; a complete end-to-end installation and flight remain open.
-See the [MSFS 2020 test status](marketplace-collections.md#package-checks-and-the-msfs-2020-disc-prompt).
+package is available in the public Microsoft catalog. Installation, updates and
+license checks are implemented. A startup disc prompt can occur; successful
+startup and complete-flight compatibility remain unconfirmed. See the
+[MSFS 2020 limitations](marketplace-collections.md#package-checks-and-the-msfs-2020-disc-prompt).
 
 Microsoft sign-in opens in a separate GTK/WebKitGTK window provided by Xodus.
 It does not use the browser showing Flightdeck's local interface. If the
@@ -191,8 +192,8 @@ Choose the update that matches what you want to change:
 | Fenix compatibility | **Mods → Fenix A320** | Optional, version-checked runner/profile setup; requires a separate explicit install |
 | Fenix aircraft and liveries | Official Fenix installer/manager | Purchased Fenix software and matching liveries |
 
-Flightdeck 0.1.5 checks for launcher and selected-simulator updates when the app
-opens. Discovery runs in the background without reserving the simulator. A notice
+Since Flightdeck 0.1.5, the launcher checks for its own and the selected simulator's
+updates when the app opens. Discovery runs in the background without reserving the simulator. A notice
 links to available updates; downloading and installing remain explicit actions.
 Repeated windows share a 30-minute check interval within the same running service.
 An offline or failed check can be retried manually. Microsoft sign-in opens only
@@ -291,7 +292,59 @@ A changed installed source file or entrypoint blocks an update rather than
 silently discarding local edits. Keep such edits in a source checkout, preserve
 them before uninstalling, and install into a fresh managed directory if needed.
 
-## Uninstall
+## NVIDIA graphics modes
+
+In Flightdeck 0.1.6 or later, choose **Setup → NVIDIA graphics** for
+the selected simulator. **Automatic** uses available NVIDIA features;
+**Compatibility** disables them for troubleshooting black scenery or crashes.
+The choice applies on the next game start without restarting Flightdeck.
+Compatibility mode does not provide DLSS or NVIDIA Frame Generation.
+[Requirements and troubleshooting](graphics.md)
+
+## Manage a game installation
+
+In Flightdeck 0.1.6 or later, select the simulator edition, then open
+**Setup → Manage installation**. Finish the
+game, cloud sync and other setup work first. Every action requires a preview and
+a separate confirmation. Changing an installation after preview requires a new
+check; previews expire after ten minutes. A failed, finished cloud sync does not
+block maintenance. Reset preserves its pending recovery data; cloud recovery is
+still required before normal play. Active sync operations remain protected.
+
+**Reset game environment** prepares a fresh Wine prefix using the existing
+runner and verified compatibility files. The base game, local saves and previous
+prefix remain on disk. Registry, in-game graphics settings and programs installed
+inside the prefix start fresh, so extra programs need setup again. The NVIDIA
+mode saved in Flightdeck is retained separately. First restore an
+active Fenix modification using its controls under **Mods**. Downloaded content
+at a recognized location inside the old prefix stays linked from the new prefix;
+external content stays in its original folder and may need selecting again in
+the simulator. **Undo last reset** reactivates the previous prefix. The displayed
+backup folder is retained, including when undoing the reset.
+
+**Uninstall game → Review uninstallation** lists the exact base-game and retained
+previous-version folders that will be deleted, including externally linked game
+folders. The default keeps settings, local saves and the remaining runtime in a
+neighboring `.uninstalled-…` backup folder. Clear the data-retention checkbox only
+to permanently delete that remaining runtime too. Clear the base-game checkbox
+to retain all files and only remove the installation from Flightdeck. The original
+runtime path becomes available for a new installation.
+
+External linked runners, add-ons and account stores, other simulator editions
+and Xbox cloud saves remain untouched. Shared base-game folders are protected.
+If additional packages/add-ons are stored inside a base-game folder, Flightdeck
+asks you to move them first or keep the files. Removal does not follow nested
+directory links. Interrupted removal is reported as incomplete; its recovery
+locations are recorded in `private/uninstalled.json` in the runtime or backup.
+
+**Verify & repair** repairs base-game files while keeping the Wine environment,
+settings and saves. It does not recreate the environment or replace graphics
+drivers. For black scenery or NVIDIA crashes, follow the
+[graphics troubleshooting guide](graphics.md) before resetting an installation.
+
+## Uninstall the launcher
+
+The commands below remove **only the launcher**:
 
 ```sh
 ~/.local/bin/flightdeck --uninstall
@@ -307,9 +360,7 @@ Use the original `--data-dir` when uninstalling a custom installation. Only
 manifest-owned files whose hashes still match are removed. Changed files,
 unrecognized files and symlinks are kept and their paths are reported. Settings,
 prepared runtimes, account stores and local/cloud save data are left untouched.
-The small manager directory and lock inode remain to avoid a concurrent-operation
-race; they can be reused by a later install. No recursive deletion of foreign
-folders is performed.
+A small launcher-management folder remains available for a later installation.
 
 ## Verification
 

@@ -84,6 +84,40 @@
       </section>
       <section id="view-installation" class="view" aria-labelledby="page-title" hidden>
         <p class="setup-subtitle"><span data-i18n="Installieren oder verbinden. Danach startet dein Simulator direkt aus Flightdeck.">Installieren oder verbinden. Danach startet dein Simulator direkt aus Flightdeck.</span></p>
+        <section id="graphics-card" class="panel graphics-panel" aria-labelledby="graphics-title" hidden>
+          <h2 id="graphics-title" data-i18n="NVIDIA-Grafik">NVIDIA-Grafik</h2>
+          <p id="graphics-game" class="eyebrow"></p>
+          <div class="graphics-controls">
+            <div class="field"><label for="graphics-mode" data-i18n="NVIDIA-Modus">NVIDIA-Modus</label><select id="graphics-mode" aria-describedby="graphics-description" disabled><option value="auto" data-i18n="Automatisch (NVIDIA-Funktionen nutzen)">Automatisch (NVIDIA-Funktionen nutzen)</option><option value="compatibility" data-i18n="Kompatibilität (ohne NVIDIA-Zusatzfunktionen)">Kompatibilität (ohne NVIDIA-Zusatzfunktionen)</option></select></div>
+            <button id="graphics-save" class="button secondary" disabled data-i18n="Modus speichern">Modus speichern</button>
+          </div>
+          <p id="graphics-description"></p>
+          <p class="muted" data-i18n="Gilt für den ausgewählten Simulator ab dem nächsten Spielstart. Jederzeit umstellbar.">Gilt für den ausgewählten Simulator ab dem nächsten Spielstart. Jederzeit umstellbar.</p>
+          <p id="graphics-busy" class="muted" hidden></p>
+          <p id="graphics-error" class="notice error" role="alert" hidden></p>
+        </section>
+        <section id="maintenance-card" class="panel maintenance-panel" aria-labelledby="maintenance-title">
+          <h2 id="maintenance-title" data-i18n="Installation verwalten">Installation verwalten</h2>
+          <p id="maintenance-game" class="eyebrow"></p>
+          <p data-i18n="Bei Startproblemen kannst du die Spielumgebung zurücksetzen. Vor jeder Änderung zeigt Flightdeck eine Vorschau.">Bei Startproblemen kannst du die Spielumgebung zurücksetzen. Vor jeder Änderung zeigt Flightdeck eine Vorschau.</p>
+          <div class="update-actions"><button id="maintenance-reset" class="button secondary" disabled data-i18n="Spielumgebung zurücksetzen">Spielumgebung zurücksetzen</button><button id="maintenance-restore" class="button secondary" hidden disabled data-i18n="Letztes Zurücksetzen rückgängig machen">Letztes Zurücksetzen rückgängig machen</button></div>
+          <p class="muted" data-i18n="Zurücksetzen behebt nicht automatisch jeden Grafikfehler. Der bisherige Zustand bleibt als Sicherung erhalten.">Zurücksetzen behebt nicht automatisch jeden Grafikfehler. Der bisherige Zustand bleibt als Sicherung erhalten.</p>
+          <details class="maintenance-removal"><summary data-i18n="Spiel deinstallieren">Spiel deinstallieren</summary>
+            <label class="maintenance-option"><input id="maintenance-keep-data" type="checkbox" checked><span data-i18n="Einstellungen und lokale Spielstände sichern">Einstellungen und lokale Spielstände sichern</span></label>
+            <label class="maintenance-option"><input id="maintenance-delete-packages" type="checkbox" checked><span data-i18n="Basisspiel und frühere Spielversionen löschen">Basisspiel und frühere Spielversionen löschen</span></label>
+            <button id="maintenance-uninstall" class="button secondary" disabled data-i18n="Deinstallation prüfen">Deinstallation prüfen</button>
+          </details>
+          <p id="maintenance-busy" class="muted" hidden data-i18n="Beende zuerst Spiel, Cloud-Abgleich und laufende Einrichtungen.">Beende zuerst Spiel, Cloud-Abgleich und laufende Einrichtungen.</p>
+          <progress id="maintenance-progress" hidden aria-label="Wartung läuft" data-i18n-aria-label="Wartung läuft"></progress>
+          <p id="maintenance-message" role="status" aria-live="polite"></p><p id="maintenance-error" class="notice error" role="alert" hidden></p>
+          <section id="maintenance-preview" class="maintenance-preview" aria-labelledby="maintenance-preview-title" hidden>
+            <h3 id="maintenance-preview-title"></h3><p id="maintenance-preview-game"></p><code id="maintenance-runtime"></code>
+            <p id="maintenance-effects"></p><p id="maintenance-retained" class="muted"></p>
+            <div id="maintenance-package-section"><h4 data-i18n="Diese Spielordner werden dauerhaft gelöscht">Diese Spielordner werden dauerhaft gelöscht</h4><ul id="maintenance-package-list"></ul><p id="maintenance-package-size"></p></div>
+            <div class="update-actions"><button id="maintenance-confirm" class="button dark" disabled></button><button id="maintenance-discard" class="button secondary" data-i18n="Abbrechen">Abbrechen</button></div>
+          </section>
+          <div id="maintenance-backup" hidden><strong data-i18n="Erhaltener Sicherungsordner">Erhaltener Sicherungsordner</strong><p id="maintenance-backup-path"></p></div>
+        </section>
         <ol id="setup-steps" class="setup-steps" aria-label="Einrichtungsschritte" data-i18n-aria-label="Einrichtungsschritte"><li id="setup-step-1" class="active"><span data-i18n="Installation wählen">Installation wählen</span></li><li id="setup-step-2"><span data-i18n="Prüfen">Prüfen</span></li><li id="setup-step-3"><span data-i18n="Verbinden">Verbinden</span></li></ol>
         <p id="setup-unavailable" class="notice error setup-unavailable" hidden></p>
 

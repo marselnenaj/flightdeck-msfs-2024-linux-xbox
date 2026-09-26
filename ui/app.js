@@ -1,4 +1,5 @@
 import {t, locale, plural, getLanguage, setLanguage, applyTranslations} from './i18n.js';
+import {createMaintenance} from './maintenance.js';
 import {createSetup} from './setup.js';
 import {createMods} from './mods.js';
 import {createFenix} from './fenix.js';
@@ -6,11 +7,14 @@ import {createUpdates} from './updates.js';
 import {createLauncherUpdates} from './launcher-updates.js';
 import {createNotices} from './notices.js';
 import {createCloudSaves} from './cloud-saves.js';
-import {VIEWS, stringValue, normalizeStatus, normalizeChecks, formatBytes, formatCount, formatDate, gamePresentation, actionPermissions, diagnosticValue, automaticBusy} from './state.js';
+import {VIEWS, stringValue, normalizeStatus, normalizeChecks, formatBytes, formatCount, formatDate, gamePresentation, actionPermissions, diagnosticValue, automaticBusy, graphicsEditable} from './state.js';
 
 const $ = id => document.getElementById(id);
 const state = {status: null, online: false, pending: null, pendingGame: null, view: 'overview', report: null, reportLoading: false};
 let statusRequest = null;
+let graphicsDraft = null;
+let maintenanceController = null;
+let maintenanceReserved = false;
 let setupReserved = false;
 let setupController = null;
 let modsController = null;
@@ -34,7 +38,7 @@ function renderUpdateNotice(kind, available) {
 
 async function checkStartupUpdates() {
   if(startupRequest||!state.online||!state.status?.csrf_token||state.pending)return;
-  const idle=state.status.game.state==='stopped'&&!setupReserved&&!fenixReserved&&!updateReserved&&!cloudReserved&&!launcherUpdateReserved&&!automaticBusy(state.status);
+  const idle=state.status.game.state==='stopped'&&!setupReserved&&!fenixReserved&&!updateReserved&&!cloudReserved&&!launcherUpdateReserved&&!maintenanceReserved&&!automaticBusy(state.status);
   const key=idle&&state.status.runtime.path?state.status.runtime.path:'launcher';
   if(startupChecked.has(key))return;
   startupChecked.add(key);
@@ -133,14 +137,16 @@ function renderChecks(target, checks, empty = t('Noch keine Prüfergebnisse verf
 }
 
 function renderStatus() {
+  renderGraphics();
   document.body.classList.toggle('game-switch-pending', state.pending === 'switch');
+  maintenanceController?.render();
   modsController?.render();
   fenixController?.render();
   updatesController?.render();
   launcherUpdatesController?.render();
   cloudController?.render();
   const status = state.status;
-  const permissions = actionPermissions(status, state.online, state.pending || fenixReserved || setupReserved || updateReserved || cloudReserved || launcherUpdateReserved);
+  const permissions = actionPermissions(status, state.online, state.pending || fenixReserved || setupReserved || updateReserved || cloudReserved || launcherUpdateReserved || maintenanceReserved);
   const game = gamePresentation(status, state.online);
   const connected = state.online && !!status;
   text('service-notice', status?.service?.message || '');
@@ -160,7 +166,7 @@ function renderStatus() {
   text('backup-label', state.pending === 'backup' ? t('Backup wird erstellt …') : t('Backup erstellen'));
   $('refresh-status').disabled = !!state.pending;
   const canSwitch = connected && status?.game.state === 'stopped' && !state.pending &&
-    !fenixReserved && !setupReserved && !updateReserved && !cloudReserved && !launcherUpdateReserved && !automaticBusy(status);
+    !fenixReserved && !setupReserved && !updateReserved && !cloudReserved && !launcherUpdateReserved&&!maintenanceReserved && !automaticBusy(status);
   for (const gameId of ['msfs2024','msfs2020']) {
     const button=$('version-'+gameId), item=status?.versions?.[gameId];
     const active=!!status?.runtime.configured && status.runtime.game_id===gameId;
@@ -204,12 +210,37 @@ function renderStatus() {
   text('last-backup-name', stringValue(backup?.name));
 }
 
+function canEditGraphics() {
+  return graphicsEditable(state.status, state.online, state.pending || setupReserved || fenixReserved ||
+    updateReserved || cloudReserved || launcherUpdateReserved || maintenanceReserved);
+}
+
+function renderGraphics() {
+  const status = state.status;
+  $('graphics-card').hidden = !status?.runtime.configured || !status.graphics?.nvidia_present;
+  if (graphicsDraft?.path !== status?.runtime.path) graphicsDraft = null;
+  const mode = graphicsDraft?.mode ?? status?.graphics?.nvidia_mode ?? 'auto';
+  $('graphics-mode').value = mode;
+  $('graphics-mode').disabled = !canEditGraphics();
+  $('graphics-save').disabled = !canEditGraphics() || (mode === status?.graphics?.nvidia_mode && !status?.graphics?.error);
+  text('graphics-game', status?.runtime.game_name || '');
+  text('graphics-description', t(mode === 'compatibility'
+    ? 'Bei schwarzer Welt oder NVIDIA-Abstürzen testen. DLSS und NVIDIA Frame Generation sind in diesem Modus deaktiviert.'
+    : 'Nutzt NVIDIA-Funktionen mit den Komponenten des Runners und des installierten Treibers. DLSS benötigt passende Treiberkomponenten.'));
+  text('graphics-error', status?.graphics?.error || '');
+  $('graphics-error').hidden = !status?.graphics?.error;
+  text('graphics-busy', t(status?.graphics?.available
+    ? 'Beende zuerst Spiel, Cloud-Abgleich und laufende Einrichtungen.'
+    : 'Für diese Installation ist keine NVIDIA-Einrichtung verfügbar.'));
+  $('graphics-busy').hidden = canEditGraphics();
+}
+
 async function refreshStatus() {
   if (statusRequest) return statusRequest;
   statusRequest = (async () => {
     try { state.status = normalizeStatus(await request('/api/status')); state.online = true; }
     catch { state.online = false; }
-    finally { renderStatus(); setupController?.render(); statusRequest = null; void checkStartupUpdates(); }
+    finally { renderStatus(); setupController?.render(); statusRequest = null; maintenanceController?.poll(); void checkStartupUpdates(); }
   })();
   return statusRequest;
 }
@@ -222,11 +253,12 @@ async function mutate(action, path, body = {}) {
   showNotice(''); renderStatus(); setupController?.render();
   try {
     await request(path, {method: 'POST', body, token: state.status.csrf_token});
+    if (action === 'graphics') graphicsDraft = null;
     if (action === 'switch') {
       await artworkReady;
       text('version-announcement', t('Simulator gewechselt. Du kannst ihn jetzt starten.'));
     } else {
-      const messages = {launch: t('Start angefordert. Der aktuelle Zustand wird geprüft.'), stop: t('Beenden angefordert. Der aktuelle Zustand wird geprüft.'), backup: t('Das lokale Backup wurde erstellt.'), config: t('Runtime-Pfad gespeichert. Die Installation wird geprüft.')};
+      const messages = {launch: t('Start angefordert. Der aktuelle Zustand wird geprüft.'), stop: t('Beenden angefordert. Der aktuelle Zustand wird geprüft.'), backup: t('Das lokale Backup wurde erstellt.'), config: t('Runtime-Pfad gespeichert. Die Installation wird geprüft.'), graphics: t('NVIDIA-Modus gespeichert. Er gilt ab dem nächsten Spielstart.')};
       showNotice(messages[action]);
     }
   } catch (error) { showNotice(error.message, true); }
@@ -250,7 +282,7 @@ function setView() {
     else nav.removeAttribute('aria-current');
   }
   document.title = `${t(VIEWS[state.view])} · Flightdeck`;
-  if (state.view === 'installation') void setupController?.poll();
+  if (state.view === 'installation') {void setupController?.poll();void maintenanceController?.load();}
   if (state.view === 'mods') { void modsController?.load(); void fenixController?.load(); }
   if (state.view === 'updates') {void updatesController?.load();void launcherUpdatesController?.load();}
   if (state.view === 'saves') void cloudController?.load();
@@ -289,7 +321,7 @@ async function loadDiagnostics() {
 }
 
 $('launch-button').addEventListener('click', () => {
-  const permissions = actionPermissions(state.status, state.online, state.pending || fenixReserved || setupReserved || updateReserved || cloudReserved);
+  const permissions = actionPermissions(state.status, state.online, state.pending || fenixReserved || setupReserved || updateReserved || cloudReserved || launcherUpdateReserved || maintenanceReserved);
   if (permissions.stop) void mutate('stop', '/api/stop');
   else if (permissions.start) void mutate('launch', '/api/launch');
   else if (permissions.setup) location.hash = 'installation';
@@ -297,7 +329,7 @@ $('launch-button').addEventListener('click', () => {
 for (const gameId of ['msfs2024','msfs2020']) {
   $('version-'+gameId).addEventListener('click',()=>{
     const status=state.status;
-    if (!state.online||!status||state.pending||fenixReserved||setupReserved||updateReserved||cloudReserved||automaticBusy(status)||status.game.state!=='stopped')return;
+    if (!state.online||!status||state.pending||fenixReserved||setupReserved||updateReserved||cloudReserved||launcherUpdateReserved||maintenanceReserved||automaticBusy(status)||status.game.state!=='stopped')return;
     if (status.runtime.configured&&status.runtime.game_id===gameId)return;
     const version=status.versions[gameId];
     if (version.ready) void mutate('switch','/api/game/select',{game_id:gameId});
@@ -309,8 +341,17 @@ for (const gameId of ['msfs2024','msfs2020']) {
   });
 }
 $('refresh-status').addEventListener('click', () => void refreshStatus());
+$('graphics-mode').addEventListener('change', () => {
+  if (canEditGraphics()) graphicsDraft = {path: state.status.runtime.path, mode: $('graphics-mode').value};
+  renderGraphics();
+});
+$('graphics-save').addEventListener('click', () => {
+  if (canEditGraphics()) void mutate('graphics', '/api/graphics', {
+    runtime_path: state.status.runtime.path, nvidia_mode: $('graphics-mode').value,
+  });
+});
 $('backup-button').addEventListener('click', () => {
-  if (actionPermissions(state.status, state.online, state.pending || fenixReserved || setupReserved || updateReserved || cloudReserved).backup) void mutate('backup', '/api/saves/backup');
+  if (actionPermissions(state.status, state.online, state.pending || fenixReserved || setupReserved || updateReserved || cloudReserved || launcherUpdateReserved || maintenanceReserved).backup) void mutate('backup', '/api/saves/backup');
 });
 $('diagnostic-refresh').addEventListener('click', () => void loadDiagnostics());
 $('diagnostic-copy').addEventListener('click', async () => {
@@ -334,15 +375,19 @@ window.addEventListener('flightdeck-languagechange', () => {
 window.addEventListener('hashchange', setView);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) void refreshStatus(); });
 applyTranslations();
-setupController = createSetup({request,getStatus:()=>state.status,isOnline:()=>state.online && !state.pending && !fenixReserved && !updateReserved && !cloudReserved && !launcherUpdateReserved && !automaticBusy(state.status),renderChecks,notice:showNotice,refreshStatus,changed:reserved=>{setupReserved=reserved;renderStatus();}});
-fenixController = createFenix({request,getStatus:()=>state.status,isOnline:()=>state.online&&!state.pending,isReserved:()=>setupReserved||updateReserved||cloudReserved||launcherUpdateReserved||automaticBusy(state.status),refreshStatus,notice:showNotice,changed:value=>{fenixReserved=value;renderStatus();}});
-modsController = createMods({request,getStatus:()=>state.status,isOnline:()=>state.online&&!state.pending,isReserved:()=>fenixReserved||setupReserved||updateReserved||cloudReserved||launcherUpdateReserved||automaticBusy(state.status),notice:showNotice});
-updatesController = createUpdates({request,getStatus:()=>state.status,isOnline:()=>state.online&&!state.pending,getSetupJob:()=>setupController.job(),isReserved:()=>fenixReserved||setupReserved||cloudReserved||launcherUpdateReserved||automaticBusy(state.status),refreshStatus,refreshSetup:()=>setupController.poll(),renderChecks,availableChanged:value=>renderUpdateNotice('game',value),changed:value=>{updateReserved=value;setupController?.render();renderStatus();}});
-cloudController = createCloudSaves({request,getStatus:()=>state.status,isOnline:()=>state.online&&!state.pending,isReserved:()=>fenixReserved||setupReserved||updateReserved||launcherUpdateReserved,refreshStatus,changed:value=>{cloudReserved=value;setupController?.render();renderStatus();}});
+setupController = createSetup({request,getStatus:()=>state.status,isOnline:()=>state.online && !state.pending && !fenixReserved && !updateReserved && !cloudReserved && !launcherUpdateReserved&&!maintenanceReserved && !automaticBusy(state.status),renderChecks,notice:showNotice,refreshStatus,changed:reserved=>{setupReserved=reserved;renderStatus();}});
+fenixController = createFenix({request,getStatus:()=>state.status,isOnline:()=>state.online&&!state.pending,isReserved:()=>setupReserved||updateReserved||cloudReserved||launcherUpdateReserved||maintenanceReserved||automaticBusy(state.status),refreshStatus,notice:showNotice,changed:value=>{fenixReserved=value;renderStatus();}});
+modsController = createMods({request,getStatus:()=>state.status,isOnline:()=>state.online&&!state.pending,isReserved:()=>fenixReserved||setupReserved||updateReserved||cloudReserved||launcherUpdateReserved||maintenanceReserved||automaticBusy(state.status),notice:showNotice});
+updatesController = createUpdates({request,getStatus:()=>state.status,isOnline:()=>state.online&&!state.pending,getSetupJob:()=>setupController.job(),isReserved:()=>fenixReserved||setupReserved||cloudReserved||launcherUpdateReserved||maintenanceReserved||automaticBusy(state.status),refreshStatus,refreshSetup:()=>setupController.poll(),renderChecks,availableChanged:value=>renderUpdateNotice('game',value),changed:value=>{updateReserved=value;setupController?.render();renderStatus();}});
+cloudController = createCloudSaves({request,getStatus:()=>state.status,isOnline:()=>state.online&&!state.pending,isReserved:()=>fenixReserved||setupReserved||updateReserved||launcherUpdateReserved||maintenanceReserved,refreshStatus,changed:value=>{cloudReserved=value;setupController?.render();renderStatus();}});
 launcherUpdatesController = createLauncherUpdates({request,getStatus:()=>state.status,isOnline:()=>state.online&&!state.pending,
-  isReserved:()=>fenixReserved||setupReserved||updateReserved||cloudReserved||automaticBusy(state.status),
+  isReserved:()=>fenixReserved||setupReserved||updateReserved||cloudReserved||maintenanceReserved||automaticBusy(state.status),
   availableChanged:value=>renderUpdateNotice('launcher',value),
   refreshStatus,notice:showNotice,changed:value=>{launcherUpdateReserved=value;setupController?.render();renderStatus();}});
+maintenanceController = createMaintenance({request,getStatus:()=>state.status,isOnline:()=>state.online&&!state.pending,
+  isSetupActive:()=>setupReserved,
+  isReserved:()=>setupReserved||updateReserved||fenixReserved||cloudReserved||launcherUpdateReserved,
+  refreshStatus,changed:value=>{maintenanceReserved=value;setupController?.render();renderStatus();}});
 setView();
 void refreshStatus().then(()=>{setupController.render();void updatesController.load();void launcherUpdatesController.load();});
 setInterval(() => { if (!document.hidden && !state.pending) void refreshStatus(); }, 3000);

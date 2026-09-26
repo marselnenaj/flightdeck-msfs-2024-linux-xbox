@@ -59,7 +59,8 @@ let launcherUnavailable=false,launcherBarrier=null,releaseLauncher=null,launcher
 
 let cloudData={available:true,mode:'download_and_import',sync_supported:false,can_check:true,can_download:true,can_prepare_import:true,can_import:false,can_cancel:false,plan:null,job:null};
 let cloudReplies=0,cloudUnavailable=false,cloudBarrier=null,releaseCloud=null,cloudWaiting=false;
-const files = new Set(['launcher-updates.js','notices.js','fenix.js','cloud-saves.js','manrope-variable.woff2','updates.js','mods.js','index.html','styles.css','app.js','setup.js','state.js','i18n.js','mark.svg','flight-panorama.png','flight-panorama-2020.png']);
+let maintenance={job:null,can_restore:false};
+const files = new Set(['maintenance.js','launcher-updates.js','notices.js','fenix.js','cloud-saves.js','manrope-variable.woff2','updates.js','mods.js','index.html','styles.css','app.js','setup.js','state.js','i18n.js','mark.svg','flight-panorama.png','flight-panorama-2020.png']);
 const server = createServer(async (req,res) => {
   const url = new URL(req.url, 'http://localhost');
   if (url.pathname.startsWith('/api/')) {
@@ -67,6 +68,7 @@ const server = createServer(async (req,res) => {
     res.setHeader('Content-Type','application/json'); res.setHeader('Cache-Control','no-store');
     if (apiUnavailable) {res.writeHead(503); res.end(JSON.stringify({ok:false,error:'Fixture offline'}));return;}
     if (req.method === 'GET') {
+      if (url.pathname === '/api/maintenance') {res.end(JSON.stringify(maintenance));return;}
       if (url.pathname === '/api/status') {if(statusBarrier){statusWaiting=true;await statusBarrier;}res.end(JSON.stringify({...status,runtime:{...status.runtime,checks:localizeChecks(status.runtime.checks,language)}}));return;}
       if (url.pathname === '/api/setup/discover') {res.end(JSON.stringify({ok:true,runtimes:discovered,checked_count:discovered.length,limited:false}));return;}
       if (url.pathname === '/api/setup') {res.end(JSON.stringify({...setup,job:setup.job?{...setup.job,checks:localizeChecks(setup.job.checks,language),message:language==='en'?'Synthetic files checked.':setup.job.message}:null}));return;}
@@ -93,8 +95,25 @@ const server = createServer(async (req,res) => {
         res.end(JSON.stringify({ok:true}));return;
       }
       posts.push({path:url.pathname,token:req.headers['x-flightdeck-token'],body:JSON.parse(body)});
+      if(url.pathname.startsWith('/api/maintenance/')) {
+        assert.equal(req.headers['x-flightdeck-token'],csrf);
+        const data=JSON.parse(body);
+        if(url.pathname.endsWith('/preview'))maintenance={...maintenance,job:{id:'maintenance-preview',state:'ready',operation:data.operation,runtime_path:status.runtime.path,game_name:status.runtime.game_name,
+          keep_data:data.keep_data,delete_packages:data.delete_packages,packages:data.operation==='uninstall'&&data.delete_packages?['/opt/flightdeck-fixture/Flight Simulator Downloads/Microsoft Flight Simulator 2024/base-game']:[],package_bytes:24*1024**3,message:language==='en'?'Review the folders, then confirm the action.':'Prüfe die Ordner und bestätige anschließend die Aktion.'}};
+        else if(url.pathname.endsWith('/start')){assert.deepEqual(data,{job_id:maintenance.job.id,confirmed:true});maintenance.job={...maintenance.job,state:'running',message:'Maintenance in progress'};}
+        else {assert.equal(data.job_id,maintenance.job.id);maintenance.job={...maintenance.job,state:'cancelled',message:''};}
+        res.end(JSON.stringify({ok:true,...maintenance}));return;
+      }
+
       if (req.headers['x-flightdeck-token'] !== csrf) {res.writeHead(403);res.end(JSON.stringify({ok:false,error:'Missing fixture CSRF'}));return;}
       if (failNext) {failNext = false;res.writeHead(400);res.end(JSON.stringify({ok:false,error:'<img src=x onerror="window.injected=1"> Backend-Fehler'}));return;}
+      if (url.pathname === '/api/graphics') {
+        const data=JSON.parse(body);
+        assert.equal(data.runtime_path,status.runtime.path);
+        assert.ok(['auto','compatibility'].includes(data.nvidia_mode));
+        status.graphics={...status.graphics,nvidia_mode:data.nvidia_mode};
+        res.end(JSON.stringify({ok:true}));return;
+      }
       if(url.pathname==='/api/launcher-update/check') {
         assert.deepEqual(JSON.parse(body),{});
         launcherUpdate={...launcherUpdate,latest_version:launcherUpdate.installed_version==='0.1.5'?'0.1.6':'0.1.5',update_available:true,check_id:'launcher-check-fixture',checked_at:'2026-09-24T20:00:00Z',can_install:launcherUpdate.managed,notes:'New update\n<img src=x onerror="window.launcherInjected=1">',job:null};
@@ -249,6 +268,73 @@ try {
   await check('Background MSFS discovery requires explicit preflight before download',`document.getElementById('update-start').hidden && !document.getElementById('update-check').disabled`);
   await refresh(`!document.getElementById('launch-button').disabled`);assert.equal(startupRequests.length,1);results.push('Language, navigation and status refresh do not repeat startup discovery');
   startupFixture=false;launcherUpdate=launcherDefault();gameUpdate={...gameUpdate,latest_version:null,update_available:null};
+  // A saved NVIDIA choice applies to the current edition and survives reloads.
+  status.graphics={available:true,nvidia_present:true,nvidia_mode:'auto',error:''};
+  await call('Emulation.setDeviceMetricsOverride',{width:1536,height:1024,deviceScaleFactor:1,mobile:false});
+  await language('de');await route('installation');
+  await refresh(`!document.getElementById('graphics-card').hidden && !document.getElementById('graphics-mode').disabled`);
+  await check('NVIDIA settings identify the selected simulator and automatic default',`document.getElementById('graphics-game').textContent===${JSON.stringify(status.runtime.game_name)} && document.getElementById('graphics-mode').value==='auto' && document.getElementById('graphics-save').disabled`);
+  await evaluate(`document.getElementById('graphics-mode').value='compatibility';document.getElementById('graphics-mode').dispatchEvent(new Event('change',{bubbles:true}))`);
+  await refresh(`document.getElementById('graphics-mode').value==='compatibility' && !document.getElementById('graphics-save').disabled`);
+  await check('Status polling retains the unsaved profile and explains disabled DLSS',`document.getElementById('graphics-description').textContent.includes('DLSS') && document.getElementById('graphics-description').textContent.includes('deaktiviert')`);
+  await click('graphics-save');await until(()=>evaluate(`document.getElementById('graphics-save').disabled && document.getElementById('notice').textContent.includes('NVIDIA-Modus gespeichert')`),'NVIDIA mode did not save');
+  assert.equal(status.graphics.nvidia_mode,'compatibility');
+  assert.deepEqual(posts.at(-1).body,{runtime_path:status.runtime.path,nvidia_mode:'compatibility'});
+  await evaluate(`document.getElementById('graphics-card').scrollIntoView({block:'start'})`);await screenshot('nvidia-compatibility-desktop.png');
+  await call('Page.reload');await until(()=>evaluate(`document.getElementById('graphics-mode')?.value==='compatibility' && !document.getElementById('graphics-mode').disabled`),'Saved NVIDIA mode did not survive page reload');
+  results.push('NVIDIA preference persists through reload without restarting the service');
+  await language('en');await call('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
+  await evaluate(`document.getElementById('graphics-card').scrollIntoView({block:'start'})`);await screenshot('nvidia-compatibility-mobile.png');
+  await check('NVIDIA mode is translated and fits mobile width',`document.getElementById('graphics-title').textContent==='NVIDIA graphics' && document.getElementById('graphics-description').textContent.includes('disabled') && document.documentElement.scrollWidth<=innerWidth`);
+  status.game.state='running';await refresh(`document.getElementById('graphics-mode').disabled`);
+  status.game.state='stopped';status.cloud={...autoIdle(),state:'syncing',phase:'before_start',request_id:autoRequest};
+  await refresh(`document.getElementById('graphics-mode').disabled`);
+  status.cloud={...status.cloud,state:'attention',error_code:'graphics'};
+  await refresh(`!document.getElementById('graphics-mode').disabled`);
+  results.push('Graphics preferences are blocked during play/sync and available after a finished graphics failure');
+  await evaluate(`document.getElementById('graphics-mode').value='auto';document.getElementById('graphics-mode').dispatchEvent(new Event('change',{bubbles:true}))`);
+  await click('graphics-save');await until(()=>evaluate(`document.getElementById('graphics-save').disabled && document.getElementById('graphics-mode').value==='auto'`),'Automatic mode was not restored');
+  assert.equal(status.graphics.nvidia_mode,'auto');
+  status.graphics={available:false,nvidia_present:false,nvidia_mode:'auto',error:''};status.cloud=autoIdle();
+  await refresh(`document.getElementById('graphics-card').hidden`);
+  results.push('AMD/Intel-only systems do not offer NVIDIA controls');
+  await call('Emulation.setDeviceMetricsOverride',{width:1536,height:1024,deviceScaleFactor:1,mobile:false});await language('de');await route('overview');
+  // Maintenance uses a reviewed plan; opening or changing options never deletes.
+  await route('installation');await until(()=>evaluate(`!document.getElementById('maintenance-reset').disabled`),'Maintenance not available');
+  await check('Maintenance belongs to selected edition and preserves data by default',`document.getElementById('maintenance-game').textContent===${JSON.stringify(status.runtime.game_name)} && document.getElementById('maintenance-keep-data').checked`);
+  status.cloud={...autoIdle(),state:'syncing',phase:'before_start',request_id:autoRequest};
+  await refresh(`document.getElementById('maintenance-reset').disabled`);
+  status.cloud={...status.cloud,state:'attention',error_code:'graphics',can_retry:true};
+  await refresh(`!document.getElementById('maintenance-reset').disabled`);
+  await check('A finished graphics or cloud failure allows reset while normal launch stays blocked',`document.getElementById('launch-button').disabled && !document.getElementById('maintenance-reset').disabled`);
+  const maintenancePosts=posts.length;
+  await click('maintenance-reset');await until(()=>evaluate(`!document.getElementById('maintenance-preview').hidden`),'Reset preview missing');
+  assert.equal(posts.length,maintenancePosts+1);assert.equal(posts.at(-1).path,'/api/maintenance/preview');
+  await check('Reset preview explains backups without executing reset',`document.getElementById('maintenance-effects').textContent.includes('gesichert') && document.getElementById('maintenance-confirm').textContent==='Jetzt zurücksetzen'`);
+  await evaluate(`document.getElementById('maintenance-card').scrollIntoView({block:'start'})`);await screenshot('maintenance-reset-desktop.png');
+  await click('maintenance-discard');await until(()=>evaluate(`document.getElementById('maintenance-preview').hidden`),'Preview did not close');
+  await click('maintenance-reset');await until(()=>evaluate(`!document.getElementById('maintenance-confirm').disabled`),'Reset confirm unavailable');
+  await click('maintenance-confirm');await until(()=>evaluate(`!document.getElementById('maintenance-progress').hidden && document.getElementById('launch-button').disabled && document.getElementById('maintenance-reset').disabled`),'Maintenance did not reserve runtime');
+  results.push('Confirmed reset blocks launch and concurrent maintenance');
+  maintenance={can_restore:true,job:{...maintenance.job,state:'complete',message:'Die Spielumgebung wurde zurückgesetzt.',backup_path:'/opt/flightdeck-fixture/MSFS2024/local/environment-backup-test/prefix'}};
+  await refresh(`!document.getElementById('maintenance-backup').hidden && !document.getElementById('maintenance-restore').hidden && !document.getElementById('maintenance-restore').disabled`);
+  await click('maintenance-restore');await until(()=>evaluate(`document.getElementById('maintenance-preview-title').textContent==='Vorherige Spielumgebung wiederherstellen?'`),'Restore preview missing');
+  await click('maintenance-discard');await until(()=>evaluate(`document.getElementById('maintenance-preview').hidden`),'Restore preview not discarded');
+  await language('en');await evaluate(`document.querySelector('.maintenance-removal').open=true`);
+  await click('maintenance-uninstall');await until(()=>evaluate(`document.getElementById('maintenance-confirm').textContent==='Uninstall now'`),'Uninstall preview missing');
+  await check('Uninstall lists exact package paths and preserved cloud data',`document.getElementById('maintenance-package-list').textContent.includes('Flight Simulator Downloads') && document.getElementById('maintenance-retained').textContent.includes('Xbox cloud saves')`);
+  await call('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
+  await evaluate(`document.getElementById('maintenance-preview').scrollIntoView({block:'center'})`);await screenshot('maintenance-uninstall-mobile.png');
+  await check('Maintenance preview fits mobile viewport',`document.documentElement.scrollWidth<=innerWidth`);
+  await click('maintenance-delete-packages');await until(()=>evaluate(`document.getElementById('maintenance-preview').hidden`),'Option change did not invalidate preview');
+  await check('Keeping packages also retains installation data',`document.getElementById('maintenance-keep-data').checked && document.getElementById('maintenance-keep-data').disabled`);
+  await click('maintenance-delete-packages');
+  await click('maintenance-uninstall');await until(()=>evaluate(`!document.getElementById('maintenance-confirm').disabled`),'New uninstall preview missing');
+  const originalMaintenancePath=status.runtime.path;status.runtime.path='/another/runtime';
+  await refresh(`document.getElementById('maintenance-preview').hidden`);
+  results.push('Switching runtime hides stale destructive confirmation');
+  status.runtime.path=originalMaintenancePath;status.cloud=autoIdle();maintenance={job:null,can_restore:false};
+  await refresh(`!document.getElementById('maintenance-reset').disabled`);
   await call('Emulation.setDeviceMetricsOverride',{width:1536,height:1024,deviceScaleFactor:1,mobile:false});await language('de');await route('overview');
   await check('Save summary pluralizes nonzero counts',`document.getElementById('overview-save-detail').textContent.endsWith('3 Dateien · 1 Backup')`);
   status.saves.files=0;status.saves.backups=0;await refresh(`document.getElementById('save-files').textContent==='0' && document.getElementById('save-backups').textContent==='0'`);

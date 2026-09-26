@@ -49,6 +49,12 @@ export function normalizeStatus(raw) {
       ready: raw.runtime.ready === true, checks: normalizeChecks(raw.runtime.checks),
     },
     versions,
+    graphics: {
+      available: raw.graphics?.available === true,
+      nvidia_present: raw.graphics?.nvidia_present === true,
+      nvidia_mode: ['auto', 'compatibility'].includes(raw.graphics?.nvidia_mode) ? raw.graphics.nvidia_mode : 'auto',
+      error: stringValue(raw.graphics?.error, '', 1000),
+    },
     game: {
       state, managed: raw.game.managed === true,
       can_start: raw.game.can_start === true && state === 'stopped' && raw.runtime.ready === true,
@@ -66,6 +72,12 @@ export function normalizeStatus(raw) {
     cloud: normalizeAutomatic(raw.cloud),
     csrf_token: stringValue(raw.csrf_token, '', 512),
   };
+}
+
+export function graphicsEditable(status, online, reserved) {
+  return !!(online && !reserved && status?.csrf_token && status.runtime.configured &&
+    status.graphics?.available && status.game.state === 'stopped' &&
+    !['syncing', 'playing'].includes(status.cloud?.state));
 }
 
 export function normalizeChecks(checks) {

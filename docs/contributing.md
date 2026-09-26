@@ -45,6 +45,15 @@ an unavailable response must not be converted into an empty successful query.
    guides. Keep upcoming features separate from what the published installer
    actually includes; distinguish reported game behavior from isolated probes.
 
+Public guides should describe user-visible behavior, requirements and known
+limitations. Keep personal support conversations, local debugging history,
+account observations, workstation paths and temporary test artifacts out of
+README files and release notes. Technical references may document stable
+interfaces and reproducible checks. Keep German and English instructions
+consistent, and verify relative links after editing. Do not describe a GPU or
+driver as working solely because configuration or unit tests pass; rendering
+claims require a test on the relevant hardware.
+
 New compatibility operations must define cancellation, result ownership and
 error behavior. Keep personal inventory separate from the public catalog, and
 keep Store consumable quantities separate from a game's own currency wallet.

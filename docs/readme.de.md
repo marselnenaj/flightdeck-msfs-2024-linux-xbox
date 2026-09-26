@@ -20,23 +20,19 @@ Flightdeck installiert und startet deine **gekaufte Xbox-PC-/Microsoft-Store-
 Version von MSFS 2024 oder 2020** unter Linux mit Wine/Proton. Mit dem Microsoft-Konto
 anmelden, das Spiel herunterladen und im Launcher starten.
 
-**Flightdeck 0.1.5** prüft beim Öffnen automatisch auf Launcher- und Spielupdates.
-Es ergänzt die fehlende NVIDIA-NVAPI-/NGX-Einrichtung und wählt
-auf Rechnern mit integrierter Grafik dieselbe NVIDIA-Karte für DXGI und DirectX 12.
-Nach gescheitertem Cloud-Upload kannst du ausdrücklich lokal weiterspielen;
-Sicherungen und ausstehender Abgleich bleiben erhalten. Der Grafik-Praxistest
-auf dem gemeldeten RTX-4060-/Zorin-System steht noch aus. Aktualisiere unter
-**Updates → Flightdeck** (ab 0.1.4) oder mit dem
-[vollständigen Installer](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.5).
-[Alle Änderungen und Tests](changelog.md).
+**Aktuelle Veröffentlichung: [Flightdeck 0.1.6](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.6).**
+Sie ergänzt auswählbare NVIDIA-Grafikmodi, eine erweiterte Grafikdiagnose und
+die Installationsverwaltung mit rückgängig machbarem Zurücksetzen der Wine-Umgebung.
+Aktualisiere über **Updates → Flightdeck** oder verwende den vollständigen Installer.
+Siehe [NVIDIA-Grafik](graphics.de.md) und
+[Änderungsübersicht](changelog.md).
 
-**Experimentell.** Für MSFS 2024 wurden der lokale Spielstart und ein
-kontrollierter Start mit einem Flugzeug beobachtet. Online-Multiplayer wurde
-unter Linux als funktionierend bestätigt. Für MSFS 2020 gibt es synthetische
-Ablauftests und echte Lizenz-/Paketprüfungen. Bei einem Startversuch wurde eine
-Datenträgeraufforderung gemeldet; eine vollständige Installation und ein Flug
-sind noch nicht bestätigt. Der automatische
-Abgleich von Xbox-Cloud-Spielständen ist experimentell.
+**Experimentell.** MSFS 2024 wurde unter Linux einschließlich Cockpit-Zugriff
+und Flugzeugstart getestet. Darstellung und Stabilität mit NVIDIA müssen noch
+auf entsprechender Hardware bestätigt werden; Ergebnisse können je nach Treiber
+und Grafikkarte abweichen. Für MSFS 2020 sind erfolgreicher Spielstart und
+vollständige Flüge noch nicht bestätigt. Automatische Xbox-Cloud-Saves sind
+experimentell. [Kompatibilität und Grenzen](#aktueller-stand)
 
 ## Loslegen
 
@@ -153,8 +149,9 @@ Spielstände bleiben bestehen.
 
 | Bereich | Nachweis |
 | :--- | :--- |
-| **MSFS-2024-Simulator** | Cockpit erreicht und ein kontrollierter Flugzeugstart auf einem Entwicklungssystem durchgeführt. |
-| **MSFS-2020-Simulator** | Installation, Updates, Rollback und Versionswechsel synthetisch getestet; echte Spiellizenz- und Paketprüfungen bestanden. Eine Datenträgeraufforderung beim Start wurde gemeldet; ihre Behebung ist noch nicht bestätigt. Vollständiger Installations- und Flugtest offen. |
+| **MSFS-2024-Simulator** | Cockpit-Zugriff und Flugzeugstart unter Linux mit AMD-Grafik getestet. Vollständige Flüge sind noch nicht umfassend geprüft. |
+| **NVIDIA-Grafik** | Automatische Grafikeinrichtung und auswählbarer Kompatibilitätsmodus. Darstellung und Flugstabilität müssen auf NVIDIA-Hardware bestätigt werden. [Einrichtung und Grenzen](graphics.de.md) |
+| **MSFS-2020-Simulator** | Installation, Updates und Lizenzprüfung sind implementiert. Beim Start kann eine Datenträgeraufforderung auftreten; erfolgreicher Spielstart und vollständige Flüge sind noch nicht bestätigt. |
 | **Lokale Spielstände** | Laden nach einem Neustart und lokale Backups getestet. |
 | **Kostenlose Store-Inhalte** | Download in einem Nutzertest erfolgreich. |
 | **Gekaufte Marketplace-Inhalte** | Kontoeigene Add-ons lassen sich abfragen; unterstützte Durable-Lizenzen verwenden echte signierte Freigaben. Vollständige DLC-Abdeckung und das MSFS-2024-Aviator-Upgrade bleiben ungeprüft. Kaufabschluss und über Geräte geteilte DLC-Rechte werden nicht unterstützt. [Umfang](marketplace-collections.md) |
@@ -164,14 +161,10 @@ Spielstände bleiben bestehen.
 | **SimBridge** | Dienstprüfung, Web-MCDU, WebSocket und Geländedateninitialisierung unter Wine getestet; Spielverbindung offen. |
 | **Fenix A320** | Optionaler Installer mit Wine-Korrekturen, CPU-Anzeigen, Legacy-Readouts und Wiederherstellung. Cockpit mit 2.4.0.4720 geprüft; vollständiger Testflug noch offen. [Fenix einrichten](addons.de.md#fenix-a320-einrichten). |
 
-Installation und Updates haben Komponenten-, simulierte Ablauf- und Browsertests.
-Ein vollständiger frischer MSFS-Download, Runtime-Einrichtung, Pause/Fortsetzen
-und die vollständige Dateiprüfung wurden zusätzlich auf einem Arch-Linux-Rechner
-mit getrennten Launcher- und Kontodaten erfolgreich geprüft. Die Installation
-auf einem frischen Betriebssystem, das Erreichen des Hauptmenüs nach dieser
-frischen Spielinstallation und ein Flug nach einem echten Store-Update sind noch
-nicht nachgewiesen. Ein Eintrag in der Mod-Liste bestätigt lokale
-Paketdateien, nicht Lizenzaktivierung oder funktionierende Cockpit-Systeme.
+Installation, Download-Pause/Fortsetzen und Dateiprüfung wurden unter Arch Linux
+getestet. Andere Distributionen und eine frische Betriebssysteminstallation
+benötigen eigene Prüfungen. Ein Eintrag in der Mod-Liste bestätigt installierte
+Dateien, aber keine Aktivierung oder funktionierenden Cockpit-Systeme.
 
 [Mod-Anleitung](addons.de.md) · [Marketplace-Umfang](marketplace-collections.md) ·
 [Multiplayer testen](multiplayer.md)
