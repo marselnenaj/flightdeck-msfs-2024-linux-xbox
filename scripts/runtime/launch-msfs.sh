@@ -5,7 +5,7 @@ source "$(dirname -- "${BASH_SOURCE[0]}")/runtime-env.sh"
 export WINEPREFIX="$MSFS_LINUX_ROOT/local/msfs-prefix" WINEARCH=win64
 export WINEESYNC=0 WINEFSYNC=0
 export WINEDEBUG='-all,err+all,warn+gdkc,fixme+gdkc'
-export DXVK_LOG_LEVEL=warn VKD3D_DEBUG=warn
+export DXVK_LOG_LEVEL="${DXVK_LOG_LEVEL:-warn}" VKD3D_DEBUG="${VKD3D_DEBUG:-warn}"
 export WINEDLLOVERRIDES="${WINEDLLOVERRIDES:+$WINEDLLOVERRIDES;}xgameruntime=n;xgameruntime_original=n,b;xodus_store_test=b"
 export WINEDLLPATH="$MSFS_LINUX_ROOT/local/store-runtime${WINEDLLPATH:+:$WINEDLLPATH}"
 export XODUS_USER_RUNTIME=1

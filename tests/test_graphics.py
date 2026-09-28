@@ -1,6 +1,9 @@
 """NVIDIA startup integration in isolated prefixes; no real GPU or driver I/O."""
 import json
+import os
 from pathlib import Path
+import shutil
+import subprocess
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -12,6 +15,7 @@ NVIDIA = {"name": "NVIDIA GeForce RTX 4060", "vendor_id": 0x10de, "type": 2,
           "api_version": "1.3.280", "driver_version": "580.126.9.0"}
 IGPU = {"name": "AMD Radeon Graphics", "vendor_id": 0x1002, "type": 1,
         "api_version": "1.3.280", "driver_version": "25.0.0"}
+DEVICE_UUID = "00112233445566778899aabbccddeeff"
 
 
 class GraphicsTests(unittest.TestCase):
@@ -35,7 +39,8 @@ class GraphicsTests(unittest.TestCase):
         self.driver.mkdir(parents=True)
         for name in ("nvngx.dll", "_nvngx.dll"):
             (self.driver / name).write_bytes(b"synthetic host driver: " + name.encode())
-        for function, value in (("nvidia_present", True), ("probe", {"status": "ready", "devices": [IGPU, NVIDIA]}),
+        for function, value in (("nvidia_present", True),
+                                ("probe", {"status": "ready", "devices": [IGPU, {**NVIDIA, "device_uuid": DEVICE_UUID}]}),
                                 ("nvidia_directory", self.driver)):
             mocker = patch.object(graphics, function, return_value=value)
             setattr(self, function, mocker.start())
@@ -47,13 +52,17 @@ class GraphicsTests(unittest.TestCase):
             self.assertEqual((self.windows / target).read_bytes(), (self.runner / "lib/wine/nvapi" / name).read_bytes())
         self.assertEqual((self.windows / "system32/nvngx.dll").read_bytes(), (self.driver / "nvngx.dll").read_bytes())
         self.assertEqual(environment["DXVK_ENABLE_NVAPI"], "1")
-        self.assertEqual(environment["DXVK_FILTER_DEVICE_NAME"], NVIDIA["name"])
-        self.assertEqual(environment["VKD3D_FILTER_DEVICE_NAME"], NVIDIA["name"])
+        self.assertEqual(environment["DXVK_FILTER_DEVICE_UUID"], DEVICE_UUID)
+        self.assertNotIn("DXVK_FILTER_DEVICE_NAME", environment)
+        self.assertNotIn("VKD3D_FILTER_DEVICE_NAME", environment)
         self.assertEqual(environment["NVIDIA_WINE_DLL_DIR"], str(self.driver))
         self.assertEqual(environment["WINEDLLOVERRIDES"], "xgameruntime=n;nvapi=n;nvapi64=n;nvofapi64=n;nvcuda=b")
         self.assertEqual(report["nvidia"], "ready")
         self.assertTrue(report["ngx_available"])
         self.assertNotIn(str(self.driver), json.dumps(report))
+        self.assertEqual(report["adapter_selection"], "nvidia_uuid")
+        self.assertNotIn(DEVICE_UUID, json.dumps(report))
+        self.probe.assert_called_once_with(include_device_ids=True)
 
     def test_managed_libraries_follow_runner_and_host_driver_updates(self):
         graphics.prepare(self.runtime, {})
@@ -63,6 +72,14 @@ class GraphicsTests(unittest.TestCase):
         graphics.prepare(self.runtime, {})
         self.assertEqual((self.windows / "system32/nvapi64.dll").read_bytes(), source.read_bytes())
         self.assertEqual((self.windows / "system32/nvngx.dll").read_bytes(), b"updated host driver")
+
+    def test_nvidia_startup_logging_preserves_explicit_preferences(self):
+        env, _ = graphics.prepare(self.runtime, {})
+        self.assertEqual(env["DXVK_LOG_LEVEL"], "info")
+        self.assertEqual(env["VKD3D_DEBUG"], "info")
+        env, _ = graphics.prepare(self.runtime, {"DXVK_LOG_LEVEL": "none", "VKD3D_DEBUG": "warn"})
+        self.assertEqual(env["DXVK_LOG_LEVEL"], "none")
+        self.assertEqual(env["VKD3D_DEBUG"], "warn")
 
     def test_custom_dll_and_explicit_gpu_overrides_are_preserved(self):
         custom = self.windows / "system32/nvapi64.dll"
@@ -123,8 +140,9 @@ class GraphicsTests(unittest.TestCase):
         for flag in ({"PROTON_DISABLE_NVAPI": "1"}, {"DXVK_ENABLE_NVAPI": "0"}):
             with self.subTest(flag=flag):
                 disabled, report = graphics.prepare(self.runtime, flag)
-                for key in ("DXVK_FILTER_DEVICE_NAME", "VKD3D_FILTER_DEVICE_NAME", "__GLVND_DISALLOW_PATCHING"):
+                for key in ("DXVK_FILTER_DEVICE_UUID", "__GLVND_DISALLOW_PATCHING"):
                     self.assertEqual(disabled.get(key), enabled[key])
+                self.assertNotIn("VKD3D_FILTER_DEVICE_NAME", disabled)
                 self.assertEqual(report["devices"], [IGPU, NVIDIA])
 
     def test_nvapi_opt_out_preserves_explicit_gpu_choices_and_does_not_choose_among_discrete_cards(self):
@@ -224,6 +242,11 @@ class GraphicsTests(unittest.TestCase):
             self.assertEqual(overrides[name], "disabled")
         self.assertEqual(report["nvidia_mode"], "compatibility")
         self.assertTrue(report["hide_nvidia"])
+        self.assertEqual(env["DXVK_FILTER_DEVICE_UUID"], DEVICE_UUID)
+        # Wine reports a different name when hiding the NVIDIA vendor. No
+        # automatically supplied host-name filter may exclude that adapter.
+        self.assertNotIn("DXVK_FILTER_DEVICE_NAME", env)
+        self.assertNotIn("VKD3D_FILTER_DEVICE_NAME", env)
         self.assertEqual({name: (self.windows / name).read_bytes() for name in graphics._FILES}, before)
         self.assertEqual(original["DXVK_ENABLE_NVAPI"], "1")
         settings.write_text(json.dumps({"schema": 1, "nvidia_mode": "auto"}))
@@ -258,12 +281,28 @@ class GraphicsTests(unittest.TestCase):
 
     def test_gpu_selection_is_not_tied_to_a_specific_nvidia_model(self):
         for name in ("NVIDIA GeForce GTX 1660", "NVIDIA GeForce RTX 3060", "NVIDIA GeForce RTX 4060",
+                     "NVIDIA GeForce RTX 4060 Laptop GPU", "NVIDIA GeForce RTX 5060 Ti",
                      "NVIDIA GeForce RTX 5090", "NVIDIA RTX A4000"):
             with self.subTest(name=name):
-                self.probe.return_value = {"status": "ready", "devices": [IGPU, {**NVIDIA, "name": name}]}
+                self.probe.return_value = {"status": "ready", "devices": [IGPU, {**NVIDIA, "name": name, "device_uuid": DEVICE_UUID}]}
                 env, _ = graphics.prepare(self.runtime, {})
-                self.assertEqual(env["DXVK_FILTER_DEVICE_NAME"], name)
-                self.assertEqual(env["VKD3D_FILTER_DEVICE_NAME"], name)
+                self.assertEqual(env["DXVK_FILTER_DEVICE_UUID"], DEVICE_UUID)
+                self.assertNotIn("DXVK_FILTER_DEVICE_NAME", env)
+                self.assertNotIn("VKD3D_FILTER_DEVICE_NAME", env)
+
+    def test_missing_invalid_or_ambiguous_ids_never_fall_back_to_host_names_or_indices(self):
+        for identity in (None, "", "0" * 32, "invalid", "1" * 33, [], "private-id"):
+            with self.subTest(identity=identity):
+                self.probe.return_value = {"status": "ready", "devices": [IGPU, {**NVIDIA, "device_uuid": identity}]}
+                env, report = graphics.prepare(self.runtime, {})
+                self.assertFalse(set(env) & set(graphics._SELECTORS))
+                self.assertEqual(report["adapter_selection"], "default")
+                self.assertNotIn("device_uuid", json.dumps(report))
+        self.probe.return_value = {"status": "ready", "devices": [
+            {**IGPU, "device_uuid": DEVICE_UUID}, {**NVIDIA, "device_uuid": DEVICE_UUID}]}
+        env, report = graphics.prepare(self.runtime, {})
+        self.assertFalse(set(env) & set(graphics._SELECTORS))
+        self.assertEqual(report["adapter_selection"], "default")
 
     def test_settings_are_bounded_validated_and_never_follow_symlinks(self):
         target = self.runtime / "private" / graphics.SETTINGS_FILE
@@ -293,6 +332,18 @@ class GraphicsProbeTests(unittest.TestCase):
         self.assertEqual(result["devices"], [NVIDIA])
         self.assertNotIn("private", json.dumps(result))
 
+    def test_device_ids_are_validated_and_only_available_to_internal_selection(self):
+        device = {**NVIDIA, "device_uuid": DEVICE_UUID, "driver_uuid": "private", "token": "private"}
+        with patch.object(graphics, "_child", return_value={"status": "ready", "devices": [device]}):
+            self.assertEqual(graphics.probe()["devices"], [NVIDIA])
+            internal = graphics.probe(include_device_ids=True)
+            self.assertEqual(internal["devices"], [{**NVIDIA, "device_uuid": DEVICE_UUID}])
+            self.assertNotIn("private", json.dumps(internal))
+        for identity in (None, [], "0" * 32, "1234", "g" * 32, "0" * 31 + "\n"):
+            with self.subTest(identity=identity), patch.object(graphics, "_child", return_value={
+                    "status": "ready", "devices": [{**NVIDIA, "device_uuid": identity}]}):
+                self.assertEqual(graphics.probe(include_device_ids=True)["devices"], [NVIDIA])
+
     def test_software_only_is_not_reported_as_hardware_ready(self):
         with patch.object(graphics, "_child", return_value={"status": "ready", "devices": [{**IGPU, "type": 4}]}):
             self.assertEqual(graphics.probe()["status"], "software_only")
@@ -312,3 +363,36 @@ class GraphicsProbeTests(unittest.TestCase):
             self.assertFalse(graphics.nvidia_present(root))
             (device / "class").write_text("0x030000\n")
             self.assertTrue(graphics.nvidia_present(root))
+
+
+class GraphicsLaunchScriptTests(unittest.TestCase):
+    def test_real_shell_launcher_retains_selected_adapter_and_logging_preferences(self):
+        with tempfile.TemporaryDirectory() as directory:
+            runtime = Path(directory)
+            scripts = Path(__file__).resolve().parents[1] / "scripts/runtime"
+            (runtime / "tools").mkdir()
+            (runtime / "private").mkdir()
+            (runtime / "desktop").mkdir()
+            game = runtime / "games/MSFS2024"
+            game.mkdir(parents=True)
+            for name in (".xodus-streaming.msixvc", "FlightSimulator2024.exe"):
+                (game / name).write_bytes(b"synthetic placeholder")
+            (runtime / "private/runtime.json").write_text('{"game_id":"msfs2024","market":"AT"}')
+            for name in ("launch-msfs.sh", "runtime-env.sh"):
+                shutil.copy2(scripts / name, runtime / "tools" / name)
+            capture = runtime / "tools/xodus.sh"
+            capture.write_text("#!/usr/bin/env python3\nimport json,os\n"
+                               "print(json.dumps({k:os.environ.get(k) for k in "
+                               "('DXVK_LOG_LEVEL','VKD3D_DEBUG','DXVK_FILTER_DEVICE_UUID','VKD3D_FILTER_DEVICE_NAME')}))\n")
+            capture.chmod(0o700)
+            base = {"PATH": os.defpath, "XDG_RUNTIME_DIR": str(runtime / "desktop")}
+            for preferences in ({}, {"DXVK_LOG_LEVEL": "info", "VKD3D_DEBUG": "info"},
+                                {"DXVK_LOG_LEVEL": "none", "VKD3D_DEBUG": "warn"}):
+                with self.subTest(preferences=preferences):
+                    env = base | preferences | {"DXVK_FILTER_DEVICE_UUID": DEVICE_UUID}
+                    result = subprocess.run(["bash", str(runtime / "tools/launch-msfs.sh")],
+                        env=env, capture_output=True, text=True, timeout=5, check=True)
+                    actual = json.loads(result.stdout)
+                    self.assertEqual(actual, {"DXVK_LOG_LEVEL": preferences.get("DXVK_LOG_LEVEL", "warn"),
+                        "VKD3D_DEBUG": preferences.get("VKD3D_DEBUG", "warn"),
+                        "DXVK_FILTER_DEVICE_UUID": DEVICE_UUID, "VKD3D_FILTER_DEVICE_NAME": None})

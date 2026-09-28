@@ -114,8 +114,15 @@ Missing NGX does not prevent ordinary rendering, but DLSS needs the host NGX
 components. See [DXVK-NVAPI's requirements](https://github.com/jp7677/dxvk-nvapi).
 
 On a machine with one discrete NVIDIA GPU plus integrated graphics, Flightdeck
-selects that NVIDIA device for both DXVK/DXGI and VKD3D. Explicit device selections
-are retained; multiple discrete GPUs are not automatically narrowed to one.
+0.1.7 selects that NVIDIA device using `DXVK_FILTER_DEVICE_UUID`. The native
+Vulkan device UUID survives Wine's translation of display names and vendor
+identification. DirectX 12 receives the physical adapter from DXGI, including
+when the application requests its default adapter. Flightdeck does not add a
+VKD3D host-name filter or assume that Linux and Wine enumerate GPUs in the same
+order. If a unique device UUID is unavailable, it leaves adapter selection to
+the runner. Explicit device selections are retained; multiple discrete GPUs are
+not automatically narrowed to one. Hardware UUIDs are never exported in
+diagnostics or persisted in the launch-settings record.
 AMD/Intel-only launch environments are unchanged. A failed NVIDIA Vulkan check
 stops launch with a driver message.
 
@@ -143,6 +150,12 @@ The Vulkan check, DXGI/D3D12 adapter selection and GLVND setup also run with
 NVAPI disabled. A single GPU name filter that uniquely matches a Vulkan adapter
 is completed for the other graphics API. Explicit filters for both APIs, UUIDs,
 device indices and ambiguous matches are preserved without guessing.
+Explicit name filters must match the names visible inside Wine. Remove custom
+name filters before comparing the two modes if diagnostics reports that the
+desired adapter was excluded.
+NVIDIA starts default to `DXVK_LOG_LEVEL=info` and `VKD3D_DEBUG=info` so the local
+game log includes renderer versions and adapter decisions. Explicit logging
+preferences remain effective. These settings do not enable per-call tracing.
 
 **Diagnostics** reports Vulkan adapters, API/driver versions and the desktop
 session type. `graphics.status: ready` means that the Linux probe can enumerate
@@ -167,9 +180,12 @@ Flightdeck 0.1.7 provides diagnostics schema 4, retaining these graphics fields:
   builtins, different files and missing/unavailable files. Known global and
   game-specific registry override modes are included. NGX presence alone does
   not establish a working driver bridge or DLSS.
-- `graphics.log`: known component markers and Vulkan/DXGI error symbols found
-  in the bounded first/last log excerpt. Empty results do not rule out a graphics
-  failure or prove a renderer was never loaded.
+- `graphics.log`: known component markers, bounded renderer versions and
+  Vulkan/DXGI error symbols found in the first/last log excerpt. `observations`
+  counts presents without rendering, name/UUID filter skips and missing DXVK
+  adapters in that excerpt, not throughout the whole run. An occasional blank
+  present can be valid; its presence alone does not identify a driver fault.
+  Empty results do not rule out a graphics failure or prove a renderer was never loaded.
 
 Schema 4 also includes the latest Store check and timestamped Store-session
 events with component hashes recorded at game launch. See

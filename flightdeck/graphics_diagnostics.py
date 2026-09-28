@@ -65,6 +65,8 @@ def launch_record(runtime, report, environment, *, state, at):
     known = {device["name"]: {0x10de: "nvidia", 0x1002: "amd", 0x8086: "intel"}.get(device["vendor_id"], "other_device")
              for device in report.get("devices", [])}
     filters = {key: known.get(environment[key], "custom") for key in sorted(FILTERS) if environment.get(key)}
+    if report.get("adapter_selection") == "nvidia_uuid" and environment.get("DXVK_FILTER_DEVICE_UUID"):
+        filters["DXVK_FILTER_DEVICE_UUID"] = "nvidia"
     result = {"schema": 1, "at": at, "launcher_version": __version__, "game_id": games.for_runtime(runtime).id,
               "state": state, "nvidia": report.get("nvidia", "unknown"),
               "gpu_filters": filters, "dll_overrides": environment_overrides(environment),
@@ -228,4 +230,22 @@ def log_summary(text):
                           ("dxvk", r"\bDXVK: v[0-9]"), ("dxvk-nvapi", r"\bDXVK-NVAPI\b")):
         if re.search(pattern, text):
             components.append(name)
-    return {"scope": "bounded_log_excerpt", "observed_components": components, "error_symbols": sorted(found)}
+    versions = {}
+    for name, pattern in (
+            ("dxvk", r"\bDXVK: (v[0-9]{1,3}\.[0-9]{1,3}(?:\.[0-9]{1,3})?(?:-[0-9]{1,7}-g[0-9a-f]{7,40})?)(?=\s|$)"),
+            ("vkd3d-proton", r"\bvkd3d-proton - applicationVersion: ([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})\.(?=\s|$)"),
+            ("vkd3d-proton-build", r"\bvkd3d-proton - build: ([0-9a-f]{7,40})\.(?=\s|$)")):
+        observed = sorted(set(re.findall(pattern, text)))[:8]
+        if observed:
+            versions[name] = observed
+    observations = {}
+    for name, pattern in (
+            ("present_without_render", r"\bApplication is presenting user index [0-9]{1,10}, but it has never been rendered to\."),
+            ("adapter_name_filter_skips", r"\bSkipping: Device filter\b"),
+            ("adapter_uuid_filter_skips", r"\bSkipping: UUID filter\b"),
+            ("no_dxvk_adapters", r"\bDXVK: No adapters found\b")):
+        count = len(re.findall(pattern, text))
+        if count:
+            observations[name] = count
+    return {"scope": "bounded_log_excerpt", "observed_components": components, "error_symbols": sorted(found),
+            "observed_versions": versions, "observations": observations}

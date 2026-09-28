@@ -125,6 +125,26 @@ a real Store page.
 See [the runtime contract](docs/runtime.md) to prepare a local installation from
 the built artifacts and user-owned runner, package and Wine prefix.
 
+## Graphics adapter regression check
+
+With a graphical session, a working Vulkan driver, one discrete GPU and the
+MinGW toolchain, check the runner's actual DXGI/DirectX 12 adapter handoff:
+
+```sh
+python3 scripts/check-graphics-adapter.py --runner "$RUNNER" \
+  --output build/graphics-adapter-check
+```
+
+The output directory must be new. The check creates an isolated Wine prefix,
+installs the supplied runner's DXVK/VKD3D libraries and compiles a small probe.
+It compares the old Linux-name filter with UUID selection, verifies explicit
+and default D3D12 device creation on the same adapter, checks vendor hiding and
+rejects an intentionally invalid UUID. On NVIDIA it also runs both Flightdeck
+graphics modes with the actual preparation code. It uses no game or account
+and leaves existing installations untouched. These checks establish adapter
+selection and device creation; they do not validate simulator rendering or
+flight stability. Raw device UUIDs are omitted from the result summary.
+
 ## Optional Fenix patch
 
 The Fenix Wine overlay has a separate source/build pipeline in

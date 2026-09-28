@@ -140,7 +140,7 @@
   },
   "runtime_scripts": {
     "files": {
-      "launch-msfs.sh": "476a4f5ad75ecc88bd2c16d43aa3e75e50085ee7cb12db90d1aa0087827e9cc8",
+      "launch-msfs.sh": "36cb698c6ca59e1fddd2efcd7a5168b8410b6b61ce93d5aeda4c506fbc58b656",
       "play-msfs.sh": "d7fc893ad457aefc95039eaef22d6e394b13236372d93230948c7e007267a7c7",
       "runtime-env.sh": "e8ad933de8a6da4308a8a3c5541bcdfe559bbfc1d97bdfaf33610a94d6ba4d39",
       "xodus.sh": "95b1fb7ddc254d5571eb84a41a13e90d9d48f6cefac38ab346b538fbda8b0d45",
@@ -175,6 +175,14 @@
       {
         "launch-msfs.sh": "476a4f5ad75ecc88bd2c16d43aa3e75e50085ee7cb12db90d1aa0087827e9cc8",
         "play-msfs.sh": "2fcbe71849540a78005e588626cda83e2e255d16e8d4d34b61a4c7130e399b14",
+        "runtime-env.sh": "e8ad933de8a6da4308a8a3c5541bcdfe559bbfc1d97bdfaf33610a94d6ba4d39",
+        "xodus.sh": "95b1fb7ddc254d5571eb84a41a13e90d9d48f6cefac38ab346b538fbda8b0d45",
+        "xodus-service.sh": "77c31c30873e14ce7a0805ad3220d99b724b01ec5e63bf372e5bc919ca73424a",
+        "xodus-wine-launch": "b004808236bd0482b0190d8eaf7a302e9f22b1d850b8fc6d79d732c728804cf1"
+      },
+      {
+        "launch-msfs.sh": "476a4f5ad75ecc88bd2c16d43aa3e75e50085ee7cb12db90d1aa0087827e9cc8",
+        "play-msfs.sh": "d7fc893ad457aefc95039eaef22d6e394b13236372d93230948c7e007267a7c7",
         "runtime-env.sh": "e8ad933de8a6da4308a8a3c5541bcdfe559bbfc1d97bdfaf33610a94d6ba4d39",
         "xodus.sh": "95b1fb7ddc254d5571eb84a41a13e90d9d48f6cefac38ab346b538fbda8b0d45",
         "xodus-service.sh": "77c31c30873e14ce7a0805ad3220d99b724b01ec5e63bf372e5bc919ca73424a",

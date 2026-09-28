@@ -1,9 +1,17 @@
 # Changes and release status
 
-## 0.1.7 — 28 September 2026
+## 0.1.7 — in testing
 
-[Download Flightdeck 0.1.7](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.7).
+Not yet published. The current public release is
+[Flightdeck 0.1.6](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.6).
 
+- Select the sole discrete NVIDIA GPU by its Vulkan device UUID instead of its
+  Linux display name. Wine can rename the adapter, especially in Compatibility
+  mode; the previous name filter could exclude the intended GPU. DirectX 12
+  retains the adapter selected by DXGI.
+- Include graphics startup versions, adapter-filter failures and counts of
+  presents without rendering in diagnostics. Hardware UUIDs and raw log lines
+  are excluded from the exported report.
 - Add **Diagnostics → Check Store** to check installed components, saved sign-in,
   catalog access, game licensing, owned content and local window display without
   opening a purchase page.
@@ -30,6 +38,10 @@ MSFS 2024 1.8.16.0. Automated checks cover dialog behavior, cancellation and
 message validation. Completed paid transactions, delivery of purchased content
 and layout across other systems remain unverified. Broader Marketplace
 inventory compatibility also requires testing.
+The adapter-selection regression has been reproduced and corrected with the
+real runner on AMD hardware, including vendor hiding and both DirectX 12 device
+creation paths. NVIDIA in-game rendering, including the reported RTX 5060 Ti
+black scene, still needs hardware validation.
 
 ## 0.1.6 — 26 September 2026
 

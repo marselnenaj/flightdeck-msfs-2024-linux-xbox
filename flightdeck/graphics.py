@@ -89,7 +89,7 @@ def nvidia_present(root=Path("/sys/bus/pci/devices")):
 
 
 def _native_probe():
-    """Vulkan 1.0 ABI; enumerate real adapters without vulkan-tools or a display."""
+    """Enumerate real adapters and stable IDs without vulkan-tools or a display."""
     class Application(ct.Structure):
         _fields_ = [("type", ct.c_uint32), ("next", ct.c_void_p), ("name", ct.c_char_p),
                     ("version", ct.c_uint32), ("engine", ct.c_char_p),
@@ -98,6 +98,13 @@ def _native_probe():
         _fields_ = [("type", ct.c_uint32), ("next", ct.c_void_p), ("flags", ct.c_uint32),
                     ("application", ct.POINTER(Application)), ("layer_count", ct.c_uint32),
                     ("layers", ct.c_void_p), ("extension_count", ct.c_uint32), ("extensions", ct.c_void_p)]
+    class DeviceID(ct.Structure):
+        _fields_ = [("type", ct.c_uint32), ("next", ct.c_void_p),
+                    ("device_uuid", ct.c_ubyte * 16), ("driver_uuid", ct.c_ubyte * 16),
+                    ("luid", ct.c_ubyte * 8), ("node_mask", ct.c_uint32), ("luid_valid", ct.c_uint32)]
+    class Properties2(ct.Structure):
+        # Keep the properties payload aligned and larger than the Vulkan ABI.
+        _fields_ = [("type", ct.c_uint32), ("next", ct.c_void_p), ("properties", ct.c_uint64 * 512)]
     library = ct.CDLL("libvulkan.so.1")
     library.vkCreateInstance.argtypes = [ct.POINTER(InstanceInfo), ct.c_void_p, ct.POINTER(ct.c_void_p)]
     library.vkCreateInstance.restype = ct.c_int32
@@ -107,12 +114,20 @@ def _native_probe():
     library.vkGetPhysicalDeviceProperties.restype = None
     library.vkDestroyInstance.argtypes = [ct.c_void_p, ct.c_void_p]
     library.vkDestroyInstance.restype = None
-    application = Application(0, None, b"Flightdeck graphics check", 1, None, 0, 1 << 22)
+    application = Application(0, None, b"Flightdeck graphics check", 1, None, 0, (1 << 22) | (1 << 12))
     info = InstanceInfo(1, None, 0, ct.pointer(application), 0, None, 0, None)
     instance = ct.c_void_p()
     if library.vkCreateInstance(ct.byref(info), None, ct.byref(instance)) != 0:
-        raise OSError()
+        # Old drivers can still be described in diagnostics, without inventing
+        # an ID or requiring the optional Vulkan 1.1 entry point.
+        application.api = 1 << 22
+        if library.vkCreateInstance(ct.byref(info), None, ct.byref(instance)) != 0:
+            raise OSError()
     try:
+        properties2 = getattr(library, "vkGetPhysicalDeviceProperties2", None) if application.api > 1 << 22 else None
+        if properties2 is not None:
+            properties2.argtypes = [ct.c_void_p, ct.POINTER(Properties2)]
+            properties2.restype = None
         count = ct.c_uint32()
         if library.vkEnumeratePhysicalDevices(instance, ct.byref(count), None) != 0 or not 0 < count.value <= 16:
             raise OSError()
@@ -123,9 +138,15 @@ def _native_probe():
         for device in devices[:count.value]:
             # VkPhysicalDeviceProperties has a fixed Vulkan 1.0 layout. The
             # aligned allocation exceeds the entire struct, not just its header.
-            properties = (ct.c_uint64 * 512)()
-            library.vkGetPhysicalDeviceProperties(device, ct.byref(properties))
-            raw = bytes(properties)
+            identity = DeviceID(1000071004, None)
+            if properties2 is not None:
+                properties = Properties2(1000059001, ct.addressof(identity))
+                properties2(device, ct.byref(properties))
+                raw = bytes(properties.properties)
+            else:
+                properties = (ct.c_uint64 * 512)()
+                library.vkGetPhysicalDeviceProperties(device, ct.byref(properties))
+                raw = bytes(properties)
             api, driver, vendor, _, kind = struct.unpack_from("=5I", raw)
             name = raw[20:276].split(b"\0", 1)[0].decode("utf-8", "replace")
             if not _text(name):
@@ -133,8 +154,11 @@ def _native_probe():
             api_version = f"{(api >> 22) & 127}.{(api >> 12) & 1023}.{api & 4095}"
             version = (f"{driver >> 22}.{(driver >> 14) & 255}.{(driver >> 6) & 255}.{driver & 63}"
                        if vendor == 0x10de else f"{driver >> 22}.{(driver >> 12) & 1023}.{driver & 4095}")
-            result.append({"name": name, "vendor_id": vendor, "type": kind,
-                           "api_version": api_version, "driver_version": version})
+            entry = {"name": name, "vendor_id": vendor, "type": kind,
+                     "api_version": api_version, "driver_version": version}
+            if any(identity.device_uuid):
+                entry["device_uuid"] = bytes(identity.device_uuid).hex()
+            result.append(entry)
         return {"status": "ready" if result else "failed", "devices": result}
     finally:
         library.vkDestroyInstance(instance, None)
@@ -172,7 +196,7 @@ def _child(mode):
         return None
 
 
-def probe():
+def probe(*, include_device_ids=False):
     value = _child("--probe")
     result = {"status": "failed", "devices": [],
               "session": os.environ.get("XDG_SESSION_TYPE") if os.environ.get("XDG_SESSION_TYPE") in {"x11", "wayland"} else "unknown"}
@@ -184,7 +208,10 @@ def probe():
                 and type(entry.get("type")) is int and entry["type"] in range(5)
                 and all(isinstance(entry.get(key), str) and re.fullmatch(r"[0-9.]{1,40}", entry[key])
                         for key in ("api_version", "driver_version"))):
-            result["devices"].append({key: entry[key] for key in ("name", "vendor_id", "type", "api_version", "driver_version")})
+            device = {key: entry[key] for key in ("name", "vendor_id", "type", "api_version", "driver_version")}
+            if include_device_ids and _device_uuid(entry) is not None:
+                device["device_uuid"] = entry["device_uuid"]
+            result["devices"].append(device)
     if result["devices"]:
         result["status"] = "ready" if any(d["type"] != 4 for d in result["devices"]) else "software_only"
     return result
@@ -287,8 +314,16 @@ def _select_adapter(environment, devices):
     if not any(environment.get(key) for key in _SELECTORS):
         discrete = [d for d in devices if d["type"] == 2]
         if len(discrete) == 1 and discrete[0]["vendor_id"] == 0x10de:
-            environment["DXVK_FILTER_DEVICE_NAME"] = discrete[0]["name"]
-            environment["VKD3D_FILTER_DEVICE_NAME"] = discrete[0]["name"]
+            identity = _device_uuid(discrete[0])
+            if identity is not None and sum(_device_uuid(d) == identity for d in devices) == 1:
+                # Wine replaces Vulkan device names with Windows display names,
+                # including an AMD name when WINE_HIDE_NVIDIA_GPU is active.
+                # Filtering by the host name can therefore hide the chosen GPU.
+                # UUIDs survive that translation. D3D12 receives the physical
+                # adapter from DXGI; do not override it with a host name/index.
+                environment["DXVK_FILTER_DEVICE_UUID"] = identity
+                return "nvidia_uuid"
+        return "default"
     elif not any(environment.get(key) for key in ("DXVK_FILTER_DEVICE_UUID", "VKD3D_VULKAN_DEVICE")):
         # A single unambiguous name filter can be completed for the other API.
         # Never guess the meaning of a UUID/index or overwrite a second choice.
@@ -301,6 +336,14 @@ def _select_adapter(environment, devices):
                     # host. Retain the user's working substring, not a newly
                     # constructed full name from the native probe.
                     environment[target] = environment[source]
+    return "explicit"
+
+
+def _device_uuid(device):
+    identity = device.get("device_uuid")
+    if isinstance(identity, str) and re.fullmatch(r"[0-9a-f]{32}", identity) and identity != "0" * 32:
+        return identity
+    return None
 
 
 def _nvidia_mode(environment, mode):
@@ -330,15 +373,24 @@ def prepare(runtime, environment=None):
         return environment, {"nvidia": "not_present"}
     mode = settings(runtime)["nvidia_mode"]
     _nvidia_mode(environment, mode)
-    report = probe()
+    report = probe(include_device_ids=True)
     if report["status"] != "ready" or not any(d["vendor_id"] == 0x10de and d["type"] != 4 for d in report["devices"]):
         raise GraphicsError("NVIDIA wurde erkannt, aber Vulkan ist nicht verfügbar. Bitte den empfohlenen NVIDIA-Treiber der Distribution installieren und Linux neu starten.")
     # Adapter selection and GLVND setup are needed even without NVAPI. An
     # opt-out must not also change which physical GPU DXGI and D3D12 use.
     # Keep explicit choices and never guess among multiple discrete GPUs.
-    _select_adapter(environment, report["devices"])
+    selection = _select_adapter(environment, report["devices"])
+    # Device UUIDs are needed only for the child environment. Neither public
+    # diagnostics nor the persisted launch record should expose hardware IDs.
+    report = {**report, "adapter_selection": selection,
+              "devices": [{key: value for key, value in device.items() if key != "device_uuid"}
+                          for device in report["devices"]]}
     report.update(nvidia_mode=mode, hide_nvidia=environment.get("WINE_HIDE_NVIDIA_GPU") == "1")
     environment.setdefault("__GLVND_DISALLOW_PATCHING", "1")
+    # Include startup versions and adapter decisions in the local game log.
+    # Explicit logging preferences still win; no per-call tracing is enabled.
+    environment.setdefault("DXVK_LOG_LEVEL", "info")
+    environment.setdefault("VKD3D_DEBUG", "info")
     if environment.get("PROTON_DISABLE_NVAPI", "0") not in {"", "0"} or environment.get("DXVK_ENABLE_NVAPI") == "0":
         # Direct Wine starts do not interpret PROTON_DISABLE_NVAPI. Skipping
         # installation alone leaves DLLs from previous starts loadable. Block

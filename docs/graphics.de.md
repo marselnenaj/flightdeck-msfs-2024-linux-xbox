@@ -18,6 +18,13 @@ sind noch nicht für die verschiedenen NVIDIA-Karten und Treiberversionen
 bestätigt. Erfolgreiche Steam-/Proton-Berichte liefern Hinweise zur Kompatibilität,
 bestätigen aber nicht den separaten Xbox-PC-Startweg von Flightdeck.
 
+Die **Testversion 0.1.7** korrigiert einen Fehler bei der Grafikkartenauswahl:
+Wine kann einen anderen GPU-Namen als Linux melden. Der bisherige automatische
+Namensfilter konnte dadurch die gewünschte Karte ausschließen. Die Auswahl
+verwendet jetzt die stabile Geräte-ID; sie bleibt auch beim Verbergen der
+NVIDIA-Kennung im Kompatibilitätsmodus gültig. Die öffentliche Version 0.1.6
+enthält diese Korrektur noch nicht.
+
 ## Modus auswählen
 
 Die Modusauswahl ist ab **Flightdeck 0.1.6** verfügbar. Aktualisiere über
@@ -50,8 +57,9 @@ NVIDIA-Auswahl nicht angezeigt.
 Unter Linux Mint 22.3 mit RTX 5060 Ti und NVIDIA 580.178.04 wurde in beiden
 Grafikmodi eine schwarze 3D-Szene bei funktionierenden Menüs gemeldet. Ein
 zweites Renderfenster zeigte die Szene kurz an, führte später jedoch zu
-Abstürzen. Ursache und eine funktionierende Konfiguration für diesen Fall
-sind noch ungeklärt.
+Abstürzen. Die korrigierte Grafikkartenauswahl aus 0.1.7 muss auf diesem System
+noch getestet werden; eine erfolgreiche Darstellung im Spiel ist bislang nicht
+bestätigt.
 
 Teste dieselbe Szene einmal pro Modus. Lade nach jedem Versuch unter
 **Diagnose** einen neuen Bericht und speichere ihn. Gib bei einer Fehlermeldung
@@ -59,6 +67,10 @@ Flightdeck-Version, Simulator-Ausgabe, Grafikkarte, Treiberversion und den
 Zeitpunkt des Darstellungsfehlers an. Der Bericht enthält verfügbare
 Vulkan-Grafikkarten und die angeforderten Einstellungen des letzten Starts über
 Flightdeck; er bestätigt keine erfolgreiche Darstellung.
+Ab 0.1.7 enthält er außerdem erkannte Renderer-Versionen und Zähler für
+Grafikkarten-Filterfehler sowie Bildausgaben ohne vorheriges Rendering aus dem
+verfügbaren Log-Ausschnitt. Eine solche Bildausgabe ist eine Beobachtung und
+allein kein Nachweis für einen Treiberfehler.
 
 Die Dateiprüfung repariert das Basisspiel. Das Zurücksetzen der Wine-Umgebung
 erstellt ein neues Profil. Beides ersetzt keine Grafiktreiber oder bestätigt die

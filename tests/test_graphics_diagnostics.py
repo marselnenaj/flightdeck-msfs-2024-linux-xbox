@@ -7,7 +7,7 @@ import unittest
 from unittest.mock import patch
 
 from flightdeck import graphics_diagnostics as gd
-from tests.test_graphics import NVIDIA, IGPU
+from tests.test_graphics import NVIDIA, IGPU, DEVICE_UUID
 
 
 class GraphicsEvidenceTests(unittest.TestCase):
@@ -105,6 +105,16 @@ class GraphicsEvidenceTests(unittest.TestCase):
         self.assertNotIn("private-unexported", json.dumps(saved))
         self.assertNotIn('schema', saved)
 
+    def test_automatic_uuid_selection_is_recorded_without_exporting_hardware_identity(self):
+        record = gd.launch_record(self.runtime, {"nvidia": "disabled", "adapter_selection": "nvidia_uuid"},
+            {"DXVK_FILTER_DEVICE_UUID": DEVICE_UUID, "DXVK_ENABLE_NVAPI": "0"},
+            state="spawned", at=self.at)
+        self.assertTrue(gd.save_launch(self.runtime, record))
+        saved = gd.load_launch(self.runtime)
+        self.assertEqual(saved["gpu_filters"], {"DXVK_FILTER_DEVICE_UUID": "nvidia"})
+        self.assertNotIn(DEVICE_UUID, json.dumps(record))
+        self.assertNotIn(DEVICE_UUID, json.dumps(saved))
+
     def test_modified_marker_cannot_add_raw_data_to_export(self):
         record = self.record()
         record['token'] = 'synthetic-private-token'
@@ -162,6 +172,29 @@ DXVK-NVAPI synthetic-private-id
 ''')
         self.assertEqual(result, {'scope':'bounded_log_excerpt',
                          'observed_components':['vkd3d-proton','dxvk','dxvk-nvapi'],
-                         'error_symbols':['DXGI_ERROR_DEVICE_HUNG','VK_ERROR_DEVICE_LOST']})
+                         'error_symbols':['DXGI_ERROR_DEVICE_HUNG','VK_ERROR_DEVICE_LOST'],
+                         'observed_versions':{'dxvk':['v2.7']}, 'observations':{}})
         self.assertNotIn('synthetic', json.dumps(result))
-        self.assertEqual(gd.log_summary(''), {'scope':'bounded_log_excerpt','observed_components':[], 'error_symbols':[]})
+        self.assertEqual(gd.log_summary(''), {'scope':'bounded_log_excerpt','observed_components':[], 'error_symbols':[],
+                                            'observed_versions':{}, 'observations':{}})
+
+    def test_blank_presents_and_filter_failures_are_distinct_from_device_loss(self):
+        result = gd.log_summary('''info:  DXVK: v3.0.2-10-g123456789abcdef
+1:00d8:info:vkd3d-proton:vkd3d_get_vk_version: vkd3d-proton - applicationVersion: 3.1.0.
+1:00d8:info:vkd3d-proton:vkd3d_instance_init: vkd3d-proton - build: 123456789abcdef.
+warn:vkd3d-proton:dxgi_vk_swap_chain_record_render_pass: Application is presenting user index 0, but it has never been rendered to.
+warn:vkd3d-proton:dxgi_vk_swap_chain_record_render_pass: Application is presenting user index 1, but it has never been rendered to.
+info:  Skipping: Device filter
+info:  Skipping: UUID filter
+err:   DXVK: No adapters found. Please check your device filter settings
+private: bearer synthetic-secret
+DXVK: v3.1-private-data
+vkd3d-proton - build: private-token.
+''')
+        self.assertEqual(result['observations'], {'present_without_render':2,
+                         'adapter_name_filter_skips':1, 'adapter_uuid_filter_skips':1, 'no_dxvk_adapters':1})
+        self.assertEqual(result['observed_versions'], {'dxvk':['v3.0.2-10-g123456789abcdef'],
+                         'vkd3d-proton':['3.1.0'], 'vkd3d-proton-build':['123456789abcdef']})
+        self.assertEqual(result['error_symbols'], [])
+        self.assertNotIn('private', json.dumps(result))
+        self.assertNotIn('synthetic', json.dumps(result))
