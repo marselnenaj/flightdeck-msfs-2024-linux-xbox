@@ -45,6 +45,11 @@ AMD/Intel-only systems do not display the NVIDIA controls.
 
 ## If rendering still fails
 
+A black 3D scene with working menus has been reported on Linux Mint 22.3 with
+an RTX 5060 Ti and NVIDIA 580.178.04 in both graphics modes. Creating a second
+render window briefly displayed the scene but subsequently caused crashes.
+The cause and a working configuration for this case remain unverified.
+
 Run the same simulator scene once in each mode. In **Diagnostics**, load and
 download a report after each attempt. Include the Flightdeck version, simulator
 edition, GPU, driver version and a short description of when rendering fails.

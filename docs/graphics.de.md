@@ -47,6 +47,12 @@ NVIDIA-Auswahl nicht angezeigt.
 
 ## Wenn die Darstellung weiterhin fehlschlägt
 
+Unter Linux Mint 22.3 mit RTX 5060 Ti und NVIDIA 580.178.04 wurde in beiden
+Grafikmodi eine schwarze 3D-Szene bei funktionierenden Menüs gemeldet. Ein
+zweites Renderfenster zeigte die Szene kurz an, führte später jedoch zu
+Abstürzen. Ursache und eine funktionierende Konfiguration für diesen Fall
+sind noch ungeklärt.
+
 Teste dieselbe Szene einmal pro Modus. Lade nach jedem Versuch unter
 **Diagnose** einen neuen Bericht und speichere ihn. Gib bei einer Fehlermeldung
 Flightdeck-Version, Simulator-Ausgabe, Grafikkarte, Treiberversion und den

@@ -42,6 +42,7 @@ let status = {
 };
 let apiUnavailable = false, failNext = false, nextCheckState = 'ready', switchDelay = 0;
 let statusBarrier = null, releaseStatus = null, statusWaiting = false;
+let graphicsBarrier = null, releaseGraphics = null, graphicsWaiting = false;
 const apiRequests = [];
 const posts = [], externalRequests = [], errors = [], results = [];
 const startupRequests = [], consoleIssues = [];
@@ -123,6 +124,7 @@ const server = createServer(async (req,res) => {
         const data=JSON.parse(body);
         assert.equal(data.runtime_path,status.runtime.path);
         assert.ok(['auto','compatibility'].includes(data.nvidia_mode));
+        if (graphicsBarrier) {graphicsWaiting=true;await graphicsBarrier;}
         status.graphics={...status.graphics,nvidia_mode:data.nvidia_mode};
         res.end(JSON.stringify({ok:true}));return;
       }
@@ -305,7 +307,12 @@ try {
   await refresh(`!document.getElementById('graphics-mode').disabled`);
   results.push('Graphics preferences are blocked during play/sync and available after a finished graphics failure');
   await evaluate(`document.getElementById('graphics-mode').value='auto';document.getElementById('graphics-mode').dispatchEvent(new Event('change',{bubbles:true}))`);
-  await click('graphics-save');await until(()=>evaluate(`document.getElementById('graphics-save').disabled && document.getElementById('graphics-mode').value==='auto'`),'Automatic mode was not restored');
+  graphicsBarrier=new Promise(resolve=>{releaseGraphics=resolve;});
+  await click('graphics-save');await until(()=>graphicsWaiting,'Automatic mode save did not reach the server');
+  await check('A pending graphics save disables controls before the preference is persisted',`document.getElementById('graphics-save').disabled && document.getElementById('graphics-mode').disabled && document.getElementById('graphics-mode').value==='auto'`);
+  assert.equal(status.graphics.nvidia_mode,'compatibility');
+  releaseGraphics();graphicsBarrier=null;graphicsWaiting=false;
+  await until(()=>evaluate(`document.getElementById('graphics-save').disabled && !document.getElementById('graphics-mode').disabled && document.getElementById('graphics-mode').value==='auto'`),'Automatic mode save did not complete');
   assert.equal(status.graphics.nvidia_mode,'auto');
   status.graphics={available:false,nvidia_present:false,nvidia_mode:'auto',error:''};status.cloud=autoIdle();
   await refresh(`document.getElementById('graphics-card').hidden`);
@@ -1148,7 +1155,7 @@ try {
 } catch(error) {
   console.error(error.stack);console.error(JSON.stringify(errors));console.error(chromeErrors.slice(-2000));process.exitCode=1;
 } finally {
-  releaseLauncher?.();releaseCloud?.();releaseUpdate?.();releaseStatus?.();socket?.close();chrome.kill('SIGTERM');realBackend?.kill('SIGTERM');
+  releaseGraphics?.();releaseLauncher?.();releaseCloud?.();releaseUpdate?.();releaseStatus?.();socket?.close();chrome.kill('SIGTERM');realBackend?.kill('SIGTERM');
   await new Promise(resolve=>server.close(resolve));
   await sleep(250);await rm(temp,{recursive:true,force:true,maxRetries:5,retryDelay:100});
 }
