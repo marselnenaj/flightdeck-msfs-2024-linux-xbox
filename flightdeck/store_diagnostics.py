@@ -10,7 +10,7 @@ from pathlib import Path
 import re
 import stat
 
-from . import __version__
+from . import __version__, log_reader
 
 COMPONENTS = {
     "cli": "bin/xodus-cli", "broker": "bin/xodus-service", "storage": "bin/flightdeck-connected-storage.exe",
@@ -86,44 +86,52 @@ def bounded_log(path, head=1024 * 1024, tail=512 * 1024):
 
 
 def session(run):
-    result = {"components_at_launch": None, "events": [], "partial": False, "sources": {}}
+    result = {"components_at_launch": None, "events": [], "partial": False, "sources": {}, "coverage": {}}
     for source in ("game", "service"):
+        def consume(text):
+            result["partial"] |= "[flightdeck-store-events-truncated]" in text
+            for line in text.splitlines():
+                # Native timestamps permit comparison across the game and broker.
+                # Legacy lines remain in the existing summary, never a guessed time.
+                if source == "service" and line.startswith("[flightdeck-store-build] ") and len(line) < 4096:
+                    try:
+                        build = _build(json.loads(line.split("] ", 1)[1]))
+                        if build is not None:
+                            result["components_at_launch"] = build
+                    except (ValueError, TypeError):
+                        pass
+                timestamp = re.search(r"\btime_ms=(\d{13})(?=\s|$)", line)
+                if not timestamp or not 946684800000 <= int(timestamp[1]) < 7258118400000:
+                    continue
+                row = {"time_ms": int(timestamp[1]), "source": source}
+                match = re.search(r"\[xodus-store-query\] kind=(\d{1,2}) hr=([a-fA-F0-9]{8})\b", line)
+                phase = re.search(r"\[xodus-store-async\] kind=(\d{1,2}) stage=([a-z_]{1,20}) hr=([a-fA-F0-9]{8})\b", line)
+                catalog = re.search(r"\[xodus-store-catalog\] stage=([a-z-]{1,32}) hr=([a-fA-F0-9]{8})\b", line)
+                event = re.search(r"\[flightdeck-store-event\] time_ms=\d{13} seq=\d{1,6} phase=([a-z_]{1,24}) outcome=([a-z]{1,16})(?=\s|$)", line)
+                if match and int(match[1]) < len(METHODS):
+                    row.update(method=METHODS[int(match[1])], phase="result", hresult=match[2].lower())
+                elif phase and int(phase[1]) < len(METHODS) and phase[2] in ASYNC:
+                    row.update(method=METHODS[int(phase[1])], phase=phase[2], hresult=phase[3].lower())
+                elif catalog and catalog[1] in CATALOG:
+                    row.update(phase=catalog[1], hresult=catalog[2].lower())
+                elif event and event[1] in PHASES and event[2] in OUTCOMES:
+                    row.update(phase=event[1], outcome=event[2])
+                else:
+                    continue
+                result["events"].append(row)
+            if len(result["events"]) > 256:
+                result["events"].sort(key=lambda r: r["time_ms"])
+                result["events"] = result["events"][-256:]
+                result["partial"] = True
         try:
-            text, clipped, _ = bounded_log(run / (source + ".log"))
+            coverage, _ = log_reader.scan(run / (source + ".log"), consume)
         except OSError:
             result["sources"][source] = "unavailable"
+            result["partial"] = True
             continue
-        result["sources"][source] = "partial" if clipped else "complete"
-        result["partial"] |= clipped or "[flightdeck-store-events-truncated]" in text
-        for number, line in enumerate(text.splitlines()):
-            # Native timestamps permit comparison across the game and broker.
-            # Legacy lines remain in the existing summary, never a guessed time.
-            if source == "service" and line.startswith("[flightdeck-store-build] ") and len(line) < 4096:
-                try:
-                    build = _build(json.loads(line.split("] ", 1)[1]))
-                    if build is not None:
-                        result["components_at_launch"] = build
-                except (ValueError, TypeError):
-                    pass
-            timestamp = re.search(r"\btime_ms=(\d{13})(?=\s|$)", line)
-            if not timestamp or not 946684800000 <= int(timestamp[1]) < 7258118400000:
-                continue
-            row = {"time_ms": int(timestamp[1]), "source": source}
-            match = re.search(r"\[xodus-store-query\] kind=(\d{1,2}) hr=([a-fA-F0-9]{8})\b", line)
-            phase = re.search(r"\[xodus-store-async\] kind=(\d{1,2}) stage=([a-z_]{1,20}) hr=([a-fA-F0-9]{8})\b", line)
-            catalog = re.search(r"\[xodus-store-catalog\] stage=([a-z-]{1,32}) hr=([a-fA-F0-9]{8})\b", line)
-            event = re.search(r"\[flightdeck-store-event\] time_ms=\d{13} seq=\d{1,6} phase=([a-z_]{1,24}) outcome=([a-z]{1,16})(?=\s|$)", line)
-            if match and int(match[1]) < len(METHODS):
-                row.update(method=METHODS[int(match[1])], phase="result", hresult=match[2].lower())
-            elif phase and int(phase[1]) < len(METHODS) and phase[2] in ASYNC:
-                row.update(method=METHODS[int(phase[1])], phase=phase[2], hresult=phase[3].lower())
-            elif catalog and catalog[1] in CATALOG:
-                row.update(phase=catalog[1], hresult=catalog[2].lower())
-            elif event and event[1] in PHASES and event[2] in OUTCOMES:
-                row.update(phase=event[1], outcome=event[2])
-            else:
-                continue
-            result["events"].append(row)
+        result["coverage"][source] = coverage
+        result["sources"][source] = "complete" if coverage["complete"] else "partial"
+        result["partial"] |= not coverage["complete"]
     result["events"].sort(key=lambda r: r["time_ms"])
     if len(result["events"]) > 256:
         result["events"] = result["events"][-256:]

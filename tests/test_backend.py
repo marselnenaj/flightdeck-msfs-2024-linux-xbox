@@ -401,7 +401,7 @@ class BackendTests(unittest.TestCase):
             {"method": "XStoreShowPurchaseUIAsync", "hresult": "80004004"},
         ])
         self.assertEqual(result["summary"]["exit"], {"code": 0, "seconds": 12.5})
-        self.assertEqual(result["summary"]["context"]["diagnostics_schema"], 4)
+        self.assertEqual(result["summary"]["context"]["diagnostics_schema"], 5)
         self.assertEqual(result["summary"]["store_catalog"], [
             {"stage": "inventory-mapping", "hresult": "80004001"},
             {"stage": "page", "hresult": "00000000"},
@@ -453,7 +453,7 @@ class BackendTests(unittest.TestCase):
         self.write_log("xodus-wine-launch: wine_pid=123 exit_code=0 elapsed_seconds=1..2\n")
         self.assertIsNone(self.launcher.diagnostics()["summary"]["exit"])
 
-    def test_diagnostics_read_bounded_head_and_tail(self):
+    def test_diagnostics_find_failures_in_the_middle_without_reading_oversized_lines(self):
         run = self.write_log("xodus-title-auth: host=user.auth.xboxlive.com status=200\n")
         with (run / "game.log").open("a") as stream:
             stream.write("x" * (2 * 1024 * 1024))
@@ -461,7 +461,10 @@ class BackendTests(unittest.TestCase):
             stream.write("x" * (2 * 1024 * 1024))
             stream.write("\nxodus-wine-launch: wine_pid=123 exit_code=7 elapsed_seconds=2.25\n")
         summary = self.launcher.diagnostics()["summary"]
-        self.assertEqual(summary["auth_http"], [200])
+        self.assertEqual(summary["auth_http"], [200, 599])
+        self.assertEqual(summary["log_coverage"]["omitted_bytes"], 0)
+        self.assertEqual(summary["log_coverage"]["oversized_lines"], 2)
+        self.assertFalse(summary["log_coverage"]["complete"])
         self.assertEqual(summary["exit"], {"code": 7, "seconds": 2.25})
 
     def test_backup_copies_bytes_hashes_permissions_and_no_symlinks(self):

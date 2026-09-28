@@ -697,14 +697,14 @@ class Launcher:
 
     def diagnostics(self):
         """Extract numeric allowlisted outcomes, never raw lines or identities."""
-        from . import graphics, graphics_diagnostics, store_diagnostics
+        from . import graphics, graphics_diagnostics, store_diagnostics, run_diagnostics
         summary = {"run_found": False, "auth_http": [], "local_save_init": [], "store_calls": [], "store_catalog": [], "exit": None}
         root = self.runtime
         try:
             game_id = games.for_runtime(root).id if root else None
         except ValueError:
             game_id = None
-        summary["context"] = {"diagnostics_schema": 4, "launcher_version": __version__, "game_id": game_id,
+        summary["context"] = {"diagnostics_schema": 5, "launcher_version": __version__, "game_id": game_id,
                               "cloud_sync_scope": "current_service", "run_log_modified_at": None}
         graphics_log = None
         if root:
@@ -714,42 +714,11 @@ class Launcher:
                 summary["store_session"] = store_diagnostics.session(run)
                 path = run / "game.log"
                 try:
-                    text, _, log_info = store_diagnostics.bounded_log(path)
+                    evidence, log_info = run_diagnostics.read(path)
+                    graphics_log = evidence.pop("graphics_log")
+                    summary.update(evidence)
                     summary["run_found"] = True
                     summary["context"]["run_log_modified_at"] = datetime.fromtimestamp(log_info.st_mtime, timezone.utc).isoformat()
-                    graphics_log = graphics_diagnostics.log_summary(text)
-                    summary["auth_http"] = sorted(set(int(x) for x in re.findall(r"xodus-title-auth: host=(?:user|device|title|xsts)\.auth\.xboxlive\.com status=(\d{3})\b", text)))
-                    summary["local_save_init"] = [{"enabled": int(e), "sync_on_demand": int(s), "hresult": h.lower()} for e, s, h in dict.fromkeys(re.findall(r"\[xodus-gamesave\] local_init enabled=([01]) sync_on_demand=([01]) hr=([0-9a-fA-F]{8})\b", text))]
-                    store_methods = {"XStoreCreateContext", "XStoreQueryEntitledProductsAsync",
-                                     "XStoreQueryProductsAsync", "XStoreQueryGameAndDlcPackageUpdatesAsync",
-                                     "XStoreShowPurchaseUIAsync", "XStoreAcquireLicenseForDurablesAsync",
-                                     "XStoreAcquireLicenseForPackageAsync", "XStoreQueryAddOnLicensesAsync",
-                                     "XStoreCanAcquireLicenseForStoreIdAsync", "XStoreQueryLicenseTokenAsync"}
-                    calls = re.findall(r"\[xodus-store\] (XStore[A-Za-z0-9_]{1,80})(?: [^\r\n]{0,100})? hr=([0-9a-fA-F]{8})(?=\s|$)", text)
-                    # Native query workers report their final asynchronous
-                    # outcome by numeric kind. Map only known kinds to public
-                    # API names; never include surrounding log text.
-                    query_methods = ("XStoreQueryGameLicenseAsync", "XStoreQueryEntitledProductsAsync",
-                                     "XStoreProductsQueryNextPageAsync", "XStoreQueryLicenseTokenAsync",
-                                     "XStoreQueryProductsAsync", "XStoreQueryConsumableBalanceRemainingAsync",
-                                     "XStoreAcquireLicenseForDurablesAsync", "XStoreQueryGameAndDlcPackageUpdatesAsync",
-                                     "XStoreShowPurchaseUIAsync", "XStoreQueryProductForCurrentGameAsync", "XStoreCanAcquireLicenseForStoreIdAsync")
-                    calls += [(query_methods[int(kind)], hr) for kind, hr in
-                              re.findall(r"\[xodus-store-query\] kind=(10|[0-9]) hr=([0-9a-fA-F]{8})(?=\s|$)", text)]
-                    store_methods.update(query_methods)
-                    summary["store_calls"] = [{"method": method, "hresult": hr}
-                                              for method, hr in sorted({(method, hr.lower()) for method, hr in calls if method in store_methods})]
-                    # An inventory failure can originate in the authenticated
-                    # query, catalog metadata or native mapping. Export only
-                    # fixed stage names and result codes, never product data.
-                    stages = {"inventory", "inventory-catalog", "inventory-mapping", "inventory-page",
-                              "catalog", "mapping", "collections", "page", "result"}
-                    outcomes = re.findall(r"\[xodus-store-catalog\] stage=([a-z-]{1,32})(?: products=\d{1,10} skus=\d{1,10})? hr=([0-9a-fA-F]{8})(?=\s|$)", text)
-                    summary["store_catalog"] = [{"stage": stage, "hresult": hr}
-                                                for stage, hr in sorted({(stage, hr.lower()) for stage, hr in outcomes if stage in stages})]
-                    exits = re.findall(r"xodus-wine-launch: wine_pid=\d+ exit_code=(\d+) elapsed_seconds=(\d+(?:\.\d+)?)(?=\s|$)", text)
-                    if exits:
-                        summary["exit"] = {"code": int(exits[-1][0]), "seconds": float(exits[-1][1])}
                 except (OSError, ValueError, OverflowError):
                     pass
         summary["store_check"] = self.store_check.report()

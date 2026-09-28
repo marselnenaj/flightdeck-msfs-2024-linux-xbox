@@ -166,6 +166,11 @@ and does not require `vulkaninfo`.
 
 Flightdeck 0.1.7 provides diagnostics schema 4, retaining these graphics fields:
 
+The unreleased schema 5 correction additionally scans the middle of logs and
+exports token/signature, networking-policy and audio evidence. See
+[the 0.1.8 follow-up and offline exporter](diagnostic-follow-up.md) for bounds,
+privacy, and the symptoms that still require tester evidence.
+
 - `context`: launcher version, selected simulator, last run-log modification
   time and `cloud_sync_scope: current_service`. Cloud state describes the current
   service, not necessarily the recorded game run.

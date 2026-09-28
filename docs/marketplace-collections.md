@@ -1,5 +1,10 @@
 # Marketplace integration
 
+The reported 0.1.8 **“Marketplace session expired”** message remains under
+investigation. Successful Store inventory/license calls do not rule out a
+later game-service sign-in failure. See [the diagnostic follow-up](diagnostic-follow-up.md)
+for the missing evidence and the read-only exporter for existing tester logs.
+
 Flightdeck can list account-owned Marketplace content and supports genuine
 signed licenses for eligible Durable products. Free-content downloads have been
 reported working. Paid checkout is not yet verified. Flightdeck 0.1.7

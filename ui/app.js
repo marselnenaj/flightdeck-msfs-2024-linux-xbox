@@ -305,7 +305,7 @@ async function loadDiagnostics() {
     }
     // Explicit allowlist: never export status, CSRF or unrelated response fields.
     state.report = {summary: raw.summary, checks: raw.checks, generated_at: raw.generated_at ?? null};
-    const summaryLabels = {run_found: t('Spielsitzung gefunden'), auth_http: t('Xbox-Anmeldung · HTTP-Status'), local_save_init: t('Lokaler Spielstandspeicher'), store_calls: t('Store-API-Aufrufe'), store_catalog: t('Marketplace-Abfragen'), store_session:t('Store-Sitzungsverlauf'), store_check:t('Letzte Store-Prüfung'), exit: t('Letztes Sitzungsende'), cloud_sync:t('Xbox-Cloud-Abgleich'), graphics:t('Grafik und Vulkan')};
+    const summaryLabels = {run_found: t('Spielsitzung gefunden'), auth_http: t('Xbox-Anmeldung · HTTP-Status'), local_save_init: t('Lokaler Spielstandspeicher'), store_calls: t('Store-API-Aufrufe'), store_catalog: t('Marketplace-Abfragen'), store_session:t('Store-Sitzungsverlauf'), store_check:t('Letzte Store-Prüfung'), exit: t('Letztes Sitzungsende'), cloud_sync:t('Xbox-Cloud-Abgleich'), graphics:t('Grafik und Vulkan'), audio:t('Audio und Medien'), user_calls:t('Spielanmeldung'), policy_cache:t('Anmelderichtlinien'), signature_policy:t('Anfragesignaturen'), network_security:t('Netzwerksicherheit'), log_coverage:t('Log-Auswertung'), summary_limited:t('Zusammenfassung gekürzt')};
     const rows = Object.entries(state.report.summary).slice(0, 100).map(([key, value]) => {
       const row = document.createElement('div');
       const term = document.createElement('dt'); term.textContent = summaryLabels[key] ?? key;
