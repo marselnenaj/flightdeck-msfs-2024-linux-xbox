@@ -3,7 +3,7 @@
 The top-level MIT license does not replace the licenses below. Original notices
 are retained in source and upstream patch context. New native compatibility
 files are provided under LGPL-2.1-or-later; new launcher/build tooling uses MIT.
-The exported changes include modifications through 2026-09-27. `source-deltas.json` identifies
+The exported changes include modifications through 2026-09-28. `source-deltas.json` identifies
 every changed upstream file and the resulting content hash.
 
 | Component | Pinned source | License and treatment |

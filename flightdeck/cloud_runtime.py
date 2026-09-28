@@ -39,6 +39,36 @@ WRITE_FEATURE = "connected-storage-sync-v1"
 _FRAME_MAX = 256 * 1024
 
 
+def _helper_error(answer):
+    """Classify failed operations by their numeric cause, including during init.
+
+    Older helpers label every initialization failure as authentication, even
+    when the broker or HTTP request timed out. Never turn a network failure
+    into a request to sign in again, or expose native response text.
+    """
+    code = answer.get("error")
+    details = {}
+    for source, target, minimum, maximum in (("hresult", "native_hresult", 0, 2**32 - 1),
+                                             ("http_status", "http_status", 100, 599)):
+        value = answer.get(source)
+        if type(value) is int and minimum <= value <= maximum:
+            details[target] = value
+    hr, status = details.get("native_hresult"), details.get("http_status")
+    if status in (401, 403):
+        category = "authentication"
+    elif hr in (0x800705B4, 0x80072EE2, 0x8007274C) or status in (408, 504):
+        category = "deadline"
+    elif (hr in (0x800703E3, 0x80072EE7, 0x80072EFD, 0x80072EFE, 0x80072F8F)
+          or status == 429 or (status is not None and status >= 500)):
+        category = "transport"
+    else:
+        category = "authentication" if code == "authentication" else "invalid_scope" if code == "title_binding" else "transport"
+    error = CloudStorageError(category)
+    for name, value in details.items():
+        setattr(error, name, value)
+    return error
+
+
 def _cancel(cancel):
     if cancel is not None and cancel.is_set():
         raise CloudStorageError("cancelled")
@@ -196,16 +226,7 @@ class HelperTransport:
             from .cloud_storage import _json
             answer = _json(bytes(raw))
             if answer.get("ok") is not True:
-                code = answer.get("error")
-                error = CloudStorageError("authentication" if code == "authentication" else
-                                          "invalid_scope" if code == "title_binding" else "transport")
-                # Numeric diagnostics only; never forward native strings/bodies.
-                for source, target, maximum in (("hresult", "native_hresult", 2**32 - 1),
-                                                ("http_status", "http_status", 599)):
-                    value = answer.get(source)
-                    if type(value) is int and 0 <= value <= maximum:
-                        setattr(error, target, value)
-                raise error
+                raise _helper_error(answer)
             size = answer.get("body_bytes", 0)
             if type(size) is not int or not 0 <= size <= maximum:
                 raise CloudStorageError("bounds")

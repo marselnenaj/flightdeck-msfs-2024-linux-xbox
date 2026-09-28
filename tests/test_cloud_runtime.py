@@ -125,6 +125,48 @@ class CloudRuntimeTests(unittest.TestCase):
         self.assertEqual(result.exception.code, "authentication")
         self.assertNotIn("synthetic-token", str(result.exception))
 
+    def test_native_timeout_during_auth_is_a_connection_deadline(self):
+        for stage in ("authentication", "title_binding", "transport"):
+            for hresult in (0x800705B4, 0x80072EE2, 0x8007274C):
+                with self.subTest(stage=stage, hresult=hresult):
+                    child = Child([frame({"ok": False, "error": stage, "hresult": hresult,
+                                          "http_status": 0, "message": "synthetic-token"})])
+                    self.addCleanup(child.close)
+                    with self.assertRaises(CloudStorageError) as result:
+                        cr.HelperTransport(child, INIT)
+                    self.assertEqual(result.exception.code, "deadline")
+                    self.assertEqual(result.exception.native_hresult, hresult)
+                    self.assertFalse(hasattr(result.exception, "http_status"))
+                    self.assertNotIn("synthetic-token", str(result.exception))
+
+    def test_server_failure_and_rejected_signin_remain_distinct(self):
+        for native in ("authentication", "title_binding", "transport"):
+            for status, expected in ((401, "authentication"), (403, "authentication"),
+                                     (408, "deadline"), (429, "transport"),
+                                     (500, "transport"), (503, "transport"), (504, "deadline")):
+                with self.subTest(native=native, status=status):
+                    transport, _ = self.transport([frame({"ok": False, "error": native,
+                                                         "http_status": status, "hresult": 0x80070005})])
+                    with self.assertRaises(CloudStorageError) as result:
+                        transport(Request(transport.scope.base_url), timeout=1, max_bytes=100)
+                    self.assertEqual(result.exception.code, expected)
+                    self.assertEqual(result.exception.http_status, status)
+                    self.assertTrue(transport.failed)
+
+    def test_native_network_errors_do_not_request_reauthentication(self):
+        for hresult in (0x800703E3, 0x80072EE7, 0x80072EFD, 0x80072EFE, 0x80072F8F):
+            with self.subTest(hresult=hresult):
+                error = cr._helper_error({"error": "authentication", "hresult": hresult})
+                self.assertEqual(error.code, "transport")
+                self.assertEqual(error.native_hresult, hresult)
+        self.assertEqual(cr._helper_error({"error": "authentication", "hresult": 0x8007052E}).code, "authentication")
+        self.assertEqual(cr._helper_error({"error": "title_binding", "hresult": 0x80070057, "http_status": 200}).code, "invalid_scope")
+        for bad in (True, -1, 2**32, "2147943860", None):
+            error = cr._helper_error({"error": "authentication", "hresult": bad, "http_status": bad})
+            self.assertEqual(error.code, "authentication")
+            self.assertFalse(hasattr(error, "native_hresult"))
+            self.assertFalse(hasattr(error, "http_status"))
+
     def test_cancel_before_auth_writes_nothing(self):
         cancel = threading.Event(); cancel.set()
         child = Child([]); self.addCleanup(child.close)

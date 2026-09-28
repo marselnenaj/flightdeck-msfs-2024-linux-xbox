@@ -101,6 +101,18 @@ stops only the wineserver associated with each test prefix.
 These synthetic checks do not replace live validation of account authentication,
 signed licenses, Microsoft-hosted checkout or in-game content availability.
 
+To exercise the built Wine broker transport with delayed synthetic responses:
+
+```sh
+python3 tests/compat/ipc-timeout-test.py --stage build/compat \
+  --wine "$RUNNER/files/bin/wine"
+```
+
+This uses an isolated prefix and a local Unix socket, with no account or HTTP
+requests. It covers inventory success and server timeouts after six seconds,
+subsequent license queries, delayed Microsoft ticket parsing, package-update
+queries, and rejection of late replies after a local transport timeout.
+
 The purchase host also has browser and native Linux window checks:
 
 ```sh

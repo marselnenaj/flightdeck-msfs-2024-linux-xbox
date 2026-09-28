@@ -14,6 +14,12 @@ a purchase are separate operations. A working catalog does not establish
 checkout support. Account or session errors during a purchase attempt do not
 by themselves establish that the account owning the game is incorrect.
 
+Flightdeck 0.1.8 fixes premature five-second timeouts in inventory and package
+update queries. These calls now wait long enough for the broker's bounded server
+requests to finish. A server timeout returned by the broker remains an error,
+but does not itself close the shared connection used by later license queries.
+An unresponsive or broken broker connection still requires a fresh game session.
+
 Flightdeck 0.1.7 implements `XUserFindUserById` for the user
 already added through Xbox authentication. It matches the exact validated ID
 and returns an owned handle. Unknown IDs, absent users and shutdown return

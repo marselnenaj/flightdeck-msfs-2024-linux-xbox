@@ -44,6 +44,13 @@ Nach sauberem Beenden behält Flightdeck die separate Wine-Umgebung seines
 Cloud-Hilfsprozesses. Dadurch entfällt deren erneute Einrichtung bei jedem
 Abgleich. Xbox-Konto und Spielidentität werden bei jeder Verbindung neu geprüft.
 
+Ab 0.1.8 wartet die Cloud-Anmeldung länger auf verzögerte Microsoft-Antworten,
+statt den Broker-Aufruf bereits nach fünf Sekunden abzubrechen. Zeitüberschreitungen,
+Netzwerkfehler und Serverfehler werden auch während der Anmeldung als
+Verbindungsproblem angezeigt. Eine tatsächlich abgelehnte Anmeldung bleibt
+ein Anmeldefehler. Bei einem Fehler kann der Abgleich erneut versucht werden;
+eine fehlgeschlagene Anfrage wird nicht als erfolgreicher Abgleich gewertet.
+
 ## Wann Flightdeck nachfragt
 
 Der letzte geprüfte Abgleich dient als gemeinsamer Vergleichsstand.

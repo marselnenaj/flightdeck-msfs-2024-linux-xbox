@@ -6,7 +6,7 @@ not contain Microsoft game files, a Wine prefix, account data, Linux system
 libraries or the upstream Proton runner. The Git repository and source-only
 archive still exclude compiled runtime binaries.
 
-Flightdeck **0.1.7** includes rebuilt **0.1.7** native components and their
+Flightdeck **0.1.8** includes rebuilt **0.1.8** native components and their
 matching source archive. Use the component version
 pinned by the selected package's `compat/bootstrap.lock.json`; see
 [release changes](changelog.md).
@@ -31,8 +31,8 @@ The checked source manifest connects each patched source to its build artifacts.
 `flightdeck-native-sources-<version>.tar.gz`. The source archive contains full patched
 WineGDK and Xodus sources, proxy and cloud-helper sources, all 686 locked Cargo vendor packages,
 the source manifest, original notices and an offline Cargo configuration. The
-reviewed Linux normal/build dependency graph contains 505 packages. This is a
-conservative graph including build tools, not a claim that all 505 are linked
+reviewed Linux normal/build dependency graph contains 491 packages. This is a
+conservative graph including build tools, not a claim that all 491 are linked
 into both executables. Other-target dependency sources are also retained.
 
 From the extracted source archive's root, with the toolchain in `BUILDING.md`:

@@ -39,6 +39,12 @@ Flightdeck also retains its separate cloud helper's Wine environment after a
 clean shutdown. This avoids repeating its initialization for each sync. The
 Xbox account and game identity are checked anew for every connection.
 
+From 0.1.8, cloud sign-in allows delayed Microsoft responses instead of aborting
+the broker request after five seconds. Timeouts, network failures and server
+errors are reported as connection problems even during sign-in. A rejected
+sign-in still reports an authentication error. Failed syncs can be retried;
+a failed request is never treated as a successful sync.
+
 ## When Flightdeck needs a decision
 
 A previous verified transfer provides a common comparison state. Changes on

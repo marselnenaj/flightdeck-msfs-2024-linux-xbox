@@ -1,5 +1,26 @@
 # Changes and release status
 
+## 0.1.8 — 28 September 2026
+
+- Give Store inventory, package-update queries and Microsoft account ticket
+  requests enough time to receive server responses. These operations previously
+  used a five-second local-request timeout, which could close the shared broker
+  connection and abort subsequent license queries.
+- Keep the broker connection usable after a completed inventory request reports
+  a server timeout. A broken or unresponsive transport still closes safely so a
+  late reply cannot be mistaken for another request's response.
+- Align the nested cloud sign-in waits with the longer broker request deadline.
+- Report native cloud timeouts, connection failures and server errors as
+  connection problems, including during sign-in and title lookup. Actual rejected
+  sign-ins still report authentication errors; numeric diagnostics are retained.
+
+Native components are rebuilt as **0.1.8**. Delayed synthetic broker replies
+reproduce the 0.1.7 inventory timeout and following license abort, and verify
+the corrected inventory, sign-in, package-update and failure handling. These
+checks use the built Wine component without accounts or real cloud data; they
+do not establish recovery from every Microsoft outage or a successful live
+cloud sync on an affected user's system.
+
 ## 0.1.7 — 28 September 2026
 
 [Download Flightdeck 0.1.7](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.7).

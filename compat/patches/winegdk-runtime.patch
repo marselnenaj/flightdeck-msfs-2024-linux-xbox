@@ -1242,7 +1242,7 @@ index 0000000..964b8df
 +    return matches;
 +}
 diff --git c/dlls/xgameruntime/GDKComponent/System/XUser.c w/dlls/xgameruntime/GDKComponent/System/XUser.c
-index 7891759..b381f53 100644
+index 7891759..e1f421c 100644
 --- c/dlls/xgameruntime/GDKComponent/System/XUser.c
 +++ w/dlls/xgameruntime/GDKComponent/System/XUser.c
 @@ -29,0 +30,7 @@
@@ -2206,7 +2206,7 @@ index 7891759..b381f53 100644
 +            !!(context->options & XUserAddOptions_AddDefaultUserAllowingUI), fullTrust, &operation);
 +    if (FAILED(hr)) goto load_failed;
 +    stage = "msa_await";
-+    async = await_IAsyncOperation_IMsaTokenResponse(operation, IPC_REQUEST_TIMEOUT_MS, &context->cancelled);
++    async = await_IAsyncOperation_IMsaTokenResponse(operation, IPC_NETWORK_TIMEOUT_MS + 2000, &context->cancelled);
 +    if (async)
 +    {
 +        hr = FAILED((HRESULT)async) ? (HRESULT)async : HRESULT_FROM_WIN32(async == WAIT_TIMEOUT ? ERROR_TIMEOUT : ERROR_OPERATION_ABORTED);
@@ -3472,7 +3472,7 @@ index 7891759..b381f53 100644
 -    return S_OK;
 +    return x_user_diagnostic_result(__func__, S_OK, diagnostic_call);
 diff --git c/dlls/xgameruntime/GDKComponent/Xodus/IPCLayer.cpp w/dlls/xgameruntime/GDKComponent/Xodus/IPCLayer.cpp
-index eb9107e..0b239fe 100644
+index eb9107e..97ef447 100644
 --- c/dlls/xgameruntime/GDKComponent/Xodus/IPCLayer.cpp
 +++ w/dlls/xgameruntime/GDKComponent/Xodus/IPCLayer.cpp
 @@ -30,0 +31 @@
@@ -3619,11 +3619,14 @@ index eb9107e..0b239fe 100644
 +            iface->StopTransport();
 +            status = HRESULT_FROM_NT(nts);
 +            goto cleanup;
-@@ -255,0 +269,28 @@ private:
+@@ -255,0 +269,31 @@ private:
 +        waits[0] = context.event;
 +        waits[1] = iface->m_StopEvent;
 +        wait_result = WaitForMultipleObjects(2, waits, FALSE,
-+            header.Message_Type == 7 || header.Message_Type == 11 || header.Message_Type == 13 ? 45000 : IPC_REQUEST_TIMEOUT_MS);
++            (header.Message_Type == 3 /* MSA */ || header.Message_Type == 7 /* License */ ||
++             header.Message_Type == 11 /* License token */ || header.Message_Type == 13 /* Collections */ ||
++             header.Message_Type == 15 /* Inventory */ || header.Message_Type == 17 /* Package updates */)
++                ? IPC_NETWORK_TIMEOUT_MS : IPC_REQUEST_TIMEOUT_MS);
 +        if (wait_result == WAIT_OBJECT_0 && context.response)
 +        {
 +            result->vt = VT_UNKNOWN;
@@ -3648,7 +3651,7 @@ index eb9107e..0b239fe 100644
 +        packet->Release();
 +        return status;
 +    }
-@@ -257,4 +298,8 @@ private:
+@@ -257,4 +301,8 @@ private:
 -        result->vt = VT_UNKNOWN;
 -        result->punkVal = context.response;
 -
@@ -3661,9 +3664,9 @@ index eb9107e..0b239fe 100644
 +        m_Stopped = true;
 +        if (m_StopEvent) SetEvent(m_StopEvent);
 +        if (unixhandle) __wine_unix_call(unixhandle, disconnect_socket, nullptr);
-@@ -282,0 +328 @@ private:
+@@ -282,0 +331 @@ private:
 +        if (ctx->response) return S_OK;
-@@ -289 +335,11 @@ private:
+@@ -289 +338,11 @@ private:
 -    static HRESULT WINAPI 
 +    static DWORD WINAPI PumpThread(void *context)
 +    {
@@ -3676,22 +3679,22 @@ index eb9107e..0b239fe 100644
 +    }
 +
 +    static HRESULT WINAPI
-@@ -322,0 +379 @@ private:
+@@ -322,0 +382 @@ private:
 +                bufferFactory->Release();
-@@ -383 +439,0 @@ private:
+@@ -383 +442,0 @@ private:
 -                LIST_FOR_EACH_ENTRY( currCallback, &iface->m_Callbacks, response_received_callback, entry )
-@@ -385 +441,3 @@ private:
+@@ -385 +444,3 @@ private:
 -                    currCallback->handler->Invoke( xodusPacket );
 +                    std::lock_guard<std::mutex> callbacks(iface->m_CallbackMutex);
 +                    LIST_FOR_EACH_ENTRY(currCallback, &iface->m_Callbacks, response_received_callback, entry)
 +                        currCallback->handler->Invoke(xodusPacket);
-@@ -389,0 +448 @@ private:
+@@ -389,0 +451 @@ private:
 +                message->Release();
-@@ -409,0 +469,3 @@ private:
+@@ -409,0 +472,3 @@ private:
 +    std::mutex m_CallbackMutex, m_RequestMutex, m_LifecycleMutex;
 +    HANDLE m_Thread = nullptr, m_StopEvent = nullptr;
 +    std::atomic_bool m_Stopped{true};
-@@ -416,0 +479,5 @@ IIPCLayer *xodus_ipclayer = static_cast<IIPCLayer*>(&g_xodus_ipclayer);
+@@ -416,0 +482,5 @@ IIPCLayer *xodus_ipclayer = static_cast<IIPCLayer*>(&g_xodus_ipclayer);
 +
 +extern "C" HRESULT xodus_ipc_shutdown(void)
 +{
@@ -5021,7 +5024,7 @@ index c49e1dd..5afb2b4 100644
 +    disconnect_sock
 +};
 diff --git c/dlls/xgameruntime/GDKComponent/Xodus/XodusService.cpp w/dlls/xgameruntime/GDKComponent/Xodus/XodusService.cpp
-index 1c9bf5d..c6dcde8 100644
+index 1c9bf5d..15f6a1c 100644
 --- c/dlls/xgameruntime/GDKComponent/Xodus/XodusService.cpp
 +++ w/dlls/xgameruntime/GDKComponent/Xodus/XodusService.cpp
 @@ -27,0 +28 @@
@@ -5035,14 +5038,14 @@ index 1c9bf5d..c6dcde8 100644
 +    ~OwnedMsaTokenRequestContext() { free(clientId); }
 +};
 +
-+static HRESULT wait_for_response(IAsyncOperation<IXodusIPCPacket *> *operation)
++static HRESULT wait_for_response(IAsyncOperation<IXodusIPCPacket *> *operation, DWORD timeout = IPC_REQUEST_TIMEOUT_MS + 1000)
 +{
 +    if (!operation) return E_UNEXPECTED;
 +    ::IAsyncInfo *info = nullptr;
 +    HRESULT hr = operation->QueryInterface(__uuidof(::IAsyncInfo), (void **)&info);
 +    if (FAILED(hr)) return hr;
 +    AsyncStatus status = Started;
-+    ULONGLONG deadline = GetTickCount64() + IPC_REQUEST_TIMEOUT_MS + 1000;
++    ULONGLONG deadline = GetTickCount64() + timeout;
 +    while (SUCCEEDED(hr = info->get_Status(&status)) && status == Started && GetTickCount64() < deadline)
 +        Sleep(1);
 +    if (SUCCEEDED(hr) && status == Started) hr = HRESULT_FROM_WIN32(ERROR_TIMEOUT);
@@ -5168,7 +5171,7 @@ index 1c9bf5d..c6dcde8 100644
 +        stage = "request_send";
 +        if (FAILED(hr = xodus_ipclayer->SendRequestAsync(requestPacket, &asyncop))) goto cleanup;
 +        stage = "response_wait";
-+        if (FAILED(hr = wait_for_response(asyncop))) goto cleanup;
++        if (FAILED(hr = wait_for_response(asyncop, IPC_NETWORK_TIMEOUT_MS + 1000))) goto cleanup;
 @@ -217,0 +261 @@ private:
 +        stage = "response_result";
 @@ -219 +263,3 @@ private:
@@ -5771,14 +5774,18 @@ index 7c8ba38..a145251 100644
 \ No newline at end of file
 +}
 diff --git c/dlls/xgameruntime/private.h w/dlls/xgameruntime/private.h
-index 9f96480..822309f 100644
+index 9f96480..0045a57 100644
 --- c/dlls/xgameruntime/private.h
 +++ w/dlls/xgameruntime/private.h
-@@ -147 +147,2 @@ enum unix_funcs
+@@ -100,0 +101,3 @@
++/* HTTP-backed broker calls may take up to 35 seconds. Local ping/account
++ * requests stay short. Outer async waits must outlive the transport wait. */
++#define IPC_NETWORK_TIMEOUT_MS 45000
+@@ -147 +150,2 @@ enum unix_funcs
 -    send_frame
 +    send_frame,
 +    disconnect_socket
-@@ -150,0 +152,2 @@ extern unixlib_handle_t unixhandle;
+@@ -150,0 +155,2 @@ extern unixlib_handle_t unixhandle;
 +EXTERN_C HRESULT xodus_ipc_shutdown(void);
 +EXTERN_C void x_user_shutdown(void);
 diff --git c/dlls/xgameruntime/xodus_store_test.spec w/dlls/xgameruntime/xodus_store_test.spec
