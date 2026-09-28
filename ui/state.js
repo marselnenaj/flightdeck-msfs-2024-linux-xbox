@@ -49,6 +49,7 @@ export function normalizeStatus(raw) {
       ready: raw.runtime.ready === true, checks: normalizeChecks(raw.runtime.checks),
     },
     versions,
+    setup: {busy: raw.setup?.busy === true},
     graphics: {
       available: raw.graphics?.available === true,
       nvidia_present: raw.graphics?.nvidia_present === true,

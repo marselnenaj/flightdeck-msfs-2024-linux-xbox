@@ -170,7 +170,12 @@ int main() {
               strcmp(p.skus[0].skuId, "0001") == 0 &&
               strcmp(p.skus[0].availabilities[0].availabilityId,
                      "SYNTHETIC-AVAILABILITY") == 0);
+    const auto availability = p.skus[0].availabilities[0];
+    check("known-purchase-availability", is_availability_purchasable(availability, now_utc()));
+    check("expired-availability", !is_availability_purchasable(availability, availability.endDate));
+    check("unknown-availability", !is_availability_purchasable(XStoreAvailability{}, now_utc()));
     check("release-owned-page", release_coin_page(page));
+    check("released-availability", !is_availability_purchasable(availability, now_utc()));
     check("release-twice-not-owned", !release_coin_page(page));
   }
   source = complete_fixture();
@@ -238,6 +243,10 @@ int main() {
   bad["Product"]["DisplaySkuAvailabilities"][0]["Sku"]["Properties"]
      ["IsTrial"] = true;
   negative("trial-sku-not-in-subset", bad);
+  bad = complete_fixture();
+  bad["Product"]["DisplaySkuAvailabilities"][0]["Sku"]["Properties"]
+     ["BundledSkus"] = Json::array({{{"ProductId", "CHILD1234567"}, {"SkuId", "0001"}}});
+  negative("bundle-checkout-stays-unsupported", bad);
   bad = complete_fixture();
   bad["Product"]["DisplaySkuAvailabilities"][0]["Sku"]["SubscriptionPolicyId"] =
       "synthetic";
@@ -329,6 +338,29 @@ int main() {
       page->products[0].hasDigitalDownload && page->products[0].skus[0].availabilitiesCount == 0 &&
       !strcmp(page->products[0].skus[1].skuId, "0002") && !strcmp(page->continuation, next.c_str()));
   if (page) release_coin_page(page);
+  // A purchased bundle must remain visible without fabricating rights for
+  // its catalog children. Exercise the actual ownership join and page output.
+  source["Product"]["DisplaySkuAvailabilities"][0]["Sku"]["Properties"]["BundledSkus"] =
+      Json::array({{{"ProductId", "CHILD1234567"}, {"SkuId", "0001"}}});
+  check("owned-bundle-catalog", parse(source.dump(), "ABCD1234EFGH", true, &owned_catalog) == S_OK);
+  check("owned-bundle-plan", plan_coins({owned_catalog}, {"ABCD1234EFGH/0001", "ABCD1234EFGH/0002"}, 2, {},
+      "PARENT123456", "AT", "en-US", now_utc(), &owned_plan, &owned_requests, true) == S_OK && owned_requests.size() == 2);
+  page = nullptr;
+  check("owned-bundle-keeps-exact-entitlements", coin_page(owned_plan, &owned_snapshot, now_utc(), &page) == S_OK && page &&
+      page->product_count == 1 && !strcmp(page->products[0].storeId, "ABCD1234EFGH") && page->products[0].skusCount == 2 &&
+      page->products[0].isInUserCollection && page->products[0].skus[0].collectionData.quantity == 1);
+  if (page) release_coin_page(page);
+  check("owned-fallback-translation-plan", plan_coins({owned_catalog}, {"ABCD1234EFGH/0001", "ABCD1234EFGH/0002"}, 2, {},
+      "PARENT123456", "AT", "de-DE", now_utc(), &owned_plan, &owned_requests, true) == S_OK);
+  page = nullptr;
+  check("owned-fallback-preserves-actual-language", coin_page(owned_plan, &owned_snapshot, now_utc(), &page) == S_OK && page &&
+      !strcmp(page->products[0].language, "en") && page->products[0].isInUserCollection);
+  if (page) release_coin_page(page);
+  auto foreign_text = owned_catalog;
+  for (auto &text : foreign_text.localized) text.markets = {"US"};
+  CoinPlan rejected_plan;
+  check("owned-fallback-does-not-cross-market", FAILED(plan_coins({foreign_text}, {"ABCD1234EFGH/0001"}, 2, {},
+      "PARENT123456", "AT", "de-DE", now_utc(), &rejected_plan, &owned_requests, true)) && !rejected_plan);
   owned_snapshot.item_count = 1; page = nullptr;
   check("missing-owned-sku-is-not-empty-success", FAILED(coin_page(owned_plan, &owned_snapshot, now_utc(), &page)) && !page);
   owned_snapshot.item_count = 2; owned_items[1].end_date = now_utc()-1;

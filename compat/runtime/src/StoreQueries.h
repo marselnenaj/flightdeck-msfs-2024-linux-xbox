@@ -3,6 +3,14 @@
 #include "compat.h"
 #include <xstore.h>
 
+HRESULT XodusStoreQueryProductForCurrentGameAsync(XStoreContextHandle, XAsyncBlock *);
+HRESULT XodusStoreQueryProductForCurrentGameResult(XAsyncBlock *, XStoreProductQueryHandle *);
+HRESULT XodusStoreCanAcquireLicenseForStoreIdAsync(XStoreContextHandle, const char *, XAsyncBlock *);
+HRESULT XodusStoreCanAcquireLicenseForStoreIdResult(XAsyncBlock *, XStoreCanAcquireLicenseResult *);
+
+HRESULT XodusStoreShowPurchaseUIAsync(XStoreContextHandle, const char *, const char *, const char *, XAsyncBlock *);
+HRESULT XodusStoreShowPurchaseUIResult(XAsyncBlock *);
+
 HRESULT XodusStoreAcquireLicenseForDurablesAsync(XStoreContextHandle context,const char *store_id,XAsyncBlock *async);
 HRESULT XodusStoreAcquireLicenseForDurablesResult(XAsyncBlock *async,XStoreLicenseHandle *out);
 

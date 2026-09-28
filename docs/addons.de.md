@@ -111,10 +111,13 @@ Flightdeck die Fenix-Begleitprozesse dieser Sitzung; hängende Prozesse werden
 nach einer kurzen Wartezeit beendet. Der offizielle Fenix-Installer und andere
 Wine-Profile bleiben davon unberührt.
 
-Dieser Quellstand bereitet Patch **0.1.0-preview.3** vor; er ist noch nicht veröffentlicht. Flightdeck lädt die geprüfte
-Version aus `compat/fenix/release.json`; ein neueres GitHub-Release wird nicht
-ungeprüft übernommen. Eine Flightdeck-Installation richtet Fenix nicht automatisch
-ein. Für den öffentlichen Patch-Download ist keine GitHub-Anmeldung nötig. Das
+Flightdeck verwendet Patch **0.1.0-preview.3**. Neuere Patch-Versionen werden
+mit einem Flightdeck-Update übernommen; der Launcher sucht nicht eigenständig
+nach dem neuesten Fenix-Patch auf GitHub. Unterstützte ältere Patches werden
+beim Öffnen von Fenix, seinem Installer oder Manager sowie beim Abschließen der
+Einrichtung auf die mit Flightdeck bereitgestellte Version aktualisiert.
+Eine Flightdeck-Installation richtet Fenix nicht automatisch ein.
+Für den öffentlichen Patch-Download ist keine GitHub-Anmeldung nötig. Das
 Flugzeug selbst wird mit dem offiziellen Fenix-Programm heruntergeladen und über
 dein Fenix-Konto aktiviert.
 

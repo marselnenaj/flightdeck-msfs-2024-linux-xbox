@@ -80,7 +80,7 @@ matching `compat/bootstrap.lock.json`:
 ```sh
 python3 scripts/full-installer-release.py \
   --source build/flightdeck-source.tar.gz \
-  --native build/flightdeck-compat-0.1.1-linux-x86_64.tar.gz \
+  --native build/flightdeck-compat-0.1.7-linux-x86_64.tar.gz \
   --output build/Flightdeck-Linux-x86_64.tar.gz
 ```
 

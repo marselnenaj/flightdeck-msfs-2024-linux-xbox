@@ -52,6 +52,9 @@ If sign-in or the connection is unavailable, choose **Try again** or explicitly
 start with local saves. This also lets you open MSFS for its first Xbox sign-in.
 Local sessions are backed up; their pending changes are checked at the next
 normal start. An authentication failure is never treated as an empty cloud.
+Playing with local saves skips this session's cloud-save transfers. It does
+not disable MSFS networking, multiplayer or the Marketplace. Local save
+storage is also used during normal cloud-synchronized sessions.
 Do not run the same game profile on another device during a session: changes
 there can require a decision before the final upload.
 

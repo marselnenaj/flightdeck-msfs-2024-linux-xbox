@@ -18,6 +18,7 @@ struct Offer {
   std::string id, currency;
   double base = 0, price = 0;
   INT64 end = 0;
+  bool purchasable = false;
 };
 struct Coin {
   std::string id, sku, offer_token, title, description, language, sku_title,
@@ -48,8 +49,8 @@ bool contains(const Json &array, const std::string &v) {
 }
 const Text *language_text(const std::vector<Text> &values,
                           const std::string &language,
-                          const std::string &market) {
-  const Text *fallback = nullptr;
+                          const std::string &market, bool entitled) {
+  const Text *fallback = nullptr, *regional = nullptr, *market_fallback = nullptr;
   const auto short_name = language.substr(0, language.find('-'));
   for (const auto &v : values) {
     if (std::find(v.markets.begin(), v.markets.end(), market) ==
@@ -59,8 +60,14 @@ const Text *language_text(const std::vector<Text> &values,
       return &v;
     if (v.language == short_name)
       fallback = &v;
+    if (!regional && v.language.substr(0, v.language.find('-')) == short_name)
+      regional = &v;
+    if (!market_fallback)
+      market_fallback = &v;
   }
-  return fallback;
+  // Owned content remains owned when the catalog has no exact translation.
+  // Keep the actual returned language, and never borrow another market's text.
+  return fallback ? fallback : entitled ? (regional ? regional : market_fallback) : nullptr;
 }
 bool utc(const std::string &s, INT64 *out) {
   if (s.size() < 20 || s.back() != 'Z' || s[4] != '-' || s[7] != '-' ||
@@ -175,6 +182,7 @@ struct PageOwner {
   std::vector<std::vector<XStoreImage>> images, sku_images;
   std::vector<std::vector<const char *>> keywords;
   std::deque<std::string> text;
+  std::map<const char *, INT64> purchasable;
   const char *keep(const std::string &s) {
     text.push_back(s);
     return text.back().c_str();
@@ -279,20 +287,25 @@ HRESULT plan_coins(const std::vector<Product> &catalog,
       const auto &props = s.at("Properties");
       if (!boolean_is(props, "IsTrial", false) || !props.count("Packages") ||
           !props.at("Packages").is_array() || (!entitled && !props.at("Packages").empty()) ||
-          !empty_media(props, "BundledSkus") || !s.count("RecurrencePolicy") ||
+          (!entitled && !empty_media(props, "BundledSkus")) ||
+          (entitled && props.count("BundledSkus") && !props.at("BundledSkus").is_null() &&
+           !props.at("BundledSkus").is_array()) || !s.count("RecurrencePolicy") ||
           !s.at("RecurrencePolicy").is_null() ||
           !s.count("SubscriptionPolicyId") ||
           !s.at("SubscriptionPolicyId").is_null())
         return E_NOTIMPL;
+      // Bundle metadata is descriptive for an already-owned exact SKU. Its
+      // children need their own authenticated entitlement records; never expand
+      // ownership from BundledSkus or apply checkout restrictions to inventory.
       for (const auto &localized : p.at("LocalizedProperties"))
         if (!entitled && !empty_media(localized, "Videos"))
           return E_NOTIMPL;
       for (const auto &localized : s.at("LocalizedProperties"))
         if (!entitled && !empty_media(localized, "Videos"))
           return E_NOTIMPL;
-      const auto *pt = language_text(product.localized, language, market);
+      const auto *pt = language_text(product.localized, language, market, entitled);
       const auto *st =
-          language_text(selected->localized, language, market);
+          language_text(selected->localized, language, market, entitled);
       if (!pt || !st)
         return E_NOTIMPL;
       Coin coin;
@@ -344,7 +357,8 @@ HRESULT plan_coins(const std::vector<Product> &catalog,
                      a.price.base_price * 100) > 0.00001)
           return E_NOTIMPL;
         coin.offers.push_back(Offer{a.id, a.price.currency, a.price.base_price,
-                                    a.price.list_price, end});
+                                    a.price.list_price, end,
+                                    std::find(a.actions.begin(), a.actions.end(), "Purchase") != a.actions.end()});
       }
       if (coin.offers.empty() && !entitled) {
         if (!actions.empty())
@@ -513,6 +527,7 @@ HRESULT coin_page(const CoinPlan &plan,
         auto &dest = page->offers[i][a];
         dest.availabilityId = page->keep(c.offers[a].id);
         dest.endDate = c.offers[a].end;
+        if (c.offers[a].purchasable) page->purchasable.emplace(dest.availabilityId, dest.endDate);
         hr = page->price(c.offers[a], &dest.price);
         if (FAILED(hr))
           return hr;
@@ -536,6 +551,17 @@ HRESULT coin_page(const CoinPlan &plan,
   } catch (...) {
     return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
   }
+}
+bool is_availability_purchasable(const XStoreAvailability &availability, INT64 now) {
+  // GDK passes this structure by value. Match its borrowed ID to a live
+  // provider page without dereferencing unknown or already-released pointers.
+  std::lock_guard<std::mutex> lock(pages_mutex);
+  for (const auto &page : pages) {
+    auto found = page.second->purchasable.find(availability.availabilityId);
+    if (found != page.second->purchasable.end())
+      return found->second == availability.endDate && found->second > now;
+  }
+  return false;
 }
 bool release_coin_page(XodusStoreProductPage *page) {
   std::unique_ptr<PageOwner> owned;

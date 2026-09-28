@@ -2,10 +2,33 @@
 
 Flightdeck can list account-owned Marketplace content and supports genuine
 signed licenses for eligible Durable products. Free-content downloads have been
-reported working. Paid checkout, device-shared DLC rights and separate Store
-package installation are not supported. Full DLC coverage and the MSFS 2024
+reported working. Paid checkout is not yet verified. Flightdeck 0.1.7
+implements a Microsoft-hosted purchase dialog, described below.
+Device-shared DLC rights and separate Store package installation remain
+unsupported. Full DLC coverage and the MSFS 2024
 Aviator Upgrade remain unverified. Catalog visibility alone does not establish
 ownership or in-game availability.
+
+Loading the Marketplace catalog, recognizing the game edition and completing
+a purchase are separate operations. A working catalog does not establish
+checkout support. Account or session errors during a purchase attempt do not
+by themselves establish that the account owning the game is incorrect.
+
+Flightdeck 0.1.7 implements `XUserFindUserById` for the user
+already added through Xbox authentication. It matches the exact validated ID
+and returns an owned handle. Unknown IDs, absent users and shutdown return
+errors; a lookup does not sign in or switch accounts. In an MSFS 2024 1.8.16.0
+test, successful lookup allows the game to reach `XStoreShowPurchaseUIAsync`.
+The Store-user check compares the opaque account context captured during Xbox
+authentication with the current broker account; account changes and failed
+account reads do not return a match. Successful lookup or matching accounts
+alone do not establish checkout support.
+
+**Play with local saves** skips Xbox cloud-save synchronization for that
+session. It does not disable MSFS networking or the Marketplace. The next
+normal launch checks cloud synchronization again. Local save storage is also
+used during cloud-synchronized sessions, so `local_save_init.enabled=1` in a
+diagnostic report is expected. See [cloud saves](cloud-saves.md).
 
 License renewal retries an expired signed response only for an explicitly
 requested product, preserves the original challenge and returns an unmodified
@@ -14,9 +37,124 @@ receipt does not by itself confirm that every in-game download or activation
 flow succeeds.
 
 **Diagnostics** includes Store method names and result codes, excluding account
-data, product IDs and raw logs. The integration uses the configured Store market
+data, product IDs and raw logs. Diagnostics schema 4 adds `store_session`: a
+bounded, timestamped sequence of native query, catalog and purchase-window
+stages from the latest game session. Repeated events are retained in order.
+`components_at_launch` contains the launcher version and hashes of the native
+files observed at launch, recorded in that session's broker log. Older sessions
+without this record report an unknown component set; the currently installed
+files are never substituted for it. `partial` and `sources` identify clipped or
+unavailable logs. An absent event is not proof that an operation never occurred.
+
+The existing `store_catalog` summary distinguishes the authenticated ownership
+query (`inventory`), metadata retrieval (`inventory-catalog`), product conversion
+(`inventory-mapping`) and page construction (`inventory-page`). `80004001`
+indicates an unsupported operation or product shape, not necessarily a network
+outage. The cloud-sync section and `store_check` describe the current launcher
+service, which may differ from the session recorded in the game log.
+
+## Check Store without a purchase
+
+In Flightdeck 0.1.7, select **Diagnostics → Check Store → Start
+Store check** with the game closed. The check validates installed components,
+the saved sign-in, the public title catalog, the signed game license and the
+authenticated title library. It uses the same Store brokers as the simulator.
+It does not open checkout, create an order, acquire a Durable license handle,
+change accounts or refresh stored credentials. A missing or expired sign-in
+requires the normal Flightdeck sign-in flow.
+
+A separate local window asks you to confirm that its text and buttons are
+visible. Only that confirmation passes the display step; loading HTML alone
+does not prove that the window is visible. Closing it or waiting past its
+90-second limit leaves the display step unconfirmed. The check can be cancelled
+from the launcher, and it excludes simultaneous game starts and setup changes.
+Results belong to the selected runtime and remain available in diagnostics for
+the current launcher service. Passing these checks does not establish that
+Microsoft's payment page loads or that a paid transaction succeeds.
+
+The integration uses the configured Store market
 for game licensing. The sections below document the supported API scope for
 contributors and advanced troubleshooting.
+
+## Purchase dialog
+
+Flightdeck 0.1.7 replaces the purchase-dialog stub with an
+asynchronous request to Microsoft's hosted confirmation page. The broker selects
+one current desktop offer for the requested product/SKU and authenticates with
+the configured Store account. Authentication data reaches the isolated window
+through an inherited pipe and reaches Microsoft in the HTTPS request body;
+it is not placed in command-line arguments, URLs or diagnostic reports.
+
+The window first loads Microsoft's public prefetch document without credentials
+or product data. It then opens the confirmation page from that genuine Microsoft
+origin. Direct form submissions from the local opening view produce an opaque
+origin, for which Microsoft returns an empty HTTP 403 response. The host waits
+for the committed prefetch document and checks its exact URL before attaching
+the dialog. It does not override origin headers or disable browser security.
+Initialization has a separate 30-second limit and a visible connection error.
+The confirmation request selects Microsoft's hosted Xbox layout. The window
+keeps its own header compact after loading and follows validated height messages
+from the Microsoft frame, within the available window space. Flightdeck does
+not rewrite Microsoft's payment controls or legal text.
+
+Microsoft handles prices, payment details and the user's final confirmation.
+Flightdeck does not submit orders or fulfill consumables itself. Completion is
+accepted only from the expected Microsoft frame, with a successful result and
+an order identifier. Opening a page is not a completed purchase. Cancelling an active dialog returns cancellation. A failed dialog retains its
+failure when closed; timeouts, account changes and service errors remain failures.
+The window shows loading progress, a visible error if Microsoft does not signal
+readiness within 45 seconds, a distinct expired-session message and a 15-minute
+session limit. Errors stay visible until dismissed. The broker records only
+fixed phase/outcome names, never URLs, tokens, payment details or order IDs. Concurrent requests cannot open a second
+dialog, and requests are not automatically retried. Ownership caches are cleared
+after completion or interruption so subsequent game queries read fresh data.
+Closing a dialog does not reverse a payment already confirmed by Microsoft.
+
+The initial scope is an unambiguous, non-trial desktop offer associated with
+the running title. Subscription and bundle selection, gifting, redemption,
+custom campaign metadata and separate Store package installation are outside
+this purchase path. Simverse's publisher-managed wallet remains the simulator's
+responsibility; Store inventory is not substituted for that wallet.
+
+Automated tests cover request validation, asynchronous completion, cancellation,
+account matching, message origins and the dialog host in an isolated browser.
+An offline Linux window test also checks actual WebKitGTK rendering and
+cancellation under X11 and Wayland. The webview uses the existing GTK container
+to avoid an empty window caused by the previous foreign-window attachment.
+The native navigation regression test reproduces the empty 403 response on a
+loopback server and verifies the corrected origin, cancellation before navigation
+and rejection of an unexpected document. It uses synthetic data exclusively.
+The Store-account authentication exchange, anonymous page loading and Microsoft's
+hosted stylesheet have also been checked. The authenticated confirmation page
+and its layout have been checked in MSFS 2024 1.8.16.0. Completed paid
+transactions, delivery of purchased content and layout across other systems
+remain unverified.
+
+Title inventory processing validates and exhausts the account's collection
+pages, establishes each product's title relationship, and then interprets the
+relevant rights. Unsupported metadata belonging to another title no longer
+invalidates the current title's inventory. Unknown or malformed rights for the
+current title still return an error. Pagination respects both the requested
+product count and the transport limit while keeping a product's SKUs together.
+
+## Current-game product and license preview
+
+`XStoreQueryProductForCurrentGameAsync` returns the current title and its
+account-owned SKUs through the authenticated inventory mapper. The returned
+page owns its metadata and uses the normal product-query lifecycle. This
+initial subset requires exactly one matching current-game product and a
+complete page; it does not list unowned edition SKUs or infer ownership from
+public catalog data. Unknown or incomplete inventory remains an error.
+See Microsoft's [current-game product query](https://learn.microsoft.com/en-us/gaming/gdk/docs/reference/system/xstore/functions/xstorequeryproductforcurrentgameasync).
+
+`XStoreCanAcquireLicenseForStoreIdAsync` previews a verified full-game license
+for the current title or a signed eligible Durable grant associated with it.
+It returns the exact licensable SKU without acquiring a handle or changing a
+license concurrency slot. Consumable and unmanaged-consumable product kinds
+return `LicenseActionNotApplicableToProduct`. Missing grants do not produce `NotLicensableToUser`, because the
+account-only backend cannot rule out device-shared rights. Unsupported products,
+authentication failures and timeouts also remain errors. Other games, trials, shared-device licenses and package-based preview
+are outside this implementation. See Microsoft's [license-preview API](https://learn.microsoft.com/en-us/gaming/gdk/docs/reference/system/xstore/functions/xstorecanacquirelicenseforstoreidasync).
 
 ## Package checks and the MSFS 2020 disc prompt
 
@@ -93,8 +231,13 @@ requests, total pages, record counts, response sizes and in-flight snapshots are
 bounded. Authentication failures, timeouts, incomplete paging, conflicting
 records or unavailable catalog metadata return errors, never empty success.
 
-The current mapping supports non-trial, non-subscription products without bundled
-SKUs. The service reports direct and satisfying account coverage explicitly;
+The current mapping supports non-trial, non-subscription products. In Flightdeck
+0.1.7, an owned bundle SKU can be listed using its exact
+authenticated entitlement. Catalog bundle membership does not grant ownership
+of child products. Inventory also accepts a fallback translation returned for
+the selected market, preserving its actual language. Explicit purchase-offer
+queries retain their narrower restrictions.
+The service reports direct and satisfying account coverage explicitly;
 device-shared rights are not covered. This is not full GDK Store parity.
 
 The broker and native provider accept both GUID and legacy 16-character

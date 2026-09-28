@@ -11,19 +11,22 @@ namespace {
 bool cancelled_now(volatile LONG *value) {
   return value && InterlockedCompareExchange(value, 0, 0);
 }
-INT64 now_utc() {
+INT64 now_ms() {
   FILETIME ft;
   GetSystemTimeAsFileTime(&ft);
   ULARGE_INTEGER value;
   value.LowPart = ft.dwLowDateTime;
   value.HighPart = ft.dwHighDateTime;
-  return static_cast<INT64>(value.QuadPart / 10000000) - 11644473600LL;
+  return static_cast<INT64>(value.QuadPart / 10000) - 11644473600000LL;
 }
+INT64 now_utc() { return now_ms()/1000; }
 HRESULT diagnose(const char *stage, HRESULT hr) {
   static std::atomic<unsigned> calls{0};
-  if (calls.fetch_add(1) < 128)
-    std::fprintf(stderr, "[xodus-store-catalog] stage=%s hr=%08lx\n", stage,
-                 static_cast<ULONG>(hr));
+  const auto index=calls.fetch_add(1);
+  if(index==2048)std::fprintf(stderr,"[flightdeck-store-events-truncated]\n");
+  if (index < 2048)
+    std::fprintf(stderr, "[xodus-store-catalog] stage=%s hr=%08lx time_ms=%lld\n", stage,
+                 static_cast<ULONG>(hr), now_ms());
   return hr;
 }
 bool root_id(const std::string &value) {

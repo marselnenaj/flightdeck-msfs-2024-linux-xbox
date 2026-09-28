@@ -58,7 +58,12 @@ Fehlen Anmeldung oder Verbindung, kannst du erneut versuchen oder ausdrücklich
 mit lokalen Spielständen starten. So kannst du MSFS auch zur ersten
 Xbox-Anmeldung öffnen. Lokale Sitzungen werden gesichert und beim nächsten
 normalen Start erneut abgeglichen. Ein Anmeldefehler gilt niemals als leere
-Cloud. Verwende dasselbe Spielprofil währenddessen nicht auf einem anderen
+Cloud. Das Spielen mit lokalen Spielständen überspringt den Cloud-Abgleich
+dieser Sitzung. Es deaktiviert weder die MSFS-Netzwerkverbindung noch
+Multiplayer oder Marketplace. Auch beim normalen Cloud-Abgleich verwendet
+Flightdeck den lokalen Spielstandspeicher.
+
+Verwende dasselbe Spielprofil währenddessen nicht auf einem anderen
 Gerät: Dortige Änderungen können vor dem abschließenden Upload eine Auswahl
 erforderlich machen.
 

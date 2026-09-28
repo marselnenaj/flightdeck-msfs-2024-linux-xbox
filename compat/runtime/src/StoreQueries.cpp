@@ -14,25 +14,37 @@
 #include <vector>
 
 namespace {
-enum class Kind { License, Products, NextPage, LicenseToken, ExplicitProducts, Balance, Durable, PackageUpdates };
+enum class Kind { License, Products, NextPage, LicenseToken, ExplicitProducts, Balance, Durable, PackageUpdates, Purchase, CurrentGame, PreviewLicense };
+const char purchase_identity=0, current_identity=0, preview_identity=0;
 const char license_identity=0, products_identity=0, next_identity=0, token_identity=0, explicit_identity=0, balance_identity=0, durable_identity=0, updates_identity=0;
 constexpr SIZE_T max_token_size=60001, max_challenge_size=8192, max_product_count=100;
 std::atomic<bool> stopped{false};
 std::atomic<unsigned> diagnostic_count{0};
+unsigned long long timestamp_ms() {
+    FILETIME ft;GetSystemTimeAsFileTime(&ft);ULARGE_INTEGER v;
+    v.LowPart=ft.dwLowDateTime;v.HighPart=ft.dwHighDateTime;
+    return v.QuadPart/10000-11644473600000ULL;
+}
 void phase(Kind kind,const char *stage,HRESULT hr,bool queue_null) {
     static std::atomic<unsigned> count{0};
-    if(count.fetch_add(1)<128)std::fprintf(stderr,"[xodus-store-async] kind=%u stage=%s hr=%08lx queue_null=%d\n",
-        static_cast<unsigned>(kind),stage,static_cast<ULONG>(hr),queue_null);
+    const auto index=count.fetch_add(1);
+    if(index==4096)std::fprintf(stderr,"[flightdeck-store-events-truncated]\n");
+    if(index<4096)std::fprintf(stderr,"[xodus-store-async] kind=%u stage=%s hr=%08lx queue_null=%d time_ms=%llu\n",
+        static_cast<unsigned>(kind),stage,static_cast<ULONG>(hr),queue_null,timestamp_ms());
 }
 void diagnostic(Kind kind,HRESULT hr) {
-    if(diagnostic_count.fetch_add(1)<64)
-        std::fprintf(stderr,"[xodus-store-query] kind=%u hr=%08lx\n",static_cast<unsigned>(kind),static_cast<ULONG>(hr));
+    const auto index=diagnostic_count.fetch_add(1);
+    if(index==2048)std::fprintf(stderr,"[flightdeck-store-events-truncated]\n");
+    if(index<2048)
+        std::fprintf(stderr,"[xodus-store-query] kind=%u hr=%08lx time_ms=%llu\n",static_cast<unsigned>(kind),static_cast<ULONG>(hr),timestamp_ms());
 }
 const void *identity(Kind kind) {
+    if(kind==Kind::CurrentGame)return &current_identity;
+    if(kind==Kind::PreviewLicense)return &preview_identity;
     return kind==Kind::License?&license_identity:kind==Kind::Products?&products_identity:
         kind==Kind::NextPage?&next_identity:kind==Kind::ExplicitProducts?&explicit_identity:
         kind==Kind::Balance?&balance_identity:kind==Kind::Durable?&durable_identity:
-        kind==Kind::PackageUpdates?&updates_identity:&token_identity;
+        kind==Kind::PackageUpdates?&updates_identity:kind==Kind::Purchase?&purchase_identity:&token_identity;
 }
 struct Page {
     XodusStoreContextRef context;
@@ -58,12 +70,14 @@ struct Job {
     volatile LONG cancelled=0;
     XStoreGameLicense license{};
     XStoreConsumableResult balance{};
+    XStoreCanAcquireLicenseResult preview{};
     XStoreLicenseHandle durable=nullptr;
     std::shared_ptr<Page> page;
     std::vector<std::string> product_ids;
     std::vector<std::string> action_filters;
     bool explicit_products=false;
     std::string custom;
+    std::string display_name;
     char *token=nullptr;
     SIZE_T token_size=0;
     ~Job() {
@@ -123,6 +137,32 @@ HRESULT do_work(Job *job) {
         if(!provider->query_game_license)return E_NOTIMPL;
         hr=provider->query_game_license(provider->state,XodusStoreContextAccount(job->context),&job->cancelled,&job->license);
         if(SUCCEEDED(hr))hr=validate_license(job->license);
+    } else if(job->kind==Kind::PreviewLicense) {
+        if(!provider->preview_license)return E_NOTIMPL;
+        hr=provider->preview_license(provider->state,XodusStoreContextAccount(job->context),
+            job->product_ids[0].c_str(),&job->cancelled,&job->preview);
+        if(SUCCEEDED(hr)) {
+            auto &v=job->preview;
+            const bool licensable=v.status==XStoreCanLicenseStatus::Licensable;
+            const auto size=strnlen(v.licensableSku,sizeof(v.licensableSku));
+            if(hr!=S_OK || (licensable?(size!=4 || !std::all_of(v.licensableSku,v.licensableSku+4,[](char c){return (c>='A'&&c<='Z')||(c>='0'&&c<='9');})):
+                (size || (v.status!=XStoreCanLicenseStatus::NotLicensableToUser && v.status!=XStoreCanLicenseStatus::LicenseActionNotApplicableToProduct))))
+                hr=HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
+        }
+    } else if(job->kind==Kind::CurrentGame) {
+        if(!provider->query_current_game||!provider->release_product_page)return E_NOTIMPL;
+        auto page=std::make_shared<Page>();page->context=job->context;
+        hr=provider->query_current_game(provider->state,XodusStoreContextAccount(job->context),&job->cancelled,&page->data);
+        if(SUCCEEDED(hr)) {
+            if(hr!=S_OK || !page->data || page->data->structure_size!=sizeof(*page->data) || page->data->product_count!=1 || !page->data->products ||
+                page->data->products[0].productKind!=XStoreProductKind::Game || (page->data->continuation&&*page->data->continuation))hr=HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
+            else job->page=std::move(page);
+        }
+    } else if(job->kind==Kind::Purchase) {
+        if(!provider->show_purchase)return E_NOTIMPL;
+        hr=provider->show_purchase(provider->state,XodusStoreContextAccount(job->context),
+            job->product_ids[0].c_str(),job->display_name.c_str(),job->custom.c_str(),&job->cancelled);
+        if(SUCCEEDED(hr)&&hr!=S_OK)hr=HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
     } else if(job->kind==Kind::PackageUpdates) {
         if(!provider->check_package_updates)return E_NOTIMPL;
         hr=provider->check_package_updates(provider->state,XodusStoreContextAccount(job->context),&job->cancelled);
@@ -185,8 +225,8 @@ HRESULT WINAPI provider(XAsyncOp op,const XAsyncProviderData *data) {
         catch(const std::bad_alloc&) {hr=E_OUTOFMEMORY;}
         catch(...) {hr=E_FAIL;}
         diagnostic(job->kind,hr);
-        SIZE_T required=job->kind==Kind::License?sizeof(job->license):
-            job->kind==Kind::PackageUpdates?0:
+        SIZE_T required=job->kind==Kind::PreviewLicense?sizeof(job->preview):job->kind==Kind::License?sizeof(job->license):
+            (job->kind==Kind::PackageUpdates||job->kind==Kind::Purchase)?0:
             job->kind==Kind::Durable?sizeof(job->durable):
             job->kind==Kind::Balance?sizeof(job->balance):
             job->kind==Kind::LicenseToken?job->token_size:sizeof(XStoreProductQueryHandle);
@@ -202,7 +242,8 @@ HRESULT WINAPI provider(XAsyncOp op,const XAsyncProviderData *data) {
          * after GetResult returns when DoWork is still unwinding. */
         forget_job(job);
         if(abort_job(job))return E_ABORT;
-        if(job->kind==Kind::License)std::memcpy(data->buffer,&job->license,sizeof(job->license));
+        if(job->kind==Kind::PreviewLicense)std::memcpy(data->buffer,&job->preview,sizeof(job->preview));
+        else if(job->kind==Kind::License)std::memcpy(data->buffer,&job->license,sizeof(job->license));
         else if(job->kind==Kind::Durable) {
             if(!XodusStoreIsLicenseValid(job->durable))return HRESULT_FROM_WIN32(ERROR_LOGON_FAILURE);
             *static_cast<XStoreLicenseHandle*>(data->buffer)=job->durable;job->durable=nullptr;
@@ -289,6 +330,56 @@ std::shared_ptr<Page> retain_page(void *handle) {
     auto it=pages.find(handle);
     return it==pages.end()?nullptr:it->second;
 }
+}
+
+HRESULT XodusStoreQueryProductForCurrentGameAsync(XStoreContextHandle handle,XAsyncBlock *async) {
+    if(!async)return E_POINTER;
+    try {auto job=std::make_unique<Job>();job->kind=Kind::CurrentGame;
+        HRESULT hr=XodusStoreContextRetain(handle,&job->context);if(FAILED(hr))return hr;
+        return begin(std::move(job),async);
+    } catch(const std::bad_alloc&){return E_OUTOFMEMORY;}
+}
+HRESULT XodusStoreQueryProductForCurrentGameResult(XAsyncBlock *async,XStoreProductQueryHandle *out) {
+    if(out)*out=nullptr;return get_result(Kind::CurrentGame,async,out,sizeof(*out));
+}
+HRESULT XodusStoreCanAcquireLicenseForStoreIdAsync(XStoreContextHandle handle,const char *id,XAsyncBlock *async) {
+    if(!async||!id)return E_POINTER;
+    if(strnlen(id,13)!=12 || !std::all_of(id,id+12,[](char c){return (c>='A'&&c<='Z')||(c>='0'&&c<='9');}))return E_INVALIDARG;
+    try {auto job=std::make_unique<Job>();job->kind=Kind::PreviewLicense;job->product_ids.emplace_back(id);
+        HRESULT hr=XodusStoreContextRetain(handle,&job->context);if(FAILED(hr))return hr;
+        return begin(std::move(job),async);
+    } catch(const std::bad_alloc&){return E_OUTOFMEMORY;}
+}
+HRESULT XodusStoreCanAcquireLicenseForStoreIdResult(XAsyncBlock *async,XStoreCanAcquireLicenseResult *out) {
+    if(out)std::memset(out,0,sizeof(*out));return get_result(Kind::PreviewLicense,async,out,sizeof(*out));
+}
+
+HRESULT XodusStoreShowPurchaseUIAsync(XStoreContextHandle handle,const char *id,
+    const char *name,const char *extended,XAsyncBlock *async) {
+    if(!async||!id)return E_POINTER;
+    SIZE_T length=strnlen(id,18);
+    if(length!=12&&length!=17)return E_INVALIDARG;
+    for(SIZE_T i=0;i<length;++i) {
+        if(i==12&&length==17){if(id[i]!='/')return E_INVALIDARG;}
+        else if(!((id[i]>='A'&&id[i]<='Z')||(id[i]>='0'&&id[i]<='9')))return E_INVALIDARG;
+    }
+    for(const char *value:{name,extended})if(value) {
+        SIZE_T size=strnlen(value,8193);
+        if(size>8192||(size&&!MultiByteToWideChar(CP_UTF8,MB_ERR_INVALID_CHARS,value,size,nullptr,0)))return E_INVALIDARG;
+    }
+    try {
+        auto job=std::make_unique<Job>();job->kind=Kind::Purchase;
+        job->product_ids.emplace_back(id);
+        if(name)job->display_name=name;
+        if(extended)job->custom=extended;
+        HRESULT hr=XodusStoreContextRetain(handle,&job->context);
+        if(FAILED(hr))return hr;
+        return begin(std::move(job),async);
+    } catch(const std::bad_alloc&) {return E_OUTOFMEMORY;}
+}
+HRESULT XodusStoreShowPurchaseUIResult(XAsyncBlock *async) {
+    if(!async)return E_POINTER;
+    return XAsyncGetResult(async,identity(Kind::Purchase),0,nullptr,nullptr);
 }
 
 HRESULT XodusStoreQueryGameAndDlcPackageUpdatesAsync(XStoreContextHandle handle,XAsyncBlock *async) {

@@ -13,6 +13,20 @@ from flightdeck.server import Handler, Server
 
 
 class ServerTests(unittest.TestCase):
+    def test_store_check_is_explicit_and_session_protected(self):
+        manager = self.server.launcher.store_check
+        headers = {"Content-Type":"application/json", "X-Flightdeck-Token":self.server.token, "Accept-Language":"de"}
+        with patch.object(manager, "start", return_value={"ok":True}) as start:
+            self.assertEqual(self.request("GET", "/store-check.js")[0], 200)
+            self.assertEqual(self.request("GET", "/api/store-check")[0], 200)
+            self.assertEqual(self.request("POST", "/api/store-check/start", "{}", {"Content-Type":"application/json"})[0],403)
+            start.assert_not_called()
+            self.assertEqual(self.request("POST", "/api/store-check/start", '{"url":"https://foreign.invalid"}', headers)[0],200)
+            start.assert_called_once_with("de")
+        with patch.object(manager, "cancel", return_value={"ok":True}) as cancel:
+            self.assertEqual(self.request("POST", "/api/store-check/cancel", '{"job_id":"current"}', headers)[0],200)
+            cancel.assert_called_once_with("current")
+
     def test_graphics_settings_require_session_token_and_bind_to_selected_runtime(self):
         with patch.object(self.server.launcher, "configure_graphics", return_value={"ok": True}) as configure:
             body = json.dumps({"runtime_path": "/fixture", "nvidia_mode": "compatibility"})
@@ -65,7 +79,7 @@ class ServerTests(unittest.TestCase):
             cancel.assert_called_once_with("fixture")
         with patch.object(manager, "restart", return_value={"ok": True}) as restart:
             self.assertEqual(self.request("POST", "/api/launcher-update/restart", "{}", headers)[0], 200)
-            restart.assert_called_once_with("en")
+            restart.assert_called_once_with("en", port=self.server.server_port)
 
     def test_automatic_cloud_actions_are_bound_to_current_request_and_token(self):
         auto = self.server.launcher.cloud_saves.automation

@@ -4,6 +4,7 @@
 #include "StoreCollectionsTypes.h"
 #include "StoreContext.h"
 #include <memory>
+struct XStoreAvailability;
 
 namespace xodus_catalog {
 struct CoinCatalogPlan;
@@ -23,4 +24,5 @@ HRESULT coin_page(const CoinPlan &plan,
                   XodusStoreProductPage **out, const char *continuation = nullptr);
 // Returns false for a page owned by another provider. Never dereferences it.
 bool release_coin_page(XodusStoreProductPage *page);
+bool is_availability_purchasable(const XStoreAvailability &availability, INT64 now);
 } // namespace xodus_catalog

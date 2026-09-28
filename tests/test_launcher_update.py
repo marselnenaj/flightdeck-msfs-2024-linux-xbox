@@ -225,9 +225,11 @@ class UpdateTests(unittest.TestCase):
         self.assertEqual(settings.read_text(), '{"keep":"exactly"}')
         with patch.object(updates.subprocess, "Popen") as process:
             process.return_value.poll.return_value = None
-            manager.restart("de")
-            self.assertIn(str(self.root / "bin/flightdeck"), process.call_args.args[0])
+            manager.restart("de", port=43210)
             self.assertIn(str(launcher.state_dir), process.call_args.args[0])
+            self.assertIn("43210", process.call_args.args[0])
+            self.assertNotIn("--desktop", process.call_args.args[0])
+            self.assertEqual(process.call_args.kwargs["cwd"], data / "releases" / current["current"])
             self.assertNotIn("shell", process.call_args.kwargs)
             self.assertFalse(manager.snapshot()["can_restart"])
             with self.assertRaises(updates.UpdateError): manager.restart("de")
@@ -241,10 +243,12 @@ class UpdateTests(unittest.TestCase):
         self.assertEqual(installer.load_installation(data)["current"], initial["current"])
         self.assertEqual(settings.read_text(), '{"keep":"exactly"}')
 
-    def test_installed_restart_hands_off_real_local_service_to_new_release(self):
+    def test_installed_update_and_rollback_reuse_origin_without_opening_a_browser(self):
         source, data, initial, launcher, _ = self.installed_manager()
         browser = self.root / "bin/chromium"
-        browser.write_text("#!/bin/sh\nexit 0\n")  # no real desktop window
+        browser_opened = self.root / "unexpected-browser"
+        browser.write_text("#!/usr/bin/env python3\nfrom pathlib import Path\n"
+                           f"Path({str(browser_opened)!r}).write_text('opened')\n")
         browser.chmod(0o700)
         environment = {**os.environ, "PATH": str(browser.parent) + os.pathsep + os.environ["PATH"],
                        "XDG_DATA_HOME": str(self.root / "empty-data")}
@@ -276,6 +280,15 @@ class UpdateTests(unittest.TestCase):
         self.assertEqual(desktop.request(new, "/api/status")["app"]["version"], "0.1.5")
         self.assertFalse(desktop.request(new, "/api/launcher-update")["pending_restart"])
         process.wait(timeout=5)
+        self.assertFalse(browser_opened.exists(), "Update opened an additional launcher window")
+        self.assertTrue(desktop.request(new, "/api/launcher-update/rollback", {})["ok"])
+        wait_for(lambda record: (status := desktop.request(record, "/api/launcher-update"))
+                 and status["pending_restart"] and status["can_restart"])
+        self.assertTrue(desktop.request(new, "/api/launcher-update/restart", {})["ok"])
+        restored = wait_for(lambda record: record["pid"] != new["pid"] and desktop.verified_service(launcher.state_dir, record))
+        self.assertEqual(restored["port"], old["port"])
+        self.assertEqual(desktop.request(restored, "/api/status")["app"]["version"], "0.1.4")
+        self.assertFalse(browser_opened.exists(), "Rollback opened an additional launcher window")
 
     def test_install_rejects_busy_stale_check_and_changed_installation(self):
         source, data, initial, launcher, manager = self.installed_manager()

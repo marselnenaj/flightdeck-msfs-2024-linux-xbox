@@ -6,9 +6,10 @@ not contain Microsoft game files, a Wine prefix, account data, Linux system
 libraries or the upstream Proton runner. The Git repository and source-only
 archive still exclude compiled runtime binaries.
 
-The current package is Flightdeck **0.1.6**, using the unchanged **0.1.1** native
-components and their matching source archive. See
-[release changes](changelog.md) before choosing an archive.
+Flightdeck **0.1.7** includes rebuilt **0.1.7** native components and their
+matching source archive. Use the component version
+pinned by the selected package's `compat/bootstrap.lock.json`; see
+[release changes](changelog.md).
 
 The release pins in `compat/bootstrap.lock.json` bind the component archive,
 every executable/library and the notice file to SHA256 checksums. The installer
@@ -27,7 +28,7 @@ locations so personal checkout/Cargo-cache paths are not embedded in the package
 The checked source manifest connects each patched source to its build artifacts.
 
 `scripts/binary-release.py` creates both the native archive and its matching
-`flightdeck-native-sources-0.1.1.tar.gz`. The source archive contains full patched
+`flightdeck-native-sources-<version>.tar.gz`. The source archive contains full patched
 WineGDK and Xodus sources, proxy and cloud-helper sources, all 686 locked Cargo vendor packages,
 the source manifest, original notices and an offline Cargo configuration. The
 reviewed Linux normal/build dependency graph contains 505 packages. This is a

@@ -151,7 +151,7 @@ the game rendered. A listed software adapter such as llvmpipe is not evidence
 that the game selected it. The probe runs in a separate process with a deadline
 and does not require `vulkaninfo`.
 
-Flightdeck 0.1.6 provides diagnostics schema 2 with:
+Flightdeck 0.1.7 provides diagnostics schema 4, retaining these graphics fields:
 
 - `context`: launcher version, selected simulator, last run-log modification
   time and `cloud_sync_scope: current_service`. Cloud state describes the current
@@ -170,6 +170,10 @@ Flightdeck 0.1.6 provides diagnostics schema 2 with:
 - `graphics.log`: known component markers and Vulkan/DXGI error symbols found
   in the bounded first/last log excerpt. Empty results do not rule out a graphics
   failure or prove a renderer was never loaded.
+
+Schema 4 also includes the latest Store check and timestamped Store-session
+events with component hashes recorded at game launch. See
+[Store diagnostics](marketplace-collections.md) for scope and interpretation.
 
 Compare the attempt and log times: a direct script start or later prefix reset
 may leave an older launcher attempt beside newer logs/files. The export omits
@@ -219,7 +223,7 @@ not copy it. See [Fenix installation and recovery](addons.md#fenix-a320).
 ## Current limits
 
 Native play has reached a cockpit in development. This is an experimental
-compatibility layer with a bounded read-only Store integration: explicit queries
+compatibility layer. Its read-only Store queries
 can return supported consumable/Durable products, public desktop prices and actual
 Store-account collection data. Owned add-ons can be enumerated for the current
 title and supported Durable handles require signed license grants.
@@ -228,8 +232,12 @@ and the supported product shape. Unverified ownership and unsupported product
 shapes produce an error. See [the Collections contract](marketplace-collections.md)
 for the scope and validation level.
 
-Full DLC coverage remains unverified; purchase dialogs, device-shared DLC rights
-and consumable fulfillment are unsupported. The launcher supports full-package updates, integrity checks and
+Full DLC coverage remains unverified. Flightdeck 0.1.7 adds a
+Microsoft-hosted purchase dialog whose display has been checked in MSFS 2024.
+Completed purchases and delivery of purchased content remain unverified;
+device-shared DLC rights and the Store consumable-fulfillment API remain
+unsupported. See [purchase-dialog scope](marketplace-collections.md#purchase-dialog).
+The launcher supports full-package updates, integrity checks and
 repairs; see [game updates](game-updates.md). Cloud saves synchronize automatically
 before a managed game starts and after it exits, with local backups and explicit
 conflict choices. The local save provider does not synchronize during gameplay.

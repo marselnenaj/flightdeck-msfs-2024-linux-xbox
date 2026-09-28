@@ -336,7 +336,7 @@ class LauncherUpdateManager:
             self.job.update(can_cancel=False, message="Launcher-Update wird abgebrochen …")
         return {"ok": True}
 
-    def restart(self, language):
+    def restart(self, language, *, port=0):
         with self.launcher.lock, self.lock:
             if not self.snapshot()["can_restart"]:
                 raise UpdateError("Bitte beende Spiel und Einrichtung vor dem Launcher-Neustart.")
@@ -347,8 +347,21 @@ class LauncherUpdateManager:
             executable = Path(entry["path"])
             if hashlib.sha256(manager.read_regular(executable)).hexdigest() != entry["sha256"]:
                 raise UpdateError("Der installierte Launcher wurde verändert. Bitte den Installer erneut ausführen.")
-            self.restart_process = subprocess.Popen([sys.executable, "-B", str(executable), "--desktop", "--state-dir", str(self.launcher.state_dir),
-                                                     "--language", language], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+            try:
+                source = manager.verify_release(root, state["current"])
+            except (OSError, ValueError, manager.InstallError) as error:
+                raise UpdateError("Die installierte Flightdeck-Version konnte nicht zugeordnet werden.") from error
+            # The existing window already polls and reloads after the handoff.
+            # Start only the selected release's service, including on rollback
+            # to releases without a dedicated CLI restart option. Keep the HTTP
+            # origin so that the current window and its preferences stay valid.
+            service = ("import sys; from pathlib import Path; "
+                       "from flightdeck.desktop import ensure_service; "
+                       "_, record = ensure_service(Path(sys.argv[1]), port=int(sys.argv[2])); "
+                       "sys.exit(1 if record.get('update_pending') else 0)")
+            self.restart_process = subprocess.Popen([sys.executable, "-B", "-c", service,
+                                                     str(self.launcher.state_dir), str(port)], cwd=source,
+                                                     stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
                                                      stderr=subprocess.DEVNULL, start_new_session=True)
             self.job = {"id": uuid.uuid4().hex, "operation": "restart", "state": "running", "phase": "restart",
                         "can_cancel": False, "message": "Flightdeck wird neu geöffnet …", "error": ""}

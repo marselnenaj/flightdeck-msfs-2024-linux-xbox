@@ -6,6 +6,7 @@
 
 struct XStoreGameLicense;
 struct XStoreProduct;
+struct XStoreCanAcquireLicenseResult;
 /* All pointed-to data belongs to the provider until release_product_page. */
 struct XodusStoreProductPage
 {
@@ -53,6 +54,16 @@ struct XodusStoreAccountProvider
      * registered package scope. Unknown scopes/revisions must remain errors. */
     HRESULT (WINAPI *check_package_updates)(void *state, void *account,
         volatile LONG *cancelled) = nullptr;
+    /* Opens Microsoft's confirmation UI. S_OK requires its confirmed result;
+     * cancellation, opening a page, and initiating a request are not success. */
+    HRESULT (WINAPI *show_purchase)(void *state, void *account, const char *store_id,
+        const char *name, const char *extended_json, volatile LONG *cancelled) = nullptr;
+    // Current title metadata, with ownership from the authenticated library.
+    HRESULT (WINAPI *query_current_game)(void *state, void *account,
+        volatile LONG *cancelled, XodusStoreProductPage **owned_page) = nullptr;
+    // Read-only preview; never acquires a handle or changes a concurrency slot.
+    HRESULT (WINAPI *preview_license)(void *state, void *account, const char *store_id,
+        volatile LONG *cancelled, XStoreCanAcquireLicenseResult *result) = nullptr;
 };
 
 class XodusStoreContextState;

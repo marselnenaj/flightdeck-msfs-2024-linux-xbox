@@ -1,8 +1,8 @@
 # Install the Flightdeck launcher
 
-This guide covers **Flightdeck 0.1.6**, including selectable NVIDIA graphics
-modes, installation maintenance, automatic update checks and cloud-upload recovery. See
-[changes](changelog.md) and [NVIDIA graphics](graphics.md).
+This guide covers **Flightdeck 0.1.7**, including Store diagnostics, launcher
+updates, selectable NVIDIA graphics modes, installation maintenance and
+cloud-upload recovery. See [changes](changelog.md) and [NVIDIA graphics](graphics.md).
 
 Download **Flightdeck-Linux-x86_64.tar.gz** from the
 [releases page](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases)
@@ -189,7 +189,7 @@ Choose the update that matches what you want to change:
 | Flightdeck launcher | **Updates → Flightdeck** (from 0.1.4), or run the new package's installer | Interface, setup logic and bundled resources |
 | Managed runtime components | Reopen the updated launcher while idle, or use `flightdeck --refresh-components` | Recognized Store/login components and runtime scripts |
 | MSFS 2024 or 2020 | Select the edition, then **Updates** | Its Store base-game package; previous package retained |
-| Fenix compatibility | **Mods → Fenix A320** | Optional, version-checked runner/profile setup; requires a separate explicit install |
+| Fenix compatibility | **Mods → Fenix A320** | Optional initial setup; supported earlier patches update to the version included with Flightdeck when opening or configuring Fenix |
 | Fenix aircraft and liveries | Official Fenix installer/manager | Purchased Fenix software and matching liveries |
 
 Since Flightdeck 0.1.5, the launcher checks for its own and the selected simulator's
@@ -205,6 +205,10 @@ notes. Choose **Download & install**, then **Restart Flightdeck now** when the
 installation finishes. Downloads show progress and can be cancelled before
 installation begins. The full package's size and SHA256 digest are checked
 before installation. Your settings and game installations remain in place.
+Flightdeck 0.1.7 reloads the existing window after an in-app
+restart, including when restoring the previous launcher. Its address and saved
+language preference are retained. The updated installer also handles restart
+requests from earlier launcher versions without opening a second window.
 The launcher can check while you play; installation, restart and restoration
 require the game and setup to be idle. GitHub is contacted for startup/manual
 version checks and requested downloads, with no GitHub sign-in required.
@@ -214,8 +218,11 @@ the retained installation, then restart. Restoring the launcher does not roll
 back the simulator or Fenix patch.
 
 The Fenix patch is downloaded separately under **Mods → Fenix A320** when
-requested. A newer patch is adopted through a reviewed Flightdeck release;
-the Fenix installer does not automatically follow GitHub's latest patch tag.
+requested. A newer patch is adopted through a reviewed Flightdeck release.
+Supported earlier patch installations update before opening Fenix, its installer
+or manager, or finishing setup. **Update patch** starts the same update directly.
+Flightdeck does not independently check for or follow the latest Fenix patch tag
+on GitHub. The purchased aircraft uses the official Fenix updater.
 [Fenix setup and restore](addons.md#fenix-a320).
 
 For Flightdeck versions before 0.1.4, or to install the updater for the first
@@ -278,7 +285,7 @@ The previous release is retained:
 ~/.local/bin/flightdeck --rollback
 ```
 
-Updates and rollbacks open the launcher by default. To manage it without launching,
+Command-line updates and rollbacks open the launcher by default. To manage it without launching,
 run the installer directly with `--no-launch` (and `--rollback` if required).
 Opening the updated launcher refreshes an idle background service automatically.
 If the simulator, a download or another protected operation is active, the
@@ -361,6 +368,26 @@ manifest-owned files whose hashes still match are removed. Changed files,
 unrecognized files and symlinks are kept and their paths are reported. Settings,
 prepared runtimes, account stores and local/cloud save data are left untouched.
 A small launcher-management folder remains available for a later installation.
+
+## Store diagnostics
+
+Flightdeck 0.1.7 provides **Diagnostics → Check Store**. Close the
+simulator, start the check and confirm the text and buttons in the local test
+window. The check reads your existing sign-in, game license and title library;
+it opens no purchase page. Failed steps give a reason, including expired
+sign-in, unavailable credentials, timeouts and unsupported responses.
+
+After a check or game session, select **Load report** (or **Refresh report**)
+before exporting diagnostics. Reports include the latest check for the selected
+runtime and timestamped Store events from the latest recorded game session.
+Component hashes describe the files recorded at that session's launch. Older
+sessions may have no such record. A successful Store check does not verify a
+paid transaction. See [Marketplace integration](marketplace-collections.md).
+
+If the purchase window reports a connection or loading failure, close it and
+refresh the diagnostic report. Initialization and confirmation-page loading
+are recorded separately. Do not infer a successful purchase from an open
+window; check Microsoft's order history if a payment was already confirmed.
 
 ## Verification
 

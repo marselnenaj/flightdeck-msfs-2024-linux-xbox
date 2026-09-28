@@ -20,11 +20,12 @@ Flightdeck installiert und startet deine **gekaufte Xbox-PC-/Microsoft-Store-
 Version von MSFS 2024 oder 2020** unter Linux mit Wine/Proton. Mit dem Microsoft-Konto
 anmelden, das Spiel herunterladen und im Launcher starten.
 
-**Aktuelle Veröffentlichung: [Flightdeck 0.1.6](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.6).**
-Sie ergänzt auswählbare NVIDIA-Grafikmodi, eine erweiterte Grafikdiagnose und
-die Installationsverwaltung mit rückgängig machbarem Zurücksetzen der Wine-Umgebung.
+**Aktuelle Veröffentlichung: [Flightdeck 0.1.7](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.7).**
+Sie ergänzt eine Store-Prüfung, öffnet den Microsoft-Bestätigungsdialog im
+Marketplace, verbessert die Abfrage gekaufter Inhalte und verhindert doppelte
+Launcherfenster nach Updates.
 Aktualisiere über **Updates → Flightdeck** oder verwende den vollständigen Installer.
-Siehe [NVIDIA-Grafik](graphics.de.md) und
+Siehe [Marketplace-Umfang](marketplace-collections.md) und
 [Änderungsübersicht](changelog.md).
 
 **Experimentell.** MSFS 2024 wurde unter Linux einschließlich Cockpit-Zugriff
@@ -93,7 +94,7 @@ anschließend Flightdeck neu starten. Der Download wird geprüft; die vorherige
 Launcher-Version lässt sich im selben Bereich wiederherstellen. Prüfen geht
 auch während eines Flugs, installieren erst bei beendetem Spiel. Für ältere
 Versionen ist einmalig die Installation aus dem neuen Paket nötig.
-In 0.1.1 erhält eine erkannte, verwaltete Spiel-Runtime die neuen geprüften Store-
+Eine erkannte, verwaltete Spiel-Runtime erhält die neuen geprüften Store-
 und Anmeldekomponenten beim nächsten Flightdeck-Start automatisch, sobald MSFS und
 die Einrichtung beendet sind. Falls das Update noch aussteht, Flightdeck neu
 öffnen oder `flightdeck --refresh-components` ausführen.
@@ -126,6 +127,15 @@ Die Installation fehlender Linux-Systempakete kann Administratorrechte benötige
 | **Diagnose** | Ausgewählte Prüfungen exportieren, ohne rohe Spiellogs, Kontotokens oder Spielstandinhalte. |
 | **Deutsch und Englisch** | Sprache der Oberfläche wechseln; auch Installer und Kommandozeile sind übersetzt. |
 
+Flightdeck 0.1.7 ergänzt **Diagnose → Store prüfen**: Anmeldung,
+Katalog, Spiellizenz, Bibliothek und ein lokales Testfenster lassen sich ohne
+Kauf prüfen. Der Bericht enthält außerdem die zeitliche Folge der Store-Schritte
+und die beim Spielstart erfassten Komponentenversionen.
+[Umfang und Grenzen](marketplace-collections.md#check-store-without-a-purchase).
+Der Kaufdialog zeigt außerdem Verbindungs- und Ladefehler an. Seine Darstellung
+wurde in MSFS 2024 geprüft; abgeschlossene Käufe und die Bereitstellung gekaufter
+Inhalte bleiben ungeprüft.
+
 Beim Pausieren können bis zu vier noch unvollständige Dateien neu beginnen.
 Fortsetzen nach einem Neustart des Hintergrunddienstes oder Rechners ist noch
 nicht implementiert. Spielupdates laden das vollständige Store-Basispaket;
@@ -154,7 +164,8 @@ Spielstände bleiben bestehen.
 | **MSFS-2020-Simulator** | Installation, Updates und Lizenzprüfung sind implementiert. Beim Start kann eine Datenträgeraufforderung auftreten; erfolgreicher Spielstart und vollständige Flüge sind noch nicht bestätigt. |
 | **Lokale Spielstände** | Laden nach einem Neustart und lokale Backups getestet. |
 | **Kostenlose Store-Inhalte** | Download in einem Nutzertest erfolgreich. |
-| **Gekaufte Marketplace-Inhalte** | Kontoeigene Add-ons lassen sich abfragen; unterstützte Durable-Lizenzen verwenden echte signierte Freigaben. Vollständige DLC-Abdeckung und das MSFS-2024-Aviator-Upgrade bleiben ungeprüft. Kaufabschluss und über Geräte geteilte DLC-Rechte werden nicht unterstützt. [Umfang](marketplace-collections.md) |
+| **Gekaufte Marketplace-Inhalte** | Kontoeigene Add-ons lassen sich abfragen; unterstützte Durable-Lizenzen verwenden echte signierte Freigaben. Vollständige DLC-Abdeckung und das MSFS-2024-Aviator-Upgrade bleiben ungeprüft. [Umfang](marketplace-collections.md) |
+| **Marketplace-Käufe** | Der Microsoft-Bestätigungsdialog öffnet sich; seine Darstellung wurde in MSFS 2024 geprüft. Abgeschlossene Käufe und die Bereitstellung gekaufter Inhalte bleiben ungeprüft. Über Geräte geteilte DLC-Rechte bleiben ununterstützt. [Umfang](marketplace-collections.md#purchase-dialog) |
 | **Multiplayer** | Online-Multiplayer unter Linux als funktionierend gemeldet. Gruppeneinladungen müssen separat getestet werden. |
 | **Xbox-Cloud-Saves** | Automatischer Abgleich bei Spielstart und Spielende, lokale Backups und Konfliktbehandlung implementiert. Nativer Cloud-Zugriff getestet; ein Spieltest über mehrere Geräte steht aus. [Details](cloud-saves.de.md) |
 | **FlyByWire A32NX** | MSFS-2024-Version Stable 2024.1.0 installiert und erkannt; Flugtest offen. |

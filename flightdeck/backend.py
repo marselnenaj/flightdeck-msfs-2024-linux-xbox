@@ -133,6 +133,8 @@ class Launcher:
         self.startup_updates = StartupUpdates(self)
         from .maintenance import Maintenance
         self.maintenance = Maintenance(self)
+        from .store_check import StoreCheck
+        self.store_check = StoreCheck(self)
 
     @staticmethod
     def validate_runtime(value):
@@ -567,6 +569,11 @@ class Launcher:
                     raise
                 graphics_record = graphics_diagnostics.launch_record(self.runtime, report, environment, state="prepared", at=graphics_at)
                 graphics_diagnostics.save_launch(self.runtime, graphics_record)
+                from . import store_diagnostics
+                environment.pop("FLIGHTDECK_STORE_LAUNCH", None)
+                store_build = store_diagnostics.launch_record(self.runtime)
+                if store_build is not None:
+                    environment["FLIGHTDECK_STORE_LAUNCH"] = json.dumps(store_build, separators=(",", ":"))
             self.graphics_report = (self.runtime, report)
         except graphics.GraphicsError as error:
             failure = LauncherError(str(error))
@@ -690,32 +697,24 @@ class Launcher:
 
     def diagnostics(self):
         """Extract numeric allowlisted outcomes, never raw lines or identities."""
-        from . import graphics, graphics_diagnostics
-        summary = {"run_found": False, "auth_http": [], "local_save_init": [], "store_calls": [], "exit": None}
+        from . import graphics, graphics_diagnostics, store_diagnostics
+        summary = {"run_found": False, "auth_http": [], "local_save_init": [], "store_calls": [], "store_catalog": [], "exit": None}
         root = self.runtime
         try:
             game_id = games.for_runtime(root).id if root else None
         except ValueError:
             game_id = None
-        summary["context"] = {"diagnostics_schema": 2, "launcher_version": __version__, "game_id": game_id,
+        summary["context"] = {"diagnostics_schema": 4, "launcher_version": __version__, "game_id": game_id,
                               "cloud_sync_scope": "current_service", "run_log_modified_at": None}
         graphics_log = None
         if root:
             runs = [p for p in (root / "private").glob("run-*") if re.fullmatch(r"run-\d{8}-\d{6}-[A-Za-z0-9]+", p.name) and p.is_dir() and not p.is_symlink()]
             if runs:
                 run = max(runs, key=lambda p: p.name)
+                summary["store_session"] = store_diagnostics.session(run)
                 path = run / "game.log"
                 try:
-                    fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
-                    with os.fdopen(fd, "rb") as stream:
-                        log_info = os.fstat(stream.fileno())
-                        if not stat.S_ISREG(log_info.st_mode):
-                            raise OSError("not regular")
-                        # Initialization lives near the start; recent exit near
-                        # the end. Never load an unbounded private log into RAM.
-                        first = stream.read(1024 * 1024)
-                        stream.seek(max(0, os.fstat(stream.fileno()).st_size - 512 * 1024))
-                        text = (first + b"\n" + stream.read(512 * 1024)).decode("utf-8", errors="replace")
+                    text, _, log_info = store_diagnostics.bounded_log(path)
                     summary["run_found"] = True
                     summary["context"]["run_log_modified_at"] = datetime.fromtimestamp(log_info.st_mtime, timezone.utc).isoformat()
                     graphics_log = graphics_diagnostics.log_summary(text)
@@ -733,17 +732,27 @@ class Launcher:
                     query_methods = ("XStoreQueryGameLicenseAsync", "XStoreQueryEntitledProductsAsync",
                                      "XStoreProductsQueryNextPageAsync", "XStoreQueryLicenseTokenAsync",
                                      "XStoreQueryProductsAsync", "XStoreQueryConsumableBalanceRemainingAsync",
-                                     "XStoreAcquireLicenseForDurablesAsync", "XStoreQueryGameAndDlcPackageUpdatesAsync")
+                                     "XStoreAcquireLicenseForDurablesAsync", "XStoreQueryGameAndDlcPackageUpdatesAsync",
+                                     "XStoreShowPurchaseUIAsync", "XStoreQueryProductForCurrentGameAsync", "XStoreCanAcquireLicenseForStoreIdAsync")
                     calls += [(query_methods[int(kind)], hr) for kind, hr in
-                              re.findall(r"\[xodus-store-query\] kind=([0-7]) hr=([0-9a-fA-F]{8})(?=\s|$)", text)]
+                              re.findall(r"\[xodus-store-query\] kind=(10|[0-9]) hr=([0-9a-fA-F]{8})(?=\s|$)", text)]
                     store_methods.update(query_methods)
                     summary["store_calls"] = [{"method": method, "hresult": hr}
                                               for method, hr in sorted({(method, hr.lower()) for method, hr in calls if method in store_methods})]
+                    # An inventory failure can originate in the authenticated
+                    # query, catalog metadata or native mapping. Export only
+                    # fixed stage names and result codes, never product data.
+                    stages = {"inventory", "inventory-catalog", "inventory-mapping", "inventory-page",
+                              "catalog", "mapping", "collections", "page", "result"}
+                    outcomes = re.findall(r"\[xodus-store-catalog\] stage=([a-z-]{1,32})(?: products=\d{1,10} skus=\d{1,10})? hr=([0-9a-fA-F]{8})(?=\s|$)", text)
+                    summary["store_catalog"] = [{"stage": stage, "hresult": hr}
+                                                for stage, hr in sorted({(stage, hr.lower()) for stage, hr in outcomes if stage in stages})]
                     exits = re.findall(r"xodus-wine-launch: wine_pid=\d+ exit_code=(\d+) elapsed_seconds=(\d+(?:\.\d+)?)(?=\s|$)", text)
                     if exits:
                         summary["exit"] = {"code": int(exits[-1][0]), "seconds": float(exits[-1][1])}
                 except (OSError, ValueError, OverflowError):
                     pass
+        summary["store_check"] = self.store_check.report()
         cloud = self.cloud_saves.automation.snapshot()
         summary["cloud_sync"] = {key: cloud[key] for key in ("state", "phase", "error_code", "error_details")}
         summary["graphics"] = graphics.probe()

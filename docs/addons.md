@@ -108,9 +108,11 @@ separately. Flightdeck closes the session's Fenix companions after normal exit,
 a game crash or **Stop**, with a bounded fallback for stuck processes. The
 official Fenix installer and other Wine profiles are excluded from that cleanup.
 
-Flightdeck uses patch **0.1.0-preview.3** and downloads
-the reviewed version recorded in `compat/fenix/release.json`, not an arbitrary
-latest release. Installing Flightdeck itself does not install Fenix automatically.
+Flightdeck uses patch **0.1.0-preview.3**. Newer patch versions are adopted
+through a Flightdeck update; the launcher does not independently check for the
+latest Fenix patch on GitHub. Supported earlier patches update to Flightdeck's
+included version when opening Fenix, its installer or manager, or finishing setup.
+Installing Flightdeck itself does not install Fenix automatically.
 No GitHub login is needed for the public patch download. Download and activation
 of the purchased aircraft use the official Fenix software and your Fenix account.
 

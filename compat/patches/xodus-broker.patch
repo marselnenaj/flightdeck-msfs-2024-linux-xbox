@@ -1,7 +1,7 @@
-diff --git a/Cargo.lock b/Cargo.lock
+diff --git c/Cargo.lock w/Cargo.lock
 index b14a82f..b6c145a 100644
---- a/Cargo.lock
-+++ b/Cargo.lock
+--- c/Cargo.lock
++++ w/Cargo.lock
 @@ -3360,0 +3361 @@ dependencies = [
 + "sha2 0.11.0",
 @@ -4636,0 +4638 @@ dependencies = [
@@ -44,16 +44,16 @@ index b14a82f..b6c145a 100644
 + "sha2 0.11.0",
 @@ -7213,0 +7239 @@ dependencies = [
 + "xal",
-diff --git a/crates/msixvc/Cargo.toml b/crates/msixvc/Cargo.toml
+diff --git c/crates/msixvc/Cargo.toml w/crates/msixvc/Cargo.toml
 index d68d8e1..6768fa2 100644
---- a/crates/msixvc/Cargo.toml
-+++ b/crates/msixvc/Cargo.toml
+--- c/crates/msixvc/Cargo.toml
++++ w/crates/msixvc/Cargo.toml
 @@ -7,0 +8 @@ rust-version = { workspace = true }
 +sha2 = "0.11.0"
-diff --git a/crates/msixvc/src/streaming.rs b/crates/msixvc/src/streaming.rs
+diff --git c/crates/msixvc/src/streaming.rs w/crates/msixvc/src/streaming.rs
 index 824f9c2..7d15570 100644
---- a/crates/msixvc/src/streaming.rs
-+++ b/crates/msixvc/src/streaming.rs
+--- c/crates/msixvc/src/streaming.rs
++++ w/crates/msixvc/src/streaming.rs
 @@ -205 +205 @@ enum CacheReadState {
 -    Reading { started_len: usize },
 +    Reading,
@@ -433,10 +433,10 @@ index 824f9c2..7d15570 100644
 +            });
 +    }
 +
-diff --git a/crates/msixvc/src/xvd.rs b/crates/msixvc/src/xvd.rs
+diff --git c/crates/msixvc/src/xvd.rs w/crates/msixvc/src/xvd.rs
 index b74a7ae..d0993ca 100644
---- a/crates/msixvc/src/xvd.rs
-+++ b/crates/msixvc/src/xvd.rs
+--- c/crates/msixvc/src/xvd.rs
++++ w/crates/msixvc/src/xvd.rs
 @@ -18,0 +19 @@ use uuid::Uuid;
 +use sha2::{Digest, Sha256};
 @@ -857,0 +859 @@ impl XvdFile {
@@ -469,544 +469,31 @@ index b74a7ae..d0993ca 100644
 +        f.data_hashs.clear(); assert!(verify_segment_page(&f,0,&page).is_ok());
 +    }
 +}
-diff --git a/crates/xodus/Cargo.toml b/crates/xodus/Cargo.toml
-index fa1033c..a780402 100644
---- a/crates/xodus/Cargo.toml
-+++ b/crates/xodus/Cargo.toml
-@@ -21,0 +22,2 @@ keyring-core = { version = "1.0.0", features = ["sample"] }
-+ron = { version = "0.12.0", optional = true }
-+tempfile = { version = "3.27.0", optional = true }
-@@ -56 +58 @@ prost-build = "0.14.4"
--key-chain-file = []
-+key-chain-file = ["dep:ron", "dep:tempfile"]
-diff --git a/crates/xodus/proto/xodus/common.proto b/crates/xodus/proto/xodus/common.proto
-index c7741a6..de11f28 100644
---- a/crates/xodus/proto/xodus/common.proto
-+++ b/crates/xodus/proto/xodus/common.proto
-@@ -10,0 +11,14 @@ enum XodusMessageType {
-+    STORE_ACCOUNT_CONTEXT_REQUEST=5;
-+    STORE_ACCOUNT_CONTEXT_RESPONSE=6;
-+    STORE_GAME_LICENSE_REQUEST=7;
-+    STORE_GAME_LICENSE_RESPONSE=8;
-+    // 9/10 are reserved for a future complete entitlement inventory.
-+    reserved 9, 10;
-+    STORE_LICENSE_TOKEN_REQUEST=11;
-+    STORE_LICENSE_TOKEN_RESPONSE=12;
-+    STORE_COLLECTIONS_REQUEST=13;
-+    STORE_COLLECTIONS_RESPONSE=14;
-+    STORE_INVENTORY_REQUEST=15;
-+    STORE_INVENTORY_RESPONSE=16;
-+    STORE_PACKAGE_UPDATES_REQUEST=17;
-+    STORE_PACKAGE_UPDATES_RESPONSE=18;
-diff --git a/crates/xodus/src/api/live/mod.rs b/crates/xodus/src/api/live/mod.rs
-index f9abc32..ec4fdf6 100644
---- a/crates/xodus/src/api/live/mod.rs
-+++ b/crates/xodus/src/api/live/mod.rs
-@@ -79 +79 @@ pub async fn exchange_device_token(
--        b => unimplemented!("Exchange token supports only singular token right now {b:?}"),
-+        _ => unimplemented!("Exchange token returned an unsupported response"),
-diff --git a/crates/xodus/src/models/xgameruntime/xuser.rs b/crates/xodus/src/models/xgameruntime/xuser.rs
-index 10d2158..6b6ec06 100644
---- a/crates/xodus/src/models/xgameruntime/xuser.rs
-+++ b/crates/xodus/src/models/xgameruntime/xuser.rs
-@@ -20,0 +21,36 @@ pub struct MSATokenResponse {
-+
-+impl MSATokenResponse {
-+    /// Broker-issued RPS tickets only. Device failure does not turn a valid
-+    /// user ticket into an invented device identity; native title auth sees
-+    /// an explicitly unavailable device ticket instead.
-+    pub fn validated(token: String, expiry: i64, device: Option<(String, i64)>, now: i64) -> Result<Self, &'static str> {
-+        if token.is_empty() || token.len() > 49152 || expiry <= now {
-+            return Err("Invalid or expired MSA user ticket");
-+        }
-+        let (device_rps, device_expiry) = device
-+            .filter(|(token, expiry)| !token.is_empty() && token.len() <= 49152 && *expiry > now)
-+            .unwrap_or_default();
-+        Ok(Self { token, expiry, device_rps, device_expiry })
-+    }
-+}
-+
-+#[cfg(test)]
-+mod tests {
-+    use super::*;
-+    #[test]
-+    fn msa_device_fields_are_exact_and_expiry_bound() {
-+        let response = MSATokenResponse::validated("synthetic-user<&".into(), 200,
-+            Some(("synthetic-device<&".into(), 201)), 100).unwrap();
-+        let xml = quick_xml::se::to_string(&response).unwrap();
-+        assert!(xml.contains("<DeviceRps>synthetic-device&lt;&amp;</DeviceRps>"));
-+        assert!(xml.contains("<DeviceExpiry>201</DeviceExpiry>"));
-+        assert!(xml.contains("<Expiry>200</Expiry>"));
-+        for device in [None, Some(("".into(), 200)), Some(("synthetic".into(), 100)), Some(("synthetic".into(), 99))] {
-+            let response=MSATokenResponse::validated("synthetic-user".into(),200,device,100).unwrap();
-+            assert!(response.device_rps.is_empty());
-+            assert_eq!(response.device_expiry,0);
-+        }
-+        assert!(MSATokenResponse::validated("synthetic".into(),100,None,100).is_err());
-+        assert!(MSATokenResponse::validated("".into(),200,None,100).is_err());
-+    }
-+}
-diff --git a/crates/xodus/src/secrets/file/tests.rs b/crates/xodus/src/secrets/file/tests.rs
-new file mode 100644
-index 0000000..54a990b
---- /dev/null
-+++ b/crates/xodus/src/secrets/file/tests.rs
-@@ -0,0 +1,123 @@
-+use super::*;
-+use crate::models::secrets::{Token, TokenStore};
-+use crate::tokens::TokenManager;
-+
-+fn private_directory() -> tempfile::TempDir {
-+    let directory = tempfile::tempdir().unwrap();
-+    #[cfg(unix)]
-+    {
-+        use std::os::unix::fs::PermissionsExt;
-+        std::fs::set_permissions(directory.path(), std::fs::Permissions::from_mode(0o700)).unwrap();
-+    }
-+    directory
-+}
-+
-+fn read(path: &Path, key: &str) -> Vec<u8> {
-+    with_entry(path, key, false, |entry| Ok(entry.get_secret()?)).unwrap()
-+}
-+
-+#[test]
-+fn legacy_format_round_trip_and_failed_update() {
-+    let directory = private_directory();
-+    let path = directory.path().join("synthetic.ron");
-+    initialize(&path).unwrap();
-+    {
-+        let store = Store::new_with_backing(path.to_str().unwrap()).unwrap();
-+        let entry = keyring_core::Entry::new_with_credential(Arc::new(CredKey {
-+            store,
-+            id: CredId {
-+                service: crate::secrets::SERVICE_NAME.to_string(),
-+                user: "synthetic".to_string(),
-+            },
-+            uuid: None,
-+        }));
-+        entry.set_secret(b"before").unwrap();
-+    }
-+    assert_eq!(read(&path, "synthetic"), b"before");
-+    let failed: Result<(), TokenStoreError> = with_entry(&path, "synthetic", true, |entry| {
-+        entry.set_secret(b"must-not-commit")?;
-+        Err(TokenStoreError::NotFound)
-+    });
-+    assert!(failed.is_err());
-+    assert_eq!(read(&path, "synthetic"), b"before");
-+    with_entry(&path, "synthetic", true, |entry| Ok(entry.set_secret(b"after")?)).unwrap();
-+    let loaded = Store::load_credentials(path.to_str().unwrap()).unwrap();
-+    assert_eq!(loaded.len(), 1);
-+    assert_eq!(read(&path, "synthetic"), b"after");
-+    assert_eq!(std::fs::read_dir(directory.path()).unwrap().count(), 2);
-+}
-+
-+#[test]
-+fn parallel_processes_preserve_all_scope_updates() {
-+    let directory = private_directory();
-+    let path = directory.path().join("synthetic.ron");
-+    initialize(&path).unwrap();
-+    let executable = std::env::current_exe().unwrap();
-+    let mut children = Vec::new();
-+    for writer in 0..4 {
-+        children.push(std::process::Command::new(&executable)
-+            .args(["--ignored", "--exact", "secrets::file::tests::child_writer", "--test-threads=1"])
-+            .env("XODUS_KEYRING_FILE", &path)
-+            .env("XODUS_SYNTHETIC_TEST_WRITER", writer.to_string())
-+            .stdout(std::process::Stdio::null())
-+            .spawn()
-+            .unwrap());
-+    }
-+    for mut child in children {
-+        assert!(child.wait().unwrap().success());
-+    }
-+    let tokens: TokenStore = serde_json::from_slice(&read(&path, "user-tokens")).unwrap();
-+    assert_eq!(tokens.tokens.len(), 100);
-+    for writer in 0..4 {
-+        for iteration in 0..25 {
-+            let key = format!("synthetic-{writer}-{iteration}");
-+            assert!(matches!(tokens.tokens.get(&key), Some(Token::Compact(value)) if value == &key));
-+        }
-+    }
-+    #[cfg(unix)]
-+    {
-+        use std::os::unix::fs::PermissionsExt;
-+        assert_eq!(std::fs::metadata(directory.path()).unwrap().permissions().mode() & 0o777, 0o700);
-+        for entry in std::fs::read_dir(directory.path()).unwrap() {
-+            assert_eq!(entry.unwrap().metadata().unwrap().permissions().mode() & 0o777, 0o600);
-+        }
-+    }
-+}
-+
-+#[test]
-+#[ignore = "spawned by parallel_processes_preserve_all_scope_updates"]
-+fn child_writer() {
-+    let Ok(writer) = std::env::var("XODUS_SYNTHETIC_TEST_WRITER") else { return };
-+    crate::secrets::init_secrets().unwrap();
-+    let manager = TokenManager::with_keychain_and_memory();
-+    for iteration in 0..25 {
-+        let key = format!("synthetic-{writer}-{iteration}");
-+        manager.save_user_token(key.clone(), Token::Compact(key)).unwrap();
-+        std::thread::yield_now();
-+    }
-+    // Exit without dropping stores: every successful save must already persist.
-+    std::process::exit(0);
-+}
-+
-+#[cfg(unix)]
-+#[test]
-+fn rejects_permissive_directory_and_symlinks() {
-+    use std::os::unix::fs::{PermissionsExt, symlink};
-+    let directory = private_directory();
-+    let path = directory.path().join("synthetic.ron");
-+    std::fs::set_permissions(directory.path(), std::fs::Permissions::from_mode(0o755)).unwrap();
-+    assert!(initialize(&path).is_err());
-+    assert!(!path.exists());
-+    std::fs::set_permissions(directory.path(), std::fs::Permissions::from_mode(0o700)).unwrap();
-+    let target = directory.path().join("unrelated");
-+    std::fs::write(&target, b"untouched").unwrap();
-+    symlink(&target, &path).unwrap();
-+    assert!(initialize(&path).is_err());
-+    assert_eq!(std::fs::read(&target).unwrap(), b"untouched");
-+    std::fs::remove_file(&path).unwrap();
-+    let lock_path = directory.path().join("synthetic.ron.lock");
-+    std::fs::remove_file(&lock_path).unwrap();
-+    symlink(&target, &lock_path).unwrap();
-+    assert!(initialize(&path).is_err());
-+    assert_eq!(std::fs::read(&target).unwrap(), b"untouched");
-+}
-diff --git a/crates/xodus/src/secrets/file.rs b/crates/xodus/src/secrets/file.rs
-new file mode 100644
-index 0000000..ac12432
---- /dev/null
-+++ b/crates/xodus/src/secrets/file.rs
-@@ -0,0 +1,88 @@
-+use std::fs::{File, OpenOptions};
-+use std::io::Write;
-+use std::path::Path;
-+use std::sync::Arc;
-+
-+use keyring_core::sample::credential::CredId;
-+use keyring_core::sample::{CredKey, Store};
-+
-+use crate::tokens::store::TokenStoreError;
-+
-+pub(super) fn initialize(path: &Path) -> Result<(), TokenStoreError> {
-+    let _lock = lock(path)?;
-+    super::prepare_private_backing_file(path)?;
-+    // Check format without retaining a writable process-local snapshot.
-+    let _ = Store::load_credentials(path_text(path)?)?;
-+    Ok(())
-+}
-+
-+pub(super) fn with_entry<T>(
-+    path: &Path,
-+    user: &str,
-+    write: bool,
-+    operation: impl FnOnce(&keyring_core::Entry) -> Result<T, TokenStoreError>,
-+) -> Result<T, TokenStoreError> {
-+    let _lock = lock(path)?;
-+    super::prepare_private_backing_file(path)?;
-+    let store = Store::new_internal(Store::load_credentials(path_text(path)?)?, None);
-+    let entry = keyring_core::Entry::new_with_credential(Arc::new(CredKey {
-+        store: store.clone(),
-+        id: CredId {
-+            service: super::SERVICE_NAME.to_string(),
-+            user: user.to_string(),
-+        },
-+        uuid: None,
-+    }));
-+    let result = operation(&entry)?;
-+    if write {
-+        let content = ron::ser::to_string_pretty(&store.creds, ron::ser::PrettyConfig::new())
-+            .map_err(|_| std::io::Error::other("Unable to serialize keyring"))?;
-+        let parent = path.parent().expect("validated keyring parent");
-+        let mut temporary = tempfile::NamedTempFile::new_in(parent)?;
-+        temporary.write_all(content.as_bytes())?;
-+        temporary.as_file().sync_all()?;
-+        temporary.persist(path).map_err(|err| err.error)?;
-+        #[cfg(unix)]
-+        File::open(parent)?.sync_all()?;
-+    }
-+    Ok(result)
-+}
-+
-+fn path_text(path: &Path) -> std::io::Result<&str> {
-+    path.to_str().ok_or_else(|| std::io::Error::other("Keyring path is not UTF-8"))
-+}
-+
-+fn lock(path: &Path) -> std::io::Result<File> {
-+    super::validate_private_keyring_dir(path)?;
-+    // Lock a stable sidecar inode: the data file is replaced atomically.
-+    let mut name = path.as_os_str().to_os_string();
-+    name.push(".lock");
-+    let lock_path = std::path::PathBuf::from(name);
-+    let mut options = OpenOptions::new();
-+    options.read(true).write(true).create_new(true);
-+    #[cfg(unix)]
-+    {
-+        use std::os::unix::fs::OpenOptionsExt;
-+        options.mode(0o600);
-+    }
-+    let file = match options.open(&lock_path) {
-+        Ok(file) => file,
-+        Err(err) if err.kind() == std::io::ErrorKind::AlreadyExists => {
-+            if !std::fs::symlink_metadata(&lock_path)?.is_file() {
-+                return Err(std::io::Error::other("Keyring lock must be a regular file"));
-+            }
-+            OpenOptions::new().read(true).write(true).open(&lock_path)?
-+        }
-+        Err(err) => return Err(err),
-+    };
-+    #[cfg(unix)]
-+    {
-+        use std::os::unix::fs::PermissionsExt;
-+        file.set_permissions(std::fs::Permissions::from_mode(0o600))?;
-+    }
-+    file.lock()?;
-+    Ok(file)
-+}
-+
-+#[cfg(test)]
-+mod tests;
-diff --git a/crates/xodus/src/secrets.rs b/crates/xodus/src/secrets.rs
-index dba6b2f..e56ec8a 100644
---- a/crates/xodus/src/secrets.rs
-+++ b/crates/xodus/src/secrets.rs
-@@ -2,0 +3,3 @@ pub static SERVICE_NAME: &str = "Xodus Service";
-+#[cfg(feature = "key-chain-file")]
-+mod file;
-+
-@@ -6,6 +9,5 @@ pub fn init_secrets() -> Result<(), keyring_core::Error> {
--        let store = keyring_core::sample::Store::new_with_backing(
--            secrets_backing_file()
--                .to_str()
--                .expect("Invalid secrets backing path"),
--        )?;
--        keyring_core::set_default_store(store);
-+        // File operations reload and commit under a process-shared lock. Never
-+        // retain a sample Store with a backing path: its Drop would overwrite
-+        // changes made by another CLI or service process.
-+        file::initialize(&secrets_backing_file())
-+            .map_err(|err| keyring_core::Error::PlatformFailure(Box::new(err)))?;
-@@ -38,2 +40,14 @@ pub fn init_secrets() -> Result<(), keyring_core::Error> {
--pub fn get_entry(user: &str) -> Result<keyring_core::Entry, keyring_core::Error> {
--    keyring_core::Entry::new(SERVICE_NAME, user)
-+pub(crate) fn with_entry<T>(
-+    user: &str,
-+    write: bool,
-+    operation: impl FnOnce(&keyring_core::Entry) -> Result<T, crate::tokens::store::TokenStoreError>,
-+) -> Result<T, crate::tokens::store::TokenStoreError> {
-+    #[cfg(feature = "key-chain-file")]
-+    {
-+        file::with_entry(&secrets_backing_file(), user, write, operation)
-+    }
-+    #[cfg(not(feature = "key-chain-file"))]
-+    {
-+        let _ = write;
-+        operation(&keyring_core::Entry::new(SERVICE_NAME, user)?)
-+    }
-@@ -42,0 +57 @@ pub fn destroy_secrets() {
-+    #[cfg(not(feature = "key-chain-file"))]
-@@ -47,0 +63,3 @@ fn secrets_backing_file() -> std::path::PathBuf {
-+    if let Some(path) = std::env::var_os("XODUS_KEYRING_FILE") {
-+        return path.into();
-+    }
-@@ -53,0 +72,51 @@ fn secrets_backing_file() -> std::path::PathBuf {
-+
-+#[cfg(feature = "key-chain-file")]
-+fn prepare_private_backing_file(path: &std::path::Path) -> std::io::Result<()> {
-+    use std::io::Write;
-+
-+    validate_private_keyring_dir(path)?;
-+    let mut options = std::fs::OpenOptions::new();
-+    options.write(true).create_new(true);
-+    #[cfg(unix)]
-+    {
-+        use std::os::unix::fs::OpenOptionsExt;
-+        options.mode(0o600);
-+    }
-+    match options.open(path) {
-+        Ok(mut file) => file.write_all(b"{}")?,
-+        Err(err) if err.kind() == std::io::ErrorKind::AlreadyExists => {
-+            let metadata = std::fs::symlink_metadata(path)?;
-+            if !metadata.is_file() {
-+                return Err(std::io::Error::other("Keyring must be a regular file"));
-+            }
-+            #[cfg(unix)]
-+            {
-+                use std::os::unix::fs::PermissionsExt;
-+                std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o600))?;
-+            }
-+        }
-+        Err(err) => return Err(err),
-+    }
-+    Ok(())
-+}
-+
-+#[cfg(feature = "key-chain-file")]
-+fn validate_private_keyring_dir(path: &std::path::Path) -> std::io::Result<()> {
-+    if !path.is_absolute() {
-+        return Err(std::io::Error::other("XODUS_KEYRING_FILE must be an absolute path"));
-+    }
-+    let parent = path.parent().ok_or_else(|| std::io::Error::other("Missing keyring directory"))?;
-+    let parent_metadata = std::fs::symlink_metadata(parent)?;
-+    if !parent_metadata.is_dir() {
-+        return Err(std::io::Error::other("Keyring parent must be a real directory"));
-+    }
-+    #[cfg(unix)]
-+    {
-+        use std::os::unix::fs::PermissionsExt;
-+        if parent_metadata.permissions().mode() & 0o777 != 0o700 {
-+            return Err(std::io::Error::other("Keyring directory must have mode 0700"));
-+        }
-+    }
-+
-+    Ok(())
-+}
-diff --git a/crates/xodus/src/tokens/backend/keychain.rs b/crates/xodus/src/tokens/backend/keychain.rs
-index 6aa6cde..3937a17 100644
---- a/crates/xodus/src/tokens/backend/keychain.rs
-+++ b/crates/xodus/src/tokens/backend/keychain.rs
-@@ -7,6 +7 @@ impl TokenBackend for KeychainBackend {
--        let entry = crate::secrets::get_entry(key)?;
--        match entry.get_secret() {
--            Ok(bytes) => Ok(Some(bytes)),
--            Err(keyring_core::Error::NoEntry) => Ok(None),
--            Err(e) => Err(e.into()),
--        }
-+        crate::secrets::with_entry(key, false, read_entry)
-@@ -16 +11 @@ impl TokenBackend for KeychainBackend {
--        Ok(crate::secrets::get_entry(key)?.set_secret(value)?)
-+        crate::secrets::with_entry(key, true, |entry| Ok(entry.set_secret(value)?))
-@@ -20 +15,19 @@ impl TokenBackend for KeychainBackend {
--        Ok(crate::secrets::get_entry(key)?.delete_credential()?)
-+        crate::secrets::with_entry(key, true, |entry| Ok(entry.delete_credential()?))
-+    }
-+
-+    fn update(
-+        &self,
-+        key: &str,
-+        update: &dyn Fn(Option<Vec<u8>>) -> Result<Vec<u8>, TokenStoreError>,
-+    ) -> Result<(), TokenStoreError> {
-+        crate::secrets::with_entry(key, true, |entry| {
-+            Ok(entry.set_secret(&update(read_entry(entry)?)?)?)
-+        })
-+    }
-+}
-+
-+fn read_entry(entry: &keyring_core::Entry) -> Result<Option<Vec<u8>>, TokenStoreError> {
-+    match entry.get_secret() {
-+        Ok(bytes) => Ok(Some(bytes)),
-+        Err(keyring_core::Error::NoEntry) => Ok(None),
-+        Err(err) => Err(err.into()),
-diff --git a/crates/xodus/src/tokens/device.rs b/crates/xodus/src/tokens/device.rs
-index ec363e4..80a5314 100644
---- a/crates/xodus/src/tokens/device.rs
-+++ b/crates/xodus/src/tokens/device.rs
-@@ -14 +14 @@ pub async fn ensure_device_credentials(client: &reqwest::Client, tokens: &TokenM
--        Ok(license) if tokens.get_device_sts_token().is_err() => {
-+        Ok(license) if !device_token_is_current(tokens.get_device_sts_token().ok().as_ref()) => {
-@@ -87,0 +88,45 @@ fn save_device_sts_token(
-+
-+// A persisted credential is not evidence that its STS ticket is still valid.
-+// Reuse the device's existing identity/reauthentication path after expiry.
-+fn device_token_is_current(token: Option<&crate::models::secrets::Token>) -> bool {
-+    let Some(crate::models::secrets::Token::Legacy(token)) = token else {
-+        return false;
-+    };
-+    chrono::DateTime::parse_from_rfc3339(&token.lifetime.expires)
-+        .is_ok_and(|expiry| expiry.timestamp() > chrono::Utc::now().timestamp() + 60)
-+}
-+#[cfg(test)]
-+mod resume_expiry_tests {
-+    use super::*;
-+    #[test]
-+    fn device_sts_presence_does_not_hide_expiry() {
-+        use crate::models::{
-+            secrets::{LegacyToken, Token},
-+            soap::Timestamp,
-+        };
-+        let token = |expires: &str| {
-+            Token::Legacy(LegacyToken {
-+                key_name: None,
-+                token: String::new(),
-+                binary_secret: None,
-+                tpm_key: None,
-+                lifetime: Timestamp {
-+                    id: None,
-+                    created: String::new(),
-+                    expires: expires.into(),
-+                },
-+            })
-+        };
-+        assert!(!device_token_is_current(None));
-+        assert!(!device_token_is_current(Some(&Token::Compact(
-+            "synthetic".into()
-+        ))));
-+        assert!(!device_token_is_current(Some(&token(
-+            "2000-01-01T00:00:00Z"
-+        ))));
-+        assert!(!device_token_is_current(Some(&token("bad"))));
-+        assert!(device_token_is_current(Some(&token(
-+            "2999-01-01T00:00:00Z"
-+        ))));
-+    }
-+}
-diff --git a/crates/xodus/src/tokens/manager.rs b/crates/xodus/src/tokens/manager.rs
-index aeb9897..749b956 100644
---- a/crates/xodus/src/tokens/manager.rs
-+++ b/crates/xodus/src/tokens/manager.rs
-@@ -171,8 +171,10 @@ impl TokenManager {
--        let mut tokens: HashMap<String, Token> = match backend.get(key)? {
--            Some(bytes) if !bytes.is_empty() => {
--                serde_json::from_slice::<TokenStore>(&bytes)?.tokens
--            }
--            _ => HashMap::new(),
--        };
--        tokens.insert(address, token);
--        backend.set(key, &serde_json::to_vec(&TokenStore { tokens })?)
-+        backend.update(key, &|bytes| {
-+            let mut tokens: HashMap<String, Token> = match bytes {
-+                Some(bytes) if !bytes.is_empty() => {
-+                    serde_json::from_slice::<TokenStore>(&bytes)?.tokens
-+                }
-+                _ => HashMap::new(),
-+            };
-+            tokens.insert(address.clone(), token.clone());
-+            Ok(serde_json::to_vec(&TokenStore { tokens })?)
-+        })
-diff --git a/crates/xodus/src/tokens/store.rs b/crates/xodus/src/tokens/store.rs
-index 76d2329..d218ecb 100644
---- a/crates/xodus/src/tokens/store.rs
-+++ b/crates/xodus/src/tokens/store.rs
-@@ -6,0 +7,8 @@ pub trait TokenBackend: Send + Sync {
-+
-+    fn update(
-+        &self,
-+        key: &str,
-+        update: &dyn Fn(Option<Vec<u8>>) -> Result<Vec<u8>, TokenStoreError>,
-+    ) -> Result<(), TokenStoreError> {
-+        self.set(key, &update(self.get(key)?)?)
-+    }
-diff --git a/crates/xodus-cli/Cargo.toml b/crates/xodus-cli/Cargo.toml
+diff --git c/crates/xodus-cli/Cargo.toml w/crates/xodus-cli/Cargo.toml
 index 7b71cb7..fc2958e 100644
---- a/crates/xodus-cli/Cargo.toml
-+++ b/crates/xodus-cli/Cargo.toml
+--- c/crates/xodus-cli/Cargo.toml
++++ w/crates/xodus-cli/Cargo.toml
 @@ -7,0 +8 @@ default-run = "xodus-cli"
 +sha2 = "0.11.0"
-diff --git a/crates/xodus-cli/src/commands/extract.rs b/crates/xodus-cli/src/commands/extract.rs
+diff --git c/crates/xodus-cli/src/commands.rs w/crates/xodus-cli/src/commands.rs
+index dc75156..fa0e9b9 100644
+--- c/crates/xodus-cli/src/commands.rs
++++ w/crates/xodus-cli/src/commands.rs
+@@ -11,0 +12,2 @@ pub mod streaming;
++
++pub mod package_info;
+diff --git c/crates/xodus-cli/src/commands/extract.rs w/crates/xodus-cli/src/commands/extract.rs
 index 7d6264d..b87dd03 100644
---- a/crates/xodus-cli/src/commands/extract.rs
-+++ b/crates/xodus-cli/src/commands/extract.rs
+--- c/crates/xodus-cli/src/commands/extract.rs
++++ w/crates/xodus-cli/src/commands/extract.rs
 @@ -21,0 +22,3 @@ pub async fn run(
 +        false,
 +        None,
 +        None,
-diff --git a/crates/xodus-cli/src/commands/login.rs b/crates/xodus-cli/src/commands/login.rs
+diff --git c/crates/xodus-cli/src/commands/login.rs w/crates/xodus-cli/src/commands/login.rs
 index 281ef9c..e65cf9d 100644
---- a/crates/xodus-cli/src/commands/login.rs
-+++ b/crates/xodus-cli/src/commands/login.rs
+--- c/crates/xodus-cli/src/commands/login.rs
++++ w/crates/xodus-cli/src/commands/login.rs
 @@ -14 +14,7 @@ pub async fn run(client: &reqwest::Client, tokens: &TokenManager) -> ExitCode {
 -    let token = tokens.get_device_sts_token().unwrap();
 +    let token = match tokens.get_device_sts_token() {
@@ -1047,11 +534,11 @@ index 281ef9c..e65cf9d 100644
 @@ -165 +184 @@ impl webview::SessionHandler for LoginHandler {
 -                    .unwrap();
 +                    .map_err(|_| std::io::Error::other("Microsoft account could not be stored"))?;
-diff --git a/crates/xodus-cli/src/commands/package_info.rs b/crates/xodus-cli/src/commands/package_info.rs
+diff --git c/crates/xodus-cli/src/commands/package_info.rs w/crates/xodus-cli/src/commands/package_info.rs
 new file mode 100644
 index 0000000..8225209
 --- /dev/null
-+++ b/crates/xodus-cli/src/commands/package_info.rs
++++ w/crates/xodus-cli/src/commands/package_info.rs
 @@ -0,0 +1,201 @@
 +// SPDX-License-Identifier: GPL-3.0-only
 +//! A deliberately small machine interface. Never serialize PackageDetails:
@@ -1254,17 +741,17 @@ index 0000000..8225209
 +        );
 +    }
 +}
-diff --git a/crates/xodus-cli/src/commands/run.rs b/crates/xodus-cli/src/commands/run.rs
+diff --git c/crates/xodus-cli/src/commands/run.rs w/crates/xodus-cli/src/commands/run.rs
 index bc62549..ac300ec 100644
---- a/crates/xodus-cli/src/commands/run.rs
-+++ b/crates/xodus-cli/src/commands/run.rs
+--- c/crates/xodus-cli/src/commands/run.rs
++++ w/crates/xodus-cli/src/commands/run.rs
 @@ -259 +259 @@ pub async fn run(
 -    ExitCode::from(status.code().map(|c| c as u8).unwrap_or(0))
 +    ExitCode::from(crate::process_status::shell_exit_code(status))
-diff --git a/crates/xodus-cli/src/commands/streaming.rs b/crates/xodus-cli/src/commands/streaming.rs
+diff --git c/crates/xodus-cli/src/commands/streaming.rs w/crates/xodus-cli/src/commands/streaming.rs
 index 6d6640c..b01f166 100644
---- a/crates/xodus-cli/src/commands/streaming.rs
-+++ b/crates/xodus-cli/src/commands/streaming.rs
+--- c/crates/xodus-cli/src/commands/streaming.rs
++++ w/crates/xodus-cli/src/commands/streaming.rs
 @@ -1 +1,6 @@
 -use std::collections::HashMap;
 +#[path = "streaming_progress.rs"]
@@ -1803,11 +1290,11 @@ index 6d6640c..b01f166 100644
 +        assert!(!expected_revision_matches(Some("a"), Some("b")));
 +        assert!(!expected_revision_matches(Some("a"), None));
 +    }
-diff --git a/crates/xodus-cli/src/commands/streaming_progress.rs b/crates/xodus-cli/src/commands/streaming_progress.rs
+diff --git c/crates/xodus-cli/src/commands/streaming_progress.rs w/crates/xodus-cli/src/commands/streaming_progress.rs
 new file mode 100644
 index 0000000..778517a
 --- /dev/null
-+++ b/crates/xodus-cli/src/commands/streaming_progress.rs
++++ w/crates/xodus-cli/src/commands/streaming_progress.rs
 @@ -0,0 +1,434 @@
 +// SPDX-License-Identifier: GPL-3.0-only
 +//! Numeric-only, best-effort telemetry; this is never an installation receipt.
@@ -2243,11 +1730,11 @@ index 0000000..778517a
 +        assert_eq!(c.snapshot.unwrap().completed_files, 2);
 +    }
 +}
-diff --git a/crates/xodus-cli/src/commands/streaming_resume.rs b/crates/xodus-cli/src/commands/streaming_resume.rs
+diff --git c/crates/xodus-cli/src/commands/streaming_resume.rs w/crates/xodus-cli/src/commands/streaming_resume.rs
 new file mode 100644
 index 0000000..e53e767
 --- /dev/null
-+++ b/crates/xodus-cli/src/commands/streaming_resume.rs
++++ w/crates/xodus-cli/src/commands/streaming_resume.rs
 @@ -0,0 +1,548 @@
 +// SPDX-License-Identifier: GPL-3.0-only
 +//! Restart-safe completed-file receipts, not byte-level or credential storage.
@@ -2797,28 +2284,29 @@ index 0000000..e53e767
 +        assert!(read_json(&r.journal, "integrity.json").is_err());
 +    }
 +}
-diff --git a/crates/xodus-cli/src/commands.rs b/crates/xodus-cli/src/commands.rs
-index dc75156..fa0e9b9 100644
---- a/crates/xodus-cli/src/commands.rs
-+++ b/crates/xodus-cli/src/commands.rs
-@@ -11,0 +12,2 @@ pub mod streaming;
-+
-+pub mod package_info;
-diff --git a/crates/xodus-cli/src/main.rs b/crates/xodus-cli/src/main.rs
-index cf0db1d..4fef0a1 100644
---- a/crates/xodus-cli/src/main.rs
-+++ b/crates/xodus-cli/src/main.rs
+diff --git c/crates/xodus-cli/src/main.rs w/crates/xodus-cli/src/main.rs
+index cf0db1d..7f24752 100644
+--- c/crates/xodus-cli/src/main.rs
++++ w/crates/xodus-cli/src/main.rs
 @@ -11,0 +12,2 @@ mod package;
 +#[cfg(unix)]
 +mod process_status;
-@@ -52,0 +55,6 @@ enum SubCommand {
+@@ -12,0 +15,2 @@ mod webview;
++mod store_purchase;
++mod store_window_check;
+@@ -15,0 +20,4 @@ enum SubCommand {
++    #[command(hide = true)]
++    StorePurchase,
++    /// Display a local, offline Store renderer check.
++    StoreWindowCheck { #[arg(long, default_value="en")] language: String },
+@@ -52,0 +61,6 @@ enum SubCommand {
 +    /// Read authenticated package version metadata without URLs, keys or a download.
 +    PackageInfo {
 +        product: String,
 +        #[arg(short, long)]
 +        market: Option<String>,
 +    },
-@@ -67,0 +76,11 @@ enum SubCommand {
+@@ -67,0 +82,11 @@ enum SubCommand {
 +        #[arg(
 +            long,
 +            default_value_t = false,
@@ -2830,25 +2318,36 @@ index cf0db1d..4fef0a1 100644
 +        /// Numeric output-payload progress on an inherited nonblocking pipe.
 +        #[arg(long, requires = "resume_files")]
 +        progress_fd: Option<i32>,
-@@ -148 +166,0 @@ async fn main() -> ExitCode {
+@@ -148 +172,0 @@ async fn main() -> ExitCode {
 -        .connection_verbose(true)
-@@ -189,0 +208,3 @@ async fn main() -> ExitCode {
+@@ -152,0 +177,8 @@ async fn main() -> ExitCode {
++    if matches!(args.command, SubCommand::StorePurchase) {
++        return store_purchase::run();
++    }
++
++    if let SubCommand::StoreWindowCheck { ref language } = args.command {
++        return store_window_check::run(language);
++    }
++
+@@ -170,0 +203 @@ async fn main() -> ExitCode {
++        SubCommand::StorePurchase | SubCommand::StoreWindowCheck { .. } => unreachable!(),
+@@ -189,0 +223,3 @@ async fn main() -> ExitCode {
 +        SubCommand::PackageInfo { product, market } => {
 +            commands::package_info::run(&client, &tokens, product, market).await
 +        }
-@@ -214,0 +236,3 @@ async fn main() -> ExitCode {
+@@ -214,0 +251,3 @@ async fn main() -> ExitCode {
 +            resume_files,
 +            expect_package,
 +            progress_fd,
-@@ -225,0 +250,3 @@ async fn main() -> ExitCode {
+@@ -225,0 +265,3 @@ async fn main() -> ExitCode {
 +                resume_files,
 +                expect_package,
 +                progress_fd,
-diff --git a/crates/xodus-cli/src/process_status.rs b/crates/xodus-cli/src/process_status.rs
+diff --git c/crates/xodus-cli/src/process_status.rs w/crates/xodus-cli/src/process_status.rs
 new file mode 100644
 index 0000000..4bd1833
 --- /dev/null
-+++ b/crates/xodus-cli/src/process_status.rs
++++ w/crates/xodus-cli/src/process_status.rs
 @@ -0,0 +1,35 @@
 +use std::os::unix::process::ExitStatusExt;
 +use std::process::ExitStatus;
@@ -2885,10 +2384,432 @@ index 0000000..4bd1833
 +        assert_eq!(shell_exit_code(status), 143);
 +    }
 +}
-diff --git a/crates/xodus-cli/src/webview.rs b/crates/xodus-cli/src/webview.rs
+diff --git c/crates/xodus-cli/src/store_purchase.html w/crates/xodus-cli/src/store_purchase.html
+new file mode 100644
+index 0000000..e5f839c
+--- /dev/null
++++ w/crates/xodus-cli/src/store_purchase.html
+@@ -0,0 +1,118 @@
++<!doctype html>
++<html lang="en"><head><meta charset="utf-8">
++<meta name="viewport" content="width=device-width, initial-scale=1">
++<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'nonce-__NONCE__'; style-src 'unsafe-inline'; frame-src https://www.microsoft.com; form-action https://www.microsoft.com/store/purchase/buynowui/buynow; base-uri 'none'">
++<meta name="referrer" content="same-origin"><title>Microsoft Store</title>
++<style>
++html,body{margin:0;height:100%;background:#171717;color:#fff;font:16px system-ui}
++main{height:100%;display:grid;grid-template-rows:auto minmax(0,1fr) auto}
++header{padding:20px 24px}h1{font-size:20px;margin:0 0 8px}p{margin:0;line-height:1.5;color:#ddd}
++.checkout-area{min-height:0;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:0 12px}
++iframe{display:block;flex:none;min-height:0;width:100%;max-width:720px;height:100%;max-height:var(--checkout-height,640px);border:0;background:#171717}
++[hidden]{display:none!important}
++button{padding:8px 18px;margin:12px 24px;justify-self:end;border-radius:6px;border:1px solid #aaa;background:#f4f4f4;color:#171717;font:inherit}
++button:focus-visible{outline:3px solid #70c8ff;outline-offset:3px}
++progress{width:100%;margin-top:14px;height:5px}#detail{max-width:58ch}
++main.ready header{padding:12px 24px}main.ready h1{font-size:16px;margin:0}main.ready #detail{display:none}
++main.failed{grid-template-rows:1fr auto}main.failed header{padding-top:48px}
++@media(max-width:480px){header,main.ready header{padding-left:16px;padding-right:16px}.checkout-area{padding:0}button{margin:10px 16px}}
++</style>
++</head><body><main id="main"><header aria-live="polite" role="status"><h1 id="status">Opening Microsoft Store…</h1><p id="detail"></p><progress id="progress" aria-label="Loading"></progress></header>
++<div class="checkout-area" id="checkout-area">
++<iframe id="checkout" name="microsoft-checkout" title="Microsoft Store payment confirmation" allow="payment *" sandbox="allow-forms allow-scripts allow-same-origin allow-popups"></iframe>
++</div>
++<button id="cancel" type="button">Cancel</button></main>
++<script nonce="__NONCE__">
++(() => {
++  'use strict';
++  const config = __CONFIG__;
++  const nonce = '__NONCE__';
++  const mode = '__MODE__';
++  const de = config.locale.toLowerCase().startsWith('de');
++  document.documentElement.lang = de ? 'de' : 'en';
++  const text = (en, german) => de ? german : en;
++  const frame = document.getElementById('checkout');
++  const heading = document.getElementById('status');
++  const detail = document.getElementById('detail');
++  const button = document.getElementById('cancel');
++  const progress = document.getElementById('progress');
++  let finished = false, ready = false, failure = null;
++  let loadTimer, expiryTimer, sessionTimer;
++  const emit = value => window.ipc.postMessage(JSON.stringify({nonce, ...value}));
++  const phase = stage => emit({phase:stage});
++  const clear = () => { clearTimeout(loadTimer); clearTimeout(expiryTimer); clearTimeout(sessionTimer); };
++  const finish = (status, orderId) => {
++    if (finished) return;
++    finished = true; clear();
++    emit({status:failure || status, orderId});
++  };
++  const fail = reason => {
++    if (finished || failure) return;
++    failure = reason; clear(); phase(reason);
++    frame.hidden = true; frame.removeAttribute('src'); frame.src = 'about:blank';
++    document.getElementById('checkout-area').hidden = true;
++    progress.hidden = true; document.getElementById('main').classList.remove('ready'); document.getElementById('main').classList.add('failed');
++    heading.textContent = text('Microsoft Store could not continue', 'Microsoft Store konnte nicht fortfahren');
++    const messages = {
++      bootstrap_error: text('The connection to Microsoft Store could not be established. Close this window and check your connection before trying again.', 'Die Verbindung zum Microsoft Store konnte nicht hergestellt werden. Schließe dieses Fenster und prüfe vor einem erneuten Versuch deine Verbindung.'),
++      load_timeout: text('The confirmation page did not respond within 45 seconds. Close this window, check your connection and run the Store check in Flightdeck.', 'Die Bestätigungsseite hat innerhalb von 45 Sekunden nicht geantwortet. Schließe dieses Fenster, prüfe deine Verbindung und starte die Store-Prüfung in Flightdeck.'),
++      session_timeout: text('This window has been open for 15 minutes. Close it and check your Microsoft order history before trying again.', 'Dieses Fenster ist seit 15 Minuten geöffnet. Schließe es und prüfe vor einem erneuten Versuch deinen Microsoft-Bestellverlauf.'),
++      expired: text('This sign-in session has expired. Close the game and sign in again in Flightdeck.', 'Diese Anmeldung ist abgelaufen. Schließe das Spiel und melde dich in Flightdeck erneut an.'),
++      error: text('Microsoft did not return a valid confirmation. Close this window and check your Microsoft order history before trying again.', 'Microsoft hat keine gültige Bestätigung zurückgegeben. Schließe dieses Fenster und prüfe vor einem erneuten Versuch deinen Microsoft-Bestellverlauf.'),
++    };
++    detail.textContent = messages[reason]; button.textContent = text('Close', 'Schließen'); button.focus();
++  };
++  heading.textContent = text('Opening Microsoft Store…', 'Microsoft Store wird geöffnet …');
++  detail.textContent = text('Waiting for Microsoft’s confirmation page. Loading can take a moment.', 'Die Bestätigungsseite von Microsoft wird geladen. Das kann einen Moment dauern.');
++  button.textContent = text('Cancel', 'Abbrechen');
++  button.onclick = () => finish('cancel');
++  window.addEventListener('message', event => {
++    if (event.origin !== 'https://www.microsoft.com' || event.source !== frame.contentWindow || finished || failure) return;
++    const data = event.data;
++    if (data === 'ReactPurchaseReadyToRender' || (data && data.message === 'stageChanged' && data.stage === 'ready')) {
++      if (!ready) { ready = true; clearTimeout(loadTimer); phase('checkout_ready'); }
++      document.getElementById('main').classList.add('ready');
++      heading.textContent = 'Microsoft Store'; progress.hidden = true;
++      detail.textContent = text('Review the details on Microsoft’s page. You can close this window at any time.', 'Prüfe die Angaben auf der Microsoft-Seite. Du kannst dieses Fenster jederzeit schließen.');
++    } else if (data && data.message === 'sizeChanged' && typeof data.height === 'number'
++        && Number.isFinite(data.height) && data.height >= 240 && data.height <= 4096) {
++      // Microsoft's hosted layout can change height for payment-method and
++      // confirmation views. Keep its viewport inside the available window.
++      frame.style.setProperty('--checkout-height', Math.ceil(data.height) + 'px');
++    } else if (data && data.message === 'openUrl' && typeof data.url === 'string') {
++      try { const url = new URL(data.url); if (url.protocol === 'https:' && !url.username && !url.password) window.open(url.href, '_blank'); } catch (_) {}
++    } else if (data && typeof data === 'object' && data.message === 'done') {
++      if (data.status === 'success' && typeof data.orderId === 'string' && /^[A-Za-z0-9_:-]{1,128}$/.test(data.orderId)) finish('success', data.orderId);
++      else if (['cancel', 'cancelXButton', 'cancelEscKey'].includes(data.status)) finish(data.status);
++      else if (['success', 'error'].includes(data.status)) fail('error');
++    }
++  });
++  // The native host first navigates to Microsoft's public prefetch document.
++  // A form posted directly from about:blank has Origin: null and is rejected.
++  // Keep the opening view visible while that navigation is pending. No token
++  // or product is sent to the prefetch document.
++  if (mode === 'bootstrap') { phase('bootstrap_started'); return; }
++  phase('window_ready');
++  if (mode === 'bootstrap_error' || location.origin !== 'https://www.microsoft.com') { fail('bootstrap_error'); return; }
++  if (config.expiresAt * 1000 <= Date.now() + 5000) { fail('expired'); return; }
++  // These timers do not retry a request or submit a payment.
++  loadTimer = setTimeout(() => fail('load_timeout'), 45000);
++  expiryTimer = setTimeout(() => fail('expired'), Math.max(0, Math.min(2147483647, config.expiresAt * 1000 - Date.now() - 5000)));
++  sessionTimer = setTimeout(() => fail('session_timeout'), 900000);
++  const form = document.createElement('form');
++  const url = new URL('https://www.microsoft.com/store/purchase/buynowui/buynow');
++  url.search = new URLSearchParams({market:config.market, locale:config.locale, clientName:'XboxCom', noCanonical:'true'});
++  form.action = url.href; form.method = 'post'; form.target = frame.name;
++  const fields = {data:JSON.stringify({usePurchaseSdk:true}), market:config.market, locale:config.locale,
++    cV:btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(16)))).replace(/=+$/,'')+'.0',
++    xToken:config.xToken, products:JSON.stringify([{productId:config.productId, skuId:config.skuId, availabilityId:config.availabilityId}]),
++    clientType:'XboxCom', layout:'Modal', pageFormat:'full', theme:'dark', deviceFamily:'Windows.Desktop',
++    cssOverride:'XboxCom2NewUI', 'flights[0]':'sc_disabledefaultstyles'};
++  for (const [name,value] of Object.entries(fields)) {
++    const input = document.createElement('input'); input.type='hidden'; input.name=name; input.value=value; form.appendChild(input);
++  }
++  document.body.appendChild(form);
++  form.submit(); // Opens Microsoft's confirmation page; never submits a payment.
++  form.remove();
++})();
++</script></body></html>
+diff --git c/crates/xodus-cli/src/store_purchase.rs w/crates/xodus-cli/src/store_purchase.rs
+new file mode 100644
+index 0000000..ce76be3
+--- /dev/null
++++ w/crates/xodus-cli/src/store_purchase.rs
+@@ -0,0 +1,242 @@
++// SPDX-License-Identifier: GPL-3.0-only
++//! Microsoft-hosted payment UI. Receives credentials only over an inherited
++//! pipe; the host never collects payment details or submits an order itself.
++use serde_json::{Value, json};
++use std::io::{Read, Write};
++use std::time::{Duration, Instant};
++use tao::{dpi::LogicalSize, event::{Event, WindowEvent}, event_loop::{ControlFlow, EventLoopBuilder},
++    platform::run_return::EventLoopExtRunReturn, window::WindowBuilder};
++use wry::{WebViewBuilder, NewWindowResponse, PageLoadEvent};
++
++// This public, unauthenticated document establishes the genuine Microsoft
++// origin before the confirmation form is submitted. Never forge an Origin or
++// Referer header or disable WebKit's origin/TLS checks.
++const BOOTSTRAP_URL: &str = "https://www.microsoft.com/store/purchase/buynowui/prefetch/buynow";
++
++fn valid_id(s: &str, n: usize) -> bool {
++    s.len() == n && s.bytes().all(|b| b.is_ascii_uppercase() || b.is_ascii_digit())
++}
++fn config_valid(v: &Value) -> bool {
++    v.as_object().is_some_and(|o| o.len() == 7)
++        && valid_id(v["productId"].as_str().unwrap_or(""), 12)
++        && valid_id(v["skuId"].as_str().unwrap_or(""), 4)
++        && valid_id(v["availabilityId"].as_str().unwrap_or(""), 12)
++        && valid_id(v["market"].as_str().unwrap_or(""), 2)
++        && v["locale"].as_str().is_some_and(|s| (2..=35).contains(&s.len()) && s.bytes().all(|c| c.is_ascii_alphabetic() || c == b'-'))
++        && v["xToken"].as_str().is_some_and(|s| s.starts_with("XBL3.0 x=") && s.len() < 65536 && !s.chars().any(char::is_control))
++        && v["expiresAt"].as_i64().is_some_and(|t| t > chrono::Utc::now().timestamp() + 30)
++}
++fn result(v: &Value, nonce: &str) -> Option<Value> {
++    if v["nonce"] != nonce { return None; }
++    if let Some(phase) = v["phase"].as_str().filter(|p| ["bootstrap_started", "bootstrap_error", "window_ready", "checkout_ready", "load_timeout", "session_timeout", "expired", "error"].contains(p)) {
++        return Some(json!({"phase":phase}));
++    }
++    match v["status"].as_str()? {
++        "success" => {
++            let order = v["orderId"].as_str()?;
++            if order.is_empty() || order.len() > 128 || !order.bytes().all(|c| c.is_ascii_alphanumeric() || b"-_:".contains(&c)) { return None; }
++            Some(json!({"status":"Succeeded", "orderId":order}))
++        }
++        "cancel" | "cancelEscKey" | "cancelXButton" => Some(json!({"status":"Cancelled"})),
++        "error" | "bootstrap_error" => Some(json!({"status":"Error"})),
++        "expired" => Some(json!({"status":"Expired"})),
++        "load_timeout" | "session_timeout" => Some(json!({"status":"Timeout"})),
++        _ => None,
++    }
++}
++pub(crate) fn html(config: &Value, nonce: &str) -> String {
++    render(config, nonce, "checkout")
++}
++pub(crate) fn render(config: &Value, nonce: &str, mode: &str) -> String {
++    assert!(["checkout", "bootstrap", "bootstrap_error"].contains(&mode));
++    let payload = serde_json::to_string(config).unwrap().replace('<', "\\u003c").replace('>', "\\u003e").replace('&', "\\u0026");
++    include_str!("store_purchase.html").replace("__NONCE__", nonce).replace("__MODE__", mode).replace("__CONFIG__", &payload)
++}
++pub(crate) fn bootstrap_script(content: &str, nonce: &str, url: &str) -> String {
++    // evaluate_script runs in the main document only. The secret IPC nonce is
++    // never put in an initialization script shared with third-party frames.
++    format!(r#"(() => {{
++      if (window !== window.top || location.href !== {url} || location.origin !== new URL({url}).origin) {{
++        window.ipc.postMessage(JSON.stringify({{nonce:{nonce},phase:'bootstrap_error'}})); return;
++      }}
++      document.open(); document.write({content}); document.close();
++    }})()"#,
++        url=serde_json::to_string(url).unwrap(), nonce=serde_json::to_string(nonce).unwrap(),
++        content=serde_json::to_string(content).unwrap())
++}
++pub(crate) fn bootstrap_listener(url: String, loaded: impl Fn() + 'static) -> impl Fn(PageLoadEvent, String) {
++    let committed = std::cell::Cell::new(false);
++    move |event, current| {
++        // A cancelled about:blank load may finish after its URI has changed.
++        // PageLoadEvent::Started represents WebKit's document commit.
++        if matches!(event, PageLoadEvent::Started) { committed.set(current == url); }
++        if matches!(event, PageLoadEvent::Finished) && current == url && committed.get() { loaded(); }
++    }
++}
++pub(crate) fn attach_webview<'a>(window: &'a tao::window::Window, builder: WebViewBuilder<'a>) -> Result<wry::WebView, ()> {
++    // Tao already owns a GTK window. Attaching another foreign X11 window can
++    // hide the webview behind Tao's container; the native container also works
++    // under Wayland and tracks layout/resize events.
++    #[cfg(target_os = "linux")]
++    {
++        use tao::platform::unix::WindowExtUnix;
++        use wry::WebViewBuilderExtUnix;
++        let container = window.default_vbox().ok_or(())?;
++        builder.build_gtk(container).map_err(|_| ())
++    }
++    #[cfg(not(target_os = "linux"))]
++    builder.build(window).map_err(|_| ())
++}
++pub fn run() -> std::process::ExitCode {
++    let result = show().unwrap_or_else(|_| json!({"status":"Error"}));
++    // Never serialize config, credentials, server error messages or URLs.
++    let _ = writeln!(std::io::stdout(), "{result}");
++    std::process::ExitCode::SUCCESS
++}
++fn show() -> Result<Value, ()> {
++    let mut input = String::new();
++    std::io::stdin().take(70001).read_to_string(&mut input).map_err(|_| ())?;
++    let config: Value = serde_json::from_str(&input).map_err(|_| ())?;
++    if input.len() > 70000 || !config_valid(&config) { return Err(()); }
++    let nonce = uuid::Uuid::new_v4().simple().to_string();
++    let content = html(&config, &nonce);
++    let expiry = config["expiresAt"].as_i64().ok_or(())?;
++    let mut events = EventLoopBuilder::<Value>::with_user_event().build();
++    let window = WindowBuilder::new().with_title("Microsoft Store — Flightdeck")
++        .with_inner_size(LogicalSize::new(720., 820.)).build(&events).map_err(|_| ())?;
++    let proxy = events.create_proxy();
++    // On Linux Wry reports the top frame URI for iframe IPC too. The secret
++    // nonce lives only in the isolated top document, never in an init script.
++    let ipc_nonce = nonce.clone();
++    let loaded = events.create_proxy();
++    let builder = WebViewBuilder::new().with_incognito(true).with_html(render(&config, &nonce, "bootstrap"))
++        .with_devtools(false)
++        .with_on_page_load_handler(bootstrap_listener(BOOTSTRAP_URL.into(), move || {
++            let _ = loaded.send_event(json!({"native_bootstrap_loaded":true}));
++        }))
++        .with_new_window_req_handler(|url, _| {
++            if url.starts_with("https://") { NewWindowResponse::Allow } else { NewWindowResponse::Deny }
++        })
++        .with_ipc_handler(move |request| {
++            if request.body().len() > 4096 { return; }
++            if let Ok(v) = serde_json::from_str::<Value>(request.body()) {
++                if let Some(value) = result(&v, &ipc_nonce) { let _ = proxy.send_event(value); }
++            }
++        });
++    let webview = attach_webview(&window, builder)?;
++    let started = Instant::now();
++    let mut outcome = json!({"status":"Cancelled"});
++    let mut progress_count = 0;
++    let mut bootstrap_requested = false;
++    let mut bootstrap_attached = false;
++    let mut bootstrap_failed = false;
++    let mut host_ready = false;
++    events.run_return(|event, _, flow| {
++        *flow = ControlFlow::WaitUntil(Instant::now() + Duration::from_millis(250));
++        match event {
++            Event::UserEvent(value) if value["native_bootstrap_loaded"] == true => {
++                if bootstrap_requested && !bootstrap_attached && !bootstrap_failed {
++                    bootstrap_attached = true;
++                    let _ = writeln!(std::io::stderr(), "FLIGHTDECK_STORE_PROGRESS {{\"phase\":\"bootstrap_ready\"}}");
++                    if webview.evaluate_script(&bootstrap_script(&content, &nonce, BOOTSTRAP_URL)).is_err() {
++                        bootstrap_failed = true;
++                        outcome = json!({"status":"Error"});
++                        let _ = webview.load_html(&render(&config, &nonce, "bootstrap_error"));
++                    }
++                }
++            }
++            Event::UserEvent(value) if value["phase"].is_string() => {
++                // The broker reads only this closed protocol. Native GTK stderr
++                // is never forwarded to diagnostics.
++                if progress_count < 8 {
++                    let _ = writeln!(std::io::stderr(), "FLIGHTDECK_STORE_PROGRESS {value}");
++                    progress_count += 1;
++                }
++                outcome = match value["phase"].as_str() {
++                    Some("expired") => json!({"status":"Expired"}),
++                    Some("load_timeout" | "session_timeout") => json!({"status":"Timeout"}),
++                    Some("error" | "bootstrap_error") => json!({"status":"Error"}),
++                    _ => outcome.clone(),
++                };
++                if value["phase"] == "window_ready" { host_ready = true; }
++                if value["phase"] == "bootstrap_error" && !host_ready && !bootstrap_failed {
++                    bootstrap_failed = true;
++                    let _ = webview.load_html(&render(&config, &nonce, "bootstrap_error"));
++                }
++                if value["phase"] == "bootstrap_started" && !bootstrap_requested && !bootstrap_failed {
++                    bootstrap_requested = true;
++                    if webview.load_url(BOOTSTRAP_URL).is_err() {
++                        bootstrap_failed = true;
++                        outcome = json!({"status":"Error"});
++                        let _ = webview.load_html(&render(&config, &nonce, "bootstrap_error"));
++                    }
++                }
++            }
++            Event::UserEvent(value) => { outcome = value; *flow = ControlFlow::Exit; }
++            Event::WindowEvent { event: WindowEvent::CloseRequested, .. } => *flow = ControlFlow::Exit,
++            _ if !host_ready && !bootstrap_failed && started.elapsed() >= Duration::from_secs(30) => {
++                bootstrap_failed = true;
++                outcome = json!({"status":"Error"});
++                let _ = webview.load_html(&render(&config, &nonce, "bootstrap_error"));
++            }
++            _ if started.elapsed() > Duration::from_secs(930) || chrono::Utc::now().timestamp() >= expiry + 30 => {
++                outcome = json!({"status":"Timeout"}); *flow = ControlFlow::Exit;
++            }
++            _ => (),
++        }
++    });
++    Ok(outcome)
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++    #[test] fn authentic_completion_only() {
++        assert!(result(&json!({"nonce":"wrong", "status":"success", "orderId":"order-1"}), "right").is_none());
++        assert!(result(&json!({"nonce":"right", "status":"success"}), "right").is_none());
++        assert!(result(&json!({"nonce":"right", "status":"ready"}), "right").is_none());
++        assert_eq!(result(&json!({"nonce":"right", "status":"cancel"}), "right").unwrap()["status"], "Cancelled");
++        assert_eq!(result(&json!({"nonce":"right", "status":"success", "orderId":"order-1"}), "right").unwrap()["status"], "Succeeded");
++    }
++    #[test] fn progress_and_failure_reasons_are_closed_and_nonce_bound() {
++        assert!(result(&json!({"nonce":"other","phase":"checkout_ready"}),"right").is_none());
++        assert!(result(&json!({"nonce":"right","phase":"private-url"}),"right").is_none());
++        assert_eq!(result(&json!({"nonce":"right","phase":"checkout_ready","token":"private"}),"right").unwrap(),json!({"phase":"checkout_ready"}));
++        for (reason,status) in [("expired","Expired"),("load_timeout","Timeout"),("session_timeout","Timeout"),("error","Error")] {
++            assert_eq!(result(&json!({"nonce":"right","status":reason}),"right").unwrap()["status"],status);
++        }
++    }
++    #[test] fn script_content_is_escaped() {
++        let rendered = html(&json!({"xToken":"</script><script>bad()</script>"}), "nonce");
++        assert!(!rendered.contains("<script>bad()"));
++        assert!(rendered.contains("event.origin !== 'https://www.microsoft.com'"));
++        assert!(rendered.contains("event.source !== frame.contentWindow"));
++        assert!(rendered.contains("location.origin !== 'https://www.microsoft.com'"));
++        assert!(!rendered.contains("__MODE__"));
++    }
++    #[test] fn bootstrap_requires_the_exact_main_document() {
++        let script = bootstrap_script("<p>Confirmation</p>", "secret", BOOTSTRAP_URL);
++        assert!(script.contains("window !== window.top"));
++        assert!(script.contains("location.href !=="));
++        assert!(script.contains("location.origin !=="));
++        assert!(result(&json!({"nonce":"right","native_bootstrap_loaded":true}), "right").is_none());
++        assert!(result(&json!({"nonce":"right","phase":"bootstrap_ready"}), "right").is_none());
++        assert_eq!(result(&json!({"nonce":"right","status":"bootstrap_error"}), "right").unwrap()["status"], "Error");
++    }
++    #[test] fn aborted_previous_load_cannot_attach_the_checkout_host() {
++        let count = std::rc::Rc::new(std::cell::Cell::new(0));
++        let counter = count.clone();
++        let listener = bootstrap_listener(BOOTSTRAP_URL.into(), move || counter.set(counter.get() + 1));
++        listener(PageLoadEvent::Finished, BOOTSTRAP_URL.into());
++        assert_eq!(count.get(), 0);
++        listener(PageLoadEvent::Started, "about:blank".into());
++        listener(PageLoadEvent::Finished, BOOTSTRAP_URL.into());
++        assert_eq!(count.get(), 0);
++        listener(PageLoadEvent::Started, BOOTSTRAP_URL.into());
++        listener(PageLoadEvent::Finished, BOOTSTRAP_URL.into());
++        assert_eq!(count.get(), 1);
++        listener(PageLoadEvent::Started, "https://example.invalid/".into());
++        listener(PageLoadEvent::Finished, BOOTSTRAP_URL.into());
++        assert_eq!(count.get(), 1);
++    }
++}
+diff --git c/crates/xodus-cli/src/store_window_check.rs w/crates/xodus-cli/src/store_window_check.rs
+new file mode 100644
+index 0000000..0cb7127
+--- /dev/null
++++ w/crates/xodus-cli/src/store_window_check.rs
+@@ -0,0 +1,44 @@
++// SPDX-License-Identifier: GPL-3.0-only
++//! Local renderer check: a human confirms visible content. Loading a DOM alone
++//! is insufficient evidence that GTK actually displays the webview.
++use serde_json::json;
++use std::{io::Write, time::{Duration, Instant}};
++use tao::{dpi::LogicalSize,event::{Event,WindowEvent},event_loop::{ControlFlow,EventLoopBuilder},platform::run_return::EventLoopExtRunReturn,window::WindowBuilder};
++use wry::WebViewBuilder;
++pub fn run(language:&str)->std::process::ExitCode {
++    let status=show(language).unwrap_or("error");
++    let value=json!({"stage":"window","state":if status=="visible"{"passed"}else if status=="cancelled"{"cancelled"}else{"failed"},"code":status});
++    let _=writeln!(std::io::stdout(),"{value}");std::process::ExitCode::SUCCESS
++}
++pub(crate) fn html(language:&str,nonce:&str)->String {
++    let de=language=="de";
++    let (title,description,confirm,cancel)=if de {
++        ("Store-Fenster prüfen","Wenn du diesen Text und beide Schaltflächen siehst, bestätige die Anzeige. Dieses Fenster ist lokal; es öffnet keine Kaufseite.","Anzeige funktioniert","Abbrechen")
++    } else {("Check Store window","If you can see this text and both buttons, confirm the display. This window is local; it does not open a purchase page.","Display works","Cancel")};
++    format!(r#"<!doctype html><html lang="{}"><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-{nonce}'; base-uri 'none'"><title>{title}</title><style>body{{background:#fff;color:#171717;font:18px system-ui;padding:32px;line-height:1.5}}h1{{font-size:26px}}button{{font:inherit;padding:12px;margin:10px 8px 0 0}}button:focus-visible{{outline:3px solid #006fba}}</style><h1>{title}</h1><p>{description}</p><button id="confirm">{confirm}</button><button id="cancel">{cancel}</button><script nonce="{nonce}">for(const [id,result] of [['confirm','visible'],['cancel','cancelled']])document.getElementById(id).onclick=()=>window.ipc.postMessage(JSON.stringify({{nonce:'{nonce}',result}}));</script></html>"#,if de{"de"}else{"en"})
++}
++fn show(language:&str)->Result<&'static str,()> {
++    let nonce=uuid::Uuid::new_v4().simple().to_string();
++    let html=html(language,&nonce);
++    let title=if language=="de"{"Store-Fenster prüfen"}else{"Check Store window"};
++    let mut events=EventLoopBuilder::<String>::with_user_event().build();
++    let window=WindowBuilder::new().with_title(title).with_inner_size(LogicalSize::new(580.,360.)).build(&events).map_err(|_|())?;
++    let proxy=events.create_proxy();
++    let builder=WebViewBuilder::new().with_incognito(true).with_devtools(false).with_html(html)
++        .with_navigation_handler(|url|url=="about:blank"||url.starts_with("http://tauri.localhost"))
++        .with_ipc_handler(move|r| {if r.body().len()>256{return;}
++            if let Ok(v)=serde_json::from_str::<serde_json::Value>(r.body()) {
++                if v["nonce"]==nonce {if let Some(s)=v["result"].as_str().filter(|s|["visible","cancelled"].contains(s)){let _=proxy.send_event(s.into());}}
++            }
++        });
++    let _view=crate::store_purchase::attach_webview(&window,builder)?;
++    let started=Instant::now();let mut outcome="cancelled";
++    events.run_return(|event,_,flow|{
++        *flow=ControlFlow::WaitUntil(Instant::now()+Duration::from_millis(250));
++        match event {
++            Event::UserEvent(v)=>{outcome=if v=="visible"{"visible"}else{"cancelled"};*flow=ControlFlow::Exit;},
++            Event::WindowEvent{event:WindowEvent::CloseRequested,..}=>*flow=ControlFlow::Exit,
++            _ if started.elapsed()>Duration::from_secs(90)=>{outcome="timeout";*flow=ControlFlow::Exit;},_=>(),
++        }
++    });Ok(outcome)
++}
+diff --git c/crates/xodus-cli/src/webview.rs w/crates/xodus-cli/src/webview.rs
 index f761a90..129950b 100644
---- a/crates/xodus-cli/src/webview.rs
-+++ b/crates/xodus-cli/src/webview.rs
+--- c/crates/xodus-cli/src/webview.rs
++++ w/crates/xodus-cli/src/webview.rs
 @@ -381 +381,4 @@ fn create_session<T: SessionHandler>(
 -        builder.build_gtk(window.default_vbox().unwrap()).unwrap()
 +        let container = window.default_vbox().ok_or_else(|| {
@@ -2901,10 +2822,10 @@ index f761a90..129950b 100644
 @@ -387,0 +391,2 @@ fn create_session<T: SessionHandler>(
 +    window.set_visible(true);
 +    window.set_focus();
-diff --git a/crates/xodus-service/Cargo.toml b/crates/xodus-service/Cargo.toml
+diff --git c/crates/xodus-service/Cargo.toml w/crates/xodus-service/Cargo.toml
 index 8546c78..04f3619 100644
---- a/crates/xodus-service/Cargo.toml
-+++ b/crates/xodus-service/Cargo.toml
+--- c/crates/xodus-service/Cargo.toml
++++ w/crates/xodus-service/Cargo.toml
 @@ -17,0 +18,7 @@ serde_json = "1.0.151"
 +serde = { version = "1.0.229", features = ["derive"] }
 +sha2 = "0.11.0"
@@ -2913,17 +2834,41 @@ index 8546c78..04f3619 100644
 +openssl = "0.10.81"
 +reqwest11 = { package = "reqwest", version = "0.11.27", features = ["json", "stream"] }
 +xal = { git = "https://github.com/xodus-gaming/xal-rs", rev = "6aa2420f8f0d5e6f7460ff13f399037583a942f4", version = "0.1.3" }
-diff --git a/crates/xodus-service/src/connection/xml.rs b/crates/xodus-service/src/connection/xml.rs
-index 8ce765b..df34fbc 100644
---- a/crates/xodus-service/src/connection/xml.rs
-+++ b/crates/xodus-service/src/connection/xml.rs
+diff --git c/crates/xodus-service/src/connection/xml.rs w/crates/xodus-service/src/connection/xml.rs
+index 8ce765b..0a7952d 100644
+--- c/crates/xodus-service/src/connection/xml.rs
++++ w/crates/xodus-service/src/connection/xml.rs
 @@ -26,2 +26,3 @@ pub async fn handle(
 -        Err(err) => {
 -            tracing::error!("Failed parsing message: {err}");
 +        Err(_) => {
 +            // Parser errors can contain input excerpts, including auth material.
 +            tracing::error!("Failed parsing IPC message");
-@@ -42,0 +44,94 @@ pub async fn parse_message(
+@@ -41,0 +43,23 @@ pub async fn parse_message(
++        XodusMessageType::StorePurchaseRequest => {
++            use crate::store_purchase;
++            let request = match store_purchase::parse(&buffer) {
++                Ok(r) => r, Err(_) => return Ok(store_purchase::encode("InvalidRequest")),
++            };
++            let tokens = context.tokens().clone();
++            if !context.store_account.validate_context(&request.context, &tokens) {
++                context.store_purchase.cancel(); return Ok(store_purchase::encode("Unavailable"));
++            }
++            let account = request.context.clone();
++            let result = context.store_purchase.handle(request, tokens.clone()).await;
++            if result != store_purchase::encode("Pending") && result != store_purchase::encode("Busy") {
++                // A completed or interrupted dialog may have changed ownership.
++                // Never answer the game's next query with pre-checkout absence.
++                context.store_collections.clear();
++                context.store_inventory.clear();
++                context.store_license.clear();
++            }
++            if !context.store_account.validate_context(&account, &tokens) {
++                context.store_purchase.cancel(); return Ok(store_purchase::encode("Unavailable"));
++            }
++            Ok(result)
++        }
+@@ -42,0 +67,94 @@ pub async fn parse_message(
 +        XodusMessageType::StoreAccountContextRequest => {
 +            let tokens = context.tokens().clone();
 +            context.store_account.response(&buffer, &tokens)
@@ -3018,21 +2963,21 @@ index 8ce765b..df34fbc 100644
 +            }
 +            Ok(store_package_updates::encode(result))
 +        }
-@@ -44 +138,0 @@ pub async fn parse_message(
+@@ -44 +161,0 @@ pub async fn parse_message(
 -            tracing::debug!("Raw buffer: {buffer:?}");
-@@ -46 +139,0 @@ pub async fn parse_message(
+@@ -46 +162,0 @@ pub async fn parse_message(
 -            tracing::debug!("String buffer: {string_buf:?}");
-@@ -56 +149 @@ pub async fn parse_message(
+@@ -56 +172 @@ pub async fn parse_message(
 -            let device_token = context.device_token.as_ref().unwrap();
 +            let device_token = context.device_token.as_ref().ok_or("Missing broker device ticket")?;
-@@ -61 +154 @@ pub async fn parse_message(
+@@ -61 +177 @@ pub async fn parse_message(
 -                "scope=service::user.auth.xboxlive.com::MBI_SSL".to_owned(),
 +                "scope=service::user.auth.xboxlive.com::MBI_SSL&api-version=2.0".to_owned(),
-@@ -107 +200,2 @@ pub async fn parse_message(
+@@ -107 +223,2 @@ pub async fn parse_message(
 -                            tracing::warn!("Failed to persist refreshed STS token: {err}");
 +                            let _ = err;
 +                            tracing::warn!("Failed to persist refreshed STS token");
-@@ -116,8 +210,4 @@ pub async fn parse_message(
+@@ -116,8 +233,4 @@ pub async fn parse_message(
 -                    let payload = MSATokenResponse {
 -                        token: user_token,
 -                        expiry: expiry.timestamp(),
@@ -3045,43 +2990,53 @@ index 8ce765b..df34fbc 100644
 +                        user_token, expiry.timestamp(), ms_device_rps_token,
 +                        chrono::Utc::now().timestamp(),
 +                    )?;
-@@ -124,0 +215 @@ pub async fn parse_message(
+@@ -124,0 +238 @@ pub async fn parse_message(
 +                    if payload.len() > u16::MAX as usize { return Err("MSA response exceeds IPC frame".into()); }
-@@ -127 +218 @@ pub async fn parse_message(
+@@ -127 +241 @@ pub async fn parse_message(
 -                _ => todo!("Error handling sill sucks"),
 +                _ => Err("MSA broker did not issue requested ticket".into()),
-diff --git a/crates/xodus-service/src/main.rs b/crates/xodus-service/src/main.rs
-index 392bd90..6764024 100644
---- a/crates/xodus-service/src/main.rs
-+++ b/crates/xodus-service/src/main.rs
-@@ -13,0 +14,6 @@ mod simple_context;
+diff --git c/crates/xodus-service/src/main.rs w/crates/xodus-service/src/main.rs
+index 392bd90..f671c94 100644
+--- c/crates/xodus-service/src/main.rs
++++ w/crates/xodus-service/src/main.rs
+@@ -13,0 +14,9 @@ mod simple_context;
 +mod store_account;
 +mod store_license;
 +mod store_license_token;
 +mod store_collections;
 +mod store_inventory;
 +mod store_package_updates;
-@@ -81,0 +88 @@ async fn main() {
++mod store_purchase;
++mod store_health;
++mod store_events;
+@@ -20,0 +30,4 @@ async fn main() {
++    let args:Vec<_>=std::env::args_os().skip(1).collect();
++    if args==[std::ffi::OsString::from("--store-check")] { store_health::run().await; return; }
++    if !args.is_empty() { eprintln!("Usage: xodus-service [--store-check]"); std::process::exit(2); }
++    store_events::launch();
+@@ -81,0 +95 @@ async fn main() {
 +    xodus::secrets::destroy_secrets();
-diff --git a/crates/xodus-service/src/simple_context.rs b/crates/xodus-service/src/simple_context.rs
-index 2900465..1143911 100644
---- a/crates/xodus-service/src/simple_context.rs
-+++ b/crates/xodus-service/src/simple_context.rs
-@@ -11,0 +12,4 @@ pub struct SimpleContext {
+diff --git c/crates/xodus-service/src/simple_context.rs w/crates/xodus-service/src/simple_context.rs
+index 2900465..babe050 100644
+--- c/crates/xodus-service/src/simple_context.rs
++++ w/crates/xodus-service/src/simple_context.rs
+@@ -11,0 +12,5 @@ pub struct SimpleContext {
 +    pub store_account: crate::store_account::BrokerStoreAccount,
 +    pub store_license: crate::store_license::LicenseCache,
 +    pub store_collections: crate::store_collections::Broker,
 +    pub store_inventory: crate::store_inventory::Broker,
-@@ -25,0 +30,4 @@ impl SimpleContext {
++    pub store_purchase: crate::store_purchase::Broker,
+@@ -25,0 +31,5 @@ impl SimpleContext {
 +            store_account: Default::default(),
 +            store_license: Default::default(),
 +            store_collections: Default::default(),
 +            store_inventory: Default::default(),
-diff --git a/crates/xodus-service/src/store_account.rs b/crates/xodus-service/src/store_account.rs
++            store_purchase: Default::default(),
+diff --git c/crates/xodus-service/src/store_account.rs w/crates/xodus-service/src/store_account.rs
 new file mode 100644
 index 0000000..9962e13
 --- /dev/null
-+++ b/crates/xodus-service/src/store_account.rs
++++ w/crates/xodus-service/src/store_account.rs
 @@ -0,0 +1,171 @@
 +//! Read-only selection of the broker's real configured MSA account. No XUser,
 +//! authentication exchange, credential write, or license assertion is involved.
@@ -3254,12 +3209,346 @@ index 0000000..9962e13
 +        tokens.save_user(&xodus::models::secrets::User{puid:"SYNTHETIC_ACCOUNT_B".into(),username:"SYNTHETIC_NAME".into()}).unwrap();assert!(!state.validate_context(&context,&tokens));assert_ne!(first,state.response_at(&tokens,1).unwrap());
 +    }
 +}
-diff --git a/crates/xodus-service/src/store_collections/auth.rs b/crates/xodus-service/src/store_collections/auth.rs
+diff --git c/crates/xodus-service/src/store_collections.rs w/crates/xodus-service/src/store_collections.rs
 new file mode 100644
-index 0000000..056ef65
+index 0000000..95f95a8
 --- /dev/null
-+++ b/crates/xodus-service/src/store_collections/auth.rs
-@@ -0,0 +1,294 @@
++++ w/crates/xodus-service/src/store_collections.rs
+@@ -0,0 +1,328 @@
++//! Account-bound, read-only exact-SKU consumer Collections evidence.
++//! Shared entitlements and whole-title inventory are intentionally not asserted.
++pub(crate) mod auth;
++pub(crate) mod model;
++use crate::store_license::Status;
++use model::{Request, Snapshot, Wanted};
++use quick_xml::{Reader, events::Event};
++use serde::{Deserialize, Serialize};
++use serde_json::{Value, json};
++use std::{collections::BTreeSet, sync::Arc, time::Duration};
++use xodus::tokens::TokenManager;
++
++#[derive(Deserialize)]
++#[serde(
++    rename = "StoreCollectionsRequest",
++    rename_all = "PascalCase",
++    deny_unknown_fields
++)]
++struct WireRequest {
++    context: String,
++    store_id: String,
++    title_id: u32,
++    msa_app_id: String,
++    products: Products,
++}
++#[derive(Deserialize)]
++#[serde(deny_unknown_fields)]
++struct Products {
++    #[serde(rename = "Product", default)]
++    items: Vec<Product>,
++}
++#[derive(Deserialize)]
++#[serde(rename_all = "PascalCase", deny_unknown_fields)]
++struct Product {
++    store_id: String,
++    kind: u32,
++}
++
++pub fn parse_request(bytes: &[u8]) -> Result<Request, Status> {
++    let bytes = bytes.strip_suffix(&[0]).unwrap_or(bytes);
++    if bytes.is_empty() || bytes.len() > 16384 || bytes.contains(&0) {
++        return Err(Status::InvalidRequest);
++    }
++    let mut reader = Reader::from_reader(bytes);
++    let mut stack = Vec::<String>::new();
++    let mut root = false;
++    loop {
++        match reader.read_event().map_err(|_| Status::InvalidRequest)? {
++            Event::Start(e) => {
++                let name = e.name().as_ref().to_string();
++                let allowed = match stack.last().map(String::as_str) {
++                    None => !root && name == "StoreCollectionsRequest",
++                    Some("StoreCollectionsRequest") => {
++                        ["Context", "StoreId", "TitleId", "MsaAppId", "Products"]
++                            .contains(&name.as_str())
++                    }
++                    Some("Products") => name == "Product",
++                    Some("Product") => ["StoreId", "Kind"].contains(&name.as_str()),
++                    _ => false,
++                };
++                if !allowed || e.attributes().next().is_some() {
++                    return Err(Status::InvalidRequest);
++                }
++                if stack.is_empty() {
++                    root = true;
++                }
++                stack.push(name);
++            }
++            Event::End(_) => {
++                stack.pop().ok_or(Status::InvalidRequest)?;
++            }
++            Event::Text(t) => {
++                if !matches!(
++                    stack.last().map(String::as_str),
++                    Some("Context" | "StoreId" | "TitleId" | "MsaAppId" | "Kind")
++                ) && !t.as_ref().chars().all(|c| c.is_ascii_whitespace())
++                {
++                    return Err(Status::InvalidRequest);
++                }
++            }
++            Event::Eof => break,
++            _ => return Err(Status::InvalidRequest),
++        }
++    }
++    if !root || !stack.is_empty() {
++        return Err(Status::InvalidRequest);
++    }
++    let wire: WireRequest =
++        quick_xml::de::from_reader(bytes).map_err(|_| Status::InvalidRequest)?;
++    let request = Request {
++        context: wire.context,
++        store_id: wire.store_id,
++        title_id: wire.title_id,
++        msa_app_id: wire.msa_app_id,
++        products: wire
++            .products
++            .items
++            .into_iter()
++            .map(|p| Wanted {
++                store_id: p.store_id,
++                kind: p.kind,
++            })
++            .collect(),
++    };
++    model::validate(&request)?;
++    Ok(request)
++}
++
++#[derive(Default)]
++pub struct Broker {
++    session: Option<auth::Session>,
++}
++fn query_body(request: &Request, batch: &[Wanted]) -> Value {
++    // Product-wide filters cover every requested SKU. Mixing entries with and
++    // without the optional skuId was observed to fail with HTTP400; using only
++    // documented productId filters also keeps the parent control independent of
++    // the caller's selected SKU. Exact matching happens only after full paging.
++    let mut products = batch
++        .iter()
++        .map(|p| &p.store_id[..12])
++        .collect::<BTreeSet<_>>();
++    products.insert(&request.store_id);
++    let ids = products
++        .into_iter()
++        .map(|id| json!({"productId":id}))
++        .collect::<Vec<_>>();
++    json!({"market":"neutral","validityType":"All","maxPageSize":100,"excludeDuplicates":true,"expandSatisfyingItems":true,"entitlementFilters":["*:Game","*:Durable","*:Pass","*:Consumable","*:UnmanagedConsumable"],"productSkuIds":ids})
++}
++impl Broker {
++    pub fn clear(&mut self) {
++        self.session = None;
++    }
++    pub async fn query(
++        &mut self,
++        request: &Request,
++        tokens: Arc<TokenManager>,
++    ) -> Result<Snapshot, Status> {
++        // Cancellation drops all reqwest work; no detached query or token request.
++        match tokio::time::timeout(Duration::from_secs(35), self.query_inner(request, &tokens))
++            .await
++        {
++            Ok(result) => result,
++            Err(_) => {
++                self.clear();
++                Err(Status::Timeout)
++            }
++        }
++    }
++    async fn query_inner(
++        &mut self,
++        request: &Request,
++        tokens: &TokenManager,
++    ) -> Result<Snapshot, Status> {
++        model::validate(request)?;
++        if !self.session.as_ref().is_some_and(|s| s.matches(request)) {
++            self.session = None;
++            self.session = Some(auth::Session::create(request, tokens).await?);
++        }
++        let session = self.session.as_mut().ok_or(Status::Error)?;
++        let mut records = Vec::new();
++        let mut expires = session.expires_at;
++        // At most 99 requested product IDs plus the parent control per HTTP query.
++        // The extra control is not returned as a requested product to the caller.
++        for batch in request.products.chunks(99) {
++            let mut body = query_body(request, batch);
++            let mut batch_pages = model::BatchPages::default();
++            loop {
++                let page = model::parse_page(&session.page(&body).await?)?;
++                if let Some(cursor) = batch_pages.push(page)? {
++                    body["continuationToken"] = Value::String(cursor);
++                } else {
++                    break;
++                }
++            }
++            let (batch_records, parent_expiry) =
++                batch_pages.finish(&request.store_id, chrono::Utc::now().timestamp())?;
++            if records.len() + batch_records.len() > 1000 {
++                return Err(Status::Unsupported);
++            }
++            expires = expires.min(parent_expiry);
++            records.extend(batch_records);
++        }
++        model::finish(request, records, chrono::Utc::now().timestamp(), expires)
++    }
++}
++
++#[derive(Serialize)]
++#[serde(rename_all = "PascalCase")]
++struct WireItem<'a> {
++    store_id: &'a str,
++    kind: u32,
++    acquired_date: i64,
++    start_date: i64,
++    end_date: i64,
++    quantity: u32,
++    is_trial: bool,
++    trial_time_remaining_in_seconds: u32,
++    #[serde(skip_serializing_if = "Option::is_none")]
++    campaign_id: Option<&'a str>,
++    #[serde(skip_serializing_if = "Option::is_none")]
++    developer_offer_id: Option<&'a str>,
++}
++pub fn encode(result: Result<Snapshot, Status>) -> Vec<u8> {
++    fn inner(s: Snapshot) -> Result<String, Status> {
++        let now = chrono::Utc::now().timestamp();
++        if s.observed_at > now || s.expires_at <= now {
++            return Err(Status::Expired);
++        }
++        let mut body = format!(
++            "<Status>Available</Status><ContextBound>true</ContextBound><Complete>true</Complete><DirectCoverage>true</DirectCoverage><SatisfyingCoverage>true</SatisfyingCoverage><SharedCoverage>false</SharedCoverage><ParentControlActive>true</ParentControlActive><ObservedAt>{}</ObservedAt><ExpiresAt>{}</ExpiresAt><Items>",
++            s.observed_at, s.expires_at
++        );
++        for i in &s.items {
++            let item = WireItem {
++                store_id: &i.store_id,
++                kind: i.kind,
++                acquired_date: i.acquired_date,
++                start_date: i.start_date,
++                end_date: i.end_date,
++                quantity: i.quantity,
++                is_trial: i.is_trial,
++                trial_time_remaining_in_seconds: i.trial_time_remaining_in_seconds,
++                campaign_id: i.campaign_id.as_deref(),
++                developer_offer_id: i.developer_offer_id.as_deref(),
++            };
++            let xml =
++                quick_xml::se::to_string_with_root("Item", &item).map_err(|_| Status::Error)?;
++            body.push_str(&xml);
++        }
++        body.push_str("</Items><AbsentIds>");
++        for id in s.absent {
++            body.push_str(&format!("<StoreId>{id}</StoreId>"));
++        }
++        body.push_str("</AbsentIds><UnknownIds>");
++        for id in s.unknown {
++            body.push_str(&format!("<StoreId>{id}</StoreId>"));
++        }
++        body.push_str("</UnknownIds>");
++        if body.len() + 64 > u16::MAX as usize {
++            return Err(Status::Unsupported);
++        }
++        Ok(body)
++    }
++    let body = match result.and_then(inner) {
++        Ok(body) => body,
++        Err(status) => format!("<Status>{status:?}</Status>"),
++    };
++    format!("<StoreCollectionsResponse>{body}</StoreCollectionsResponse>").into_bytes()
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++    fn xml() -> String {
++        format!(
++            "<StoreCollectionsRequest><Context>{}</Context><StoreId>ABCD1234EFGH</StoreId><TitleId>1</TitleId><MsaAppId>00000000-1111-2222-3333-444444444444</MsaAppId><Products><Product><StoreId>COIN1234EFGH/0001</StoreId><Kind>16</Kind></Product></Products></StoreCollectionsRequest>",
++            "a".repeat(64)
++        )
++    }
++    #[test]
++    fn strict_wire_and_duplicates() {
++        assert_eq!(parse_request(xml().as_bytes()).unwrap().products.len(), 1);
++        assert!(parse_request(format!("{}\0", xml()).as_bytes()).is_ok());
++        for bad in [
++            xml().replace("<Kind>16</Kind>", "<Kind>31</Kind>"),
++            xml().replace(
++                "<TitleId>1</TitleId>",
++                "<TitleId>1</TitleId><TitleId>2</TitleId>",
++            ),
++            xml().replace("<Products>", "<Products attr='1'>"),
++            xml().replace("<Kind>16</Kind>", "<Kind>16</Kind><X>1</X>"),
++            format!("<!DOCTYPE x>{}", xml()),
++            format!("{}\0\0", xml()),
++            xml().replace("COIN1234EFGH/0001", "COIN1234EFGH"),
++        ] {
++            assert!(parse_request(bad.as_bytes()).is_err());
++        }
++    }
++    #[test]
++    fn expired_and_error_responses_are_status_only() {
++        let now = chrono::Utc::now().timestamp();
++        let s = Snapshot {
++            items: vec![],
++            absent: vec![],
++            unknown: vec![],
++            observed_at: now,
++            expires_at: now,
++        };
++        assert_eq!(
++            encode(Ok(s)),
++            b"<StoreCollectionsResponse><Status>Expired</Status></StoreCollectionsResponse>"
++        );
++        assert_eq!(
++            encode(Err(Status::Unavailable)),
++            b"<StoreCollectionsResponse><Status>Unavailable</Status></StoreCollectionsResponse>"
++        );
++    }
++    #[test]
++    fn exact_query_has_satisfying_and_unique_parent_control() {
++        let request = parse_request(xml().as_bytes()).unwrap();
++        let body = query_body(&request, &request.products);
++        assert_eq!(body["expandSatisfyingItems"], true);
++        assert_eq!(body["productSkuIds"].as_array().unwrap().len(), 2);
++        assert!(
++            body["productSkuIds"]
++                .as_array()
++                .unwrap()
++                .iter()
++                .all(|p| p.get("skuId").is_none())
++        );
++        let parent = Wanted {
++            store_id: format!("{}/0001", request.store_id),
++            kind: 4,
++        };
++        let body = query_body(
++            &request,
++            &[
++                parent.clone(),
++                Wanted {
++                    store_id: format!("{}/0002", request.store_id),
++                    kind: 4,
++                },
++            ],
++        );
++        assert_eq!(body["productSkuIds"].as_array().unwrap().len(), 1);
++        assert_eq!(body["productSkuIds"][0]["productId"], request.store_id);
++    }
++}
+diff --git c/crates/xodus-service/src/store_collections/auth.rs w/crates/xodus-service/src/store_collections/auth.rs
+new file mode 100644
+index 0000000..e03eddb
+--- /dev/null
++++ w/crates/xodus-service/src/store_collections/auth.rs
+@@ -0,0 +1,301 @@
 +//! Store-account-only RPS -> Device/Title/User XSTS, using one in-memory PoP key.
 +//! No Game-XUser fallback, no invented device identity and no credential writes.
 +use super::model::Request;
@@ -3430,6 +3719,13 @@ index 0000000..056ef65
 +            && self.expires_at > chrono::Utc::now().timestamp() + 5
 +    }
 +    pub async fn create(request: &Request, tokens: &TokenManager) -> Result<Self, Status> {
++        Self::create_for(request, tokens, false).await
++    }
++    pub async fn checkout(request: &Request, tokens: &TokenManager) -> Result<Self, Status> {
++        Self::create_for(request, tokens, true).await
++    }
++    pub fn checkout_token(&self) -> &str { &self.authorization }
++    async fn create_for(request: &Request, tokens: &TokenManager, checkout: bool) -> Result<Self, Status> {
 +        let Token::Legacy(device) = tokens
 +            .get_device_sts_token()
 +            .map_err(|_| Status::Unavailable)?
@@ -3517,7 +3813,7 @@ index 0000000..056ef65
 +        let (title_token, te) = token(&title)?;
 +        let u=signed(&client,&mut signer,"https://user.auth.xboxlive.com/user/authenticate",&json!({"RelyingParty":"http://auth.xboxlive.com","TokenType":"JWT","Properties":{"AuthMethod":"RPS","RpsTicket":user_rps,"SiteName":"user.auth.xboxlive.com"}}),None).await?;
 +        let (user_token, ue2) = token(&u)?;
-+        let x=signed(&client,&mut signer,"https://xsts.auth.xboxlive.com/xsts/authorize",&json!({"RelyingParty":"http://licensing.xboxlive.com","TokenType":"JWT","Properties":{"SandboxId":"RETAIL","DeviceToken":device_token,"TitleToken":title_token,"UserTokens":[user_token]}}),None).await?;
++        let x=signed(&client,&mut signer,"https://xsts.auth.xboxlive.com/xsts/authorize",&json!({"RelyingParty":if checkout {"http://mp.microsoft.com/"} else {"http://licensing.xboxlive.com"},"TokenType":"JWT","Properties":{"SandboxId":"RETAIL","DeviceToken":device_token,"TitleToken":title_token,"UserTokens":[user_token]}}),None).await?;
 +        let (token, xe) = token(&x)?;
 +        let users = x["DisplayClaims"]["xui"]
 +            .as_array()
@@ -3554,11 +3850,11 @@ index 0000000..056ef65
 +        .await
 +    }
 +}
-diff --git a/crates/xodus-service/src/store_collections/model.rs b/crates/xodus-service/src/store_collections/model.rs
+diff --git c/crates/xodus-service/src/store_collections/model.rs w/crates/xodus-service/src/store_collections/model.rs
 new file mode 100644
 index 0000000..eb2fb48
 --- /dev/null
-+++ b/crates/xodus-service/src/store_collections/model.rs
++++ w/crates/xodus-service/src/store_collections/model.rs
 @@ -0,0 +1,628 @@
 +//! Narrow consumer-collection evidence. Never infer shared ownership or balances.
 +use crate::store_license::Status;
@@ -4188,346 +4484,165 @@ index 0000000..eb2fb48
 +        assert!(finish(&request(), rows, 1800000000, 1900000000).is_err());
 +    }
 +}
-diff --git a/crates/xodus-service/src/store_collections.rs b/crates/xodus-service/src/store_collections.rs
+diff --git c/crates/xodus-service/src/store_events.rs w/crates/xodus-service/src/store_events.rs
 new file mode 100644
-index 0000000..95f95a8
+index 0000000..a928988
 --- /dev/null
-+++ b/crates/xodus-service/src/store_collections.rs
-@@ -0,0 +1,328 @@
-+//! Account-bound, read-only exact-SKU consumer Collections evidence.
-+//! Shared entitlements and whole-title inventory are intentionally not asserted.
-+pub(crate) mod auth;
-+pub(crate) mod model;
-+use crate::store_license::Status;
-+use model::{Request, Snapshot, Wanted};
-+use quick_xml::{Reader, events::Event};
-+use serde::{Deserialize, Serialize};
-+use serde_json::{Value, json};
-+use std::{collections::BTreeSet, sync::Arc, time::Duration};
++++ w/crates/xodus-service/src/store_events.rs
+@@ -0,0 +1,36 @@
++// SPDX-License-Identifier: GPL-3.0-only
++//! Closed, credential-free diagnostic protocol. No free-form remote strings.
++use std::sync::atomic::{AtomicUsize, Ordering};
++static COUNT: AtomicUsize=AtomicUsize::new(0);
++pub fn emit(phase:&str, outcome:&str) {
++    if !["prepare","catalog","authentication","window_open","bootstrap_started","bootstrap_ready","bootstrap_error","window_ready","checkout_ready","load_timeout","session_timeout","expired","error","complete","cancel"].contains(&phase)
++        || !["started","passed","failed","cancelled","expired","timeout","unsupported","busy","succeeded"].contains(&outcome) {return;}
++    let seq=COUNT.fetch_add(1,Ordering::Relaxed);
++    if seq==2048 {eprintln!("[flightdeck-store-events-truncated]");}
++    if seq<2048 {eprintln!("[flightdeck-store-event] time_ms={} seq={seq} phase={phase} outcome={outcome}",chrono::Utc::now().timestamp_millis());}
++}
++pub fn launch() {
++    let Ok(raw)=std::env::var("FLIGHTDECK_STORE_LAUNCH") else{return;};
++    if raw.len()>4096{return;}
++    let Ok(v)=serde_json::from_str::<serde_json::Value>(&raw) else{return;};
++    let Some(version)=v["launcher"].as_str().filter(|s|s.len()<40 && s.bytes().all(|b|b.is_ascii_alphanumeric()||b".-+".contains(&b))) else{return;};
++    let Some(files)=v["files"].as_object() else{return;};
++    const NAMES:[&str;7]=["cli","broker","storage","proxy","builtin","prefix_builtin","unix"];
++    if files.len()!=NAMES.len() || !NAMES.iter().all(|name|files.get(*name).and_then(serde_json::Value::as_str).is_some_and(|s|s.len()==64 && s.bytes().all(|b|b.is_ascii_digit()||(b'a'..=b'f').contains(&b)))){return;}
++    let safe=serde_json::json!({"launcher":version,"files":files});
++    eprintln!("[flightdeck-store-build] {safe}");
++}
++pub fn progress(line:&str)->Option<&str> {
++    let value=line.strip_prefix("FLIGHTDECK_STORE_PROGRESS ")?;
++    let v:serde_json::Value=serde_json::from_str(value).ok()?;
++    // Return static constants, never a reference to untrusted text.
++    ["bootstrap_started","bootstrap_ready","bootstrap_error","window_ready","checkout_ready","load_timeout","session_timeout","expired","error"].into_iter().find(|p|v["phase"]==*p)
++}
++#[cfg(test)] mod tests {
++    use super::*;
++    #[test]fn discard_native_stderr_and_unknown_values(){
++        assert_eq!(progress("Gtk warning token=secret"),None);
++        assert_eq!(progress("FLIGHTDECK_STORE_PROGRESS {\"phase\":\"https://private\"}"),None);
++        assert_eq!(progress("FLIGHTDECK_STORE_PROGRESS {\"phase\":\"checkout_ready\"}"),Some("checkout_ready"));
++    }
++}
+diff --git c/crates/xodus-service/src/store_health.rs w/crates/xodus-service/src/store_health.rs
+new file mode 100644
+index 0000000..5fb4420
+--- /dev/null
++++ w/crates/xodus-service/src/store_health.rs
+@@ -0,0 +1,105 @@
++// SPDX-License-Identifier: GPL-3.0-only
++//! Explicit read-only check using the same Store brokers as the game. No
++//! checkout credentials, purchase endpoints, device provisioning or writes.
++use crate::{store_account::BrokerStoreAccount, store_collections::model,
++    store_inventory, store_license::{self, Status}};
++use serde::Deserialize;
++use serde_json::json;
++use std::{io::{Read, Write}, sync::Arc, time::Duration};
 +use xodus::tokens::TokenManager;
 +
 +#[derive(Deserialize)]
-+#[serde(
-+    rename = "StoreCollectionsRequest",
-+    rename_all = "PascalCase",
-+    deny_unknown_fields
-+)]
-+struct WireRequest {
-+    context: String,
-+    store_id: String,
-+    title_id: u32,
-+    msa_app_id: String,
-+    products: Products,
-+}
-+#[derive(Deserialize)]
 +#[serde(deny_unknown_fields)]
-+struct Products {
-+    #[serde(rename = "Product", default)]
-+    items: Vec<Product>,
++struct Config { store_id: String, title_id: u32, msa_app_id: String, package_family_name: String, market: String }
++fn parse(bytes: &[u8]) -> Result<Config, ()> {
++    if bytes.len() > 2048 { return Err(()); }
++    let c: Config = serde_json::from_slice(bytes).map_err(|_| ())?;
++    if !model::valid_id(&c.store_id, 12) || c.title_id == 0 || !model::valid_app_id(&c.msa_app_id)
++        || c.market.len()!=2 || !c.market.bytes().all(|b| b.is_ascii_uppercase())
++        || c.package_family_name.is_empty() || c.package_family_name.len()>255
++        || !c.package_family_name.bytes().all(|b| b.is_ascii_alphanumeric() || b"_.-".contains(&b)) { return Err(()); }
++    Ok(c)
 +}
++fn emit(stage: &str, state: &str, code: &str) {
++    let value = json!({"stage":stage,"state":state,"code":code});
++    let _ = writeln!(std::io::stdout(), "{value}"); let _ = std::io::stdout().flush();
++}
++fn code(s: Status) -> &'static str { match s {
++    Status::Unavailable=>"sign_in_required", Status::Expired=>"expired", Status::NotLicensed=>"not_licensed",
++    Status::Unsupported=>"unsupported", Status::InvalidRequest=>"invalid_config", Status::Error=>"connection", Status::Timeout=>"timeout",
++} }
 +#[derive(Deserialize)]
-+#[serde(rename_all = "PascalCase", deny_unknown_fields)]
-+struct Product {
-+    store_id: String,
-+    kind: u32,
-+}
-+
-+pub fn parse_request(bytes: &[u8]) -> Result<Request, Status> {
-+    let bytes = bytes.strip_suffix(&[0]).unwrap_or(bytes);
-+    if bytes.is_empty() || bytes.len() > 16384 || bytes.contains(&0) {
-+        return Err(Status::InvalidRequest);
-+    }
-+    let mut reader = Reader::from_reader(bytes);
-+    let mut stack = Vec::<String>::new();
-+    let mut root = false;
-+    loop {
-+        match reader.read_event().map_err(|_| Status::InvalidRequest)? {
-+            Event::Start(e) => {
-+                let name = e.name().as_ref().to_string();
-+                let allowed = match stack.last().map(String::as_str) {
-+                    None => !root && name == "StoreCollectionsRequest",
-+                    Some("StoreCollectionsRequest") => {
-+                        ["Context", "StoreId", "TitleId", "MsaAppId", "Products"]
-+                            .contains(&name.as_str())
-+                    }
-+                    Some("Products") => name == "Product",
-+                    Some("Product") => ["StoreId", "Kind"].contains(&name.as_str()),
-+                    _ => false,
-+                };
-+                if !allowed || e.attributes().next().is_some() {
-+                    return Err(Status::InvalidRequest);
-+                }
-+                if stack.is_empty() {
-+                    root = true;
-+                }
-+                stack.push(name);
-+            }
-+            Event::End(_) => {
-+                stack.pop().ok_or(Status::InvalidRequest)?;
-+            }
-+            Event::Text(t) => {
-+                if !matches!(
-+                    stack.last().map(String::as_str),
-+                    Some("Context" | "StoreId" | "TitleId" | "MsaAppId" | "Kind")
-+                ) && !t.as_ref().chars().all(|c| c.is_ascii_whitespace())
-+                {
-+                    return Err(Status::InvalidRequest);
-+                }
-+            }
-+            Event::Eof => break,
-+            _ => return Err(Status::InvalidRequest),
-+        }
-+    }
-+    if !root || !stack.is_empty() {
-+        return Err(Status::InvalidRequest);
-+    }
-+    let wire: WireRequest =
-+        quick_xml::de::from_reader(bytes).map_err(|_| Status::InvalidRequest)?;
-+    let request = Request {
-+        context: wire.context,
-+        store_id: wire.store_id,
-+        title_id: wire.title_id,
-+        msa_app_id: wire.msa_app_id,
-+        products: wire
-+            .products
-+            .items
-+            .into_iter()
-+            .map(|p| Wanted {
-+                store_id: p.store_id,
-+                kind: p.kind,
-+            })
-+            .collect(),
-+    };
-+    model::validate(&request)?;
-+    Ok(request)
-+}
-+
-+#[derive(Default)]
-+pub struct Broker {
-+    session: Option<auth::Session>,
-+}
-+fn query_body(request: &Request, batch: &[Wanted]) -> Value {
-+    // Product-wide filters cover every requested SKU. Mixing entries with and
-+    // without the optional skuId was observed to fail with HTTP400; using only
-+    // documented productId filters also keeps the parent control independent of
-+    // the caller's selected SKU. Exact matching happens only after full paging.
-+    let mut products = batch
-+        .iter()
-+        .map(|p| &p.store_id[..12])
-+        .collect::<BTreeSet<_>>();
-+    products.insert(&request.store_id);
-+    let ids = products
-+        .into_iter()
-+        .map(|id| json!({"productId":id}))
-+        .collect::<Vec<_>>();
-+    json!({"market":"neutral","validityType":"All","maxPageSize":100,"excludeDuplicates":true,"expandSatisfyingItems":true,"entitlementFilters":["*:Game","*:Durable","*:Pass","*:Consumable","*:UnmanagedConsumable"],"productSkuIds":ids})
-+}
-+impl Broker {
-+    pub fn clear(&mut self) {
-+        self.session = None;
-+    }
-+    pub async fn query(
-+        &mut self,
-+        request: &Request,
-+        tokens: Arc<TokenManager>,
-+    ) -> Result<Snapshot, Status> {
-+        // Cancellation drops all reqwest work; no detached query or token request.
-+        match tokio::time::timeout(Duration::from_secs(35), self.query_inner(request, &tokens))
-+            .await
-+        {
-+            Ok(result) => result,
-+            Err(_) => {
-+                self.clear();
-+                Err(Status::Timeout)
-+            }
-+        }
-+    }
-+    async fn query_inner(
-+        &mut self,
-+        request: &Request,
-+        tokens: &TokenManager,
-+    ) -> Result<Snapshot, Status> {
-+        model::validate(request)?;
-+        if !self.session.as_ref().is_some_and(|s| s.matches(request)) {
-+            self.session = None;
-+            self.session = Some(auth::Session::create(request, tokens).await?);
-+        }
-+        let session = self.session.as_mut().ok_or(Status::Error)?;
-+        let mut records = Vec::new();
-+        let mut expires = session.expires_at;
-+        // At most 99 requested product IDs plus the parent control per HTTP query.
-+        // The extra control is not returned as a requested product to the caller.
-+        for batch in request.products.chunks(99) {
-+            let mut body = query_body(request, batch);
-+            let mut batch_pages = model::BatchPages::default();
-+            loop {
-+                let page = model::parse_page(&session.page(&body).await?)?;
-+                if let Some(cursor) = batch_pages.push(page)? {
-+                    body["continuationToken"] = Value::String(cursor);
-+                } else {
-+                    break;
-+                }
-+            }
-+            let (batch_records, parent_expiry) =
-+                batch_pages.finish(&request.store_id, chrono::Utc::now().timestamp())?;
-+            if records.len() + batch_records.len() > 1000 {
-+                return Err(Status::Unsupported);
-+            }
-+            expires = expires.min(parent_expiry);
-+            records.extend(batch_records);
-+        }
-+        model::finish(request, records, chrono::Utc::now().timestamp(), expires)
++#[serde(rename_all="PascalCase")]
++struct Account { status: String, context: Option<String> }
++fn account(state: &mut BrokerStoreAccount, tokens: &TokenManager) -> Result<String, &'static str> {
++    let bytes=state.response(b"<StoreAccountContextRequest/>", tokens).map_err(|_| "sign_in_required")?;
++    let r: Account=quick_xml::de::from_reader(bytes.as_slice()).map_err(|_| "sign_in_required")?;
++    match r.status.as_str() {
++        "Available" => r.context.filter(|s| s.len()==64).ok_or("sign_in_required"),
++        "Expired" => Err("expired"), _=>Err("sign_in_required"),
 +    }
 +}
-+
-+#[derive(Serialize)]
-+#[serde(rename_all = "PascalCase")]
-+struct WireItem<'a> {
-+    store_id: &'a str,
-+    kind: u32,
-+    acquired_date: i64,
-+    start_date: i64,
-+    end_date: i64,
-+    quantity: u32,
-+    is_trial: bool,
-+    trial_time_remaining_in_seconds: u32,
-+    #[serde(skip_serializing_if = "Option::is_none")]
-+    campaign_id: Option<&'a str>,
-+    #[serde(skip_serializing_if = "Option::is_none")]
-+    developer_offer_id: Option<&'a str>,
++async fn check(c: Config, tokens: Arc<TokenManager>) {
++    let mut state=BrokerStoreAccount::default();
++    emit("account","running","checking");
++    let context=account(&mut state, &tokens);
++    emit("account",if context.is_ok(){"passed"}else{"failed"},context.as_ref().err().copied().unwrap_or("local_session"));
++    emit("catalog","running","checking");
++    let catalog = async {
++        let client=reqwest::Client::builder().timeout(Duration::from_secs(15)).redirect(reqwest::redirect::Policy::none()).build().map_err(|_|Status::Error)?;
++        let v=store_license::fetch_catalogue(&client,&c.store_id,&c.market).await?;
++        if v["Product"]["ProductId"]!=c.store_id {return Err(Status::Error);} Ok(())
++    }.await;
++    emit("catalog",if catalog.is_ok(){"passed"}else{"failed"},catalog.err().map(code).unwrap_or("available"));
++    let Ok(context)=context else {for stage in ["license","library"]{emit(stage,"skipped","sign_in_required");}return;};
++    emit("license","running","checking");
++    let r=store_license::Request {context:context.clone(),store_id:c.store_id.clone(),package_family_name:c.package_family_name,market:c.market.clone(),durable_store_id:None};
++    let license=store_license::LicenseCache::default().query(&r,tokens.clone()).await;
++    if !state.validate_context(&context,&tokens) {for stage in ["license","library"]{emit(stage,"failed","account_changed");}return;}
++    let license=license.and_then(|v|if v.is_active {Ok(())}else{Err(Status::NotLicensed)});
++    emit("license",if license.is_ok(){"passed"}else{"failed"},license.err().map(code).unwrap_or("verified"));
++    emit("library","running","checking");
++    let mut r=store_inventory::Request{context:context.clone(),store_id:c.store_id,title_id:c.title_id,msa_app_id:c.msa_app_id,market:c.market,kinds:31,page_size:100,continuation:String::new()};
++    let mut broker=store_inventory::Broker::default();
++    let library=async {
++        for _ in 0..200 {
++            let page=broker.query(&r,tokens.clone()).await?;
++            if !page.snapshot.unknown.is_empty() {return Err(Status::Unsupported);}
++            if page.continuation.is_empty(){return Ok(());}
++            r.continuation=page.continuation;
++        }
++        Err(Status::Unsupported)
++    }.await;
++    if !state.validate_context(&context,&tokens) {emit("library","failed","account_changed");return;}
++    emit("library",if library.is_ok(){"passed"}else{"failed"},library.err().map(code).unwrap_or("available"));
 +}
-+pub fn encode(result: Result<Snapshot, Status>) -> Vec<u8> {
-+    fn inner(s: Snapshot) -> Result<String, Status> {
-+        let now = chrono::Utc::now().timestamp();
-+        if s.observed_at > now || s.expires_at <= now {
-+            return Err(Status::Expired);
-+        }
-+        let mut body = format!(
-+            "<Status>Available</Status><ContextBound>true</ContextBound><Complete>true</Complete><DirectCoverage>true</DirectCoverage><SatisfyingCoverage>true</SatisfyingCoverage><SharedCoverage>false</SharedCoverage><ParentControlActive>true</ParentControlActive><ObservedAt>{}</ObservedAt><ExpiresAt>{}</ExpiresAt><Items>",
-+            s.observed_at, s.expires_at
-+        );
-+        for i in &s.items {
-+            let item = WireItem {
-+                store_id: &i.store_id,
-+                kind: i.kind,
-+                acquired_date: i.acquired_date,
-+                start_date: i.start_date,
-+                end_date: i.end_date,
-+                quantity: i.quantity,
-+                is_trial: i.is_trial,
-+                trial_time_remaining_in_seconds: i.trial_time_remaining_in_seconds,
-+                campaign_id: i.campaign_id.as_deref(),
-+                developer_offer_id: i.developer_offer_id.as_deref(),
-+            };
-+            let xml =
-+                quick_xml::se::to_string_with_root("Item", &item).map_err(|_| Status::Error)?;
-+            body.push_str(&xml);
-+        }
-+        body.push_str("</Items><AbsentIds>");
-+        for id in s.absent {
-+            body.push_str(&format!("<StoreId>{id}</StoreId>"));
-+        }
-+        body.push_str("</AbsentIds><UnknownIds>");
-+        for id in s.unknown {
-+            body.push_str(&format!("<StoreId>{id}</StoreId>"));
-+        }
-+        body.push_str("</UnknownIds>");
-+        if body.len() + 64 > u16::MAX as usize {
-+            return Err(Status::Unsupported);
-+        }
-+        Ok(body)
++pub async fn run() {
++    let mut bytes=Vec::new();
++    let config=std::io::stdin().take(2049).read_to_end(&mut bytes).map_err(|_|()).and_then(|_|parse(&bytes));
++    let Ok(config)=config else {emit("account","failed","invalid_config");return;};
++    if xodus::secrets::init_secrets().is_err(){emit("account","failed","keyring");return;}
++    let tokens=Arc::new(TokenManager::with_keychain_and_memory());
++    // Isolate dependency panics; no raw error text reaches the launcher.
++    let mut work=tokio::spawn(check(config,tokens));
++    match tokio::time::timeout(Duration::from_secs(115),&mut work).await {
++        Ok(Ok(()))=>(),
++        Ok(Err(_))=>emit("check","failed","error"),
++        Err(_)=>{work.abort();let _=work.await;emit("check","failed","timeout");},
 +    }
-+    let body = match result.and_then(inner) {
-+        Ok(body) => body,
-+        Err(status) => format!("<Status>{status:?}</Status>"),
-+    };
-+    format!("<StoreCollectionsResponse>{body}</StoreCollectionsResponse>").into_bytes()
++    xodus::secrets::destroy_secrets();
 +}
-+
-+#[cfg(test)]
-+mod tests {
++#[cfg(test)] mod tests {
 +    use super::*;
-+    fn xml() -> String {
-+        format!(
-+            "<StoreCollectionsRequest><Context>{}</Context><StoreId>ABCD1234EFGH</StoreId><TitleId>1</TitleId><MsaAppId>00000000-1111-2222-3333-444444444444</MsaAppId><Products><Product><StoreId>COIN1234EFGH/0001</StoreId><Kind>16</Kind></Product></Products></StoreCollectionsRequest>",
-+            "a".repeat(64)
-+        )
-+    }
-+    #[test]
-+    fn strict_wire_and_duplicates() {
-+        assert_eq!(parse_request(xml().as_bytes()).unwrap().products.len(), 1);
-+        assert!(parse_request(format!("{}\0", xml()).as_bytes()).is_ok());
-+        for bad in [
-+            xml().replace("<Kind>16</Kind>", "<Kind>31</Kind>"),
-+            xml().replace(
-+                "<TitleId>1</TitleId>",
-+                "<TitleId>1</TitleId><TitleId>2</TitleId>",
-+            ),
-+            xml().replace("<Products>", "<Products attr='1'>"),
-+            xml().replace("<Kind>16</Kind>", "<Kind>16</Kind><X>1</X>"),
-+            format!("<!DOCTYPE x>{}", xml()),
-+            format!("{}\0\0", xml()),
-+            xml().replace("COIN1234EFGH/0001", "COIN1234EFGH"),
-+        ] {
-+            assert!(parse_request(bad.as_bytes()).is_err());
++    #[test] fn input_is_public_and_bounded() {
++        let good=json!({"store_id":"ABCD1234EFGH","title_id":1,"msa_app_id":"0000000012345678","package_family_name":"Game_publisher","market":"AT"});
++        assert!(parse(&serde_json::to_vec(&good).unwrap()).is_ok());
++        for (key,value) in [("market",json!("<xml>")),("store_id",json!("bad")),("title_id",json!(0)),("package_family_name",json!("../secret")),("token",json!("private"))] {
++            let mut bad=good.clone();bad[key]=value;assert!(parse(&serde_json::to_vec(&bad).unwrap()).is_err());
 +        }
 +    }
-+    #[test]
-+    fn expired_and_error_responses_are_status_only() {
-+        let now = chrono::Utc::now().timestamp();
-+        let s = Snapshot {
-+            items: vec![],
-+            absent: vec![],
-+            unknown: vec![],
-+            observed_at: now,
-+            expires_at: now,
-+        };
-+        assert_eq!(
-+            encode(Ok(s)),
-+            b"<StoreCollectionsResponse><Status>Expired</Status></StoreCollectionsResponse>"
-+        );
-+        assert_eq!(
-+            encode(Err(Status::Unavailable)),
-+            b"<StoreCollectionsResponse><Status>Unavailable</Status></StoreCollectionsResponse>"
-+        );
-+    }
-+    #[test]
-+    fn exact_query_has_satisfying_and_unique_parent_control() {
-+        let request = parse_request(xml().as_bytes()).unwrap();
-+        let body = query_body(&request, &request.products);
-+        assert_eq!(body["expandSatisfyingItems"], true);
-+        assert_eq!(body["productSkuIds"].as_array().unwrap().len(), 2);
-+        assert!(
-+            body["productSkuIds"]
-+                .as_array()
-+                .unwrap()
-+                .iter()
-+                .all(|p| p.get("skuId").is_none())
-+        );
-+        let parent = Wanted {
-+            store_id: format!("{}/0001", request.store_id),
-+            kind: 4,
-+        };
-+        let body = query_body(
-+            &request,
-+            &[
-+                parent.clone(),
-+                Wanted {
-+                    store_id: format!("{}/0002", request.store_id),
-+                    kind: 4,
-+                },
-+            ],
-+        );
-+        assert_eq!(body["productSkuIds"].as_array().unwrap().len(), 1);
-+        assert_eq!(body["productSkuIds"][0]["productId"], request.store_id);
++    #[tokio::test] async fn missing_account_does_not_create_credentials() {
++        let tokens=TokenManager::with_memory(); let mut state=BrokerStoreAccount::default();
++        assert_eq!(account(&mut state,&tokens).unwrap_err(),"sign_in_required");
++        assert!(tokens.get_user_sts_token().is_err());assert!(tokens.get_device_sts_token().is_err());
 +    }
 +}
-diff --git a/crates/xodus-service/src/store_inventory.rs b/crates/xodus-service/src/store_inventory.rs
+diff --git c/crates/xodus-service/src/store_inventory.rs w/crates/xodus-service/src/store_inventory.rs
 new file mode 100644
-index 0000000..9311f9e
+index 0000000..b7ce1e2
 --- /dev/null
-+++ b/crates/xodus-service/src/store_inventory.rs
-@@ -0,0 +1,493 @@
++++ w/crates/xodus-service/src/store_inventory.rs
+@@ -0,0 +1,533 @@
 +//! Current Store account's direct and satisfying entitlements for this title.
 +//! Exhaust the authenticated library before filtering; catalog visibility is
 +//! never evidence of ownership. Device-shared entitlements are not covered.
@@ -4709,16 +4824,13 @@ index 0000000..9311f9e
 +    let mut products = BTreeSet::new();
 +    while end < p.items.len() {
 +        let id = &p.items[end].store_id[..12];
-+        if !products.contains(id) && products.len() == p.request.page_size {
-+            break;
-+        }
++        let mut group_end = end + 1;
++        while group_end < p.items.len() && &p.items[group_end].store_id[..12] == id { group_end += 1; }
++        if products.len() == p.request.page_size || group_end - start > 100 { break; }
 +        products.insert(id.to_owned());
-+        end += 1;
++        end = group_end;
 +    }
-+    // Bound XML frames as well as product count, never split one product's SKUs.
-+    if end - start > 100 {
-+        return Err(Status::Unsupported);
-+    }
++    if end == start && start < p.items.len() { return Err(Status::Unsupported); }
 +    let continuation = if end < p.items.len() {
 +        token()
 +    } else {
@@ -4788,6 +4900,24 @@ index 0000000..9311f9e
 +    }
 +    Ok(false)
 +}
++fn page_envelope(raw: &Value) -> Result<(BTreeSet<String>, Option<String>, usize), Status> {
++    let rows = raw["items"].as_array().filter(|v| v.len() <= 100).ok_or(Status::Unsupported)?;
++    let mut ids = BTreeSet::new();
++    for row in rows {
++        let id = row["productId"].as_str().filter(|s| model::valid_id(s, 12)).ok_or(Status::Unsupported)?;
++        ids.insert(id.to_owned());
++    }
++    // Reuse the strict page-envelope parser, with no rights interpreted yet.
++    let mut envelope = raw.clone(); envelope["items"] = json!([]);
++    let continuation = model::parse_page(&envelope)?.continuation;
++    Ok((ids, continuation, rows.len()))
++}
++fn scoped_page(mut raw: Value, allowed: &BTreeSet<String>) -> Result<model::Page, Status> {
++    page_envelope(&raw)?;
++    raw["items"].as_array_mut().ok_or(Status::Unsupported)?.retain(|row|
++        row["productId"].as_str().is_some_and(|id| allowed.contains(id)));
++    model::parse_page(&raw)
++}
 +async fn collect(r: &Request, tokens: Arc<TokenManager>) -> Result<Pending, Status> {
 +    let binding = model::Request {
 +        context: r.context.clone(),
@@ -4798,22 +4928,25 @@ index 0000000..9311f9e
 +    };
 +    let mut session = auth::Session::create(&binding, &tokens).await?;
 +    let mut body = json!({"market":"neutral","validityType":"All","maxPageSize":100,"excludeDuplicates":true,"expandSatisfyingItems":true,"entitlementFilters":["*:Game","*:Durable","*:Pass","*:Consumable","*:UnmanagedConsumable"]});
-+    let mut pages = model::BatchPages::default();
++    // Establish title scope before interpreting rights. An unsupported trial or
++    // sharing record for another game must not invalidate this game's Store.
++    // All raw pages and IDs are still validated and exhausted first.
++    let mut raw_pages = Vec::new();
++    let mut roots = BTreeSet::new();
++    let mut cursors = BTreeSet::new();
++    let mut total = 0;
 +    loop {
-+        let page = model::parse_page(&session.page(&body).await?)?;
-+        if let Some(cursor) = pages.push(page)? {
++        let raw = session.page(&body).await?;
++        let (ids, continuation, count) = page_envelope(&raw)?;
++        total += count;
++        if raw_pages.len() >= 20 || total > 1000 { return Err(Status::Unsupported); }
++        roots.extend(ids);
++        raw_pages.push(raw);
++        if let Some(cursor) = continuation {
++            if !cursors.insert(cursor.clone()) || raw_pages.len() == 20 { return Err(Status::Unsupported); }
 +            body["continuationToken"] = Value::String(cursor);
-+        } else {
-+            break;
-+        }
++        } else { break; }
 +    }
-+    let now = chrono::Utc::now().timestamp();
-+    let (records, parent_expiry) = pages.finish(&r.store_id, now)?;
-+    let mut items = active_items(records, r.kinds, now)?;
-+    let roots = items
-+        .iter()
-+        .map(|i| i.store_id[..12].to_owned())
-+        .collect::<BTreeSet<_>>();
 +    let client = reqwest::Client::builder()
 +        .timeout(Duration::from_secs(12))
 +        .redirect(reqwest::redirect::Policy::none())
@@ -4845,8 +4978,11 @@ index 0000000..9311f9e
 +            None => break,
 +        }
 +    }
-+    items.retain(|i| allowed.contains(&i.store_id[..12]));
 +    let now = chrono::Utc::now().timestamp();
++    let mut pages = model::BatchPages::default();
++    for raw in raw_pages { pages.push(scoped_page(raw, &allowed)?)?; }
++    let (records, parent_expiry) = pages.finish(&r.store_id, now)?;
++    let items = active_items(records, r.kinds, now)?;
 +    let expires_at = items.iter().map(|i| i.end_date).fold(
 +        session.expires_at.min(parent_expiry).min(now + 30),
 +        i64::min,
@@ -4899,6 +5035,17 @@ index 0000000..9311f9e
 +#[cfg(test)]
 +mod tests {
 +    use super::*;
++    #[test]
++    fn unrelated_library_rights_do_not_poison_title_inventory() {
++        let raw = json!({"items":[{"productId":"OTHER1234567","trialData":{"newServerShape":true}}],"continuationToken":"next"});
++        let allowed = BTreeSet::from(["TITLE1234567".into()]);
++        let page = scoped_page(raw.clone(), &allowed).unwrap();
++        assert!(page.records.is_empty()); assert_eq!(page.continuation.as_deref(), Some("next"));
++        assert!(scoped_page(raw, &BTreeSet::from(["OTHER1234567".into()])).is_err());
++        assert!(page_envelope(&json!({"items":[{"productId":"invalid"}]})).is_err());
++        assert!(page_envelope(&json!({"items":[],"continuationToken":42})).is_err());
++    }
++
 +    fn request() -> Request {
 +        Request {
 +            context: "a".repeat(64),
@@ -4999,6 +5146,14 @@ index 0000000..9311f9e
 +        assert!(matches!(take_page(&mut p), Err(Status::Expired)));
 +    }
 +    #[test]
++    fn many_multi_sku_products_continue_at_the_transport_boundary() {
++        let now=chrono::Utc::now().timestamp();let mut r=request();r.page_size=100;
++        let items=(0..51).flat_map(|id|[item(&format!("P{id:011}/0001")),item(&format!("P{id:011}/0002"))]).collect();
++        let mut p=Pending {request:r,items,observed_at:now,expires_at:now+30,created:Instant::now(),cursor:String::new(),offset:0};
++        let first=take_page(&mut p).unwrap();assert_eq!(first.snapshot.items.len(),100);assert!(!first.continuation.is_empty());
++        let second=take_page(&mut p).unwrap();assert_eq!(second.snapshot.items.len(),2);assert!(second.continuation.is_empty());
++    }
++    #[test]
 +    fn request_binding_and_xml_are_strict() {
 +        let xml = format!(
 +            "<StoreInventoryRequest><Context>{}</Context><StoreId>GAME1234EFGH</StoreId><TitleId>1</TitleId><MsaAppId>00000000-1111-2222-3333-444444444444</MsaAppId><Market>US</Market><Kinds>2</Kinds><PageSize>1</PageSize></StoreInventoryRequest>",
@@ -5021,160 +5176,11 @@ index 0000000..9311f9e
 +        assert!(!same_query(&request(), &other));
 +    }
 +}
-diff --git a/crates/xodus-service/src/store_license/verified_token.rs b/crates/xodus-service/src/store_license/verified_token.rs
-new file mode 100644
-index 0000000..081cd62
---- /dev/null
-+++ b/crates/xodus-service/src/store_license/verified_token.rs
-@@ -0,0 +1,143 @@
-+//! Microsoft-documented PC license token validation. Inputs/claims have no Debug
-+//! implementation and are never logged. Public certificate fetch has a fixed origin.
-+use base64::prelude::*;
-+use openssl::{hash::MessageDigest,pkey::Id,sign::Verifier,x509::X509};
-+use serde_json::Value;
-+
-+pub struct VerifiedToken {
-+    pub products: Vec<Product>,
-+    pub expires_at: i64,
-+    pub not_before: i64,
-+}
-+#[derive(Clone)]
-+pub struct Product { pub product_id: String, pub sku_id: String, pub ends_at: i64 }
-+
-+pub fn nonce() -> Result<String,&'static str> {
-+    use std::io::Read;
-+    let mut bytes=[0;32];
-+    std::fs::File::open("/dev/urandom").and_then(|mut f| f.read_exact(&mut bytes)).map_err(|_|"nonce")?;
-+    Ok(BASE64_URL_SAFE_NO_PAD.encode(bytes))
-+}
-+
-+pub async fn verify(client:&reqwest::Client, token:&str, nonce:&str) -> Result<VerifiedToken,&'static str> {
-+    if token.len()>1024*1024 {return Err("token_size");}
-+    let parts:Vec<_>=token.split('.').collect();
-+    if parts.len()!=3 {return Err("token_format");}
-+    let header:Value=serde_json::from_slice(&BASE64_URL_SAFE_NO_PAD.decode(parts[0]).map_err(|_|"header_encoding")?).map_err(|_|"header_json")?;
-+    if header["alg"].as_str()!=Some("RS256") {return Err("signature_algorithm");}
-+    let claims:Value=serde_json::from_slice(&BASE64_URL_SAFE_NO_PAD.decode(parts[1]).map_err(|_|"claims_encoding")?).map_err(|_|"claims_json")?;
-+    let encoded=claims["LicenseTokenClaim"].as_str().ok_or("license_claim_missing")?;
-+    let inner=BASE64_STANDARD.decode(encoded).map_err(|_|"license_claim_encoding")?;
-+    let start=inner.iter().position(|&b|b==b'{').ok_or("license_claim_prefix")?;
-+    if start>256 {return Err("license_claim_prefix");}
-+    let license:Value=serde_json::from_slice(&inner[start..]).map_err(|_|"license_claim_json")?;
-+    let certificate_id=license["certificateId"].as_str().ok_or("certificate_id")?;
-+    if certificate_id.is_empty() || certificate_id.len()>128 || !certificate_id.bytes().all(|b|b.is_ascii_alphanumeric()||b==b'-') {return Err("certificate_id");}
-+    let url=format!("https://licensing.mp.microsoft.com/v8.0/licenseToken/fullCertificate/{certificate_id}");
-+    let mut response=client.get(url).send().await.map_err(|_|"certificate_request")?.error_for_status().map_err(|_|"certificate_status")?;
-+    let mut bytes=Vec::new();
-+    while let Some(chunk)=response.chunk().await.map_err(|_|"certificate_body")? {
-+        if bytes.len()+chunk.len()>256*1024 {return Err("certificate_size");}
-+        bytes.extend_from_slice(&chunk);
-+    }
-+    let cert=decode_certificate(&bytes)?;
-+    verify_with_certificate(token,nonce,&cert,chrono::Utc::now().timestamp())
-+}
-+
-+fn verify_with_certificate(token:&str,nonce:&str,cert:&X509,now:i64)->Result<VerifiedToken,&'static str> {
-+    if token.len()>1024*1024 {return Err("token_size");}
-+    let parts:Vec<_>=token.split('.').collect();
-+    if parts.len()!=3 {return Err("token_format");}
-+    let header:Value=serde_json::from_slice(&BASE64_URL_SAFE_NO_PAD.decode(parts[0]).map_err(|_|"header_encoding")?).map_err(|_|"header_json")?;
-+    if header["alg"].as_str()!=Some("RS256") {return Err("signature_algorithm");}
-+    let claims:Value=serde_json::from_slice(&BASE64_URL_SAFE_NO_PAD.decode(parts[1]).map_err(|_|"claims_encoding")?).map_err(|_|"claims_json")?;
-+    let encoded=claims["LicenseTokenClaim"].as_str().ok_or("license_claim_missing")?;
-+    let inner=BASE64_STANDARD.decode(encoded).map_err(|_|"license_claim_encoding")?;
-+    let start=inner.iter().position(|&b|b==b'{').ok_or("license_claim_prefix")?;
-+    if start>256 {return Err("license_claim_prefix");}
-+    let license:Value=serde_json::from_slice(&inner[start..]).map_err(|_|"license_claim_json")?;
-+    let der=cert.to_der().map_err(|_|"certificate_der")?;
-+    let thumbprint=BASE64_URL_SAFE_NO_PAD.encode(openssl::sha::sha1(&der));
-+    if header["x5t"].as_str().map(|s|s.trim_end_matches('='))!=Some(thumbprint.as_str()) {return Err("certificate_thumbprint");}
-+    let time=openssl::asn1::Asn1Time::from_unix(now).map_err(|_|"clock")?;
-+    if cert.not_before()>time || cert.not_after()<time {return Err("certificate_expired");}
-+    let key=cert.public_key().map_err(|_|"certificate_public_key")?;
-+    if key.id()!=Id::RSA || key.bits()<2048 {return Err("certificate_key_type");}
-+    let signature=BASE64_URL_SAFE_NO_PAD.decode(parts[2]).map_err(|_|"signature_encoding")?;
-+    let mut verifier=Verifier::new(MessageDigest::sha256(),&key).map_err(|_|"signature_setup")?;
-+    verifier.update(format!("{}.{}",parts[0],parts[1]).as_bytes()).map_err(|_|"signature_setup")?;
-+    if !verifier.verify(&signature).map_err(|_|"signature_verify")? {return Err("signature_invalid");}
-+    let expires_at=claims["exp"].as_i64().ok_or("jwt_expiry")?;
-+    let not_before=claims["nbf"].as_i64().ok_or("jwt_not_before")?;
-+    if expires_at<=now || not_before>now || expires_at<=not_before {return Err("jwt_expired");}
-+    if license["tokenVersion"].as_u64()!=Some(1) {return Err("token_version");}
-+    // Microsoft documents no literal issuer/audience contract here. Trust comes
-+    // from the fixed-origin TLS exchange, the Microsoft certificate/signature,
-+    // current signed token dates, and the unique request nonce. Do not invent a
-+    // stricter literal gate or use arbitrary audience values as account IDs.
-+    if license["customDeveloperString"].as_str()!=Some(nonce) {return Err("nonce_mismatch");}
-+    let items=license["licensableProducts"].as_array().ok_or("products_missing")?;
-+    if items.len()>128 {return Err("product_count");}
-+    let mut products=Vec::new();
-+    for item in items {
-+        let product_id=item["productId"].as_str().ok_or("product_id")?;
-+        let sku_id=item["skuId"].as_str().ok_or("sku_id")?;
-+        if product_id.len()!=12 || !product_id.bytes().all(|b|b.is_ascii_uppercase()||b.is_ascii_digit()) || sku_id.len()!=4 || !sku_id.bytes().all(|b|b.is_ascii_uppercase()||b.is_ascii_digit()) {return Err("product_id_format");}
-+        let end=item["endDate"].as_str().ok_or("product_expiry")?;
-+        let ends_at=chrono::DateTime::parse_from_rfc3339(end).map_err(|_|"product_expiry")?.timestamp();
-+        if let Some(existing)=products.iter().find(|p:&&Product|p.product_id==product_id&&p.sku_id==sku_id) {
-+            if existing.ends_at!=ends_at {return Err("conflicting_duplicate_product");}
-+        } else {products.push(Product{product_id:product_id.into(),sku_id:sku_id.into(),ends_at});}
-+    }
-+    Ok(VerifiedToken{products,expires_at,not_before})
-+}
-+
-+fn decode_certificate(bytes:&[u8]) -> Result<X509,&'static str> {
-+    if let Ok(cert)=X509::from_der(bytes) {return Ok(cert);}
-+    if let Ok(cert)=X509::from_pem(bytes) {return Ok(cert);}
-+    let json:Value=serde_json::from_slice(bytes).map_err(|_|"certificate_json")?;
-+    let text=json.as_str().or_else(||json["certificate"].as_str()).or_else(||json["Certificate"].as_str()).ok_or("certificate_field")?;
-+    let der=BASE64_STANDARD.decode(text).map_err(|_|"certificate_base64")?;
-+    X509::from_der(&der).map_err(|_|"certificate_parse")
-+}
-+
-+#[cfg(test)]
-+mod tests {
-+    use super::*;
-+    use openssl::{asn1::Asn1Time,pkey::{PKey,Private},rsa::Rsa,sign::Signer,x509::X509NameBuilder};
-+    use serde_json::json;
-+    fn cert()->(PKey<Private>,X509) {
-+        let key=PKey::from_rsa(Rsa::generate(2048).unwrap()).unwrap();let mut name=X509NameBuilder::new().unwrap();name.append_entry_by_text("CN","Synthetic License Test").unwrap();let name=name.build();
-+        let mut cert=X509::builder().unwrap();cert.set_version(2).unwrap();cert.set_subject_name(&name).unwrap();cert.set_issuer_name(&name).unwrap();cert.set_pubkey(&key).unwrap();cert.set_not_before(&Asn1Time::from_unix(1_000).unwrap()).unwrap();cert.set_not_after(&Asn1Time::from_unix(10_000).unwrap()).unwrap();cert.sign(&key,MessageDigest::sha256()).unwrap();(key,cert.build())
-+    }
-+    fn token(key:&PKey<Private>,cert:&X509,license:Value,mutate:impl FnOnce(&mut Value))->String {
-+        let header=json!({"alg":"RS256","x5t":BASE64_URL_SAFE_NO_PAD.encode(openssl::sha::sha1(&cert.to_der().unwrap()))});
-+        let mut claims=json!({"iss":"https://licensing.mp.microsoft.com","aud":"https://licensing.mp.microsoft.com","nbf":2000,"exp":4000,"LicenseTokenClaim":BASE64_STANDARD.encode(format!("prefix{license}"))});mutate(&mut claims);
-+        let body=format!("{}.{}",BASE64_URL_SAFE_NO_PAD.encode(header.to_string()),BASE64_URL_SAFE_NO_PAD.encode(claims.to_string()));let mut signer=Signer::new(MessageDigest::sha256(),key).unwrap();signer.update(body.as_bytes()).unwrap();format!("{body}.{}",BASE64_URL_SAFE_NO_PAD.encode(signer.sign_to_vec().unwrap()))
-+    }
-+    fn license()->Value {json!({"certificateId":"synthetic-id","customDeveloperString":"SYNTHETIC_NONCE","tokenVersion":1,"licensableProducts":[{"productId":"ABCD1234EFGH","skuId":"0001","endDate":"2040-01-01T00:00:00Z"}]})}
-+    #[test]
-+    fn caller_challenge_is_exact_signed_content_and_empty_products_are_valid() {
-+        let (key,cert)=cert();
-+        for challenge in ["  &<>\"'\r\n\t Österreich 🛫  ", "FIRST_CALLER_NONCE", "SECOND_CALLER_NONCE"] {
-+            let mut l=license();l["customDeveloperString"]=json!(challenge);l["licensableProducts"]=json!([]);
-+            let signed=token(&key,&cert,l,|_|{});let original=signed.clone();
-+            assert!(verify_with_certificate(&signed,challenge,&cert,3000).unwrap().products.is_empty());
-+            assert_eq!(signed,original);
-+            assert_eq!(verify_with_certificate(&signed,&format!("{challenge}changed"),&cert,3000).err(),Some("nonce_mismatch"));
-+        }
-+    }
-+    #[test]
-+    fn signed_token_nonce_time_version_and_duplicates() {
-+        let (key,cert)=cert();let good=token(&key,&cert,license(),|_|{});
-+        let verified=verify_with_certificate(&good,"SYNTHETIC_NONCE",&cert,3000).unwrap();assert_eq!(verified.products.len(),1);assert_eq!(verified.expires_at,4000);
-+        assert_eq!(verify_with_certificate(&good,"WRONG_NONCE",&cert,3000).err(),Some("nonce_mismatch"));
-+        assert_eq!(verify_with_certificate(&good,"SYNTHETIC_NONCE",&cert,4000).err(),Some("jwt_expired"));
-+        assert_eq!(verify_with_certificate(&good,"SYNTHETIC_NONCE",&cert,1999).err(),Some("jwt_expired"));
-+        let alternate=token(&key,&cert,license(),|c|c["iss"]=json!("other signed issuer"));assert!(verify_with_certificate(&alternate,"SYNTHETIC_NONCE",&cert,3000).is_ok());
-+        let mut l=license();l["tokenVersion"]=json!(2);let bad=token(&key,&cert,l,|_|{});assert_eq!(verify_with_certificate(&bad,"SYNTHETIC_NONCE",&cert,3000).err(),Some("token_version"));
-+        let mut l=license();let mut duplicate=l["licensableProducts"][0].clone();duplicate["endDate"]=json!("2041-01-01T00:00:00Z");l["licensableProducts"].as_array_mut().unwrap().push(duplicate);let bad=token(&key,&cert,l,|_|{});assert_eq!(verify_with_certificate(&bad,"SYNTHETIC_NONCE",&cert,3000).err(),Some("conflicting_duplicate_product"));
-+        let mut split:Vec<String>=good.split('.').map(String::from).collect();let mut sig=BASE64_URL_SAFE_NO_PAD.decode(&split[2]).unwrap();sig[0]^=1;split[2]=BASE64_URL_SAFE_NO_PAD.encode(sig);assert_eq!(verify_with_certificate(&split.join("."),"SYNTHETIC_NONCE",&cert,3000).err(),Some("signature_invalid"));
-+        assert_eq!(verify_with_certificate(&good,"SYNTHETIC_NONCE",&cert,11_000).err(),Some("certificate_expired"));
-+    }
-+}
-diff --git a/crates/xodus-service/src/store_license.rs b/crates/xodus-service/src/store_license.rs
+diff --git c/crates/xodus-service/src/store_license.rs w/crates/xodus-service/src/store_license.rs
 new file mode 100644
 index 0000000..7926fcc
 --- /dev/null
-+++ b/crates/xodus-service/src/store_license.rs
++++ w/crates/xodus-service/src/store_license.rs
 @@ -0,0 +1,328 @@
 +//! Genuine PC full-game licenses from Microsoft-signed v8 tokens. No inventory,
 +//! trial emulation, offline fallback, token refresh writes or purchase operations.
@@ -5504,11 +5510,160 @@ index 0000000..7926fcc
 +        cache.clear();assert!(matches!(cache.query(&r,tokens).await,Err(Status::Unavailable)));
 +    }
 +}
-diff --git a/crates/xodus-service/src/store_license_token.rs b/crates/xodus-service/src/store_license_token.rs
+diff --git c/crates/xodus-service/src/store_license/verified_token.rs w/crates/xodus-service/src/store_license/verified_token.rs
+new file mode 100644
+index 0000000..081cd62
+--- /dev/null
++++ w/crates/xodus-service/src/store_license/verified_token.rs
+@@ -0,0 +1,143 @@
++//! Microsoft-documented PC license token validation. Inputs/claims have no Debug
++//! implementation and are never logged. Public certificate fetch has a fixed origin.
++use base64::prelude::*;
++use openssl::{hash::MessageDigest,pkey::Id,sign::Verifier,x509::X509};
++use serde_json::Value;
++
++pub struct VerifiedToken {
++    pub products: Vec<Product>,
++    pub expires_at: i64,
++    pub not_before: i64,
++}
++#[derive(Clone)]
++pub struct Product { pub product_id: String, pub sku_id: String, pub ends_at: i64 }
++
++pub fn nonce() -> Result<String,&'static str> {
++    use std::io::Read;
++    let mut bytes=[0;32];
++    std::fs::File::open("/dev/urandom").and_then(|mut f| f.read_exact(&mut bytes)).map_err(|_|"nonce")?;
++    Ok(BASE64_URL_SAFE_NO_PAD.encode(bytes))
++}
++
++pub async fn verify(client:&reqwest::Client, token:&str, nonce:&str) -> Result<VerifiedToken,&'static str> {
++    if token.len()>1024*1024 {return Err("token_size");}
++    let parts:Vec<_>=token.split('.').collect();
++    if parts.len()!=3 {return Err("token_format");}
++    let header:Value=serde_json::from_slice(&BASE64_URL_SAFE_NO_PAD.decode(parts[0]).map_err(|_|"header_encoding")?).map_err(|_|"header_json")?;
++    if header["alg"].as_str()!=Some("RS256") {return Err("signature_algorithm");}
++    let claims:Value=serde_json::from_slice(&BASE64_URL_SAFE_NO_PAD.decode(parts[1]).map_err(|_|"claims_encoding")?).map_err(|_|"claims_json")?;
++    let encoded=claims["LicenseTokenClaim"].as_str().ok_or("license_claim_missing")?;
++    let inner=BASE64_STANDARD.decode(encoded).map_err(|_|"license_claim_encoding")?;
++    let start=inner.iter().position(|&b|b==b'{').ok_or("license_claim_prefix")?;
++    if start>256 {return Err("license_claim_prefix");}
++    let license:Value=serde_json::from_slice(&inner[start..]).map_err(|_|"license_claim_json")?;
++    let certificate_id=license["certificateId"].as_str().ok_or("certificate_id")?;
++    if certificate_id.is_empty() || certificate_id.len()>128 || !certificate_id.bytes().all(|b|b.is_ascii_alphanumeric()||b==b'-') {return Err("certificate_id");}
++    let url=format!("https://licensing.mp.microsoft.com/v8.0/licenseToken/fullCertificate/{certificate_id}");
++    let mut response=client.get(url).send().await.map_err(|_|"certificate_request")?.error_for_status().map_err(|_|"certificate_status")?;
++    let mut bytes=Vec::new();
++    while let Some(chunk)=response.chunk().await.map_err(|_|"certificate_body")? {
++        if bytes.len()+chunk.len()>256*1024 {return Err("certificate_size");}
++        bytes.extend_from_slice(&chunk);
++    }
++    let cert=decode_certificate(&bytes)?;
++    verify_with_certificate(token,nonce,&cert,chrono::Utc::now().timestamp())
++}
++
++fn verify_with_certificate(token:&str,nonce:&str,cert:&X509,now:i64)->Result<VerifiedToken,&'static str> {
++    if token.len()>1024*1024 {return Err("token_size");}
++    let parts:Vec<_>=token.split('.').collect();
++    if parts.len()!=3 {return Err("token_format");}
++    let header:Value=serde_json::from_slice(&BASE64_URL_SAFE_NO_PAD.decode(parts[0]).map_err(|_|"header_encoding")?).map_err(|_|"header_json")?;
++    if header["alg"].as_str()!=Some("RS256") {return Err("signature_algorithm");}
++    let claims:Value=serde_json::from_slice(&BASE64_URL_SAFE_NO_PAD.decode(parts[1]).map_err(|_|"claims_encoding")?).map_err(|_|"claims_json")?;
++    let encoded=claims["LicenseTokenClaim"].as_str().ok_or("license_claim_missing")?;
++    let inner=BASE64_STANDARD.decode(encoded).map_err(|_|"license_claim_encoding")?;
++    let start=inner.iter().position(|&b|b==b'{').ok_or("license_claim_prefix")?;
++    if start>256 {return Err("license_claim_prefix");}
++    let license:Value=serde_json::from_slice(&inner[start..]).map_err(|_|"license_claim_json")?;
++    let der=cert.to_der().map_err(|_|"certificate_der")?;
++    let thumbprint=BASE64_URL_SAFE_NO_PAD.encode(openssl::sha::sha1(&der));
++    if header["x5t"].as_str().map(|s|s.trim_end_matches('='))!=Some(thumbprint.as_str()) {return Err("certificate_thumbprint");}
++    let time=openssl::asn1::Asn1Time::from_unix(now).map_err(|_|"clock")?;
++    if cert.not_before()>time || cert.not_after()<time {return Err("certificate_expired");}
++    let key=cert.public_key().map_err(|_|"certificate_public_key")?;
++    if key.id()!=Id::RSA || key.bits()<2048 {return Err("certificate_key_type");}
++    let signature=BASE64_URL_SAFE_NO_PAD.decode(parts[2]).map_err(|_|"signature_encoding")?;
++    let mut verifier=Verifier::new(MessageDigest::sha256(),&key).map_err(|_|"signature_setup")?;
++    verifier.update(format!("{}.{}",parts[0],parts[1]).as_bytes()).map_err(|_|"signature_setup")?;
++    if !verifier.verify(&signature).map_err(|_|"signature_verify")? {return Err("signature_invalid");}
++    let expires_at=claims["exp"].as_i64().ok_or("jwt_expiry")?;
++    let not_before=claims["nbf"].as_i64().ok_or("jwt_not_before")?;
++    if expires_at<=now || not_before>now || expires_at<=not_before {return Err("jwt_expired");}
++    if license["tokenVersion"].as_u64()!=Some(1) {return Err("token_version");}
++    // Microsoft documents no literal issuer/audience contract here. Trust comes
++    // from the fixed-origin TLS exchange, the Microsoft certificate/signature,
++    // current signed token dates, and the unique request nonce. Do not invent a
++    // stricter literal gate or use arbitrary audience values as account IDs.
++    if license["customDeveloperString"].as_str()!=Some(nonce) {return Err("nonce_mismatch");}
++    let items=license["licensableProducts"].as_array().ok_or("products_missing")?;
++    if items.len()>128 {return Err("product_count");}
++    let mut products=Vec::new();
++    for item in items {
++        let product_id=item["productId"].as_str().ok_or("product_id")?;
++        let sku_id=item["skuId"].as_str().ok_or("sku_id")?;
++        if product_id.len()!=12 || !product_id.bytes().all(|b|b.is_ascii_uppercase()||b.is_ascii_digit()) || sku_id.len()!=4 || !sku_id.bytes().all(|b|b.is_ascii_uppercase()||b.is_ascii_digit()) {return Err("product_id_format");}
++        let end=item["endDate"].as_str().ok_or("product_expiry")?;
++        let ends_at=chrono::DateTime::parse_from_rfc3339(end).map_err(|_|"product_expiry")?.timestamp();
++        if let Some(existing)=products.iter().find(|p:&&Product|p.product_id==product_id&&p.sku_id==sku_id) {
++            if existing.ends_at!=ends_at {return Err("conflicting_duplicate_product");}
++        } else {products.push(Product{product_id:product_id.into(),sku_id:sku_id.into(),ends_at});}
++    }
++    Ok(VerifiedToken{products,expires_at,not_before})
++}
++
++fn decode_certificate(bytes:&[u8]) -> Result<X509,&'static str> {
++    if let Ok(cert)=X509::from_der(bytes) {return Ok(cert);}
++    if let Ok(cert)=X509::from_pem(bytes) {return Ok(cert);}
++    let json:Value=serde_json::from_slice(bytes).map_err(|_|"certificate_json")?;
++    let text=json.as_str().or_else(||json["certificate"].as_str()).or_else(||json["Certificate"].as_str()).ok_or("certificate_field")?;
++    let der=BASE64_STANDARD.decode(text).map_err(|_|"certificate_base64")?;
++    X509::from_der(&der).map_err(|_|"certificate_parse")
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++    use openssl::{asn1::Asn1Time,pkey::{PKey,Private},rsa::Rsa,sign::Signer,x509::X509NameBuilder};
++    use serde_json::json;
++    fn cert()->(PKey<Private>,X509) {
++        let key=PKey::from_rsa(Rsa::generate(2048).unwrap()).unwrap();let mut name=X509NameBuilder::new().unwrap();name.append_entry_by_text("CN","Synthetic License Test").unwrap();let name=name.build();
++        let mut cert=X509::builder().unwrap();cert.set_version(2).unwrap();cert.set_subject_name(&name).unwrap();cert.set_issuer_name(&name).unwrap();cert.set_pubkey(&key).unwrap();cert.set_not_before(&Asn1Time::from_unix(1_000).unwrap()).unwrap();cert.set_not_after(&Asn1Time::from_unix(10_000).unwrap()).unwrap();cert.sign(&key,MessageDigest::sha256()).unwrap();(key,cert.build())
++    }
++    fn token(key:&PKey<Private>,cert:&X509,license:Value,mutate:impl FnOnce(&mut Value))->String {
++        let header=json!({"alg":"RS256","x5t":BASE64_URL_SAFE_NO_PAD.encode(openssl::sha::sha1(&cert.to_der().unwrap()))});
++        let mut claims=json!({"iss":"https://licensing.mp.microsoft.com","aud":"https://licensing.mp.microsoft.com","nbf":2000,"exp":4000,"LicenseTokenClaim":BASE64_STANDARD.encode(format!("prefix{license}"))});mutate(&mut claims);
++        let body=format!("{}.{}",BASE64_URL_SAFE_NO_PAD.encode(header.to_string()),BASE64_URL_SAFE_NO_PAD.encode(claims.to_string()));let mut signer=Signer::new(MessageDigest::sha256(),key).unwrap();signer.update(body.as_bytes()).unwrap();format!("{body}.{}",BASE64_URL_SAFE_NO_PAD.encode(signer.sign_to_vec().unwrap()))
++    }
++    fn license()->Value {json!({"certificateId":"synthetic-id","customDeveloperString":"SYNTHETIC_NONCE","tokenVersion":1,"licensableProducts":[{"productId":"ABCD1234EFGH","skuId":"0001","endDate":"2040-01-01T00:00:00Z"}]})}
++    #[test]
++    fn caller_challenge_is_exact_signed_content_and_empty_products_are_valid() {
++        let (key,cert)=cert();
++        for challenge in ["  &<>\"'\r\n\t Österreich 🛫  ", "FIRST_CALLER_NONCE", "SECOND_CALLER_NONCE"] {
++            let mut l=license();l["customDeveloperString"]=json!(challenge);l["licensableProducts"]=json!([]);
++            let signed=token(&key,&cert,l,|_|{});let original=signed.clone();
++            assert!(verify_with_certificate(&signed,challenge,&cert,3000).unwrap().products.is_empty());
++            assert_eq!(signed,original);
++            assert_eq!(verify_with_certificate(&signed,&format!("{challenge}changed"),&cert,3000).err(),Some("nonce_mismatch"));
++        }
++    }
++    #[test]
++    fn signed_token_nonce_time_version_and_duplicates() {
++        let (key,cert)=cert();let good=token(&key,&cert,license(),|_|{});
++        let verified=verify_with_certificate(&good,"SYNTHETIC_NONCE",&cert,3000).unwrap();assert_eq!(verified.products.len(),1);assert_eq!(verified.expires_at,4000);
++        assert_eq!(verify_with_certificate(&good,"WRONG_NONCE",&cert,3000).err(),Some("nonce_mismatch"));
++        assert_eq!(verify_with_certificate(&good,"SYNTHETIC_NONCE",&cert,4000).err(),Some("jwt_expired"));
++        assert_eq!(verify_with_certificate(&good,"SYNTHETIC_NONCE",&cert,1999).err(),Some("jwt_expired"));
++        let alternate=token(&key,&cert,license(),|c|c["iss"]=json!("other signed issuer"));assert!(verify_with_certificate(&alternate,"SYNTHETIC_NONCE",&cert,3000).is_ok());
++        let mut l=license();l["tokenVersion"]=json!(2);let bad=token(&key,&cert,l,|_|{});assert_eq!(verify_with_certificate(&bad,"SYNTHETIC_NONCE",&cert,3000).err(),Some("token_version"));
++        let mut l=license();let mut duplicate=l["licensableProducts"][0].clone();duplicate["endDate"]=json!("2041-01-01T00:00:00Z");l["licensableProducts"].as_array_mut().unwrap().push(duplicate);let bad=token(&key,&cert,l,|_|{});assert_eq!(verify_with_certificate(&bad,"SYNTHETIC_NONCE",&cert,3000).err(),Some("conflicting_duplicate_product"));
++        let mut split:Vec<String>=good.split('.').map(String::from).collect();let mut sig=BASE64_URL_SAFE_NO_PAD.decode(&split[2]).unwrap();sig[0]^=1;split[2]=BASE64_URL_SAFE_NO_PAD.encode(sig);assert_eq!(verify_with_certificate(&split.join("."),"SYNTHETIC_NONCE",&cert,3000).err(),Some("signature_invalid"));
++        assert_eq!(verify_with_certificate(&good,"SYNTHETIC_NONCE",&cert,11_000).err(),Some("certificate_expired"));
++    }
++}
+diff --git c/crates/xodus-service/src/store_license_token.rs w/crates/xodus-service/src/store_license_token.rs
 new file mode 100644
 index 0000000..f672735
 --- /dev/null
-+++ b/crates/xodus-service/src/store_license_token.rs
++++ w/crates/xodus-service/src/store_license_token.rs
 @@ -0,0 +1,250 @@
 +//! Receipt acquisition, not an entitlement decision. The original Microsoft JWT
 +//! and caller challenge have no Debug implementations and must never be logged.
@@ -5760,11 +5915,11 @@ index 0000000..f672735
 +        assert!(!needs_refresh(&verified,&request,100));
 +    }
 +}
-diff --git a/crates/xodus-service/src/store_package_updates.rs b/crates/xodus-service/src/store_package_updates.rs
+diff --git c/crates/xodus-service/src/store_package_updates.rs w/crates/xodus-service/src/store_package_updates.rs
 new file mode 100644
 index 0000000..6db4aa1
 --- /dev/null
-+++ b/crates/xodus-service/src/store_package_updates.rs
++++ w/crates/xodus-service/src/store_package_updates.rs
 @@ -0,0 +1,435 @@
 +//! Online check of Flightdeck's single registered MSIXVC base package.
 +//! No installed DLC is inferred from ownership. Newer revisions remain an
@@ -6201,3 +6356,778 @@ index 0000000..6db4aa1
 +        assert!(content_id(&c, &r).is_err());
 +    }
 +}
+diff --git c/crates/xodus-service/src/store_purchase.rs w/crates/xodus-service/src/store_purchase.rs
+new file mode 100644
+index 0000000..f932747
+--- /dev/null
++++ w/crates/xodus-service/src/store_purchase.rs
+@@ -0,0 +1,247 @@
++// SPDX-License-Identifier: GPL-3.0-only
++//! One account-bound Microsoft-hosted checkout at a time. No order submission,
++//! payment instrument handling, automatic retries, or consumable fulfillment.
++use crate::{store_events, store_collections::{auth, model}, store_license::{self, Status}};
++use quick_xml::{Reader, events::Event};
++use serde::Deserialize;
++use serde_json::{Value, json};
++use std::{process::Stdio, sync::{Arc, atomic::{AtomicBool, Ordering}}, time::{Duration, Instant}};
++use tokio::{io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader}, process::{Child, Command}};
++use xodus::tokens::TokenManager;
++
++static ACTIVE: AtomicBool = AtomicBool::new(false);
++struct Permit;
++impl Drop for Permit { fn drop(&mut self) { ACTIVE.store(false, Ordering::Release); } }
++#[derive(Clone, Deserialize)]
++#[serde(rename = "StorePurchaseRequest", rename_all = "PascalCase", deny_unknown_fields)]
++pub struct Request {
++    pub context: String, pub operation: String, pub action: String,
++    pub store_id: String, pub product_id: String, pub title_id: u32,
++    pub msa_app_id: String, pub market: String, pub language: String,
++}
++fn hex(s: &str, size: usize) -> bool { s.len() == size && s.bytes().all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b)) }
++pub fn parse(input: &[u8]) -> Result<Request, Status> {
++    let input = input.strip_suffix(&[0]).unwrap_or(input);
++    if input.len() > 2048 || input.contains(&0) { return Err(Status::InvalidRequest); }
++    let mut reader = Reader::from_reader(input); let mut depth = 0; let mut roots = 0;
++    loop {
++        match reader.read_event().map_err(|_| Status::InvalidRequest)? {
++            Event::Start(e) => {
++                if e.attributes().next().is_some() || depth > 1 { return Err(Status::InvalidRequest); }
++                if depth == 0 { if e.name().as_ref() != "StorePurchaseRequest" { return Err(Status::InvalidRequest); } roots += 1; }
++                depth += 1;
++            }
++            Event::End(_) => { if depth == 0 { return Err(Status::InvalidRequest); } depth -= 1; }
++            Event::Text(t) if depth == 2 || t.as_ref().chars().all(|c| c.is_ascii_whitespace()) => (),
++            Event::Eof => break,
++            _ => return Err(Status::InvalidRequest),
++        }
++    }
++    if roots != 1 || depth != 0 { return Err(Status::InvalidRequest); }
++    let r: Request = quick_xml::de::from_reader(input).map_err(|_| Status::InvalidRequest)?;
++    let product = r.product_id.split('/').collect::<Vec<_>>();
++    if !hex(&r.context, 64) || !hex(&r.operation, 32) || !["Start", "Poll", "Cancel"].contains(&r.action.as_str())
++        || !model::valid_id(&r.store_id, 12) || !(1..=2).contains(&product.len())
++        || !model::valid_id(product[0], 12) || (product.len() == 2 && !model::valid_id(product[1], 4))
++        || r.title_id == 0 || !model::valid_app_id(&r.msa_app_id)
++        || r.market.len() != 2 || !r.market.bytes().all(|b| b.is_ascii_uppercase())
++        || !(2..=35).contains(&r.language.len()) || !r.language.bytes().all(|c| c.is_ascii_alphabetic() || c == b'-') {
++        return Err(Status::InvalidRequest);
++    }
++    Ok(r)
++}
++pub fn encode(status: &str) -> Vec<u8> {
++    // Status is always an internal closed constant, never server text.
++    format!("<StorePurchaseResponse><Status>{status}</Status></StorePurchaseResponse>").into_bytes()
++}
++fn date(v: &Value) -> Option<i64> {
++    chrono::DateTime::parse_from_rfc3339(v.as_str()?).ok().map(|d| d.timestamp())
++}
++fn offer(catalogue: &Value, r: &Request, now: i64) -> Result<Value, Status> {
++    let id = &r.product_id[..12]; let p = &catalogue["Product"];
++    if p["ProductId"].as_str() != Some(id) { return Err(Status::Unsupported); }
++    let related = p["MarketProperties"].as_array().is_some_and(|markets| markets.iter().any(|m|
++        m["RelatedProducts"].as_array().is_some_and(|v| v.iter().any(|v|
++            v["RelationshipType"] == "addOnParent" && v["RelatedProductId"] == r.store_id))));
++    if id != r.store_id && !related { return Err(Status::Unsupported); }
++    // The dialog can purchase the exact offer; subscriptions, bundles and
++    // ambiguous SKU selection need their own selection flow first.
++    let mut found = Vec::new();
++    for entry in p["DisplaySkuAvailabilities"].as_array().ok_or(Status::Unsupported)? {
++        let sku = &entry["Sku"]; let properties = &sku["Properties"];
++        let sid = sku["SkuId"].as_str().filter(|s| model::valid_id(s, 4)).ok_or(Status::Unsupported)?;
++        if r.product_id.len() == 17 && &r.product_id[13..] != sid { continue; }
++        if sku["SkuType"] != "full" || properties["IsTrial"] != false || properties["IsPreOrder"] != false || properties["IsBundle"] != false { continue; }
++        for a in entry["Availabilities"].as_array().ok_or(Status::Unsupported)? {
++            let conditions = &a["Conditions"];
++            if !a["Actions"].as_array().is_some_and(|v| v.iter().any(|v| v == "Purchase"))
++                || !a["Markets"].as_array().is_some_and(|v| v.iter().any(|v| v == &r.market))
++                || !date(&conditions["StartDate"]).is_some_and(|t| t <= now)
++                || !date(&conditions["EndDate"]).is_some_and(|t| t > now)
++                || !conditions["ClientConditions"]["AllowedPlatforms"].as_array().is_some_and(|v| v.iter().any(|v| v["PlatformName"] == "Windows.Desktop")) { continue; }
++            let aid = a["AvailabilityId"].as_str().filter(|s| model::valid_id(s, 12)).ok_or(Status::Unsupported)?;
++            found.push(json!({"productId":id,"skuId":sid,"availabilityId":aid}));
++        }
++    }
++    if found.len() != 1 { return Err(Status::Unsupported); }
++    Ok(found.remove(0))
++}
++fn same_checkout(a: &Request, b: &Request) -> bool {
++    a.context == b.context && a.operation == b.operation && a.store_id == b.store_id &&
++    a.product_id == b.product_id && a.title_id == b.title_id && a.msa_app_id == b.msa_app_id &&
++    a.market == b.market && a.language == b.language
++}
++struct Job { request: Request, child: Child, started: Instant, expires_at: i64, _permit: Permit }
++#[derive(Default)]
++pub struct Broker { job: Option<Job>, completed: Option<(Request, &'static str)> }
++impl Broker {
++    pub fn cancel(&mut self) { self.stop("Cancelled"); }
++    fn stop(&mut self, status: &'static str) {
++        if let Some(mut job) = self.job.take() {
++            let _ = job.child.start_kill();
++            store_events::emit(if status=="Cancelled" {"cancel"}else{"complete"}, if status=="Cancelled" {"cancelled"}else if status=="Timeout" {"timeout"}else{"failed"});
++            self.completed = Some((job.request, status));
++        }
++    }
++    pub async fn handle(&mut self, r: Request, tokens: Arc<TokenManager>) -> Vec<u8> {
++        if let Some((completed, status)) = &self.completed {
++            if completed.context == r.context && completed.operation == r.operation {
++                return encode(if same_checkout(completed, &r) { status } else { "InvalidRequest" });
++            }
++        }
++        if let Some(job) = &self.job {
++            if job.request.context != r.context || job.request.operation != r.operation { return encode("Busy"); }
++            if !same_checkout(&job.request, &r) { return encode("InvalidRequest"); }
++            if r.action == "Cancel" { self.cancel(); return encode("Cancelled"); }
++            if job.started.elapsed() > Duration::from_secs(935) || chrono::Utc::now().timestamp() >= job.expires_at + 35 {
++                self.stop("Timeout"); return encode("Timeout");
++            }
++            let job = self.job.as_mut().unwrap();
++            match job.child.try_wait() {
++                Ok(None) => return encode("Pending"),
++                Ok(Some(exit)) if exit.success() => {
++                    let mut bytes = Vec::new();
++                    let read = match job.child.stdout.take() {
++                        Some(out) => tokio::time::timeout(Duration::from_secs(2), out.take(2049).read_to_end(&mut bytes)).await,
++                        None => { self.stop("Error"); return encode("Error"); }
++                    };
++                    let status = if read.is_ok_and(|r| r.is_ok()) && bytes.len() <= 2048 { completion(&bytes) } else { "Error" };
++                    self.job.take();
++                    self.completed = Some((r, status));
++                    store_events::emit("complete", match status {"Succeeded"=>"succeeded", "Cancelled"=>"cancelled", "Expired"=>"expired", "Timeout"=>"timeout", _=>"failed"});
++                    return encode(status);
++                }
++                _ => { self.stop("Error"); return encode("Error"); }
++            }
++        }
++        if r.action != "Start" { return encode("InvalidRequest"); }
++        if ACTIVE.compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire).is_err() { return encode("Busy"); }
++        let permit = Permit;
++        store_events::emit("prepare", "started");
++        let prepared = tokio::time::timeout(Duration::from_secs(35), prepare(&r, tokens)).await;
++        let mut config = match prepared {
++            Ok(Ok(value)) => value,
++            Ok(Err(status)) => { store_events::emit("prepare", "failed"); return encode(&format!("{status:?}")); },
++            Err(_) => { store_events::emit("prepare", "timeout"); return encode("Timeout"); },
++        };
++        let Some(helper) = std::env::current_exe().ok().and_then(|p| p.parent().map(|p| p.join("xodus-cli"))) else { return encode("Error"); };
++        let mut child = match Command::new(helper).arg("store-purchase")
++            .env_remove("XODUS_LOG").stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped())
++            .kill_on_drop(true).spawn() { Ok(c) => c, Err(_) => return encode("Error") };
++        store_events::emit("window_open", "started");
++        if let Some(stderr) = child.stderr.take() {
++            tokio::spawn(async move {
++                let read = async {
++                    let mut lines=BufReader::new(stderr.take(32768)).lines();
++                    let mut count=0;
++                    while let Ok(Some(line))=lines.next_line().await {
++                        if let Some(phase)=store_events::progress(&line) {
++                            if count<8 {store_events::emit(phase,match phase {"bootstrap_started"=>"started","load_timeout"|"session_timeout"=>"timeout","expired"=>"expired","bootstrap_error"|"error"=>"failed",_=>"passed"});count+=1;}
++                        }
++                    }
++                };
++                let _=tokio::time::timeout(Duration::from_secs(940),read).await;
++            });
++        }
++        let payload = serde_json::to_vec(&config).unwrap();
++        config["xToken"] = Value::Null;
++        let expires_at = config["expiresAt"].as_i64().unwrap();
++        let Some(mut input) = child.stdin.take() else { return encode("Error"); };
++        if !tokio::time::timeout(Duration::from_secs(2), input.write_all(&payload)).await.is_ok_and(|r| r.is_ok()) { return encode("Error"); }
++        drop(input);
++        self.job = Some(Job { request:r, child, started:Instant::now(), expires_at, _permit:permit });
++        encode("Pending")
++    }
++}
++fn completion(bytes: &[u8]) -> &'static str {
++    let Ok(v) = serde_json::from_slice::<Value>(bytes) else { return "Error"; };
++    match v["status"].as_str() {
++        Some("Succeeded") if v["orderId"].as_str().is_some_and(|s| !s.is_empty() && s.len() <= 128 && s.bytes().all(|c| c.is_ascii_alphanumeric() || b"-_:".contains(&c))) => "Succeeded",
++        Some("Cancelled") => "Cancelled", Some("Expired") => "Expired", Some("Timeout") => "Timeout", _ => "Error",
++    }
++}
++pub(crate) async fn prepare(r: &Request, tokens: Arc<TokenManager>) -> Result<Value, Status> {
++    let client = reqwest::Client::builder().timeout(Duration::from_secs(15)).redirect(reqwest::redirect::Policy::none()).build().map_err(|_| Status::Error)?;
++    store_events::emit("catalog", "started");
++    let catalog = store_license::fetch_catalogue(&client, &r.product_id[..12], &r.market).await?;
++    let mut fields = offer(&catalog, r, chrono::Utc::now().timestamp())?;
++    store_events::emit("catalog", "passed");
++    store_events::emit("authentication", "started");
++    let binding = model::Request {context:r.context.clone(), store_id:r.store_id.clone(), title_id:r.title_id, msa_app_id:r.msa_app_id.clone(), products:vec![]};
++    let session = auth::Session::checkout(&binding, &tokens).await?;
++    store_events::emit("authentication", "passed");
++    fields["xToken"] = json!(session.checkout_token()); fields["expiresAt"] = json!(session.expires_at);
++    fields["market"] = json!(r.market); fields["locale"] = json!(r.language);
++    Ok(fields)
++}
++#[cfg(test)]
++mod tests {
++    use super::*;
++    fn request() -> Request {
++        Request { context:"a".repeat(64), operation:"b".repeat(32), action:"Start".into(),
++            store_id:"GAME1234EFGH".into(), product_id:"COIN1234EFGH".into(), title_id:1,
++            msa_app_id:"0000000012345678".into(), market:"AT".into(), language:"en-US".into() }
++    }
++    fn catalog() -> Value {
++        json!({"Product":{"ProductId":"COIN1234EFGH","MarketProperties":[{"RelatedProducts":[{"RelationshipType":"addOnParent","RelatedProductId":"GAME1234EFGH"}]}],
++            "DisplaySkuAvailabilities":[{"Sku":{"SkuId":"0001","SkuType":"full","Properties":{"IsTrial":false,"IsPreOrder":false,"IsBundle":false}},
++            "Availabilities":[{"AvailabilityId":"AVAIL1234567","Actions":["Purchase"],"Markets":["AT"],"Conditions":{"StartDate":"2000-01-01T00:00:00Z","EndDate":"2099-01-01T00:00:00Z","ClientConditions":{"AllowedPlatforms":[{"PlatformName":"Windows.Desktop"}]}}}]}]}})
++    }
++    #[test] fn selects_only_an_exact_unambiguous_live_desktop_offer() {
++        let r=request(); let v=catalog();let now=1800000000;
++        assert_eq!(offer(&v,&r,now).unwrap()["skuId"],"0001");
++        let mut wrong=r.clone();wrong.store_id="OTHR1234EFGH".into();assert!(offer(&v,&wrong,now).is_err());
++        wrong=r.clone();wrong.market="DE".into();assert!(offer(&v,&wrong,now).is_err());
++        wrong=r.clone();wrong.product_id+="/0002";assert!(offer(&v,&wrong,now).is_err());
++        assert!(offer(&v,&r,4102444800).is_err());
++        let mut trial=v.clone();trial["Product"]["DisplaySkuAvailabilities"][0]["Sku"]["Properties"]["IsTrial"]=json!(true);assert!(offer(&trial,&r,now).is_err());
++        let mut mobile=v.clone();mobile["Product"]["DisplaySkuAvailabilities"][0]["Availabilities"][0]["Conditions"]["ClientConditions"]["AllowedPlatforms"][0]["PlatformName"]=json!("Windows.Mobile");assert!(offer(&mobile,&r,now).is_err());
++        let mut ambiguous=v.clone();let a=ambiguous["Product"]["DisplaySkuAvailabilities"][0]["Availabilities"][0].clone();ambiguous["Product"]["DisplaySkuAvailabilities"][0]["Availabilities"].as_array_mut().unwrap().push(a);assert!(offer(&ambiguous,&r,now).is_err());
++    }
++    #[tokio::test] async fn completed_operation_cannot_start_again_or_change_product() {
++        let r=request();let tokens=Arc::new(TokenManager::with_memory());
++        let mut broker=Broker {job:None,completed:Some((r.clone(),"Succeeded"))};
++        assert_eq!(broker.handle(r.clone(),tokens.clone()).await,encode("Succeeded"));
++        let mut other=r.clone();other.product_id="OTHR1234EFGH".into();assert_eq!(broker.handle(other,tokens.clone()).await,encode("InvalidRequest"));
++        let mut other=r.clone();other.market="DE".into();assert_eq!(broker.handle(other,tokens.clone()).await,encode("InvalidRequest"));
++        let mut unknown=r;unknown.operation="c".repeat(32);unknown.action="Poll".into();assert_eq!(broker.handle(unknown,tokens).await,encode("InvalidRequest"));
++    }
++    #[tokio::test] async fn forced_timeout_is_not_cached_as_user_cancellation() {
++        let r=request();
++        let child=Command::new("/bin/true").kill_on_drop(true).spawn().unwrap();
++        let mut broker=Broker{job:Some(Job{request:r.clone(),child,started:Instant::now(),expires_at:4102444800,_permit:Permit}),completed:None};
++        broker.stop("Timeout");
++        assert_eq!(broker.handle(r,Arc::new(TokenManager::with_memory())).await,encode("Timeout"));
++    }
++    #[test] fn closed_result_protocol() {
++        assert_eq!(completion(br#"{"status":"Succeeded"}"#), "Error");
++        assert_eq!(completion(br#"{"status":"Succeeded","orderId":"1234-abcd"}"#), "Succeeded");
++        assert_eq!(completion(br#"{"status":"Cancelled"}"#), "Cancelled");
++        assert_eq!(completion(br#"{"status":"Expired"}"#), "Expired");
++        assert_eq!(completion(br#"{"status":"Pending"}"#), "Error");
++        assert_eq!(completion(b"not json"), "Error");
++    }
++    #[test] fn invalid_xml_never_starts_ui() {
++        for request in [b"<Other/>".as_slice(), b"<!DOCTYPE x><StorePurchaseRequest/>", b"<StorePurchaseRequest/>\0\0"] { assert!(parse(request).is_err()); }
++    }
++}
+diff --git c/crates/xodus/Cargo.toml w/crates/xodus/Cargo.toml
+index fa1033c..a780402 100644
+--- c/crates/xodus/Cargo.toml
++++ w/crates/xodus/Cargo.toml
+@@ -21,0 +22,2 @@ keyring-core = { version = "1.0.0", features = ["sample"] }
++ron = { version = "0.12.0", optional = true }
++tempfile = { version = "3.27.0", optional = true }
+@@ -56 +58 @@ prost-build = "0.14.4"
+-key-chain-file = []
++key-chain-file = ["dep:ron", "dep:tempfile"]
+diff --git c/crates/xodus/proto/xodus/common.proto w/crates/xodus/proto/xodus/common.proto
+index c7741a6..7a95130 100644
+--- c/crates/xodus/proto/xodus/common.proto
++++ w/crates/xodus/proto/xodus/common.proto
+@@ -10,0 +11,16 @@ enum XodusMessageType {
++    STORE_ACCOUNT_CONTEXT_REQUEST=5;
++    STORE_ACCOUNT_CONTEXT_RESPONSE=6;
++    STORE_GAME_LICENSE_REQUEST=7;
++    STORE_GAME_LICENSE_RESPONSE=8;
++    // 9/10 are reserved for a future complete entitlement inventory.
++    reserved 9, 10;
++    STORE_LICENSE_TOKEN_REQUEST=11;
++    STORE_LICENSE_TOKEN_RESPONSE=12;
++    STORE_COLLECTIONS_REQUEST=13;
++    STORE_COLLECTIONS_RESPONSE=14;
++    STORE_INVENTORY_REQUEST=15;
++    STORE_INVENTORY_RESPONSE=16;
++    STORE_PACKAGE_UPDATES_REQUEST=17;
++    STORE_PACKAGE_UPDATES_RESPONSE=18;
++    STORE_PURCHASE_REQUEST=19;
++    STORE_PURCHASE_RESPONSE=20;
+diff --git c/crates/xodus/src/api/live/mod.rs w/crates/xodus/src/api/live/mod.rs
+index f9abc32..ec4fdf6 100644
+--- c/crates/xodus/src/api/live/mod.rs
++++ w/crates/xodus/src/api/live/mod.rs
+@@ -79 +79 @@ pub async fn exchange_device_token(
+-        b => unimplemented!("Exchange token supports only singular token right now {b:?}"),
++        _ => unimplemented!("Exchange token returned an unsupported response"),
+diff --git c/crates/xodus/src/models/xgameruntime/xuser.rs w/crates/xodus/src/models/xgameruntime/xuser.rs
+index 10d2158..6b6ec06 100644
+--- c/crates/xodus/src/models/xgameruntime/xuser.rs
++++ w/crates/xodus/src/models/xgameruntime/xuser.rs
+@@ -20,0 +21,36 @@ pub struct MSATokenResponse {
++
++impl MSATokenResponse {
++    /// Broker-issued RPS tickets only. Device failure does not turn a valid
++    /// user ticket into an invented device identity; native title auth sees
++    /// an explicitly unavailable device ticket instead.
++    pub fn validated(token: String, expiry: i64, device: Option<(String, i64)>, now: i64) -> Result<Self, &'static str> {
++        if token.is_empty() || token.len() > 49152 || expiry <= now {
++            return Err("Invalid or expired MSA user ticket");
++        }
++        let (device_rps, device_expiry) = device
++            .filter(|(token, expiry)| !token.is_empty() && token.len() <= 49152 && *expiry > now)
++            .unwrap_or_default();
++        Ok(Self { token, expiry, device_rps, device_expiry })
++    }
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++    #[test]
++    fn msa_device_fields_are_exact_and_expiry_bound() {
++        let response = MSATokenResponse::validated("synthetic-user<&".into(), 200,
++            Some(("synthetic-device<&".into(), 201)), 100).unwrap();
++        let xml = quick_xml::se::to_string(&response).unwrap();
++        assert!(xml.contains("<DeviceRps>synthetic-device&lt;&amp;</DeviceRps>"));
++        assert!(xml.contains("<DeviceExpiry>201</DeviceExpiry>"));
++        assert!(xml.contains("<Expiry>200</Expiry>"));
++        for device in [None, Some(("".into(), 200)), Some(("synthetic".into(), 100)), Some(("synthetic".into(), 99))] {
++            let response=MSATokenResponse::validated("synthetic-user".into(),200,device,100).unwrap();
++            assert!(response.device_rps.is_empty());
++            assert_eq!(response.device_expiry,0);
++        }
++        assert!(MSATokenResponse::validated("synthetic".into(),100,None,100).is_err());
++        assert!(MSATokenResponse::validated("".into(),200,None,100).is_err());
++    }
++}
+diff --git c/crates/xodus/src/secrets.rs w/crates/xodus/src/secrets.rs
+index dba6b2f..e56ec8a 100644
+--- c/crates/xodus/src/secrets.rs
++++ w/crates/xodus/src/secrets.rs
+@@ -2,0 +3,3 @@ pub static SERVICE_NAME: &str = "Xodus Service";
++#[cfg(feature = "key-chain-file")]
++mod file;
++
+@@ -6,6 +9,5 @@ pub fn init_secrets() -> Result<(), keyring_core::Error> {
+-        let store = keyring_core::sample::Store::new_with_backing(
+-            secrets_backing_file()
+-                .to_str()
+-                .expect("Invalid secrets backing path"),
+-        )?;
+-        keyring_core::set_default_store(store);
++        // File operations reload and commit under a process-shared lock. Never
++        // retain a sample Store with a backing path: its Drop would overwrite
++        // changes made by another CLI or service process.
++        file::initialize(&secrets_backing_file())
++            .map_err(|err| keyring_core::Error::PlatformFailure(Box::new(err)))?;
+@@ -38,2 +40,14 @@ pub fn init_secrets() -> Result<(), keyring_core::Error> {
+-pub fn get_entry(user: &str) -> Result<keyring_core::Entry, keyring_core::Error> {
+-    keyring_core::Entry::new(SERVICE_NAME, user)
++pub(crate) fn with_entry<T>(
++    user: &str,
++    write: bool,
++    operation: impl FnOnce(&keyring_core::Entry) -> Result<T, crate::tokens::store::TokenStoreError>,
++) -> Result<T, crate::tokens::store::TokenStoreError> {
++    #[cfg(feature = "key-chain-file")]
++    {
++        file::with_entry(&secrets_backing_file(), user, write, operation)
++    }
++    #[cfg(not(feature = "key-chain-file"))]
++    {
++        let _ = write;
++        operation(&keyring_core::Entry::new(SERVICE_NAME, user)?)
++    }
+@@ -42,0 +57 @@ pub fn destroy_secrets() {
++    #[cfg(not(feature = "key-chain-file"))]
+@@ -47,0 +63,3 @@ fn secrets_backing_file() -> std::path::PathBuf {
++    if let Some(path) = std::env::var_os("XODUS_KEYRING_FILE") {
++        return path.into();
++    }
+@@ -53,0 +72,51 @@ fn secrets_backing_file() -> std::path::PathBuf {
++
++#[cfg(feature = "key-chain-file")]
++fn prepare_private_backing_file(path: &std::path::Path) -> std::io::Result<()> {
++    use std::io::Write;
++
++    validate_private_keyring_dir(path)?;
++    let mut options = std::fs::OpenOptions::new();
++    options.write(true).create_new(true);
++    #[cfg(unix)]
++    {
++        use std::os::unix::fs::OpenOptionsExt;
++        options.mode(0o600);
++    }
++    match options.open(path) {
++        Ok(mut file) => file.write_all(b"{}")?,
++        Err(err) if err.kind() == std::io::ErrorKind::AlreadyExists => {
++            let metadata = std::fs::symlink_metadata(path)?;
++            if !metadata.is_file() {
++                return Err(std::io::Error::other("Keyring must be a regular file"));
++            }
++            #[cfg(unix)]
++            {
++                use std::os::unix::fs::PermissionsExt;
++                std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o600))?;
++            }
++        }
++        Err(err) => return Err(err),
++    }
++    Ok(())
++}
++
++#[cfg(feature = "key-chain-file")]
++fn validate_private_keyring_dir(path: &std::path::Path) -> std::io::Result<()> {
++    if !path.is_absolute() {
++        return Err(std::io::Error::other("XODUS_KEYRING_FILE must be an absolute path"));
++    }
++    let parent = path.parent().ok_or_else(|| std::io::Error::other("Missing keyring directory"))?;
++    let parent_metadata = std::fs::symlink_metadata(parent)?;
++    if !parent_metadata.is_dir() {
++        return Err(std::io::Error::other("Keyring parent must be a real directory"));
++    }
++    #[cfg(unix)]
++    {
++        use std::os::unix::fs::PermissionsExt;
++        if parent_metadata.permissions().mode() & 0o777 != 0o700 {
++            return Err(std::io::Error::other("Keyring directory must have mode 0700"));
++        }
++    }
++
++    Ok(())
++}
+diff --git c/crates/xodus/src/secrets/file.rs w/crates/xodus/src/secrets/file.rs
+new file mode 100644
+index 0000000..ac12432
+--- /dev/null
++++ w/crates/xodus/src/secrets/file.rs
+@@ -0,0 +1,88 @@
++use std::fs::{File, OpenOptions};
++use std::io::Write;
++use std::path::Path;
++use std::sync::Arc;
++
++use keyring_core::sample::credential::CredId;
++use keyring_core::sample::{CredKey, Store};
++
++use crate::tokens::store::TokenStoreError;
++
++pub(super) fn initialize(path: &Path) -> Result<(), TokenStoreError> {
++    let _lock = lock(path)?;
++    super::prepare_private_backing_file(path)?;
++    // Check format without retaining a writable process-local snapshot.
++    let _ = Store::load_credentials(path_text(path)?)?;
++    Ok(())
++}
++
++pub(super) fn with_entry<T>(
++    path: &Path,
++    user: &str,
++    write: bool,
++    operation: impl FnOnce(&keyring_core::Entry) -> Result<T, TokenStoreError>,
++) -> Result<T, TokenStoreError> {
++    let _lock = lock(path)?;
++    super::prepare_private_backing_file(path)?;
++    let store = Store::new_internal(Store::load_credentials(path_text(path)?)?, None);
++    let entry = keyring_core::Entry::new_with_credential(Arc::new(CredKey {
++        store: store.clone(),
++        id: CredId {
++            service: super::SERVICE_NAME.to_string(),
++            user: user.to_string(),
++        },
++        uuid: None,
++    }));
++    let result = operation(&entry)?;
++    if write {
++        let content = ron::ser::to_string_pretty(&store.creds, ron::ser::PrettyConfig::new())
++            .map_err(|_| std::io::Error::other("Unable to serialize keyring"))?;
++        let parent = path.parent().expect("validated keyring parent");
++        let mut temporary = tempfile::NamedTempFile::new_in(parent)?;
++        temporary.write_all(content.as_bytes())?;
++        temporary.as_file().sync_all()?;
++        temporary.persist(path).map_err(|err| err.error)?;
++        #[cfg(unix)]
++        File::open(parent)?.sync_all()?;
++    }
++    Ok(result)
++}
++
++fn path_text(path: &Path) -> std::io::Result<&str> {
++    path.to_str().ok_or_else(|| std::io::Error::other("Keyring path is not UTF-8"))
++}
++
++fn lock(path: &Path) -> std::io::Result<File> {
++    super::validate_private_keyring_dir(path)?;
++    // Lock a stable sidecar inode: the data file is replaced atomically.
++    let mut name = path.as_os_str().to_os_string();
++    name.push(".lock");
++    let lock_path = std::path::PathBuf::from(name);
++    let mut options = OpenOptions::new();
++    options.read(true).write(true).create_new(true);
++    #[cfg(unix)]
++    {
++        use std::os::unix::fs::OpenOptionsExt;
++        options.mode(0o600);
++    }
++    let file = match options.open(&lock_path) {
++        Ok(file) => file,
++        Err(err) if err.kind() == std::io::ErrorKind::AlreadyExists => {
++            if !std::fs::symlink_metadata(&lock_path)?.is_file() {
++                return Err(std::io::Error::other("Keyring lock must be a regular file"));
++            }
++            OpenOptions::new().read(true).write(true).open(&lock_path)?
++        }
++        Err(err) => return Err(err),
++    };
++    #[cfg(unix)]
++    {
++        use std::os::unix::fs::PermissionsExt;
++        file.set_permissions(std::fs::Permissions::from_mode(0o600))?;
++    }
++    file.lock()?;
++    Ok(file)
++}
++
++#[cfg(test)]
++mod tests;
+diff --git c/crates/xodus/src/secrets/file/tests.rs w/crates/xodus/src/secrets/file/tests.rs
+new file mode 100644
+index 0000000..54a990b
+--- /dev/null
++++ w/crates/xodus/src/secrets/file/tests.rs
+@@ -0,0 +1,123 @@
++use super::*;
++use crate::models::secrets::{Token, TokenStore};
++use crate::tokens::TokenManager;
++
++fn private_directory() -> tempfile::TempDir {
++    let directory = tempfile::tempdir().unwrap();
++    #[cfg(unix)]
++    {
++        use std::os::unix::fs::PermissionsExt;
++        std::fs::set_permissions(directory.path(), std::fs::Permissions::from_mode(0o700)).unwrap();
++    }
++    directory
++}
++
++fn read(path: &Path, key: &str) -> Vec<u8> {
++    with_entry(path, key, false, |entry| Ok(entry.get_secret()?)).unwrap()
++}
++
++#[test]
++fn legacy_format_round_trip_and_failed_update() {
++    let directory = private_directory();
++    let path = directory.path().join("synthetic.ron");
++    initialize(&path).unwrap();
++    {
++        let store = Store::new_with_backing(path.to_str().unwrap()).unwrap();
++        let entry = keyring_core::Entry::new_with_credential(Arc::new(CredKey {
++            store,
++            id: CredId {
++                service: crate::secrets::SERVICE_NAME.to_string(),
++                user: "synthetic".to_string(),
++            },
++            uuid: None,
++        }));
++        entry.set_secret(b"before").unwrap();
++    }
++    assert_eq!(read(&path, "synthetic"), b"before");
++    let failed: Result<(), TokenStoreError> = with_entry(&path, "synthetic", true, |entry| {
++        entry.set_secret(b"must-not-commit")?;
++        Err(TokenStoreError::NotFound)
++    });
++    assert!(failed.is_err());
++    assert_eq!(read(&path, "synthetic"), b"before");
++    with_entry(&path, "synthetic", true, |entry| Ok(entry.set_secret(b"after")?)).unwrap();
++    let loaded = Store::load_credentials(path.to_str().unwrap()).unwrap();
++    assert_eq!(loaded.len(), 1);
++    assert_eq!(read(&path, "synthetic"), b"after");
++    assert_eq!(std::fs::read_dir(directory.path()).unwrap().count(), 2);
++}
++
++#[test]
++fn parallel_processes_preserve_all_scope_updates() {
++    let directory = private_directory();
++    let path = directory.path().join("synthetic.ron");
++    initialize(&path).unwrap();
++    let executable = std::env::current_exe().unwrap();
++    let mut children = Vec::new();
++    for writer in 0..4 {
++        children.push(std::process::Command::new(&executable)
++            .args(["--ignored", "--exact", "secrets::file::tests::child_writer", "--test-threads=1"])
++            .env("XODUS_KEYRING_FILE", &path)
++            .env("XODUS_SYNTHETIC_TEST_WRITER", writer.to_string())
++            .stdout(std::process::Stdio::null())
++            .spawn()
++            .unwrap());
++    }
++    for mut child in children {
++        assert!(child.wait().unwrap().success());
++    }
++    let tokens: TokenStore = serde_json::from_slice(&read(&path, "user-tokens")).unwrap();
++    assert_eq!(tokens.tokens.len(), 100);
++    for writer in 0..4 {
++        for iteration in 0..25 {
++            let key = format!("synthetic-{writer}-{iteration}");
++            assert!(matches!(tokens.tokens.get(&key), Some(Token::Compact(value)) if value == &key));
++        }
++    }
++    #[cfg(unix)]
++    {
++        use std::os::unix::fs::PermissionsExt;
++        assert_eq!(std::fs::metadata(directory.path()).unwrap().permissions().mode() & 0o777, 0o700);
++        for entry in std::fs::read_dir(directory.path()).unwrap() {
++            assert_eq!(entry.unwrap().metadata().unwrap().permissions().mode() & 0o777, 0o600);
++        }
++    }
++}
++
++#[test]
++#[ignore = "spawned by parallel_processes_preserve_all_scope_updates"]
++fn child_writer() {
++    let Ok(writer) = std::env::var("XODUS_SYNTHETIC_TEST_WRITER") else { return };
++    crate::secrets::init_secrets().unwrap();
++    let manager = TokenManager::with_keychain_and_memory();
++    for iteration in 0..25 {
++        let key = format!("synthetic-{writer}-{iteration}");
++        manager.save_user_token(key.clone(), Token::Compact(key)).unwrap();
++        std::thread::yield_now();
++    }
++    // Exit without dropping stores: every successful save must already persist.
++    std::process::exit(0);
++}
++
++#[cfg(unix)]
++#[test]
++fn rejects_permissive_directory_and_symlinks() {
++    use std::os::unix::fs::{PermissionsExt, symlink};
++    let directory = private_directory();
++    let path = directory.path().join("synthetic.ron");
++    std::fs::set_permissions(directory.path(), std::fs::Permissions::from_mode(0o755)).unwrap();
++    assert!(initialize(&path).is_err());
++    assert!(!path.exists());
++    std::fs::set_permissions(directory.path(), std::fs::Permissions::from_mode(0o700)).unwrap();
++    let target = directory.path().join("unrelated");
++    std::fs::write(&target, b"untouched").unwrap();
++    symlink(&target, &path).unwrap();
++    assert!(initialize(&path).is_err());
++    assert_eq!(std::fs::read(&target).unwrap(), b"untouched");
++    std::fs::remove_file(&path).unwrap();
++    let lock_path = directory.path().join("synthetic.ron.lock");
++    std::fs::remove_file(&lock_path).unwrap();
++    symlink(&target, &lock_path).unwrap();
++    assert!(initialize(&path).is_err());
++    assert_eq!(std::fs::read(&target).unwrap(), b"untouched");
++}
+diff --git c/crates/xodus/src/tokens/backend/keychain.rs w/crates/xodus/src/tokens/backend/keychain.rs
+index 6aa6cde..3937a17 100644
+--- c/crates/xodus/src/tokens/backend/keychain.rs
++++ w/crates/xodus/src/tokens/backend/keychain.rs
+@@ -7,6 +7 @@ impl TokenBackend for KeychainBackend {
+-        let entry = crate::secrets::get_entry(key)?;
+-        match entry.get_secret() {
+-            Ok(bytes) => Ok(Some(bytes)),
+-            Err(keyring_core::Error::NoEntry) => Ok(None),
+-            Err(e) => Err(e.into()),
+-        }
++        crate::secrets::with_entry(key, false, read_entry)
+@@ -16 +11 @@ impl TokenBackend for KeychainBackend {
+-        Ok(crate::secrets::get_entry(key)?.set_secret(value)?)
++        crate::secrets::with_entry(key, true, |entry| Ok(entry.set_secret(value)?))
+@@ -20 +15,19 @@ impl TokenBackend for KeychainBackend {
+-        Ok(crate::secrets::get_entry(key)?.delete_credential()?)
++        crate::secrets::with_entry(key, true, |entry| Ok(entry.delete_credential()?))
++    }
++
++    fn update(
++        &self,
++        key: &str,
++        update: &dyn Fn(Option<Vec<u8>>) -> Result<Vec<u8>, TokenStoreError>,
++    ) -> Result<(), TokenStoreError> {
++        crate::secrets::with_entry(key, true, |entry| {
++            Ok(entry.set_secret(&update(read_entry(entry)?)?)?)
++        })
++    }
++}
++
++fn read_entry(entry: &keyring_core::Entry) -> Result<Option<Vec<u8>>, TokenStoreError> {
++    match entry.get_secret() {
++        Ok(bytes) => Ok(Some(bytes)),
++        Err(keyring_core::Error::NoEntry) => Ok(None),
++        Err(err) => Err(err.into()),
+diff --git c/crates/xodus/src/tokens/device.rs w/crates/xodus/src/tokens/device.rs
+index ec363e4..80a5314 100644
+--- c/crates/xodus/src/tokens/device.rs
++++ w/crates/xodus/src/tokens/device.rs
+@@ -14 +14 @@ pub async fn ensure_device_credentials(client: &reqwest::Client, tokens: &TokenM
+-        Ok(license) if tokens.get_device_sts_token().is_err() => {
++        Ok(license) if !device_token_is_current(tokens.get_device_sts_token().ok().as_ref()) => {
+@@ -87,0 +88,45 @@ fn save_device_sts_token(
++
++// A persisted credential is not evidence that its STS ticket is still valid.
++// Reuse the device's existing identity/reauthentication path after expiry.
++fn device_token_is_current(token: Option<&crate::models::secrets::Token>) -> bool {
++    let Some(crate::models::secrets::Token::Legacy(token)) = token else {
++        return false;
++    };
++    chrono::DateTime::parse_from_rfc3339(&token.lifetime.expires)
++        .is_ok_and(|expiry| expiry.timestamp() > chrono::Utc::now().timestamp() + 60)
++}
++#[cfg(test)]
++mod resume_expiry_tests {
++    use super::*;
++    #[test]
++    fn device_sts_presence_does_not_hide_expiry() {
++        use crate::models::{
++            secrets::{LegacyToken, Token},
++            soap::Timestamp,
++        };
++        let token = |expires: &str| {
++            Token::Legacy(LegacyToken {
++                key_name: None,
++                token: String::new(),
++                binary_secret: None,
++                tpm_key: None,
++                lifetime: Timestamp {
++                    id: None,
++                    created: String::new(),
++                    expires: expires.into(),
++                },
++            })
++        };
++        assert!(!device_token_is_current(None));
++        assert!(!device_token_is_current(Some(&Token::Compact(
++            "synthetic".into()
++        ))));
++        assert!(!device_token_is_current(Some(&token(
++            "2000-01-01T00:00:00Z"
++        ))));
++        assert!(!device_token_is_current(Some(&token("bad"))));
++        assert!(device_token_is_current(Some(&token(
++            "2999-01-01T00:00:00Z"
++        ))));
++    }
++}
+diff --git c/crates/xodus/src/tokens/manager.rs w/crates/xodus/src/tokens/manager.rs
+index aeb9897..749b956 100644
+--- c/crates/xodus/src/tokens/manager.rs
++++ w/crates/xodus/src/tokens/manager.rs
+@@ -171,8 +171,10 @@ impl TokenManager {
+-        let mut tokens: HashMap<String, Token> = match backend.get(key)? {
+-            Some(bytes) if !bytes.is_empty() => {
+-                serde_json::from_slice::<TokenStore>(&bytes)?.tokens
+-            }
+-            _ => HashMap::new(),
+-        };
+-        tokens.insert(address, token);
+-        backend.set(key, &serde_json::to_vec(&TokenStore { tokens })?)
++        backend.update(key, &|bytes| {
++            let mut tokens: HashMap<String, Token> = match bytes {
++                Some(bytes) if !bytes.is_empty() => {
++                    serde_json::from_slice::<TokenStore>(&bytes)?.tokens
++                }
++                _ => HashMap::new(),
++            };
++            tokens.insert(address.clone(), token.clone());
++            Ok(serde_json::to_vec(&TokenStore { tokens })?)
++        })
+diff --git c/crates/xodus/src/tokens/store.rs w/crates/xodus/src/tokens/store.rs
+index 76d2329..d218ecb 100644
+--- c/crates/xodus/src/tokens/store.rs
++++ w/crates/xodus/src/tokens/store.rs
+@@ -6,0 +7,8 @@ pub trait TokenBackend: Send + Sync {
++
++    fn update(
++        &self,
++        key: &str,
++        update: &dyn Fn(Option<Vec<u8>>) -> Result<Vec<u8>, TokenStoreError>,
++    ) -> Result<(), TokenStoreError> {
++        self.set(key, &update(self.get(key)?)?)
++    }

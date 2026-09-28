@@ -79,7 +79,7 @@ def release_identity():
     paths = list(package.glob("*.py")) + [root / "scripts/install-launcher.py"]
     paths += list((package / "_fenix").glob("*.py"))
     ui = package / "ui" if (package / "ui").is_dir() else root / "ui"
-    paths += [ui / name for name in ("index.html", "app.js", "setup.js", "mods.js", "fenix.js", "updates.js", "launcher-updates.js", "notices.js", "cloud-saves.js", "i18n.js", "state.js",
+    paths += [ui / name for name in ("index.html", "app.js", "maintenance.js", "store-check.js", "setup.js", "mods.js", "fenix.js", "updates.js", "launcher-updates.js", "notices.js", "cloud-saves.js", "i18n.js", "state.js",
                                     "styles.css", "mark.svg", "flight-panorama.png", "flight-panorama-2020.png", "manrope-variable.woff2", "OFL-Manrope.txt")]
     resources = package / "resources"
     if resources.is_dir():
@@ -346,7 +346,17 @@ def open_interface(root, record, language=None):
 
 
 def start(state_dir, runtime=None, port=0, language=None):
-    root, record = ensure_service(state_dir, runtime, port)
+    root = state_directory(state_dir)
+    previous = verified_service(root)
+    update = request(previous, "/api/launcher-update") if previous else None
+    job = update.get("job") if isinstance(update, dict) else None
+    # Released launchers restart through --desktop. Their existing window is
+    # already waiting to reload, so suppress the extra window on that handoff.
+    reuse_window = (runtime is None and isinstance(update, dict) and update.get("pending_restart") is True
+                    and isinstance(job, dict) and job.get("operation") == "restart" and job.get("state") == "running")
+    root, record = ensure_service(root, runtime, (port or previous["port"]) if reuse_window else port)
     if record.get("update_pending"):
         print(COPY[language or "en"]["update"], file=sys.stderr)
+    if reuse_window:
+        return f'http://127.0.0.1:{record["port"]}'
     return open_interface(root, record, language)

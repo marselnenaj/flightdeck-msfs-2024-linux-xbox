@@ -1,5 +1,36 @@
 # Changes and release status
 
+## 0.1.7 — 28 September 2026
+
+[Download Flightdeck 0.1.7](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.7).
+
+- Add **Diagnostics → Check Store** to check installed components, saved sign-in,
+  catalog access, game licensing, owned content and local window display without
+  opening a purchase page.
+- Open Microsoft's Marketplace confirmation page in a dedicated window. Fix
+  blank or gray windows and use Microsoft's Xbox layout with a compact frame
+  that fits the available space.
+- Show loading progress and distinct connection, timeout and expired-session
+  errors. Keep failures visible until dismissed, support cancellation and allow
+  only one purchase dialog at a time, without automatic retries.
+- Improve owned-content queries for bundles, large libraries and fallback Store
+  languages. Keep Store-account checks tied to the active sign-in and handle
+  unrelated library items without rejecting the current game's content.
+- Include timestamped Store events and the component versions used at game
+  launch in diagnostics, excluding account data, product identifiers and raw logs.
+- Reuse the existing launcher window after an update or rollback, retaining its
+  local address and language. Handle update restarts from earlier releases
+  without opening a second window.
+- Update English and German guides with Store checks, purchase-dialog limits,
+  cloud-save behavior and the separate Fenix patch update process.
+
+Native components are rebuilt as **0.1.7**; the optional Fenix patch remains
+**0.1.0-preview.3**. The confirmation page and its layout have been checked in
+MSFS 2024 1.8.16.0. Automated checks cover dialog behavior, cancellation and
+message validation. Completed paid transactions, delivery of purchased content
+and layout across other systems remain unverified. Broader Marketplace
+inventory compatibility also requires testing.
+
 ## 0.1.6 — 26 September 2026
 
 [Download Flightdeck 0.1.6](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.6).

@@ -366,7 +366,15 @@ class BackendTests(unittest.TestCase):
             "[xodus-store-query] kind=4 hr=00000000 token=" + secrets[0],
             "[xodus-store-query] kind=6 hr=00000000 account=" + secrets[1],
             "[xodus-store-query] kind=7 hr=00000000",
-            "[xodus-store-query] kind=9 hr=00000000",
+            "[xodus-store-query] kind=8 hr=80004004 token=" + secrets[0],
+            "[xodus-store-query] kind=99 hr=00000000",
+            "[xodus-store-catalog] stage=inventory-mapping hr=80004001 account=" + secrets[1],
+            "[xodus-store-catalog] stage=inventory-mapping hr=80004001",
+            "[xodus-store-catalog] stage=page products=2 skus=3 hr=00000000 token=" + secrets[0],
+            "[xodus-store-catalog] stage=result hr=8007000E",
+            "[xodus-store-catalog] stage=" + secrets[1] + " hr=00000000",
+            "[xodus-store-catalog] stage=inventory hr=800040010",
+            "[xodus-store-catalog] stage=inventory-catalog account=" + secrets[1] + " hr=80004001",
             "xodus-wine-launch: wine_pid=123 exit_code=0 elapsed_seconds=12.5",
         ))
         run = self.write_log(log)
@@ -390,8 +398,15 @@ class BackendTests(unittest.TestCase):
             {"method": "XStoreQueryGameAndDlcPackageUpdatesAsync", "hresult": "80004001"},
             {"method": "XStoreQueryProductsAsync", "hresult": "00000000"},
             {"method": "XStoreShowPurchaseUIAsync", "hresult": "80004001"},
+            {"method": "XStoreShowPurchaseUIAsync", "hresult": "80004004"},
         ])
         self.assertEqual(result["summary"]["exit"], {"code": 0, "seconds": 12.5})
+        self.assertEqual(result["summary"]["context"]["diagnostics_schema"], 4)
+        self.assertEqual(result["summary"]["store_catalog"], [
+            {"stage": "inventory-mapping", "hresult": "80004001"},
+            {"stage": "page", "hresult": "00000000"},
+            {"stage": "result", "hresult": "8007000e"},
+        ])
         self.assertEqual((run / "game.log").read_bytes(), before)
 
     def test_diagnostics_choose_latest_valid_run_and_ignore_symlinks(self):

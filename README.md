@@ -20,11 +20,11 @@ Flightdeck installs and launches your **purchased Xbox PC / Microsoft Store copy
 of MSFS 2024 or 2020** on your Linux computer through Wine/Proton. Sign in with your
 Microsoft account, download the game and start it from one application.
 
-**Current release: [Flightdeck 0.1.6](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.6).**
-It adds selectable NVIDIA graphics modes, improved graphics diagnostics and
-installation maintenance with a reversible Wine environment reset.
+**Current release: [Flightdeck 0.1.7](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.7).**
+It adds a Store check, opens Microsoft's Marketplace confirmation dialog,
+improves owned-content queries and prevents duplicate launcher windows after updates.
 Update through **Updates → Flightdeck** or use the full installer.
-See [NVIDIA graphics](docs/graphics.md) and the [release history](docs/changelog.md).
+See [Marketplace scope](docs/marketplace-collections.md) and the [release history](docs/changelog.md).
 
 **Experimental.** MSFS 2024 has been tested on Linux, including cockpit access
 and takeoff. NVIDIA rendering and stability still require hardware validation;
@@ -79,7 +79,7 @@ is the fallback.
 - [Build your own components](BUILDING.md)
 
 `./install.sh` performs the same user-local installation from a terminal. Run
-it from a newer extracted package to update Flightdeck. In 0.1.1, opening the
+it from a newer extracted package to update Flightdeck. Opening the
 updated launcher also refreshes recognized managed runtime components while the
 game and setup are idle. Custom component sets and launch scripts are preserved.
 [Launcher and runtime updates](docs/install.md#update-and-rollback) are separate
@@ -111,6 +111,14 @@ Installing missing Linux system packages may require administrator rights.
 | **Diagnostics** | Export selected checks without raw game logs, account tokens or save contents. |
 | **Deutsch / English** | Switch the interface language; installer and command-line localization are available too. |
 
+Flightdeck 0.1.7 adds **Diagnostics → Check Store**, a purchase-free
+check of sign-in, catalog, licensing, library and local window display. Reports
+include Store event order and the native files recorded at game launch. See
+[Store diagnostics and scope](docs/marketplace-collections.md#check-store-without-a-purchase).
+The purchase dialog also reports connection and loading failures. Its display
+has been checked in MSFS 2024; completed purchases and delivery of purchased
+content remain unverified.
+
 Pausing may restart up to four unfinished files. Download recovery after a
 service or system restart is not implemented. Updates download the full Store
 base-game package; additional content remains managed by MSFS and each add-on's
@@ -138,7 +146,8 @@ installation; it does not replace your separate Community folder or saves.
 | **MSFS 2020 simulator** | Installation, updates and license checks are implemented. A startup disc prompt can occur; successful startup and complete-flight compatibility remain unconfirmed. |
 | **Local saves** | Persistence across restarts and local backup tested. |
 | **Free Store content** | Free-content downloads succeeded in a user test. |
-| **Owned Marketplace content** | Account-owned add-ons can be enumerated and supported Durable licenses use genuine signed grants. Full DLC coverage and the MSFS 2024 Aviator Upgrade remain unverified. Paid checkout and device-shared DLC rights are unsupported. [Scope](docs/marketplace-collections.md) |
+| **Owned Marketplace content** | Account-owned add-ons can be enumerated and supported Durable licenses use genuine signed grants. Full DLC coverage and the MSFS 2024 Aviator Upgrade remain unverified. [Scope](docs/marketplace-collections.md) |
+| **Marketplace purchases** | Microsoft's confirmation dialog opens and its display has been checked in MSFS 2024. Completed purchases and delivery of purchased content remain unverified. Device-shared DLC rights remain unsupported. [Scope](docs/marketplace-collections.md#purchase-dialog) |
 | **Multiplayer** | Online multiplayer reported working on Linux. Group invitations still need separate testing. |
 | **Xbox cloud saves** | Automatic start/exit sync, local backups and conflict recovery implemented. Native cloud read/write tested; cross-device gameplay verification remains pending. [Details](docs/cloud-saves.md) |
 | **FlyByWire A32NX** | MSFS 2024 Stable 2024.1.0 installed and recognized. In-game flight test remains open. |

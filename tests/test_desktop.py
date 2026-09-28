@@ -152,6 +152,31 @@ class DesktopTests(unittest.TestCase):
                 self.assertNotIn("shell", spawn.call_args.kwargs)
         self.assertEqual(stat.S_IMODE((self.root / "desktop-browser").stat().st_mode), 0o700)
 
+    def test_legacy_update_restart_keeps_the_existing_window_and_origin(self):
+        previous = self.record()
+        for pending in (False, True):
+            with self.subTest(update_pending=pending), \
+                 patch.object(desktop, "verified_service", return_value=previous), \
+                 patch.object(desktop, "request", return_value={"pending_restart": True,
+                     "job": {"operation": "restart", "state": "running"}}), \
+                 patch.object(desktop, "ensure_service", return_value=(self.root, {**previous, "update_pending": pending})) as ensure, \
+                 patch.object(desktop, "open_interface") as browser:
+                self.assertEqual(desktop.start(self.root), "http://127.0.0.1:43210")
+                ensure.assert_called_once_with(self.root, None, 43210)
+                browser.assert_not_called()
+
+    def test_normal_start_still_opens_a_window_without_an_active_ui_restart(self):
+        record = self.record()
+        for update in (None, {}, {"pending_restart": True},
+                       {"pending_restart": True, "job": {"operation": "install", "state": "complete"}},
+                       {"pending_restart": True, "job": {"operation": "restart", "state": "failed"}}):
+            with self.subTest(update=update), patch.object(desktop, "verified_service", return_value=record), \
+                 patch.object(desktop, "request", return_value=update), \
+                 patch.object(desktop, "ensure_service", return_value=(self.root, record)), \
+                 patch.object(desktop, "open_interface", return_value="opened") as browser:
+                self.assertEqual(desktop.start(self.root, language="de"), "opened")
+                browser.assert_called_once_with(self.root, record, "de")
+
     def test_browser_fallback_and_failure_are_explicit(self):
         with patch.object(desktop.shutil, "which", return_value=None), \
              patch.object(desktop.webbrowser, "open", return_value=True) as browser:

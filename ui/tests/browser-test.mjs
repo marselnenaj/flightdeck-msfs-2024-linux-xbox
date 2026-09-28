@@ -59,8 +59,9 @@ let launcherUnavailable=false,launcherBarrier=null,releaseLauncher=null,launcher
 
 let cloudData={available:true,mode:'download_and_import',sync_supported:false,can_check:true,can_download:true,can_prepare_import:true,can_import:false,can_cancel:false,plan:null,job:null};
 let cloudReplies=0,cloudUnavailable=false,cloudBarrier=null,releaseCloud=null,cloudWaiting=false;
+let storeCheck={job:null};
 let maintenance={job:null,can_restore:false};
-const files = new Set(['maintenance.js','launcher-updates.js','notices.js','fenix.js','cloud-saves.js','manrope-variable.woff2','updates.js','mods.js','index.html','styles.css','app.js','setup.js','state.js','i18n.js','mark.svg','flight-panorama.png','flight-panorama-2020.png']);
+const files = new Set(['store-check.js','maintenance.js','launcher-updates.js','notices.js','fenix.js','cloud-saves.js','manrope-variable.woff2','updates.js','mods.js','index.html','styles.css','app.js','setup.js','state.js','i18n.js','mark.svg','flight-panorama.png','flight-panorama-2020.png']);
 const server = createServer(async (req,res) => {
   const url = new URL(req.url, 'http://localhost');
   if (url.pathname.startsWith('/api/')) {
@@ -68,6 +69,7 @@ const server = createServer(async (req,res) => {
     res.setHeader('Content-Type','application/json'); res.setHeader('Cache-Control','no-store');
     if (apiUnavailable) {res.writeHead(503); res.end(JSON.stringify({ok:false,error:'Fixture offline'}));return;}
     if (req.method === 'GET') {
+      if (url.pathname === '/api/store-check') {res.end(JSON.stringify(storeCheck));return;}
       if (url.pathname === '/api/maintenance') {res.end(JSON.stringify(maintenance));return;}
       if (url.pathname === '/api/status') {if(statusBarrier){statusWaiting=true;await statusBarrier;}res.end(JSON.stringify({...status,runtime:{...status.runtime,checks:localizeChecks(status.runtime.checks,language)}}));return;}
       if (url.pathname === '/api/setup/discover') {res.end(JSON.stringify({ok:true,runtimes:discovered,checked_count:discovered.length,limited:false}));return;}
@@ -82,7 +84,7 @@ const server = createServer(async (req,res) => {
       if (url.pathname === '/api/cloud-saves') {if(cloudBarrier){cloudWaiting=true;await cloudBarrier;}cloudReplies++;if(cloudUnavailable){res.writeHead(404);res.end(JSON.stringify({ok:false,error:'Synthetic cloud component unavailable'}));return;}res.end(JSON.stringify({...cloudData,automatic:status.cloud}));return;}
       if (url.pathname === '/api/fenix') {res.end(JSON.stringify({...fenix,runtime_path:status.runtime.path,busy:status.game.state!=='stopped',can_change:fenix.can_change&&status.game.state==='stopped'}));return;}
       if (url.pathname === '/api/mods') {if(modsUnavailable){res.writeHead(503);res.end(JSON.stringify({ok:false,error:'Synthetic inventory unavailable'}));return;}res.end(JSON.stringify(mods));return;}
-      if (url.pathname === '/api/diagnostics') {res.end(JSON.stringify({summary:{Runtime:'Bereit',Speichermodus:'Lokal',Experimentell:true,store_calls:[{method:'XStoreShowPurchaseUIAsync',hresult:'80004001'}],cloud_sync:{state:'attention',phase:'after_exit',error_code:'transport',error_details:{http_status:503}},graphics:{status:'ready',session:'wayland',devices:[{name:'NVIDIA GeForce RTX 4060',vendor_id:4318,type:2,api_version:'1.3.280',driver_version:'580.126.9.0'}]}},checks,generated_at:'2026-09-17T17:00:00Z',csrf_token:csrf,private_log:'MUST-NOT-EXPORT'}));return;}
+      if (url.pathname === '/api/diagnostics') {res.end(JSON.stringify({summary:{Runtime:'Bereit',Speichermodus:'Lokal',Experimentell:true,store_calls:[{method:'XStoreShowPurchaseUIAsync',hresult:'80004001'}],store_catalog:[{stage:'inventory-mapping',hresult:'80004001'}],store_session:{components_at_launch:null,events:[{time_ms:1790540000000,phase:'checkout_ready',outcome:'passed'},{time_ms:1790540001000,phase:'complete',outcome:'cancelled'}],partial:true},store_check:storeCheck.job,cloud_sync:{state:'attention',phase:'after_exit',error_code:'transport',error_details:{http_status:503}},graphics:{status:'ready',session:'wayland',devices:[{name:'NVIDIA GeForce RTX 4060',vendor_id:4318,type:2,api_version:'1.3.280',driver_version:'580.126.9.0'}]}},checks,generated_at:'2026-09-17T17:00:00Z',csrf_token:csrf,private_log:'MUST-NOT-EXPORT'}));return;}
     } else if (req.method === 'POST') {
       let body = ''; for await (const chunk of req) body += chunk;
       if(url.pathname==='/api/updates/check-startup') {
@@ -106,6 +108,16 @@ const server = createServer(async (req,res) => {
       }
 
       if (req.headers['x-flightdeck-token'] !== csrf) {res.writeHead(403);res.end(JSON.stringify({ok:false,error:'Missing fixture CSRF'}));return;}
+      if (url.pathname === '/api/store-check/start') {
+        assert.deepEqual(JSON.parse(body),{});
+        storeCheck={job:{id:'store-check-fixture',state:'running',started_at:'2026-09-27T20:00:00Z',finished_at:null,components:null,steps:['runtime','account','catalog','license','library','window'].map(stage=>({stage,state:'pending',code:'checking'}))}};
+        status.setup={busy:true};res.end(JSON.stringify({ok:true,...storeCheck}));return;
+      }
+      if (url.pathname === '/api/store-check/cancel') {
+        assert.deepEqual(JSON.parse(body),{job_id:storeCheck.job.id});
+        storeCheck.job={...storeCheck.job,state:'cancelled',finished_at:'2026-09-27T20:00:01Z',steps:storeCheck.job.steps.map(row=>({...row,state:'cancelled',code:'cancelled'}))};
+        status.setup={busy:false};res.end(JSON.stringify({ok:true,...storeCheck}));return;
+      }
       if (failNext) {failNext = false;res.writeHead(400);res.end(JSON.stringify({ok:false,error:'<img src=x onerror="window.injected=1"> Backend-Fehler'}));return;}
       if (url.pathname === '/api/graphics') {
         const data=JSON.parse(body);
@@ -227,7 +239,7 @@ try {
   socket.addEventListener('message',event=>{
     const data=JSON.parse(event.data);
     if(data.id){const entry=pending.get(data.id);pending.delete(data.id);if(data.error)entry.reject(new Error(JSON.stringify(data.error)));else entry.resolve(data.result);}
-    if(data.method==='Runtime.exceptionThrown')errors.push(data.params.exceptionDetails.text);
+    if(data.method==='Runtime.exceptionThrown')errors.push(data.params.exceptionDetails.exception?.description ?? data.params.exceptionDetails.text);
     if(data.method==='Runtime.consoleAPICalled'&&['warning','error','assert'].includes(data.params.type))consoleIssues.push(data.params.type);
     if(data.method==='Network.requestWillBeSent' && ![...allowedOrigins].some(origin=>data.params.request.url.startsWith(origin+'/')) && !data.params.request.url.startsWith('blob:'))externalRequests.push(data.params.request.url);
   });
@@ -913,15 +925,30 @@ try {
   releaseCloud();cloudBarrier=null;cloudWaiting=false;await until(()=>evaluate(`!document.getElementById('cloud-refresh').disabled`),'Runtime-switch request did not settle');
   assert.equal(posts.filter(p=>p.path==='/api/cloud-saves/check').length,cloudPostCount);results.push('Runtime switch during a pending cloud click prevents posting stale intent');
   await call('Emulation.setDeviceMetricsOverride',{width:1536,height:1024,deviceScaleFactor:1,mobile:false});await language('de');
-  await route('diagnostics');await click('diagnostic-refresh');
+  await route('diagnostics');
+  await until(()=>evaluate("!document.getElementById('store-check-start').disabled"),'Store check should be available');
+  assert.equal(posts.filter(p=>p.path==='/api/store-check/start').length,0);results.push('Opening diagnostics does not initiate Store requests');
+  await click('store-check-start');
+  await until(()=>evaluate("!document.getElementById('store-check-cancel').hidden"),'Store check progress missing');
+  await check('Store check reserves mutations and allows cancellation',`document.getElementById('launch-button').disabled && document.getElementById('store-check-start').disabled && !document.getElementById('store-check-cancel').disabled`);
+  await click('store-check-cancel');
+  await until(()=>evaluate("document.getElementById('store-check-status').textContent.includes('abgebrochen')"),'Store check cancellation missing');
+  storeCheck.job={...storeCheck.job,state:'failed',steps:storeCheck.job.steps.map(row=>({...row,state:row.stage==='account'?'failed':'passed',code:row.stage==='account'?'expired':row.stage==='window'?'visible':'verified'}))};
+  await refresh("true");
+  await until(()=>evaluate("document.getElementById('store-check-steps').textContent.includes('abgelaufen')"),'Expired Store sign-in detail missing');
+  await language('en');await check('Store check messages change language',`document.getElementById('store-check-steps').textContent.includes('sign-in has expired')`);await screenshot('store-check-en.png');await language('de');
+  await click('diagnostic-refresh');
   await until(()=>evaluate(`!document.getElementById('diagnostic-download').disabled`),'Diagnostics unavailable');
   await check('Diagnostic export excludes status/CSRF/extra fields',`!document.getElementById('diagnostic-json').textContent.includes(${JSON.stringify(csrf)}) && !document.getElementById('diagnostic-json').textContent.includes('MUST-NOT-EXPORT')`);
   await check('Store failures appear as method and HRESULT without product or account details',`document.getElementById('diagnostic-summary').textContent.includes('Store-API-Aufrufe') && document.getElementById('diagnostic-summary').textContent.includes('XStoreShowPurchaseUIAsync') && document.getElementById('diagnostic-summary').textContent.includes('80004001')`);
+  await check('Store timeline summary distinguishes unknown launch components and partial history',`document.getElementById('diagnostic-summary').textContent.includes('2 Store-Ereignisse') && document.getElementById('diagnostic-summary').textContent.includes('dieser Spielsitzung unbekannt') && document.getElementById('diagnostic-summary').textContent.includes('nur einen Ausschnitt')`);
+  await check('Marketplace diagnostic stages identify inventory mapping failures',`document.getElementById('diagnostic-summary').textContent.includes('Marketplace-Abfragen') && document.getElementById('diagnostic-summary').textContent.includes('inventory-mapping')`);
   await check('Graphics and sync diagnostics expose the GPU and numeric failure',`document.getElementById('diagnostic-summary').textContent.includes('Grafik und Vulkan') && document.getElementById('diagnostic-summary').textContent.includes('NVIDIA GeForce RTX 4060') && document.getElementById('diagnostic-summary').textContent.includes('Xbox-Cloud-Abgleich') && document.getElementById('diagnostic-summary').textContent.includes('503')`);
   await call('Browser.setDownloadBehavior',{behavior:'allow',downloadPath:join(temp,'downloads')});await click('diagnostic-download');
   await until(async()=>{try{return(await readdir(join(temp,'downloads'))).includes('flightdeck-diagnose.json');}catch{return false;}},'Download missing');
   const exported=JSON.parse(await readFile(join(temp,'downloads/flightdeck-diagnose.json'),'utf8'));
   assert.deepEqual(Object.keys(exported),['summary','checks','generated_at']);results.push('Actual JSON download is safe report only');
+  assert.deepEqual(exported.summary.store_catalog,[{stage:'inventory-mapping',hresult:'80004001'}]);
   assert.equal(exported.summary.cloud_sync.error_details.http_status,503);assert.equal(exported.summary.graphics.devices[0].name,'NVIDIA GeForce RTX 4060');
   await screenshot('diagnostics-desktop.png');
   await call('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});await check('GPU and cloud diagnostics fit the mobile viewport',`document.documentElement.scrollWidth<=innerWidth`);await screenshot('diagnostics-mobile.png');
@@ -1065,8 +1092,12 @@ try {
   await click('launcher-update-restart');
   await until(()=>evaluate(`document.getElementById('launcher-update-error').textContent==='Synthetic launcher restart failed' && !document.getElementById('launcher-update-restart').disabled`),'Failed launcher restart did not allow retry');
   results.push('Failed launcher restart recovers from waiting and offers an explicit retry');
+  const launcherTargets=async()=>(await call('Target.getTargets')).targetInfos.filter(t=>t.type==='page').map(t=>t.targetId).sort();
+  const targetsBeforeRestart=await launcherTargets();
   await click('launcher-update-restart');
   await until(()=>evaluate(`document.getElementById('launcher-update-installed')?.textContent==='0.1.5' && !document.getElementById('launcher-update-rollback-area')?.hidden`),'Restart did not load the installed version');
+  assert.deepEqual(await launcherTargets(),targetsBeforeRestart);results.push('Successful update reloads the same browser page without opening another target');
+  await screenshot('launcher-update-restarted.png');
   await evaluate(`document.getElementById('launcher-update-rollback-area').open=true`);
   const beforeLauncherRollback=launcherPosts().length;
   await click('launcher-update-rollback');await check('Launcher rollback first asks inline',`!document.getElementById('launcher-update-rollback-confirm').hidden`);
@@ -1115,7 +1146,7 @@ try {
   await writeFile(join(artifacts,'browser-results.json'),JSON.stringify({passed:results.length,checks:results,method:'Isolated Chromium CDP, synthetic API mutations and real empty backend reads',viewport:{desktop:[1536,1024],mobile:[390,844]},realRuntimeActions:false},null,2)+'\n');
   console.log(`PASS ${results.length} browser checks; screenshots: ${artifacts}`);
 } catch(error) {
-  console.error(error.stack);console.error(chromeErrors.slice(-2000));process.exitCode=1;
+  console.error(error.stack);console.error(JSON.stringify(errors));console.error(chromeErrors.slice(-2000));process.exitCode=1;
 } finally {
   releaseLauncher?.();releaseCloud?.();releaseUpdate?.();releaseStatus?.();socket?.close();chrome.kill('SIGTERM');realBackend?.kill('SIGTERM');
   await new Promise(resolve=>server.close(resolve));

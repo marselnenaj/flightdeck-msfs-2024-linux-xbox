@@ -13,6 +13,8 @@ import re
 
 # Source messages also serve as stable catalog keys; additions must include EN.
 CATALOG = {
+    "Eine Store-Prüfung läuft bereits.": "A Store check is already running.",
+    "Diese Store-Prüfung ist nicht mehr aktiv.": "This Store check is no longer active.",
     'Die Grafikeinstellungen sind ungültig. Bitte unter Einrichtung erneut speichern.': 'The graphics settings are invalid. Save them again under Setup.',
     'Die ausgewählte Installation hat sich geändert. Bitte den Status neu laden.': 'The selected installation has changed. Reload the status.',
     'Bitte einen gültigen NVIDIA-Modus auswählen.': 'Select a valid NVIDIA mode.',

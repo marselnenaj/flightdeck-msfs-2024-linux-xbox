@@ -164,3 +164,5 @@ h2{font-weight:650;letter-spacing:-.7px}
 .maintenance-preview ul {padding-left:20px;}
 .maintenance-preview h3 {margin-top:0;}
 #maintenance-backup {margin-top:16px;}
+
+.store-check-card{padding:24px;margin-bottom:28px;background:var(--surface);border:1px solid var(--line);border-radius:12px}.store-check-card h3{margin:0 0 12px}.store-check-card .diagnostic-toolbar{margin-top:18px}.store-check-card .check-list{margin:16px 0}

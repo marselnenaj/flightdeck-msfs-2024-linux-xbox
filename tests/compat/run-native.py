@@ -22,16 +22,21 @@ def run(args):
     report = {"format": 1, "suite": args.suite, "synthetic_only": True,
               "account_calls": False, "cases": {}}
     names = []
+    if args.suite in ("user", "all"):
+        names.append("user-lookup")
     if args.suite in ("gamesave", "all"):
         names.extend(("core", "bridge", "async", "save-interchange"))
     if args.suite in ("store", "all"):
-        names.extend(("explicit-products", "durable-license", "package-updates"))
+        names.extend(("explicit-products", "durable-license", "package-updates", "purchase", "store-preview"))
     if args.suite in ("store", "catalog", "all"):
         names.extend(("catalog", "catalog-batch", "catalog-coins"))
     queue_sources = ("XAsync.cpp", "XTaskQueue.cpp", "ThreadPool.cpp", "WaitTimer.cpp")
     for name in names:
         case = work / name; case.mkdir(); data = case / "synthetic-saves"; data.mkdir()
-        if name in ("explicit-products", "durable-license", "package-updates"):
+        user_sources = args.stage.resolve() / "wine-src/dlls/xgameruntime/GDKComponent/System"
+        if name == "user-lookup":
+            selected = [user_sources / "UserSessionCache.c"]
+        elif name in ("explicit-products", "durable-license", "package-updates", "purchase", "store-preview"):
             selected = [sources / part for part in
                         ("StoreQueries.cpp", "StoreContext.cpp", "StoreDurableLicense.cpp", *queue_sources)]
         elif name.startswith("catalog"):
@@ -45,10 +50,13 @@ def run(args):
             if name not in ("core", "save-interchange"): selected.append(sources / "GameSaveBridge.cpp")
             if name == "async":
                 selected += [sources / part for part in ("GameSaveAsync.cpp", *queue_sources)]
-        selected.append(REPO / "tests/compat" / (name + "-test.cpp"))
+        selected.append(REPO / "tests/compat" / (name + ("-test.c" if name == "user-lookup" else "-test.cpp")))
         binary = case / (name + "-test.exe")
         command = ["x86_64-w64-mingw32-g++", "-std=c++17", "-O2", "-static",
                    "-I", str(runtime / "include"), "-I", str(sources)]
+        if name == "user-lookup":
+            command = ["x86_64-w64-mingw32-gcc", "-std=c11", "-O2", "-static",
+                       "-I", str(runtime / "include"), "-I", str(user_sources)]
         if name in ("core", "bridge", "async"): command.append("-DXODUS_GAMESAVE_TESTING")
         if name == "durable-license": command.append("-DSTORE_DURABLES_TESTING")
         if name in ("core", "async", "save-interchange"): command.append("-municode")
@@ -58,6 +66,8 @@ def run(args):
         # The batch/provider tests reuse the embedded synthetic catalog fixture.
         # Include it in provenance without compiling a second entry point.
         hashed_sources = list(selected)
+        if name == "user-lookup":
+            hashed_sources += [user_sources / "UserSessionCache.h", user_sources / "UserLookup.inc", user_sources / "UserStoreAccount.inc"]
         if name in ("catalog-batch", "catalog-coins"):
             hashed_sources.append(REPO / "tests/compat/catalog-test.cpp")
         if name == "save-interchange":
@@ -91,6 +101,7 @@ def run(args):
                 lines.append("PASS native save read back by Python" if passed else "FAIL native save interchange")
             report["cases"][name] = {"exit_code": process.returncode, "passed": passed, "checks": lines,
                                     "source_sha256": {str(p.relative_to(runtime) if p.is_relative_to(runtime)
+                                                         else p.relative_to(args.stage.resolve()) if p.is_relative_to(args.stage.resolve())
                                                          else p.relative_to(REPO)):
                                                       hashlib.sha256(p.read_bytes()).hexdigest() for p in hashed_sources},
                                     "binary_sha256": hashlib.sha256(binary.read_bytes()).hexdigest()}
@@ -106,6 +117,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--stage", type=Path, required=True)
     parser.add_argument("--wine", type=Path, required=True)
-    parser.add_argument("--suite", choices=("gamesave", "store", "catalog", "all"), default="all",
+    parser.add_argument("--suite", choices=("user", "gamesave", "store", "catalog", "all"), default="all",
                         help="test family to run (default: all)")
     raise SystemExit(run(parser.parse_args()))

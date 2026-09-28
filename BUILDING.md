@@ -9,7 +9,7 @@ authenticated service response. Linux x86-64 is the tested host architecture.
 
 Use Python 3.12+, Git, GNU Make, GCC/G++, a POSIX-threaded x86-64 MinGW toolchain,
 Rust/Cargo 1.98+, protobuf `protoc`, pkg-config and the development packages
-required by Xodus's GTK/WebKit login window and OpenSSL. The original native
+required by Xodus's GTK/WebKit login and Store windows and OpenSSL. The original native
 build used MinGW GCC 16.2 and the pinned Wine source's WIDL 11.8. The builtin
 uses Wine's bundled libc++, libxml2 and import libraries; it does not require
 installing a replacement host Wine. Ensure `cargo` and `protoc` are on PATH.
@@ -72,14 +72,15 @@ python3 tests/compat/run-native.py --suite store --stage build/compat \
   --wine "$RUNNER/files/bin/wine"
 # --suite gamesave selects local storage and Python/native interchange tests.
 # --suite catalog selects only the three catalog/mapper tests.
+# --suite user selects authenticated-user lookup and handle lifetime tests.
 ```
 
 The default `--suite all` builds and runs the core, synchronous bridge and
 asynchronous GameSave tests, the Python/native save-format interchange test,
-plus six Store tests. Each test uses its own new
+plus seven Store tests and the user-lookup/cache test. Each test uses its own new
 Wine prefix. `--suite gamesave` selects storage and interchange tests; `--suite store`
 selects explicit product queries, Durable license handles, base-package update
-queries and three catalog/mapper tests. The narrower
+queries, purchase-dialog lifecycle and three catalog/mapper tests. The narrower
 `--suite catalog` selects only the catalog parser, parallel reader and coin
 provider/mapper.
 
@@ -97,11 +98,29 @@ documents, read an account or establish real product ownership.
 No game, account or cloud calls are involved. Results, input source hashes and
 test binary hashes remain below the ignored build directory. Prefix cleanup
 stops only the wineserver associated with each test prefix.
-The historical development validation also covered cross-prefix file locks,
-private interface routing, real account authentication, signed license tokens,
-Store cancellation, network policy, and runtime reference counting. Those
-private run artifacts are intentionally excluded; this source export does not
-pretend that its smaller clean test suite reproduces every integration run.
+These synthetic checks do not replace live validation of account authentication,
+signed licenses, Microsoft-hosted checkout or in-game content availability.
+
+The purchase host also has browser and native Linux window checks:
+
+```sh
+node tests/compat/purchase-ui-test.mjs build/compat
+python3 tests/compat/store-window-test.py --stage build/compat --backend x11
+python3 tests/compat/store-navigation-test.py --stage build/compat --backend x11
+# On a Hyprland desktop, also check the native Wayland attachment:
+python3 tests/compat/store-window-test.py --stage build/compat --backend wayland
+```
+
+The browser check requires Chromium. The window check uses the native build's
+Cargo environment, a running desktop, Pillow and ImageMagick; its Wayland
+screenshot check also uses Hyprland and grim. Both use synthetic content and
+block external requests. The native check renders the production host, captures
+its window and verifies cancellation without opening a real Microsoft checkout.
+`--legacy --backend x11` reproduces the previous window attachment for comparison.
+The navigation test uses a loopback-only server to reproduce the empty response
+to an opaque form origin and verify the public-page bootstrap, cancellation and
+document-origin checks. It accepts the same `--backend` options and never loads
+a real Store page.
 
 See [the runtime contract](docs/runtime.md) to prepare a local installation from
 the built artifacts and user-owned runner, package and Wine prefix.

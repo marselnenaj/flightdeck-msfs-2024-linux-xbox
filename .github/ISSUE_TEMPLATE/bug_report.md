@@ -19,13 +19,15 @@ Describe the expected behavior and the actual behavior.
 - Flightdeck version:
 - Linux distribution:
 - GPU / driver:
-- Source install or launcher wheel:
+- Full installer, source install or launcher wheel:
 
 ## Safe diagnostics
 
-Attach the JSON exported from Flightdeck → Diagnose if relevant. Review it
+Attach the JSON exported from Flightdeck → Diagnostics if relevant. Review it
 before sharing. Do not upload raw game logs, prefixes, screenshots with account
 names, save files, tokens or Microsoft credentials.
 
-Marketplace checkout, complete DLC inventory, automatic game downloads and Xbox
-cloud saves are currently unsupported; see README for the tested scope.
+For Store issues, include the result of **Diagnostics → Check Store** when
+available. This check does not open a purchase page. State whether the problem
+affects catalog loading, owned content or the confirmation dialog; a purchase
+is not needed to report a problem. See the README for the tested scope.
