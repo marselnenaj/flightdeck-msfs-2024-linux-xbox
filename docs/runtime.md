@@ -185,6 +185,8 @@ Flightdeck 0.1.7 provides diagnostics schema 4, retaining these graphics fields:
   counts presents without rendering, name/UUID filter skips and missing DXVK
   adapters in that excerpt, not throughout the whole run. An occasional blank
   present can be valid; its presence alone does not identify a driver fault.
+  Filter skips can also be intentional, such as excluding integrated graphics;
+  they are distinct from a failure to find any usable adapter.
   Empty results do not rule out a graphics failure or prove a renderer was never loaded.
 
 Schema 4 also includes the latest Store check and timestamped Store-session

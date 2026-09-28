@@ -62,8 +62,8 @@ download a report after each attempt. Include the Flightdeck version, simulator
 edition, GPU, driver version and a short description of when rendering fails.
 The report includes available Vulkan adapters and the settings requested for the
 last launcher-managed start; it does not certify successful rendering.
-In 0.1.7, it also includes detected renderer versions and counts of adapter-filter
-failures and presents without rendering from the available log excerpt. A
+In 0.1.7, it also includes detected renderer versions, filtered-out adapters and
+counts of presents without rendering from the available log excerpt. A
 present without rendering is an observation, not a diagnosis of a faulty driver.
 
 Checking game files repairs the base game. Resetting the Wine environment creates

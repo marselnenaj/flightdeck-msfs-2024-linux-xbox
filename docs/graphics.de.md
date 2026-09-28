@@ -67,8 +67,8 @@ Flightdeck-Version, Simulator-Ausgabe, Grafikkarte, Treiberversion und den
 Zeitpunkt des Darstellungsfehlers an. Der Bericht enthält verfügbare
 Vulkan-Grafikkarten und die angeforderten Einstellungen des letzten Starts über
 Flightdeck; er bestätigt keine erfolgreiche Darstellung.
-Ab 0.1.7 enthält er außerdem erkannte Renderer-Versionen und Zähler für
-Grafikkarten-Filterfehler sowie Bildausgaben ohne vorheriges Rendering aus dem
+Ab 0.1.7 enthält er außerdem erkannte Renderer-Versionen, ausgefilterte
+Grafikkarten sowie Zähler für Bildausgaben ohne vorheriges Rendering aus dem
 verfügbaren Log-Ausschnitt. Eine solche Bildausgabe ist eine Beobachtung und
 allein kein Nachweis für einen Treiberfehler.
 
