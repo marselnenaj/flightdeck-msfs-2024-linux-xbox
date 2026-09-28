@@ -18,7 +18,7 @@ not yet been verified across NVIDIA hardware and driver versions. Successful
 Steam/Proton reports are useful compatibility evidence, but do not validate
 Flightdeck's separate Xbox PC launch path.
 
-The **0.1.7 test build** corrects an adapter-selection problem: Wine can report
+**Flightdeck 0.1.7** corrects an adapter-selection problem: Wine can report
 a different GPU name from Linux, causing the earlier automatic name filter to
 exclude the selected card. Selection now uses the card's stable device ID,
 which also works when Compatibility mode hides NVIDIA-specific identification.

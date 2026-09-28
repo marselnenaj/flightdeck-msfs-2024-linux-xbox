@@ -1,6 +1,6 @@
 # Install the Flightdeck launcher
 
-This guide covers **Flightdeck 0.1.7 (in testing)**, including Store diagnostics, launcher
+This guide covers **Flightdeck 0.1.7**, including Store diagnostics, launcher
 updates, selectable NVIDIA graphics modes, installation maintenance and
 cloud-upload recovery. See [changes](changelog.md) and [NVIDIA graphics](graphics.md).
 

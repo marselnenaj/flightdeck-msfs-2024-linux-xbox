@@ -6,7 +6,7 @@ not contain Microsoft game files, a Wine prefix, account data, Linux system
 libraries or the upstream Proton runner. The Git repository and source-only
 archive still exclude compiled runtime binaries.
 
-Flightdeck **0.1.7 (in testing)** includes rebuilt **0.1.7** native components and their
+Flightdeck **0.1.7** includes rebuilt **0.1.7** native components and their
 matching source archive. Use the component version
 pinned by the selected package's `compat/bootstrap.lock.json`; see
 [release changes](changelog.md).

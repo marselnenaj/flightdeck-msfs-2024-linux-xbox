@@ -1,9 +1,8 @@
 # Changes and release status
 
-## 0.1.7 — in testing
+## 0.1.7 — 28 September 2026
 
-Not yet published. The current public release is
-[Flightdeck 0.1.6](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.6).
+[Download Flightdeck 0.1.7](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.7).
 
 - Select the sole discrete NVIDIA GPU by its Vulkan device UUID instead of its
   Linux display name. Wine can rename the adapter, especially in Compatibility

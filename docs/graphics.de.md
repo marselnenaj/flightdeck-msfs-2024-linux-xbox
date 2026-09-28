@@ -18,7 +18,7 @@ sind noch nicht für die verschiedenen NVIDIA-Karten und Treiberversionen
 bestätigt. Erfolgreiche Steam-/Proton-Berichte liefern Hinweise zur Kompatibilität,
 bestätigen aber nicht den separaten Xbox-PC-Startweg von Flightdeck.
 
-Die **Testversion 0.1.7** korrigiert einen Fehler bei der Grafikkartenauswahl:
+**Flightdeck 0.1.7** korrigiert einen Fehler bei der Grafikkartenauswahl:
 Wine kann einen anderen GPU-Namen als Linux melden. Der bisherige automatische
 Namensfilter konnte dadurch die gewünschte Karte ausschließen. Die Auswahl
 verwendet jetzt die stabile Geräte-ID; sie bleibt auch beim Verbergen der
