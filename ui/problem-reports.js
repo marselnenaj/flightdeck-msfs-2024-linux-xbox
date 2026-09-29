@@ -11,7 +11,18 @@ export function reportFilename(report) {
 export function reportText(report) {
   const lines = [];
   function fields(value, path = '') {
-    if (value && typeof value === 'object') {
+    // Repeating the full field path for every event can turn a normal session
+    // into a 50 KB email. Scalar records share one tab-separated header instead.
+    // Keep their order and every value; JSON cells distinguish null, empty text
+    // and an absent field (the unquoted dash), and escape embedded tabs/newlines.
+    if (Array.isArray(value) && value.length && value.every(row => row &&
+        typeof row === 'object' && !Array.isArray(row) && Object.keys(row).length && Object.values(row).every(
+          cell => cell === null || typeof cell !== 'object'))) {
+      const keys = [...new Set(value.flatMap(Object.keys))];
+      lines.push(`${path}:`, keys.join('\t'));
+      for (const row of value) lines.push(keys.map(key =>
+        Object.hasOwn(row, key) ? JSON.stringify(row[key]) : '—').join('\t'));
+    } else if (value && typeof value === 'object') {
       const entries = Object.entries(value);
       if (!entries.length) lines.push(`${path}: —`);
       for (const [key, item] of entries) fields(item, path ? `${path}.${key}` : key);

@@ -130,19 +130,24 @@ Flightdeck 0.1.6 adds **Setup → NVIDIA graphics**. Its
 per-installation choice is stored in `private/graphics-settings.json` and read
 for each launcher-managed start. See the [user guide](graphics.md).
 
-- `auto`: prepare the runner's NVIDIA components and retain explicit environment
-  overrides.
-- `compatibility`: disable NVAPI, optical flow and NGX loading for the process;
-  set `WINE_HIDE_NVIDIA_GPU=1` and append `dxgi.hideNvidiaGpu = True` to
-  `DXVK_CONFIG`. This disables DLSS and NVIDIA Frame Generation. Existing DLLs
-  remain on disk and are available again after switching back to Automatic.
+- `auto`: from 0.1.11, use the same conservative profile as `compatibility`.
+  Existing automatic preferences adopt this profile on the next start.
+- `compatibility`: disable NVAPI, optical flow and NGX loading; hide the NVIDIA
+  vendor in Wine and DXGI; exclude `VK_NV_low_latency2` in VKD3D; set
+  `dxvk.disableNvLowLatency2 = True` and `dxvk.latencySleep = False` in DXVK.
+  DLSS, Reflex and NVIDIA Frame Generation are unavailable. The bundled DXVK
+  corrects the ignored extension opt-out in the pinned upstream revision.
+- `features`: prepare the runner's NVIDIA components and host NGX, retaining
+  explicit environment overrides. This is the previous automatic behavior,
+  now an explicit experimental choice. Existing DLLs remain on disk.
 
-Flightdeck also translates `PROTON_HIDE_NVIDIA_GPU=1` for Wine
-and DXGI. `PROTON_DISABLE_NVAPI=1` or `DXVK_ENABLE_NVAPI=0` blocks NVAPI and
-optical-flow loading even when an earlier start installed these libraries.
-The saved Compatibility mode takes precedence over conflicting feature-enabling
-variables. Automatic mode honors inherited variables; remove explicit disable
-settings from the launcher's service environment to use NVIDIA features again.
+Both automatic and compatibility settings take precedence over conflicting
+feature-enabling variables. Unrelated options and explicit device selections
+remain intact. Features mode honors inherited variables; remove explicit disable
+settings from the launcher's service environment to enable NVIDIA features.
+Flightdeck translates `PROTON_HIDE_NVIDIA_GPU=1` for Wine and DXGI.
+`PROTON_DISABLE_NVAPI=1` or `DXVK_ENABLE_NVAPI=0` blocks NVAPI and optical-flow
+loading even when an earlier start installed these libraries.
 Generic Steam launch options do not configure Flightdeck's existing background
 service. Changing the mode in Flightdeck requires no service restart.
 
@@ -151,10 +156,11 @@ NVAPI disabled. A single GPU name filter that uniquely matches a Vulkan adapter
 is completed for the other graphics API. Explicit filters for both APIs, UUIDs,
 device indices and ambiguous matches are preserved without guessing.
 Explicit name filters must match the names visible inside Wine. Remove custom
-name filters before comparing the two modes if diagnostics reports that the
+name filters before comparing modes if diagnostics reports that the
 desired adapter was excluded.
-NVIDIA starts default to `DXVK_LOG_LEVEL=info` and `VKD3D_DEBUG=info` so the local
-game log includes renderer versions and adapter decisions. Explicit logging
+NVIDIA starts default to `DXVK_LOG_LEVEL=info` and `VKD3D_DEBUG=warn` so the local
+game log includes renderer versions, adapter decisions and swapchain warnings.
+VKD3D orders `info` below `warn`; earlier launcher defaults suppressed warnings. Explicit logging
 preferences remain effective. These settings do not enable per-call tracing.
 
 **Diagnostics** reports Vulkan adapters, API/driver versions and the desktop

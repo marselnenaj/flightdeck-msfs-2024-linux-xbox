@@ -198,3 +198,12 @@ vkd3d-proton - build: private-token.
         self.assertEqual(result['error_symbols'], [])
         self.assertNotIn('private', json.dumps(result))
         self.assertNotIn('synthetic', json.dumps(result))
+
+    def test_patched_renderer_versions_are_identified_without_accepting_arbitrary_suffixes(self):
+        result = gd.log_summary('''info: DXVK: v3.0.2-10-g6227b633e8d5289-flightdeck-ll1
+info: vkd3d-proton - build: 651f17762e439fe+.
+info: DXVK: v3.0.2-10-g6227b633e8d5289-private-value
+''')
+        self.assertEqual(result['observed_versions'], {
+            'dxvk': ['v3.0.2-10-g6227b633e8d5289-flightdeck-ll1'],
+            'vkd3d-proton-build': ['651f17762e439fe+']})

@@ -28,6 +28,7 @@ class GraphicsTests(unittest.TestCase):
         for name in ("system32", "syswow64"):
             (self.windows / name).mkdir(parents=True)
         (self.runtime / "private").mkdir()
+        self.set_mode("features")
         self.runner = self.runtime / "runner/files"
         (self.runner / "bin").mkdir(parents=True)
         (self.runner / "bin/wine").write_bytes(b"synthetic runner")
@@ -45,6 +46,33 @@ class GraphicsTests(unittest.TestCase):
             mocker = patch.object(graphics, function, return_value=value)
             setattr(self, function, mocker.start())
             self.addCleanup(mocker.stop)
+
+    def set_mode(self, mode):
+        (self.runtime / "private" / graphics.SETTINGS_FILE).write_text(json.dumps({"schema": 1, "nvidia_mode": mode}))
+
+    def test_new_and_existing_automatic_settings_select_complete_compatibility(self):
+        settings = self.runtime / "private" / graphics.SETTINGS_FILE
+        for saved in (None, "auto", "compatibility"):
+            with self.subTest(saved=saved):
+                settings.unlink(missing_ok=True)
+                if saved is not None:
+                    self.set_mode(saved)
+                original = {"DXVK_ENABLE_NVAPI": "1", "VKD3D_DISABLE_EXTENSIONS": "VK_EXT_present_timing",
+                            "DXVK_CONFIG": "dxvk.disableNvLowLatency2 = False; dxvk.latencySleep = True; dxgi.maxFrameRate = 60"}
+                env, report = graphics.prepare(self.runtime, original)
+                self.assertEqual(env["DXVK_ENABLE_NVAPI"], "0")
+                self.assertEqual(env["WINE_HIDE_NVIDIA_GPU"], "1")
+                self.assertEqual(env["VKD3D_DISABLE_EXTENSIONS"], "VK_EXT_present_timing;VK_NV_low_latency2")
+                # DXVK's last assignment wins. Keep unrelated options intact.
+                config = dict(item.strip().split(" = ", 1) for item in env["DXVK_CONFIG"].split(";") if item.strip())
+                self.assertEqual(config["dxvk.disableNvLowLatency2"], "True")
+                self.assertEqual(config["dxvk.latencySleep"], "False")
+                self.assertEqual(config["dxgi.maxFrameRate"], "60")
+                self.assertEqual(report["nvidia_mode"], saved or "auto")
+                self.assertEqual(report["nvidia"], "disabled")
+                self.assertEqual(env["DXVK_FILTER_DEVICE_UUID"], DEVICE_UUID)
+                self.assertEqual(original["DXVK_ENABLE_NVAPI"], "1")
+                self.nvidia_directory.assert_not_called()
 
     def test_nvidia_installs_matched_components_and_selects_one_adapter_for_both_apis(self):
         environment, report = graphics.prepare(self.runtime, {"WINEDLLOVERRIDES": "xgameruntime=n"})
@@ -76,7 +104,7 @@ class GraphicsTests(unittest.TestCase):
     def test_nvidia_startup_logging_preserves_explicit_preferences(self):
         env, _ = graphics.prepare(self.runtime, {})
         self.assertEqual(env["DXVK_LOG_LEVEL"], "info")
-        self.assertEqual(env["VKD3D_DEBUG"], "info")
+        self.assertEqual(env["VKD3D_DEBUG"], "warn")
         env, _ = graphics.prepare(self.runtime, {"DXVK_LOG_LEVEL": "none", "VKD3D_DEBUG": "warn"})
         self.assertEqual(env["DXVK_LOG_LEVEL"], "none")
         self.assertEqual(env["VKD3D_DEBUG"], "warn")
@@ -250,7 +278,7 @@ class GraphicsTests(unittest.TestCase):
         self.assertNotIn("VKD3D_FILTER_DEVICE_NAME", env)
         self.assertEqual({name: (self.windows / name).read_bytes() for name in graphics._FILES}, before)
         self.assertEqual(original["DXVK_ENABLE_NVAPI"], "1")
-        settings.write_text(json.dumps({"schema": 1, "nvidia_mode": "auto"}))
+        settings.write_text(json.dumps({"schema": 1, "nvidia_mode": "features"}))
         restored, report = graphics.prepare(self.runtime, {})
         self.assertEqual(restored["DXVK_ENABLE_NVAPI"], "1")
         self.assertNotIn("WINE_HIDE_NVIDIA_GPU", restored)
@@ -325,6 +353,7 @@ class GraphicsTests(unittest.TestCase):
         self.assertEqual(report["adapter_selection"], "default")
 
     def test_settings_are_bounded_validated_and_never_follow_symlinks(self):
+        (self.runtime / "private" / graphics.SETTINGS_FILE).unlink()
         target = self.runtime / "private" / graphics.SETTINGS_FILE
         self.assertEqual(graphics.settings(self.runtime), {"nvidia_mode": "auto"})
         for value in ([], {"schema": 1, "nvidia_mode": {}}, {"schema": 1, "nvidia_mode": "untrusted"},

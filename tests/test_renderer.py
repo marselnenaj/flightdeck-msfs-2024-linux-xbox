@@ -17,8 +17,7 @@ class RendererTests(unittest.TestCase):
         self.runtime = self.root / "runtime"
         self.private = self.runtime / "private"
         self.private.mkdir(parents=True)
-        self.runner = self.runtime / "runner/files/lib/wine/vkd3d-proton/x86_64-windows"
-        self.runner.mkdir(parents=True)
+        self.runner = self.runtime / "runner/files/lib/wine"
         self.system = self.runtime / "local/msfs-prefix/drive_c/windows/system32"
         self.system.mkdir(parents=True)
         self.bundle = self.root / "bundle"
@@ -26,12 +25,16 @@ class RendererTests(unittest.TestCase):
         self.base, self.fixed = {}, {}
         for name in renderer.FILES:
             base, fixed = b"synthetic runner " + name.encode(), b"synthetic backport " + name.encode()
-            (self.runner / name).write_bytes(base)
+            self.runner_file(name).parent.mkdir(parents=True, exist_ok=True)
+            self.runner_file(name).write_bytes(base)
             (self.system / name).write_bytes(base)
             (self.bundle / name).write_bytes(fixed)
             self.base[name] = hashlib.sha256(base).hexdigest()
             self.fixed[name] = hashlib.sha256(fixed).hexdigest()
-        (self.bundle / "manifest.json").write_text(json.dumps({"schema": 1, "base": self.base, "files": self.fixed}))
+        (self.bundle / "manifest.json").write_text(json.dumps({"schema": 2, "base": self.base, "files": self.fixed}))
+
+    def runner_file(self, name):
+        return self.runner / ("vkd3d-proton" if name in renderer.LEGACY_FILES else "dxvk") / "x86_64-windows" / name
 
     def install(self):
         return renderer.install(self.runtime, bundle=self.bundle)
@@ -40,7 +43,7 @@ class RendererTests(unittest.TestCase):
         self.assertEqual(self.install(), "backport")
         for name in renderer.FILES:
             self.assertEqual((self.system / name).read_bytes(), (self.bundle / name).read_bytes())
-            self.assertEqual(graphics._digest(self.runner / name), self.base[name])
+            self.assertEqual(graphics._digest(self.runner_file(name)), self.base[name])
         with patch.object(setup, "_copy_file") as copy:
             self.assertEqual(self.install(), "backport")
             copy.assert_not_called()
@@ -59,13 +62,37 @@ class RendererTests(unittest.TestCase):
             copy.assert_not_called()
         self.assertFalse((self.private / renderer.MARKER).exists())
 
+    def test_upgrade_from_managed_d3d12_pair_also_installs_dxvk(self):
+        legacy = {}
+        for name in renderer.LEGACY_FILES:
+            (self.system / name).write_bytes(b"previous managed renderer " + name.encode())
+            legacy[name] = graphics._digest(self.system / name)
+        (self.private / renderer.MARKER).write_text(json.dumps(legacy))
+        self.assertEqual(self.install(), "backport")
+        self.assertEqual(json.loads((self.private / renderer.MARKER).read_text()), self.fixed)
+        for name in renderer.FILES:
+            self.assertEqual(graphics._digest(self.system / name), self.fixed[name])
+
+    def test_custom_dxvk_preserves_all_five_libraries(self):
+        (self.system / "d3d11.dll").write_bytes(b"custom DXVK")
+        with patch.object(setup, "_copy_file") as copy:
+            self.assertEqual(self.install(), "custom")
+            copy.assert_not_called()
+
+    def test_damaged_dxvk_is_rejected_before_any_library_is_replaced(self):
+        (self.bundle / "dxgi.dll").write_bytes(b"damaged DXGI")
+        with patch.object(setup, "_copy_file") as copy:
+            with self.assertRaises(graphics.GraphicsError):
+                self.install()
+            copy.assert_not_called()
+
     def test_runner_upgrade_restores_matched_pair(self):
         self.install()
         for name in renderer.FILES:
-            (self.runner / name).write_bytes(b"new runner " + name.encode())
+            (self.runner_file(name)).write_bytes(b"new runner " + name.encode())
         self.assertEqual(self.install(), "runner")
         for name in renderer.FILES:
-            self.assertEqual((self.system / name).read_bytes(), (self.runner / name).read_bytes())
+            self.assertEqual((self.system / name).read_bytes(), (self.runner_file(name)).read_bytes())
         self.assertFalse((self.private / renderer.MARKER).exists())
 
     def test_source_only_launcher_restores_owned_files(self):
@@ -97,7 +124,7 @@ class RendererTests(unittest.TestCase):
             self.install()
         marker.unlink()
         (self.bundle / "d3d12.dll").unlink()
-        (self.bundle / "d3d12.dll").symlink_to(self.runner / "d3d12.dll")
+        (self.bundle / "d3d12.dll").symlink_to(self.runner_file("d3d12.dll"))
         with self.assertRaises(graphics.GraphicsError):
             self.install()
 

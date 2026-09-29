@@ -14,6 +14,7 @@ spec.loader.exec_module(release)
 
 
 class GraphicsPackageTests(unittest.TestCase):
+    runner_file = test_renderer.RendererTests.runner_file
     def setUp(self):
         test_renderer.RendererTests.setUp(self)
         self.source = self.root / "source"
@@ -22,7 +23,7 @@ class GraphicsPackageTests(unittest.TestCase):
         shutil.copytree(self.bundle, self.packaged)
         license = b"Synthetic license fixture\n"
         (self.packaged / "LICENSE").write_bytes(license)
-        self.lock = {"schema": 1, "base": self.base, "files": self.fixed,
+        self.lock = {"schema": 2, "base": self.base, "files": self.fixed,
                      "license_sha256": release.digest(license)}
         self.specification = (json.dumps(self.lock) + "\n").encode()
         (self.source / "compat/graphics.lock.json").write_bytes(self.specification)
@@ -32,7 +33,7 @@ class GraphicsPackageTests(unittest.TestCase):
         files = release.graphics_files(self.sources, self.packaged)
         installed = test_installer.installer.graphics_snapshot(self.source)
         self.assertEqual(files, {release.SOURCE_ROOT + name: value for name, value in installed.items()})
-        self.assertEqual(len(files), 4)
+        self.assertEqual(len(files), 7)
         self.assertEqual(installed["flightdeck/resources/graphics/d3d12core.dll"],
                          (self.bundle / "d3d12core.dll").read_bytes())
 

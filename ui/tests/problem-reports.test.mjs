@@ -23,6 +23,37 @@ test('long multibyte description never silently disappears from email fallback',
   assert.equal(email.href,null);assert.equal(email.tooLong,true);assert.ok(email.body.includes(long.description));assert.ok(email.body.includes('595.91.07'));
 });
 
+test('a full session event history fits an email draft without losing its records',()=>{
+  const events=Array.from({length:128},(_,index)=>({time_ms:1790700000000+index,
+    source:'game',...(index%4?{method:'XStoreQueryProductsAsync'}:{}),
+    phase:index%4?'work_enter':'mapping',hresult:index%4?'00000000':'80004001'}));
+  const full={...report,diagnostics:{...report.diagnostics,summary:{...report.diagnostics.summary,
+    store_session:{events,partial:false}}}};
+  const before=JSON.stringify(full),email=emailDraft(full,'contact@flightdeck-app.com');
+  assert.equal(email.tooLong,false);assert.ok(email.href);
+  const lines=email.body.split('\n'),start=lines.indexOf('diagnostics.summary.store_session.events:');
+  assert.ok(start>=0);
+  const keys=lines[start+1].split('\t');
+  const restored=lines.slice(start+2,start+2+events.length).map(line=>Object.fromEntries(
+    line.split('\t').flatMap((cell,index)=>cell==='—'?[]:[[keys[index],JSON.parse(cell)]])));
+  assert.deepEqual(restored,events);
+  assert.equal(JSON.stringify(full),before);
+  assert.equal(new URL(email.href).searchParams.get('body').replaceAll('\r\n','\n'),email.body);
+});
+
+test('compact records preserve missing cells, nulls, types and escaped text',()=>{
+  const events=[{phase:'a\tb\nc',hresult:'00000000',flag:false,count:0,value:null},
+    {phase:'—',hresult:'',flag:true,count:1},{phase:'null',extra:'"quoted"\\text'}];
+  const full={...report,diagnostics:{events,nested:[{result:{code:503}},{result:{code:401}}]}};
+  const lines=reportText(full).split('\n'),start=lines.indexOf('diagnostics.events:');
+  const keys=lines[start+1].split('\t');
+  const restored=lines.slice(start+2,start+2+events.length).map(line=>Object.fromEntries(
+    line.split('\t').flatMap((cell,index)=>cell==='—'?[]:[[keys[index],JSON.parse(cell)]])));
+  assert.deepEqual(restored,events);
+  assert.ok(lines.includes('diagnostics.nested.0.result.code: 503'));
+  assert.ok(lines.includes('diagnostics.nested.1.result.code: 401'));
+});
+
 test('recipient cannot add headers, extra recipients or another URL scheme',()=>{
   for(const recipient of [null,'','https://example.com','x@y.com?bcc=a@b.com','x@y.com\r\nBcc:a@b.com','x@y.com,a@b.com','x@y..com'])assert.equal(emailDraft(report,recipient).href,null,recipient);
 });

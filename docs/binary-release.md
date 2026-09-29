@@ -6,15 +6,17 @@ not contain Microsoft game files, a Wine prefix, account data, Linux system
 libraries or the upstream Proton runner. The Git repository and source-only
 archive still exclude compiled runtime binaries.
 
-Flightdeck **0.1.10** uses the unchanged **0.1.9** native components and their
+Flightdeck **0.1.11** uses the unchanged **0.1.9** native components and their
 matching source archive. Use the component version
 pinned by the selected package's `compat/bootstrap.lock.json`; see
 [release changes](changelog.md).
 
-The full installer also includes a matched NVIDIA D3D12 renderer pair, its
+The full installer also includes a matched NVIDIA DXVK/D3D12 renderer set, its
 manifest and original notices. Matching patched VKD3D sources and pinned
 submodules are supplied as `flightdeck-vkd3d-0.1.9-sources.tar.gz` alongside the
-native and launcher source archives. See [renderer provenance](nvidia-renderer.md).
+native and launcher source archives. The rebuilt DXVK and all its pinned
+recursive submodules are supplied as `flightdeck-dxvk-0.1.11-sources.tar.gz`.
+See [renderer provenance](nvidia-renderer.md).
 
 The release pins in `compat/bootstrap.lock.json` bind the component archive,
 every executable/library and the notice file to SHA256 checksums. The installer

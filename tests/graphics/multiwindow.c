@@ -7,6 +7,7 @@
 #include <windows.h>
 #include <dxgi1_6.h>
 #include <d3d12.h>
+#include <d3d11.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -24,6 +25,44 @@ static ID3D12Fence *fence;
 static HANDLE event;
 static UINT64 completed;
 static unsigned frames;
+static ID3D11Device *device11;
+static ID3D11DeviceContext *context11;
+static unsigned frames11;
+
+static void render11(IDXGISwapChain1 *chain)
+{
+    ID3D11Texture2D *buffer, *readback;
+    ID3D11RenderTargetView *rtv;
+    D3D11_TEXTURE2D_DESC desc;
+    D3D11_MAPPED_SUBRESOURCE mapped;
+    const float color[4] = {1.f, 0.f, 0.f, 1.f};
+    CHECK(IDXGISwapChain1_GetBuffer(chain, 0, &IID_ID3D11Texture2D, (void **)&buffer));
+    CHECK(ID3D11Device_CreateRenderTargetView(device11, (ID3D11Resource *)buffer, NULL, &rtv));
+    ID3D11DeviceContext_ClearRenderTargetView(context11, rtv, color);
+    ID3D11Texture2D_GetDesc(buffer, &desc);
+    desc.Usage = D3D11_USAGE_STAGING;
+    desc.BindFlags = 0;
+    desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+    desc.MiscFlags = 0;
+    CHECK(ID3D11Device_CreateTexture2D(device11, &desc, NULL, &readback));
+    ID3D11DeviceContext_CopyResource(context11, (ID3D11Resource *)readback, (ID3D11Resource *)buffer);
+    CHECK(ID3D11DeviceContext_Map(context11, (ID3D11Resource *)readback, 0, D3D11_MAP_READ, 0, &mapped));
+    for (UINT y = 0; y < desc.Height; ++y) {
+        for (UINT x = 0; x < desc.Width; ++x) {
+            const unsigned char *p = (const unsigned char *)mapped.pData + y * mapped.RowPitch + x * 4;
+            if (p[0] != 255 || p[1] != 0 || p[2] != 0 || p[3] != 255) {
+                fprintf(stderr, "Wrong D3D11 pixel in frame %u at %u,%u\n", frames11, x, y);
+                exit(1);
+            }
+        }
+    }
+    ID3D11DeviceContext_Unmap(context11, (ID3D11Resource *)readback, 0);
+    ID3D11Texture2D_Release(readback);
+    ID3D11RenderTargetView_Release(rtv);
+    ID3D11Texture2D_Release(buffer);
+    CHECK(IDXGISwapChain1_Present(chain, 1, 0));
+    ++frames11;
+}
 
 static void pump(void)
 {
@@ -135,6 +174,9 @@ int main(int argc, char **argv)
     D3D12_DESCRIPTOR_HEAP_DESC hdesc = {0};
     WNDCLASSW wc = {0};
     HWND primary_window, secondary_window;
+    HWND window11;
+    IDXGISwapChain1 *chain11;
+    DXGI_SWAP_CHAIN_DESC1 desc11 = {0};
     IDXGISwapChain3 *primary, *secondary;
     (void)argv;
     setvbuf(stdout, NULL, _IONBF, 0);
@@ -161,13 +203,26 @@ int main(int argc, char **argv)
     if (!event) return 1;
     primary = create_chain(L"Flightdeck test - primary green", 100, &primary_window);
     for (unsigned i = 0; i < 8; ++i) render(primary, 1);
+    /* MSFS also creates a DXVK D3D11 device while D3D12 is presenting. */
+    CHECK(D3D11CreateDevice((IDXGIAdapter *)adapter, D3D_DRIVER_TYPE_UNKNOWN, NULL, 0,
+                           NULL, 0, D3D11_SDK_VERSION, &device11, NULL, &context11));
+    window11 = CreateWindowW(wc.lpszClassName, L"Flightdeck test - D3D11 red", WS_OVERLAPPEDWINDOW | WS_VISIBLE,
+                             100, 450, 420, 280, NULL, NULL, wc.hInstance, NULL);
+    if (!window11) return 1;
+    desc11.Width = 400; desc11.Height = 240;
+    desc11.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    desc11.SampleDesc.Count = 1;
+    desc11.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+    desc11.BufferCount = 2;
+    desc11.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+    CHECK(IDXGIFactory2_CreateSwapChainForHwnd(factory, (IUnknown *)device11, window11, &desc11, NULL, NULL, &chain11));
     for (unsigned cycle = 0; cycle < 3; ++cycle) {
         secondary = create_chain(L"Flightdeck test - secondary blue", 550, &secondary_window);
         /* Creating an unused second chain must not disturb the first. */
         for (unsigned i = 0; i < 4; ++i) render(primary, 1);
-        for (unsigned i = 0; i < 8; ++i) { render(primary, 1); render(secondary, 0); }
+        for (unsigned i = 0; i < 8; ++i) { render(primary, 1); render(secondary, 0); render11(chain11); }
         CHECK(IDXGISwapChain3_ResizeBuffers(secondary, 3, 320, 200, DXGI_FORMAT_UNKNOWN, 0));
-        for (unsigned i = 0; i < 8; ++i) { render(primary, 1); render(secondary, 0); }
+        for (unsigned i = 0; i < 8; ++i) { render(primary, 1); render(secondary, 0); render11(chain11); }
         if (argc > 1 && cycle == 0) {
             SetForegroundWindow(primary_window);
             puts("VISIBLE_PRIMARY");
@@ -180,9 +235,15 @@ int main(int argc, char **argv)
         DestroyWindow(secondary_window);
         for (unsigned i = 0; i < 8; ++i) render(primary, 1);
         CHECK(IDXGISwapChain3_ResizeBuffers(primary, 2, 400 + cycle * 16, 240, DXGI_FORMAT_UNKNOWN, 0));
+        CHECK(IDXGISwapChain1_ResizeBuffers(chain11, 2, 320 + cycle * 16, 200, DXGI_FORMAT_UNKNOWN, 0));
     }
+    CHECK(ID3D11Device_GetDeviceRemovedReason(device11));
+    IDXGISwapChain1_Release(chain11);
+    ID3D11DeviceContext_Release(context11);
+    ID3D11Device_Release(device11);
+    DestroyWindow(window11);
     for (unsigned i = 0; i < 8; ++i) render(primary, 1);
-    printf("PASS: %u rendered/read-back/presented frames across creation, resize and destruction\n", frames);
+    printf("PASS: %u D3D12 + %u D3D11 rendered/read-back/presented frames across creation, resize and destruction\n", frames, frames11);
     CHECK(ID3D12Device_GetDeviceRemovedReason(device));
     IDXGISwapChain3_Release(primary);
     DestroyWindow(primary_window);

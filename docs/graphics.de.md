@@ -2,83 +2,60 @@
 
 [English](graphics.md)
 
-**Flightdeck 0.1.9** enthält Upstream-Korrekturen für
-NVIDIAs Verwaltung mehrerer Renderfenster. Ihr Kompatibilitätsmodus deaktiviert
-zusätzlich den eigenständigen Reflex-Pfad in VKD3D. Die Behebung der schwarzen
-Hauptszene auf RTX 4060/5060 Ti ist damit noch nicht auf NVIDIA-Hardware bestätigt.
-[Umfang, Build und Prüfungen](nvidia-renderer.md).
+**Flightdeck 0.1.11** verwendet auf NVIDIA automatisch Kompatibilitätseinstellungen.
+NVIDIA Low Latency wird für DirectX 11 und 12 deaktiviert; DXVKs bislang
+wirkungslose Abschaltoption ist korrigiert. Die bisherigen VKD3D-Korrekturen für
+mehrere Renderfenster sind enthalten. Damit ist die unvollständige Einrichtung
+korrigiert; die Behebung der schwarzen MSFS-Hauptansicht muss noch auf
+NVIDIA-Hardware bestätigt werden. [Build und Prüfungen](nvidia-renderer.md).
 
-Flightdeck richtet die NVIDIA-Grafik für MSFS 2024 und MSFS 2020 ein. Dafür
-verwendet es die Grafikkomponenten des Runners und den unter Linux installierten
-NVIDIA-Treiber. Auf Rechnern mit einer dedizierten NVIDIA-Karte und integrierter
-Grafik wählt es die NVIDIA-Karte einheitlich für DXGI und DirectX 12.
+Aktualisiere über **Updates → Flightdeck**, schließe das Update ab und starte
+den Simulator erneut. Eine bestehende Einstellung **Automatisch** übernimmt das
+neue Profil. Eine Neuinstallation von MSFS, das Zurücksetzen der Wine-Umgebung
+oder zusätzliche Startparameter sind dafür nicht erforderlich.
 
-Ein funktionierender Vulkan-Treiber ist Voraussetzung. Installiere den empfohlenen
-NVIDIA-Treiber über die Softwareverwaltung deiner Distribution und starte Linux
-nach einem Treiberwechsel neu. Für DLSS werden zusätzlich die NGX-Komponenten
-des Treibers benötigt. Flightdeck installiert keine Systemtreiber. Eine erkannte
-Grafikkarte allein bestätigt noch keine korrekte Darstellung im Simulator.
-
-Die NVIDIA-Starteinrichtung ist implementiert. Darstellung und Flugstabilität
-sind noch nicht für die verschiedenen NVIDIA-Karten und Treiberversionen
-bestätigt. Erfolgreiche Steam-/Proton-Berichte liefern Hinweise zur Kompatibilität,
-bestätigen aber nicht den separaten Xbox-PC-Startweg von Flightdeck.
-
-**Flightdeck 0.1.7** korrigiert einen Fehler bei der Grafikkartenauswahl:
-Wine kann einen anderen GPU-Namen als Linux melden. Der bisherige automatische
-Namensfilter konnte dadurch die gewünschte Karte ausschließen. Die Auswahl
-verwendet jetzt die stabile Geräte-ID; sie bleibt auch beim Verbergen der
-NVIDIA-Kennung im Kompatibilitätsmodus gültig. Die öffentliche Version 0.1.6
-enthält diese Korrektur noch nicht.
+Flightdeck verwendet die Grafikkomponenten des Runners und den unter Linux
+installierten NVIDIA-Treiber. Ein funktionierender Vulkan-Treiber ist erforderlich.
+Verwende den empfohlenen Treiber deiner Distribution und starte Linux nach
+einem Treiberwechsel neu. Flightdeck installiert keine Systemtreiber. Bei einer
+einzelnen dedizierten NVIDIA-Karte wird dieselbe physische Karte für DXGI und
+DirectX 12 über ihre stabile Geräte-ID ausgewählt, auch bei verborgener Herstellerkennung.
 
 ## Modus auswählen
 
-Die Modusauswahl ist ab **Flightdeck 0.1.6** verfügbar. Aktualisiere über
-**Updates → Flightdeck**, falls sie fehlt. Siehe [Änderungsübersicht](changelog.md).
-
-1. Wähle den Simulator in Flightdeck und beende ein laufendes Spiel oder eine Einrichtung.
+1. Wähle den Simulator und beende ein laufendes Spiel oder eine Einrichtung.
 2. Öffne **Einrichtung → NVIDIA-Grafik**.
 3. Wähle einen Modus, klicke **Modus speichern** und starte den Simulator.
 
 | Modus | Verhalten |
 | :--- | :--- |
-| **Automatisch (NVIDIA-Funktionen nutzen)** | Richtet NVAPI und Optical Flow aus dem Runner sowie verfügbare NGX-Komponenten aus dem installierten Treiber ein. Explizite Einstellungen über Umgebungsvariablen bleiben wirksam. |
-| **Kompatibilität (ohne NVIDIA-Zusatzfunktionen)** | Deaktiviert NVAPI, Optical Flow und NGX für den Spielprozess und unterdrückt die NVIDIA-Herstellerkennung gegenüber Wine und DXGI. Bei schwarzer Welt oder NVIDIA-Abstürzen ausprobieren. DLSS und NVIDIA Frame Generation stehen in diesem Modus nicht zur Verfügung. |
+| **Automatisch (Kompatibilität bevorzugen)** | Verwendet das unten beschriebene Kompatibilitätsprofil. Das gilt auch nach dem Update einer bereits gespeicherten automatischen Einstellung. |
+| **Kompatibilität (ohne NVIDIA-Zusatzfunktionen)** | Deaktiviert NVAPI, Optical Flow, NGX und NVIDIA Low Latency in DXVK/VKD3D. Verbirgt die NVIDIA-Herstellerkennung gegenüber Wine/DXGI. DLSS, Reflex und NVIDIA Frame Generation sind nicht verfügbar. |
+| **NVIDIA-Funktionen (experimentell)** | Aktiviert die NVIDIA-Komponenten des Runners und verfügbare NGX-Komponenten des installierten Treibers. Entspricht dem bisherigen automatischen Verhalten. DLSS benötigt passende Treiberkomponenten; explizite Abschaltungen über Umgebungsvariablen bleiben wirksam. |
 
-Die Auswahl wird für jede Installation separat gespeichert und gilt ab dem
-nächsten Spielstart. Flightdeck muss dafür nicht neu gestartet und die
-Wine-Umgebung nicht zurückgesetzt werden. Mit Automatisch wird beim nächsten
-Start wieder die normale Einrichtung verwendet. Der Kompatibilitätsmodus ändert
-keine Systemtreiber, entfernt keine Grafikbibliotheken und wechselt nicht auf
-integrierte Grafik.
+Die Auswahl wird pro Installation gespeichert und gilt beim nächsten Spielstart;
+ein Neustart des Launcher-Dienstes ist nicht nötig. **NVIDIA-Funktionen
+(experimentell)** stellt die Zusatzfunktionen beim nächsten Start wieder bereit.
+Der Kompatibilitätsmodus entfernt keine DLLs, ändert keine Treiber und wählt keine
+integrierte Grafik. AMD-/Intel-Systeme behalten ihre bisherige Grafikeinrichtung
+und zeigen diese Auswahl nicht an.
 
-Dieser Modus beruht auf einem
-[MSFS-2024-Kompatibilitätsbericht im Proton-Projekt](https://github.com/ValveSoftware/Proton/issues/9641).
-Er dient zur Fehlerbehebung, garantiert aber keine Lösung für jeden schwarzen
-Bildschirm. Auf Rechnern ausschließlich mit AMD-/Intel-Grafik wird die
-NVIDIA-Auswahl nicht angezeigt.
+Der vollständige Installer ersetzt nur erkannte Grafik-DLLs durch das abgestimmte
+Paket. Eigene Grafikbibliotheken bleiben erhalten. Das reine Quellpaket enthält
+die neu gebauten Bibliotheken nicht; verwende für die Korrektur den vollständigen Installer.
 
-## Wenn die Darstellung weiterhin fehlschlägt
+## Verbleibende Einschränkung
 
-Eine schwarze 3D-Hauptansicht bei funktionierenden Menüs wird weiterhin auf
-NVIDIA gemeldet, darunter Systeme mit RTX 4060, RTX 4080 und RTX 5060 Ti. Auf
-betroffenen Installationen haben beide Grafikmodi die Hauptansicht nicht
-wiederhergestellt. In einem Bericht beendete ein Treiberupdate die Abstürze
-beim zweiten Renderfenster; das Hauptfenster blieb jedoch schwarz. Ein zweites
-Renderfenster ist deshalb keine bestätigte Umgehung des Fehlers.
-Siehe [bekannte Probleme](known-issues.de.md).
+Funktionierende Menüs bei schwarzem Globus, schwarzer Free-Flight-Karte oder
+Cockpit-Hauptansicht bleiben ein gemeldetes NVIDIA-Problem. Die Modi früherer
+Versionen haben nicht jeden Fall behoben. Ein funktionierendes zweites Fenster
+bestätigt nicht die Behebung der Hauptansicht. Siehe [bekannte Probleme](known-issues.de.md)
+und die [Steam-Kompatibilitätsreferenz](nvidia-steam-parity.md).
 
-Flightdeck 0.1.9 ist noch kein bestätigter Fix für diesen Fehler. Zur Bestätigung müssen
-Menü-Globus, Free-Flight-Karte, Hauptansicht im Cockpit und ein zweites Fenster
-sowie ein erneuter Spielstart geprüft werden. Die
-[Entwicklerreferenz](nvidia-steam-parity.md) hält diesen Umfang und die
-Upstream-Nachweise fest. Diese Anleitung verlangt keine wiederholten
-Diagnoseexporte desselben Fehlers.
+Der lokale Render-Test umfasst gleichzeitig verwendete DirectX-11-/12-Geräte,
+Haupt- und Zweitfenster, Größenänderungen und das Schließen von Fenstern. Er
+besteht auf AMD-Hardware und bestätigt damit weder NVIDIA-Treiberverhalten noch
+MSFS-Flugstabilität.
 
-Die Dateiprüfung repariert das Basisspiel. Das Zurücksetzen der Wine-Umgebung
-erstellt ein neues Profil. Beides ersetzt keine Grafiktreiber oder bestätigt die
-Behebung eines Darstellungsfehlers. Probiere zunächst die Grafikeinstellungen,
-bevor du eine ansonsten funktionierende Installation zurücksetzt.
-
-Details zu eigenen Runtimes und Umgebungsvariablen stehen in der
+Eigene Einstellungen beschreibt die
 [Runtime-Referenz](runtime.md#nvidia-graphics-in-launcher-managed-starts).

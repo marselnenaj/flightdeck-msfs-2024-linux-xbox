@@ -1,17 +1,19 @@
 # SPDX-License-Identifier: MIT
-"""Install a matched, bundled VKD3D backport while the runtime lease is held."""
+"""Install matched DXVK/VKD3D corrections while the runtime lease is held."""
 from __future__ import annotations
 
 import json
 from pathlib import Path
 import re
 
-FILES = ("d3d12.dll", "d3d12core.dll")
+LEGACY_FILES = ("d3d12.dll", "d3d12core.dll")
+FILES = (*LEGACY_FILES, "dxgi.dll", "d3d11.dll", "d3d10core.dll")
 MARKER = "renderer-runtime.json"
 
 
-def _hashes(value):
-    if (not isinstance(value, dict) or set(value) != set(FILES)
+def _hashes(value, files=None):
+    allowed = (set(files),) if files is not None else (set(LEGACY_FILES), set(FILES))
+    if (not isinstance(value, dict) or set(value) not in allowed
             or any(not isinstance(v, str) or not re.fullmatch(r"[0-9a-f]{64}", v)
                    for v in value.values())):
         raise ValueError("Invalid renderer file hashes")
@@ -19,10 +21,10 @@ def _hashes(value):
 
 
 def install(runtime, *, bundle=None):
-    """Both NVIDIA modes use the backport; never replace a custom renderer.
+    """All NVIDIA modes use the corrections; never replace a custom renderer.
 
-    The shared runner and Fenix overlay remain untouched. All inputs and both
-    destination files are checked before replacing either DLL. A failed copy
+    The shared runner and Fenix overlay remain untouched. All inputs and all
+    destination files are checked before replacing any DLL. A failed copy
     stops launch; the next start recognizes and completes a partial update.
     """
     from .backend import atomic_json
@@ -39,24 +41,29 @@ def install(runtime, *, bundle=None):
         if private.is_symlink() or not private.is_dir() or bundle.is_symlink():
             raise ValueError()
         previous = _hashes(json.loads(_read(marker, 4096))) if marker.exists() or marker.is_symlink() else {}
-        runner = runtime / "runner/files/lib/wine/vkd3d-proton/x86_64-windows"
-        original = {name: _digest(runner / name) for name in FILES}
-        sources = {name: runner / name for name in FILES}
-        expected = original
-        state = "runner"
+        manifest = None
+        files = tuple(previous) if previous else FILES
         if bundle.exists():
             manifest = json.loads(_read(bundle / "manifest.json", 8192))
-            if not isinstance(manifest, dict) or manifest.get("schema") != 1:
+            if not isinstance(manifest, dict) or manifest.get("schema") != 2:
                 raise ValueError()
-            base = _hashes(manifest.get("base"))
-            replacement = _hashes(manifest.get("files"))
+            files = FILES
+        runner = runtime / "runner/files/lib/wine"
+        sources = {name: runner / ("vkd3d-proton" if name in LEGACY_FILES else "dxvk")
+                   / "x86_64-windows" / name for name in files}
+        original = {name: _digest(source) for name, source in sources.items()}
+        expected = original
+        state = "runner"
+        if manifest is not None:
+            base = _hashes(manifest.get("base"), files)
+            replacement = _hashes(manifest.get("files"), files)
             # Verify even an unused bundled payload, never silently use a
             # damaged package or combine libraries from different builds.
-            for name in FILES:
+            for name in files:
                 if (bundle / name).is_symlink() or _digest(bundle / name) != replacement[name]:
                     raise ValueError()
             if original == base:
-                sources = {name: bundle / name for name in FILES}
+                sources = {name: bundle / name for name in files}
                 expected = replacement
                 state = "backport"
         prefix = runtime / "local/msfs-prefix"
@@ -64,14 +71,14 @@ def install(runtime, *, bundle=None):
             raise ValueError()
         system = prefix_system32(prefix)
         current = {}
-        for name in FILES:
+        for name in files:
             target = system / name
             current[name] = _digest(target) if target.exists() or target.is_symlink() else None
             if current[name] not in (None, original[name], expected[name], previous.get(name)):
                 return "custom"
         # Also restores our old copies when the selected runner changes or a
         # source-only launcher replaces one that contained the backport.
-        for name in FILES:
+        for name in files:
             if current[name] != expected[name]:
                 _copy_file(sources[name], system / name)
         if state == "backport":

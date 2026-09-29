@@ -45,7 +45,7 @@ stack as either successful April report.
 | Physical adapter | DXGI is selected by a Vulkan device UUID, retained when the vendor name is hidden. D3D12 receives the DXGI adapter. | Do not reintroduce the host-name filter that broke hidden-vendor mode. |
 | Environment propagation | Backend → play script → launch script → Xodus → Wine bridge preserves these settings. | No evidence that the relevant NVIDIA options disappear before the game starts. |
 | DXGI/D3D12 installation | Prefix preparation copies DXGI/D3D11 and the D3D12 DLL pair from the runner. | A Wine executable path alone is not a complete renderer selection. |
-| Low-latency Vulkan support | VKD3D enables `VK_NV_low_latency2` independently of NVAPI. | The previous compatibility mode could still enter the driver-specific swapchain path. Flightdeck 0.1.9 explicitly excludes this extension in Compatibility mode. |
+| Low-latency Vulkan support | VKD3D enables `VK_NV_low_latency2` independently of NVAPI. | The previous compatibility mode could still enter the driver-specific swapchain path. 0.1.11 also corrects DXVK’s ignored opt-out and excludes the extension in both APIs by default. NVIDIA features remain an explicit choice. |
 | MSFS-specific Proton defaults | The pinned `proton` script has `noopwr` for MSFS 2020 (1250410), not an MSFS 2024 (2537590) entry. | Do not copy an unrelated 2020 workaround or assume a Steam AppID supplies a missing 2024 fix. |
 | Store game loading | `scripts/runtime/xodus-wine-launch` preserves Xodus' inherited file descriptors using `pass_fds`. Proton's `run_proc` calls `subprocess.call` without them. | Replacing the bridge with `proton run` would lose the Store loader inputs. A full Proton integration must preserve that contract and prefix ownership. |
 
@@ -53,14 +53,15 @@ The [VKD3D extension opt-out](https://github.com/HansKristian-Work/vkd3d-proton/
 and the three upstream swapchain lifetime backports are already included in the
 [0.1.9 renderer](nvidia-renderer.md). The backports fix concrete upstream
 defects; the Steam reports do not prove that those defects caused this black
-primary viewport. No further speculative environment switches are added on the
-basis of this research.
+primary viewport. The separate DXVK source correction in 0.1.11 makes its
+documented opt-out effective as well; it is not inferred from that warning.
 
 ## Route to confirmed NVIDIA compatibility
 
-1. Keep the 0.1.9 renderer as one frozen, reproducible change: the matched
-   D3D12 pair with the upstream fixes, plus the complete low-latency opt-out in
-   compatibility mode. Preserve an unmodified runner comparison and existing
+1. Keep the 0.1.11 graphics bundle frozen and reproducible: the existing
+   patched D3D12 pair and matched DXVK libraries with the corrected opt-out.
+   Automatic and Compatibility apply the complete profile. Preserve an
+   unmodified runner comparison and existing
    game, prefix and save data.
 2. Qualify it with the actual Store edition of MSFS 2024 on NVIDIA. The minimum
    coverage for the reported failures is one RTX 40-series and one RTX 50-series

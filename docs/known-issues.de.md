@@ -2,7 +2,7 @@
 
 [English](known-issues.md)
 
-Stand: Flightdeck 0.1.10, 29. September 2026.
+Stand: Flightdeck 0.1.11, 29. September 2026.
 
 **Komponentenupdates:** 0.1.10 behebt, dass ältere Store-Binaries bei angepassten
 Startskripten erhalten blieben. Aktualisiere Flightdeck und öffne es bei
@@ -17,12 +17,12 @@ folgen die Zuverlässigkeit von Cloud-Sync und Marketplace-Sitzungen.
 ## Aktueller Umfang
 
 - **NVIDIA:** MSFS 2024 kann funktionierende Menüs und Overlays anzeigen,
-  während Weltkarte und 3D-Hauptansicht schwarz bleiben. Keiner der beiden
-  Grafikmodi ist eine bestätigte Lösung; ein zweites Renderfenster kann einen
-  Absturz auslösen. Flightdeck 0.1.9 enthält
-  Upstream-Korrekturen. Dass sie die schwarze Hauptansicht auf NVIDIA behebt,
-  ist noch nicht bestätigt. Ein funktionierendes zweites Fenster löst das
-  Problem einer schwarzen Hauptansicht nicht.
+  während Weltkarte und 3D-Hauptansicht schwarz bleiben. 0.1.11 korrigiert DXVKs
+  wirkungslose Low-Latency-Abschaltung und verwendet automatisch das vollständige
+  Kompatibilitätsprofil für DirectX 11 und 12. DLSS, Reflex und NVIDIA Frame
+  Generation sind damit standardmäßig deaktiviert. Die Behebung der schwarzen
+  Hauptansicht ist noch nicht auf NVIDIA-Hardware bestätigt. Ein funktionierendes
+  zweites Fenster bestätigt sie nicht.
   [Grafikmodi und aktueller Stand](graphics.de.md).
 - **Cloud-Spielstände:** Wiederholte Sync-Fehler werden auch nach den
   Timeout-Korrekturen aus 0.1.8 gemeldet. Wiederherstellung und lokales Spielen

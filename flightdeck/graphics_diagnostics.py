@@ -232,9 +232,9 @@ def log_summary(text):
             components.append(name)
     versions = {}
     for name, pattern in (
-            ("dxvk", r"\bDXVK: (v[0-9]{1,3}\.[0-9]{1,3}(?:\.[0-9]{1,3})?(?:-[0-9]{1,7}-g[0-9a-f]{7,40})?)(?=\s|$)"),
+            ("dxvk", r"\bDXVK: (v[0-9]{1,3}\.[0-9]{1,3}(?:\.[0-9]{1,3})?(?:-[0-9]{1,7}-g[0-9a-f]{7,40})?(?:-flightdeck-ll1)?)(?=\s|$)"),
             ("vkd3d-proton", r"\bvkd3d-proton - applicationVersion: ([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})\.(?=\s|$)"),
-            ("vkd3d-proton-build", r"\bvkd3d-proton - build: ([0-9a-f]{7,40})\.(?=\s|$)")):
+            ("vkd3d-proton-build", r"\bvkd3d-proton - build: ([0-9a-f]{7,40}\+?)\.(?=\s|$)")):
         observed = sorted(set(re.findall(pattern, text)))[:8]
         if observed:
             versions[name] = observed

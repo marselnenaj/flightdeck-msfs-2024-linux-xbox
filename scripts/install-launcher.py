@@ -175,7 +175,7 @@ def directory(path: Path) -> None:
 
 def read_regular(path: Path, limit: int | None = None) -> bytes:
     if limit is None:
-        if path.name in {Path(name).name for name in NATIVE_FILES} | {"d3d12.dll", "d3d12core.dll"}:
+        if path.name in {Path(name).name for name in NATIVE_FILES} | {"d3d12.dll", "d3d12core.dll", "dxgi.dll", "d3d11.dll", "d3d10core.dll"}:
             limit = NATIVE_FILE_MAX
         elif path.name == "THIRD-PARTY-NOTICES.txt":
             limit = NATIVE_NOTICE_MAX
@@ -276,7 +276,7 @@ def source_snapshot(source: Path) -> dict[str, bytes]:
 
 
 def graphics_snapshot(source: Path) -> dict[str, bytes]:
-    """Admit only the matched renderer pair specified by this source release."""
+    """Admit only the matched renderer set specified by this source release."""
     root = source / "flightdeck/resources/graphics"
     no_links(root)
     if not root.exists():
@@ -284,15 +284,15 @@ def graphics_snapshot(source: Path) -> dict[str, bytes]:
     try:
         lock = json.loads(read_regular(source / "compat/graphics.lock.json"))
         files, base = lock["files"], lock["base"]
-        if (lock.get("schema") != 1 or not isinstance(files, dict) or not isinstance(base, dict)
-                or set(files) != {"d3d12.dll", "d3d12core.dll"} or set(base) != set(files)
+        if (lock.get("schema") != 2 or not isinstance(files, dict) or not isinstance(base, dict)
+                or set(files) != {"d3d12.dll", "d3d12core.dll", "dxgi.dll", "d3d11.dll", "d3d10core.dll"} or set(base) != set(files)
                 or any(not isinstance(v, str) or not HASH.fullmatch(v) for v in [*files.values(), *base.values(), lock["license_sha256"]])):
             raise ValueError()
         hashes = {**files, "LICENSE": lock["license_sha256"]}
         if set(p.name for p in root.iterdir()) != set(hashes) | {"manifest.json"}:
             raise ValueError()
         manifest = read_regular(root / "manifest.json")
-        if json.loads(manifest) != {"schema": 1, "base": base, "files": files}:
+        if json.loads(manifest) != {"schema": 2, "base": base, "files": files}:
             raise ValueError()
         values = {name: read_regular(root / name, NATIVE_FILE_MAX) for name in hashes}
         if any(digest(values[name]) != checksum for name, checksum in hashes.items()):

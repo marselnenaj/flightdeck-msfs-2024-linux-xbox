@@ -53,7 +53,7 @@ export function normalizeStatus(raw) {
     graphics: {
       available: raw.graphics?.available === true,
       nvidia_present: raw.graphics?.nvidia_present === true,
-      nvidia_mode: ['auto', 'compatibility'].includes(raw.graphics?.nvidia_mode) ? raw.graphics.nvidia_mode : 'auto',
+      nvidia_mode: ['auto', 'compatibility', 'features'].includes(raw.graphics?.nvidia_mode) ? raw.graphics.nvidia_mode : 'auto',
       error: stringValue(raw.graphics?.error, '', 1000),
     },
     game: {

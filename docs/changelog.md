@@ -1,5 +1,23 @@
 # Changes and release status
 
+## 0.1.11 — 29 September 2026
+
+[Download Flightdeck 0.1.11](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.11).
+
+- NVIDIA Automatic now selects compatibility for both DirectX 11 and 12, also
+  for saved automatic preferences. DLSS, Reflex and NVIDIA Frame Generation
+  require the explicit **NVIDIA features (experimental)** mode.
+- Correct the ignored `dxvk.disableNvLowLatency2` option in the pinned DXVK.
+  Ship matched DXGI/D3D11/D3D10 libraries with the existing VKD3D backport,
+  checked before installation. Custom renderer files are preserved.
+- Retain VKD3D warnings in the default game log and recognize patched renderer
+  versions in diagnostic exports.
+- Compact repeated report rows without dropping their values, making long
+  reports more likely to fit in the email draft. Downloads remain available.
+- Mixed D3D11/D3D12 clear, readback and multiwindow presentation passed on
+  AMD hardware. This release corrects the incomplete NVIDIA opt-out; resolving
+  the black MSFS main view still requires confirmation on NVIDIA hardware.
+
 ## 0.1.10 — 29 September 2026
 
 [Download Flightdeck 0.1.10](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.10).

@@ -35,15 +35,15 @@ def main():
     binary = output / "multiwindow.exe"
     subprocess.run(["x86_64-w64-mingw32-gcc", "-O2", "-Wall", "-Wextra", "-Werror",
                     str(ROOT / "tests/graphics/multiwindow.c"), "-o", str(binary),
-                    "-ld3d12", "-ldxgi", "-ldxguid", "-lgdi32"], check=True)
+                    "-ld3d12", "-ld3d11", "-ldxgi", "-ldxguid", "-lgdi32"], check=True)
     bootstrap.prepare_prefix(runner, prefix)
     environment = {k: v for k, v in os.environ.items()
                    if not k.startswith(("WINE", "DXVK", "VKD3D", "PROTON", "NVIDIA_WINE"))}
     environment.update(WINEPREFIX=str(prefix), WINEESYNC="0", WINEFSYNC="0", WINEDEBUG="-all",
-                       DXVK_LOG_LEVEL="info", VKD3D_DEBUG="info", DXVK_FILTER_DEVICE_UUID=gpu["device_uuid"])
+                       DXVK_LOG_LEVEL="info", VKD3D_DEBUG="warn", DXVK_FILTER_DEVICE_UUID=gpu["device_uuid"])
     results = []
-    for name, patched, mode in (("runner", False, "auto"), ("backport", True, "auto"),
-                                ("backport-compatibility", True, "compatibility")):
+    for name, patched, mode in (("runner", False, "features"), ("backport", True, "features"),
+                                ("backport-automatic", True, "auto")):
         (runtime / "private" / graphics.SETTINGS_FILE).write_text(json.dumps({"schema": 1, "nvidia_mode": mode}))
         env, _ = graphics.prepare(runtime, environment)
         # A packaged launcher can install its default bundle during prepare().
@@ -53,8 +53,8 @@ def main():
             raise ValueError("The supplied bundle does not match the runner")
         # On non-NVIDIA hardware this also checks the explicit extension opt-out
         # but does not claim to exercise the NVIDIA driver or vendor hiding.
-        if mode == "compatibility" and gpu["vendor_id"] != 0x10de:
-            env["VKD3D_DISABLE_EXTENSIONS"] = "VK_NV_low_latency2"
+        if mode == "auto" and gpu["vendor_id"] != 0x10de:
+            graphics._nvidia_mode(env, mode)
         command = [str(runner / "files/bin/wine"), str(binary)]
         if args.visible and name == "backport":
             command.append("--visible")
@@ -69,7 +69,7 @@ def main():
             for option in ("-k", "-w"):
                 subprocess.run([str(runner / "files/bin/wineserver"), option], env=env,
                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=10)
-    report = {"scope": "D3D12 clear/readback/present and swapchain lifetime",
+    report = {"scope": "Mixed D3D11/D3D12 clear/readback/present and swapchain lifetime",
               "gpu": gpu["name"], "nvidia_hardware": gpu["vendor_id"] == 0x10de, "cases": results}
     (output / "result.json").write_text(json.dumps(report, indent=2) + "\n")
     print(json.dumps(report, indent=2))

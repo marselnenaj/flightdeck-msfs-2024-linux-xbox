@@ -116,7 +116,8 @@ const server = createServer(async (req,res) => {
         const data=JSON.parse(body);assert.equal(data.runtime_path,status.runtime.path);
         const report={schema:1,id:'1234567890abcdef1234567890abcdef',created_at:'2026-09-29T12:00:00Z',category:data.category,description:data.description,
           observations:data.observations,system:{distribution:'linuxmint',release:'22.3'},diagnostics:{generated_at:'2026-09-29T12:00:00Z',checks:[{id:'game',ok:true}],
-          summary:{context:{game_id:status.runtime.game_id,launcher_version:'0.1.9',cloud_sync_scope:'current_service'},graphics:{devices:[{name:'NVIDIA GeForce RTX 5060 Ti',driver_version:'595.91.07'}]},cloud_sync:{state:'attention',error_code:'transport',error_details:{http_status:503}}}}};
+          summary:{context:{game_id:status.runtime.game_id,launcher_version:'0.1.9',cloud_sync_scope:'current_service'},graphics:{devices:[{name:'NVIDIA GeForce RTX 5060 Ti',driver_version:'595.91.07'}]},cloud_sync:{state:'attention',error_code:'transport',error_details:{http_status:503}},
+            store_session:{events:Array.from({length:128},(_,index)=>({time_ms:1790700000000+index,source:'game',method:'XStoreQueryProductsAsync',phase:'result',hresult:'80004001'})),partial:false}}}};
         problemReport={...problemReport,draft:{report,sha256:'fixture'}};res.end(JSON.stringify({ok:true,...problemReport}));return;
       }
       if (url.pathname === '/api/problem-reports/discard') {
@@ -143,7 +144,7 @@ const server = createServer(async (req,res) => {
       if (url.pathname === '/api/graphics') {
         const data=JSON.parse(body);
         assert.equal(data.runtime_path,status.runtime.path);
-        assert.ok(['auto','compatibility'].includes(data.nvidia_mode));
+        assert.ok(['auto','compatibility','features'].includes(data.nvidia_mode));
         if (graphicsBarrier) {graphicsWaiting=true;await graphicsBarrier;}
         status.graphics={...status.graphics,nvidia_mode:data.nvidia_mode};
         res.end(JSON.stringify({ok:true}));return;
@@ -336,6 +337,16 @@ try {
   releaseGraphics();graphicsBarrier=null;graphicsWaiting=false;
   await until(()=>evaluate(`document.getElementById('graphics-save').disabled && !document.getElementById('graphics-mode').disabled && document.getElementById('graphics-mode').value==='auto'`),'Automatic mode save did not complete');
   assert.equal(status.graphics.nvidia_mode,'auto');
+  await check('Automatic explains the conservative NVIDIA default',`document.getElementById('graphics-description').textContent.includes('DirectX 11 and 12') && document.getElementById('graphics-description').textContent.includes('disabled')`);
+  await evaluate(`document.getElementById('graphics-mode').value='features';document.getElementById('graphics-mode').dispatchEvent(new Event('change',{bubbles:true}))`);
+  await click('graphics-save');
+  await until(()=>evaluate(`document.getElementById('graphics-save').disabled && document.getElementById('graphics-mode').value==='features'`),'NVIDIA features mode did not save');
+  assert.equal(status.graphics.nvidia_mode,'features');
+  assert.deepEqual(posts.at(-1).body,{runtime_path:status.runtime.path,nvidia_mode:'features'});
+  await call('Page.reload');
+  await until(()=>evaluate(`document.getElementById('graphics-mode')?.value==='features' && !document.getElementById('graphics-mode').disabled`),'NVIDIA features mode did not survive reload');
+  await check('Explicit NVIDIA features mode is translated and fits mobile',`document.getElementById('graphics-mode').selectedOptions[0].textContent==='NVIDIA features (experimental)' && document.getElementById('graphics-description').textContent.includes('Enables NVIDIA features') && document.documentElement.scrollWidth<=innerWidth`);
+  await evaluate(`document.getElementById('graphics-card').scrollIntoView({block:'start'})`);await screenshot('nvidia-features-mobile.png');
   status.graphics={available:false,nvidia_present:false,nvidia_mode:'auto',error:''};status.cloud=autoIdle();
   await refresh(`document.getElementById('graphics-card').hidden`);
   results.push('AMD/Intel-only systems do not offer NVIDIA controls');
@@ -1002,6 +1013,7 @@ try {
   await evaluate(`document.getElementById('problem-description').value='Main view black, menus visible. <img src=x onerror="window.injected=1">';document.getElementById('problem-description').dispatchEvent(new Event('input'));document.getElementById('problem-black').click()`);
   await click('problem-prepare');await until(()=>evaluate("!document.getElementById('problem-mail').hidden"),'Prepared email missing');
   await check('Email draft contains description, GPU, driver and cloud error without attachment steps',`(()=>{const uri=new URL(document.getElementById('problem-mail').href),body=uri.searchParams.get('body');return uri.pathname==='contact@flightdeck-app.com'&&body.includes('Main view black')&&body.includes('595.91.07')&&body.includes('503')&&!body.includes(${JSON.stringify(csrf)})&&!body.includes('MUST-NOT-EXPORT')})()`);
+  await check('A full 128-event report keeps email enabled and every event in the message',`(()=>{const link=document.getElementById('problem-mail'),body=new URL(link.href).searchParams.get('body');return !link.hidden&&link.href.length<=24000&&document.getElementById('problem-long').hidden&&(body.match(/80004001/g)||[]).length===128&&body.includes('1790700000000')&&body.includes('1790700000127')})()`);
   await check('Report description is plain text and cannot inject markup',`document.getElementById('problem-message').textContent.includes('<img')&&!document.querySelector('#problem-message img')&&!window.injected`);
   const frozenMessage=await evaluate(`document.getElementById('problem-message').textContent`);
   await click('problem-download');

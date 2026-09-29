@@ -136,6 +136,8 @@ class BackendTests(unittest.TestCase):
             auto.state = "attention"
             self.launcher.configure_graphics(str(self.runtime), "compatibility")
             self.assertEqual(graphics.settings(self.runtime)["nvidia_mode"], "compatibility")
+            self.launcher.configure_graphics(str(self.runtime), "features")
+            self.assertEqual(graphics.settings(self.runtime)["nvidia_mode"], "features")
             other = self.make_runtime("other")
             self.assertEqual(graphics.settings(other)["nvidia_mode"], "auto")
 

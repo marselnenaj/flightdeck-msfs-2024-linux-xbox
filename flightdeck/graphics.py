@@ -27,7 +27,7 @@ _NVAPI = {
 _FILES = set(_NVAPI) | {"system32/nvngx.dll", "system32/_nvngx.dll"}
 _SELECTORS = ("DXVK_FILTER_DEVICE_NAME", "DXVK_FILTER_DEVICE_UUID",
               "VKD3D_FILTER_DEVICE_NAME", "VKD3D_VULKAN_DEVICE")
-NVIDIA_MODES = {"auto", "compatibility"}
+NVIDIA_MODES = {"auto", "compatibility", "features"}
 SETTINGS_FILE = "graphics-settings.json"
 
 
@@ -347,7 +347,7 @@ def _device_uuid(device):
 
 
 def _nvidia_mode(environment, mode):
-    if mode == "compatibility":
+    if mode in {"auto", "compatibility"}:
         environment["PROTON_DISABLE_NVAPI"] = "1"
         environment["DXVK_ENABLE_NVAPI"] = "0"
         environment["PROTON_HIDE_NVIDIA_GPU"] = "1"
@@ -360,8 +360,15 @@ def _nvidia_mode(environment, mode):
             environment["VKD3D_DISABLE_EXTENSIONS"] = (
                 extensions.rstrip("; ,\t\n") + ";" if extensions.strip() else ""
             ) + "VK_NV_low_latency2"
+        # MSFS creates D3D11 devices as well as D3D12 swapchains. DXVK enables
+        # its own Reflex path independently of NVAPI and VKD3D. The bundled
+        # DXVK correction restores its extension opt-out; latencySleep also
+        # prevents a tracker with an older/custom DXVK that ignores that option.
+        config = environment.get("DXVK_CONFIG", "").rstrip(" ;\n")
+        environment["DXVK_CONFIG"] = (config + "; " if config else "") + (
+            "dxvk.disableNvLowLatency2 = True; dxvk.latencySleep = False")
         # NGX can also be loaded directly by a game. Leave the files intact so
-        # returning to automatic mode restores driver-backed NVIDIA features.
+        # selecting features mode restores driver-backed NVIDIA features.
         entries = [environment.get("WINEDLLOVERRIDES", ""), "nvngx,_nvngx,*nvngx,*_nvngx="]
         environment["WINEDLLOVERRIDES"] = ";".join(entry for entry in entries if entry)
     if environment.get("PROTON_HIDE_NVIDIA_GPU", "0") not in {"", "0"}:
@@ -401,7 +408,8 @@ def prepare(runtime, environment=None):
     # Include startup versions and adapter decisions in the local game log.
     # Explicit logging preferences still win; no per-call tracing is enabled.
     environment.setdefault("DXVK_LOG_LEVEL", "info")
-    environment.setdefault("VKD3D_DEBUG", "info")
+    # VKD3D orders info BELOW warn: info suppresses swapchain warnings.
+    environment.setdefault("VKD3D_DEBUG", "warn")
     if environment.get("PROTON_DISABLE_NVAPI", "0") not in {"", "0"} or environment.get("DXVK_ENABLE_NVAPI") == "0":
         # Direct Wine starts do not interpret PROTON_DISABLE_NVAPI. Skipping
         # installation alone leaves DLLs from previous starts loadable. Block

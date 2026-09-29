@@ -240,7 +240,7 @@ def graphics_files(sources, directory):
     lock = read_json(sources[SOURCE_ROOT + "compat/graphics.lock.json"], "Graphics lock")
     files = hash_map(lock.get("files"), "Graphics lock")
     base = hash_map(lock.get("base"), "Graphics base")
-    if lock.get("schema") != 1 or set(files) != {"d3d12.dll", "d3d12core.dll"} or set(base) != set(files):
+    if lock.get("schema") != 2 or set(files) != {"d3d12.dll", "d3d12core.dll", "dxgi.dll", "d3d11.dll", "d3d10core.dll"} or set(base) != set(files):
         raise ValueError("Invalid graphics lock")
     expected = {**files, "LICENSE": lock.get("license_sha256")}
     if not isinstance(expected["LICENSE"], str) or not HASH.fullmatch(expected["LICENSE"]):
@@ -251,7 +251,7 @@ def graphics_files(sources, directory):
     if any(digest(values[name]) != checksum for name, checksum in expected.items()):
         raise ValueError("Graphics bundle differs from source lock")
     manifest = read_regular(directory / "manifest.json", JSON_MAX)
-    if read_json(manifest, "Graphics manifest") != {"schema": 1, "base": base, "files": files}:
+    if read_json(manifest, "Graphics manifest") != {"schema": 2, "base": base, "files": files}:
         raise ValueError("Graphics manifest differs from source lock")
     values["manifest.json"] = manifest
     return {GRAPHICS_ROOT + name: data for name, data in values.items()}

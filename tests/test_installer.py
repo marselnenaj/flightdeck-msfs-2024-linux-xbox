@@ -68,14 +68,16 @@ class InstallerTests(unittest.TestCase):
         bundle = self.source / "flightdeck/resources/graphics"
         bundle.mkdir(parents=True)
         values = {"d3d12.dll": b"synthetic wrapper", "d3d12core.dll": b"x" * (installer.MAX_FILE + 1)}
+        values.update({name: b"synthetic DXVK " + name.encode()
+                       for name in ("dxgi.dll", "d3d11.dll", "d3d10core.dll")})
         hashes = {name: installer.digest(data) for name, data in values.items()}
         base = {name: "0" * 64 for name in values}
         license = b"Synthetic renderer license"
         for name, data in {**values, "LICENSE": license}.items():
             (bundle / name).write_bytes(data)
-        (bundle / "manifest.json").write_text(json.dumps({"schema": 1, "base": base, "files": hashes}))
+        (bundle / "manifest.json").write_text(json.dumps({"schema": 2, "base": base, "files": hashes}))
         (self.source / "compat/graphics.lock.json").write_text(json.dumps({
-            "schema": 1, "base": base, "files": hashes, "license_sha256": installer.digest(license)}))
+            "schema": 2, "base": base, "files": hashes, "license_sha256": installer.digest(license)}))
         installed = self.install()
         folder = installer.verify_release(self.data, installed["current"])
         for name, data in values.items():

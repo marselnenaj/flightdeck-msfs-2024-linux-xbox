@@ -231,8 +231,8 @@ function renderGraphics() {
   $('graphics-mode').disabled = !canEditGraphics();
   $('graphics-save').disabled = !canEditGraphics() || (mode === status?.graphics?.nvidia_mode && !status?.graphics?.error);
   text('graphics-game', status?.runtime.game_name || '');
-  text('graphics-description', t(mode === 'compatibility'
-    ? 'Bei schwarzer Welt oder NVIDIA-Abstürzen testen. DLSS und NVIDIA Frame Generation sind in diesem Modus deaktiviert.'
+  text('graphics-description', t(mode !== 'features'
+    ? 'Nutzt den NVIDIA-Kompatibilitätsmodus für DirectX 11 und 12. DLSS, Reflex und NVIDIA Frame Generation sind deaktiviert.'
     : 'Nutzt NVIDIA-Funktionen mit den Komponenten des Runners und des installierten Treibers. DLSS benötigt passende Treiberkomponenten.'));
   text('graphics-error', status?.graphics?.error || '');
   $('graphics-error').hidden = !status?.graphics?.error;

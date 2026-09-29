@@ -34,3 +34,12 @@ This provenance review covers this source export. Compiled Rust/native packages
 also contain transitive dependencies and must receive a separate binary-release
 review. Upstream Cargo.lock is preserved for reproducibility, not presented as a
 complete binary license audit.
+
+## Bundled NVIDIA renderer corrections
+
+Full installers include the matched DXVK and VKD3D libraries pinned in
+`graphics.lock.json`. DXVK is zlib-licensed; VKD3D-Proton retains its LGPL and
+component notices. Both source trees and their exact recursive submodules are
+distributed as corresponding-source release assets. The full graphics bundle
+contains the original license texts of those components and their included
+dependencies. No proprietary NVIDIA driver or game DLL is included.
