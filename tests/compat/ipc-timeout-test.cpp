@@ -70,8 +70,8 @@ int main(int argc, char **argv) {
 
     void *owned = nullptr;
     hr = account(&owned);
-    if (!strcmp(scenario, "local-timeout")) {
-        check("local-request-still-bounded", hr == HRESULT_FROM_WIN32(ERROR_TIMEOUT) && !owned, hr);
+    if (!strcmp(scenario, "account-timeout")) {
+        check("account-renewal-still-bounded", hr == HRESULT_FROM_WIN32(ERROR_TIMEOUT) && !owned, hr);
         hr = account(&owned);
         check("late-response-cannot-satisfy-next-request", hr == HRESULT_FROM_WIN32(ERROR_OPERATION_ABORTED) && !owned, hr);
     } else {

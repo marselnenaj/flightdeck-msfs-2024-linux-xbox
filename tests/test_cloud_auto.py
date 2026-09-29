@@ -113,9 +113,23 @@ class AutomaticCloudTests(unittest.TestCase):
             outcome = self.finish_auto()
         self.assertEqual(outcome['state'], 'attention')
         self.assertTrue(outcome['can_play_local'])
+        self.assertTrue(outcome['can_sign_in'])
         self.assertFalse(self.spawned.is_set())
         self.assertEqual((self.folder / 'state.bin').read_bytes(), old)
         self.assertEqual(self.ops.calls, [])
+
+    def test_transport_timeout_and_forbidden_do_not_request_interactive_sign_in(self):
+        for code in ('transport', 'deadline', 'forbidden'):
+            @contextmanager
+            def unavailable(*args, **kwargs):
+                raise cloud_storage.CloudStorageError(code)
+                yield
+            with patch.object(self.api, 'open_client', unavailable):
+                self.auto.launch()
+                outcome = self.finish_auto()
+            self.assertEqual(outcome['state'], 'attention')
+            self.assertFalse(outcome['can_sign_in'], code)
+            self.assertFalse(self.spawned.is_set())
 
     def test_next_launch_reuses_verified_exit_readback_with_two_fresh_index_reads(self):
         self.start_game()

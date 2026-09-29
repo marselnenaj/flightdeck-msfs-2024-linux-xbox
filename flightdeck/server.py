@@ -69,9 +69,11 @@ class Handler(BaseHTTPRequestHandler):
         # Request strings can include local paths; no access log is needed.
         pass
 
-    def reply(self, status, body, content_type="application/json; charset=utf-8"):
+    def reply(self, status, body, content_type="application/json; charset=utf-8", *, translate=True):
         if isinstance(body, (dict, list)):
-            body = json.dumps(localize(body, language(self.headers.get("Accept-Language"))), ensure_ascii=False).encode("utf-8")
+            if translate:
+                body = localize(body, language(self.headers.get("Accept-Language")))
+            body = json.dumps(body, ensure_ascii=False).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(body)))
@@ -114,6 +116,8 @@ class Handler(BaseHTTPRequestHandler):
                 self.reply(200, value)
             elif path == "/api/diagnostics":
                 self.reply(200, self.server.launcher.diagnostics())
+            elif path == "/api/problem-reports":
+                self.reply(200, self.server.launcher.problem_reports.snapshot(), translate=False)
             elif path == "/api/game-update":
                 from .game_update import snapshot
                 self.reply(200, snapshot(self.server.launcher))
@@ -134,7 +138,7 @@ class Handler(BaseHTTPRequestHandler):
                 self.reply(200, self.server.launcher.setup.snapshot())
             elif path == "/api/setup/discover":
                 self.reply(200, self.server.launcher.setup.discover())
-            elif path in {"/", "/index.html", "/app.js", "/setup.js", "/mods.js", "/fenix.js", "/updates.js", "/maintenance.js", "/store-check.js", "/launcher-updates.js", "/notices.js", "/cloud-saves.js", "/i18n.js", "/state.js", "/styles.css", "/mark.svg", "/flight-panorama.png", "/flight-panorama-2020.png", "/manrope-variable.woff2"}:
+            elif path in {"/", "/index.html", "/app.js", "/problem-reports.js", "/setup.js", "/mods.js", "/fenix.js", "/updates.js", "/maintenance.js", "/store-check.js", "/launcher-updates.js", "/notices.js", "/cloud-saves.js", "/i18n.js", "/state.js", "/styles.css", "/mark.svg", "/flight-panorama.png", "/flight-panorama-2020.png", "/manrope-variable.woff2"}:
                 name = "index.html" if path == "/" else path[1:]
                 types = {".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".svg": "image/svg+xml", ".png": "image/png", ".woff2": "font/woff2"}
                 file = self.server.ui_root / name
@@ -191,8 +195,22 @@ class Handler(BaseHTTPRequestHandler):
                 result = launcher.configure_graphics(data.get("runtime_path"), data.get("nvidia_mode"))
             elif path == "/api/store-check/start":
                 result = launcher.store_check.start(language(self.headers.get("Accept-Language")))
+            elif path == "/api/store-check/sign-in":
+                result = launcher.store_check.start(language(self.headers.get("Accept-Language")),
+                                                    recover=True, job_id=data.get("job_id"))
+            elif path == "/api/cloud-saves/sign-in":
+                if not data.get("request_id"):
+                    raise LauncherError("Dieser Cloud-Vorgang ist nicht mehr aktuell. Bitte den Status neu laden.")
+                result = launcher.store_check.start(language(self.headers.get("Accept-Language")),
+                                                    recover=True, cloud_request_id=data["request_id"])
             elif path == "/api/store-check/cancel":
                 result = launcher.store_check.cancel(data.get("job_id"))
+            elif path == "/api/problem-reports/prepare":
+                self.reply(200, launcher.problem_reports.prepare(data), translate=False)
+                return
+            elif path == "/api/problem-reports/discard":
+                self.reply(200, launcher.problem_reports.discard(data.get("report_id")), translate=False)
+                return
             elif path == "/api/maintenance/preview":
                 result = launcher.maintenance.preview(data)
             elif path == "/api/maintenance/start":

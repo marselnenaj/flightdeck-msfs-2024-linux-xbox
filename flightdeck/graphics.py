@@ -351,6 +351,15 @@ def _nvidia_mode(environment, mode):
         environment["PROTON_DISABLE_NVAPI"] = "1"
         environment["DXVK_ENABLE_NVAPI"] = "0"
         environment["PROTON_HIDE_NVIDIA_GPU"] = "1"
+        # VKD3D discovers this driver extension independently of NVAPI. Merely
+        # hiding the vendor/disabling the DLLs still enters its NVIDIA-specific
+        # swapchain path, even with Reflex/Frame Generation off in the game.
+        extensions = environment.get("VKD3D_DISABLE_EXTENSIONS", "")
+        # Match VKD3D's token boundaries: comma/semicolon, not whitespace.
+        if "VK_NV_low_latency2" not in re.split(r"[;,]", extensions):
+            environment["VKD3D_DISABLE_EXTENSIONS"] = (
+                extensions.rstrip("; ,\t\n") + ";" if extensions.strip() else ""
+            ) + "VK_NV_low_latency2"
         # NGX can also be loaded directly by a game. Leave the files intact so
         # returning to automatic mode restores driver-backed NVIDIA features.
         entries = [environment.get("WINEDLLOVERRIDES", ""), "nvngx,_nvngx,*nvngx,*_nvngx="]
@@ -376,6 +385,8 @@ def prepare(runtime, environment=None):
     report = probe(include_device_ids=True)
     if report["status"] != "ready" or not any(d["vendor_id"] == 0x10de and d["type"] != 4 for d in report["devices"]):
         raise GraphicsError("NVIDIA wurde erkannt, aber Vulkan ist nicht verfügbar. Bitte den empfohlenen NVIDIA-Treiber der Distribution installieren und Linux neu starten.")
+    from . import renderer
+    renderer.install(runtime)
     # Adapter selection and GLVND setup are needed even without NVAPI. An
     # opt-out must not also change which physical GPU DXGI and D3D12 use.
     # Keep explicit choices and never guess among multiple discrete GPUs.

@@ -9,6 +9,7 @@
   <a href="#loslegen"><strong>Loslegen</strong></a> &nbsp;·&nbsp;
   <a href="addons.de.md">Mods installieren</a> &nbsp;·&nbsp;
   <a href="game-updates.md">Spielupdates</a> &nbsp;·&nbsp;
+  <a href="known-issues.de.md">Bekannte Probleme</a> &nbsp;·&nbsp;
   <a href="changelog.md">Änderungen</a> &nbsp;·&nbsp;
   <a href="../BUILDING.md">Selbst bauen</a> &nbsp;·&nbsp;
   <a href="../README.md">English</a>
@@ -20,11 +21,12 @@ Flightdeck installiert und startet deine **gekaufte Xbox-PC-/Microsoft-Store-
 Version von MSFS 2024 oder 2020** unter Linux mit Wine/Proton. Mit dem Microsoft-Konto
 anmelden, das Spiel herunterladen und im Launcher starten.
 
-**Aktuelle öffentliche Version: [Flightdeck 0.1.8](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.8).**
+**Aktuelle öffentliche Version: [Flightdeck 0.1.9](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.9).**
 Aktualisiere über **Updates → Flightdeck** oder verwende den vollständigen Installer.
-**0.1.8** behebt vorzeitige Store- und Cloud-Anmeldeabbrüche, wenn Serverantworten
-länger als fünf Sekunden dauern. Cloud-Verbindungsfehler werden von einer
-abgelehnten Anmeldung unterschieden.
+**0.1.9** erneuert ablaufende Microsoft-Sitzungen, ergänzt die erneute Anmeldung
+für Store und Cloud-Spielstände und bereitet Fehlermeldungen per E-Mail samt
+Diagnose vor. Upstream-Korrekturen für den NVIDIA-Renderer sind ebenfalls
+enthalten; die schwarze Hauptansicht muss auf betroffener Hardware geprüft werden.
 Siehe [Cloud-Spielstände](cloud-saves.de.md), [Marketplace-Umfang](marketplace-collections.md) und
 [Änderungsübersicht](changelog.md).
 
@@ -34,6 +36,12 @@ auf entsprechender Hardware bestätigt werden; Ergebnisse können je nach Treibe
 und Grafikkarte abweichen. Für MSFS 2020 sind erfolgreicher Spielstart und
 vollständige Flüge noch nicht bestätigt. Automatische Xbox-Cloud-Saves sind
 experimentell. [Kompatibilität und Grenzen](#aktueller-stand)
+
+**Bekannte Probleme:** Einige NVIDIA-Nutzer melden eine schwarze 3D-Hauptansicht
+bei funktionierenden Menüs. Wiederholte Cloud-Sync-Fehler und eine blockierende
+Meldung „Marketplace-Sitzung abgelaufen“ werden ebenfalls weiterhin gemeldet.
+Die Behebung dieser Fehler ist noch nicht bestätigt.
+[Aktueller Stand und Umfang](known-issues.de.md).
 
 ## Loslegen
 
@@ -124,7 +132,7 @@ Die Installation fehlender Linux-Systempakete kann Administratorrechte benötige
 | **Fenix A320** | Geprüften Linux-Patch laden, den offiziellen Fenix-Installer starten, Cockpitanzeigen einrichten und den Liverymanager öffnen. Nur für MSFS 2024. |
 | **Lokale Spielstände** | Lokal speichern und bei beendetem Simulator Backups erstellen. |
 | **Xbox-Cloud-Spielstände** | Vor dem Spielen den Cloud-Stand laden, nach dem Beenden Änderungen hochladen und lokale Sicherungen behalten. Experimentell. |
-| **Diagnose** | Ausgewählte Prüfungen exportieren, ohne rohe Spiellogs, Kontotokens oder Spielstandinhalte. |
+| **Diagnose** | Ausgewählte Prüfungen exportieren, ohne rohe Spiellogs, Kontotokens oder Spielstandinhalte. [Fehlermeldungen per E-Mail](problem-reports.de.md) mit Diagnosedaten direkt im Nachrichtentext vorbereiten. |
 | **Deutsch und Englisch** | Sprache der Oberfläche wechseln; auch Installer und Kommandozeile sind übersetzt. |
 
 Flightdeck 0.1.7 ergänzt **Diagnose → Store prüfen**: Anmeldung,

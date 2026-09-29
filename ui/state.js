@@ -20,7 +20,7 @@ export function normalizeAutomatic(raw) {
   }
   return {enabled:raw.enabled,state:raw.state,phase:raw.phase,request_id:raw.request_id,
     message:stringValue(raw.message,'',1600),error_code:stringValue(raw.error_code,'',100)||null,
-    can_retry:raw.can_retry===true,can_play_local:raw.can_play_local===true,can_cancel:raw.can_cancel===true,
+    can_retry:raw.can_retry===true,can_sign_in:raw.can_sign_in===true,can_play_local:raw.can_play_local===true,can_cancel:raw.can_cancel===true,
     conflict:raw.conflict===true,summary,last_synced_at:typeof raw.last_synced_at==='string'?raw.last_synced_at.slice(0,100):null};
 }
 export const automaticBusy=status=>['syncing','playing','attention'].includes(status?.cloud?.state);

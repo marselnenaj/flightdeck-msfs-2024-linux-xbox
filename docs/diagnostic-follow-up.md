@@ -1,5 +1,9 @@
 # Follow-up to the 0.1.8 tester reports
 
+This is a historical investigation note. The current support status is in
+[known issues](known-issues.md). The exporter instructions below remain a tool
+reference, not a request for affected users to repeat diagnostic submissions.
+
 The remaining Marketplace and NVIDIA/audio symptoms are **not confirmed fixed**.
 The first tester's screenshot says **“Marketplace-Sitzung abgelaufen”**
 (Marketplace session expired). This is the simulator's message; it does not
@@ -19,7 +23,7 @@ failure. Its earlier Store window check was cancelled, and its cloud mode was
 local. No audio evidence was included. Neither Vulkan enumeration nor a zero
 exit status establishes successful rendering or audible playback.
 
-## Prepared diagnostic correction (unreleased)
+## Diagnostic correction included in 0.1.9
 
 Schema 5 scans through the game and service logs using bounded chunks, up to
 64 MiB or three seconds per scan, plus the final 512 KiB when capped. This

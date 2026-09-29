@@ -80,10 +80,12 @@ matching `compat/bootstrap.lock.json`:
 ```sh
 python3 scripts/full-installer-release.py \
   --source build/flightdeck-source.tar.gz \
-  --native build/flightdeck-compat-0.1.8-linux-x86_64.tar.gz \
+  --native build/flightdeck-compat-0.1.9-linux-x86_64.tar.gz \
+  --graphics build/graphics \
   --output build/Flightdeck-Linux-x86_64.tar.gz
 ```
 
+The graphics directory must contain the [pinned renderer bundle](nvidia-renderer.md).
 These commands create local archives. Binary distributions also require the
 matching corresponding sources and original notices described in
 [binary package provenance](binary-release.md). Preserve the component licenses

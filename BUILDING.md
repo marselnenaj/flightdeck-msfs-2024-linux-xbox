@@ -139,6 +139,9 @@ the built artifacts and user-owned runner, package and Wine prefix.
 
 ## Graphics adapter regression check
 
+Flightdeck 0.1.9 also has a separately pinned NVIDIA VKD3D backport and a
+real multiwindow rendering/readback check. See [renderer build and packaging](docs/nvidia-renderer.md).
+
 With a graphical session, a working Vulkan driver, one discrete GPU and the
 MinGW toolchain, check the runner's actual DXGI/DirectX 12 adapter handoff:
 

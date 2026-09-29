@@ -1,9 +1,11 @@
 # Marketplace integration
 
-The reported 0.1.8 **“Marketplace session expired”** message remains under
-investigation. Successful Store inventory/license calls do not rule out a
-later game-service sign-in failure. See [the diagnostic follow-up](diagnostic-follow-up.md)
-for the missing evidence and the read-only exporter for existing tester logs.
+The reported **“Marketplace session expired”** message is not yet confirmed resolved in 0.1.9.
+It can appear when opening Marketplace inside the simulator and cannot be
+dismissed in the affected session, requiring a simulator restart. This is
+distinct from Flightdeck's purchase-window errors. Successful Store
+inventory/license calls do not establish a working Marketplace session.
+See [known issues](known-issues.md) for the current status.
 
 Flightdeck can list account-owned Marketplace content and supports genuine
 signed licenses for eligible Durable products. Free-content downloads have been
@@ -71,8 +73,10 @@ Store check** with the game closed. The check validates installed components,
 the saved sign-in, the public title catalog, the signed game license and the
 authenticated title library. It uses the same Store brokers as the simulator.
 It does not open checkout, create an order, acquire a Durable license handle,
-change accounts or refresh stored credentials. A missing or expired sign-in
-requires the normal Flightdeck sign-in flow.
+change accounts. From 0.1.9 it silently renews expiring credentials.
+If Microsoft requires interaction, **Renew Microsoft sign-in** opens login for
+the same account and then rechecks the Store. Network and keyring errors do not
+force a login. See [session recovery](store-session-refresh.md).
 
 A separate local window asks you to confirm that its text and buttons are
 visible. Only that confirmation passes the display step; loading HTML alone

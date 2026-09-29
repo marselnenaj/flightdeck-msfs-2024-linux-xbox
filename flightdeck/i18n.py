@@ -13,6 +13,15 @@ import re
 
 # Source messages also serve as stable catalog keys; additions must include EN.
 CATALOG = {
+    'Diese Store-Prüfung ist nicht mehr aktuell. Bitte den Status neu laden.': 'This Store check is no longer current. Reload its status.',
+    'Die Xbox-Anmeldung muss erneuert werden. Melde dich mit demselben Microsoft-Konto an; danach wird der Cloud-Abgleich erneut versucht.': 'Your Xbox sign-in needs to be renewed. Sign in with the same Microsoft account; Flightdeck will then retry cloud sync.',
+    'Bitte den Fehler mit 10 bis 4000 Zeichen beschreiben.': 'Describe the problem using 10 to 4000 characters.',
+    'Bitte eine Fehlerkategorie auswählen.': 'Select a problem category.',
+    'Der Fehlerbericht enthält unbekannte Felder.': 'The problem report contains unknown fields.',
+    'Der Fehlerbericht ist zu groß. Bitte den lokalen Diagnoseexport verwenden.': 'The problem report is too large. Please use the local diagnostics export.',
+    'Der gespeicherte Bericht konnte nicht gelesen werden. Bitte einen neuen Bericht vorbereiten.': 'The saved report could not be read. Please prepare a new report.',
+    'Die Angaben zum Grafikfehler sind ungültig.': 'The graphics problem details are invalid.',
+    'Dieser Bericht ist nicht mehr aktuell. Bitte die Ansicht neu laden.': 'This report is no longer current. Reload the view.',
     "Eine Store-Prüfung läuft bereits.": "A Store check is already running.",
     "Diese Store-Prüfung ist nicht mehr aktiv.": "This Store check is no longer active.",
     'Die Grafikeinstellungen sind ungültig. Bitte unter Einrichtung erneut speichern.': 'The graphics settings are invalid. Save them again under Setup.',
@@ -148,6 +157,7 @@ CATALOG = {
     'Die Cloud-Sperre ist nicht verfügbar. Beende eine laufende Sitzung auf anderen Geräten und versuche es erneut oder spiele lokal weiter.': 'The cloud save lock is unavailable. Close any session on other devices and retry, or keep playing locally.',
     'Der Cloud-Speicher reicht für diese Spielstände nicht aus. Deine lokalen Spielstände bleiben erhalten.': 'These saves exceed the available cloud storage. Your local saves are preserved.',
     'Die NVIDIA-Laufzeitdateien sind ungültig. Bitte Flightdeck erneut installieren.': 'The NVIDIA runtime files are invalid. Please reinstall Flightdeck.',
+    'Die Grafik-Laufzeit konnte nicht vorbereitet werden. Bitte Flightdeck erneut installieren.': 'Could not prepare the graphics runtime. Please reinstall Flightdeck.',
     'Die NVIDIA-Laufzeit konnte nicht vorbereitet werden. Bitte Runner und Schreibrechte der Wine-Umgebung prüfen.': 'Could not prepare the NVIDIA runtime. Check the runner and Wine prefix write permissions.',
     'NVIDIA wurde erkannt, aber Vulkan ist nicht verfügbar. Bitte den empfohlenen NVIDIA-Treiber der Distribution installieren und Linux neu starten.': 'NVIDIA was detected, but Vulkan is unavailable. Install your distribution’s recommended NVIDIA driver and restart Linux.',
     'Diese Sitzung verwendet lokale Spielstände. Der Cloud-Abgleich wird beim nächsten Start erneut versucht.': 'This session uses local saves. Cloud sync will be retried at the next launch.',

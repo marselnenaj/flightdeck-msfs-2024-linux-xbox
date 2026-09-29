@@ -74,6 +74,7 @@
 <progress id="overview-cloud-progress" hidden aria-label="Cloud-Abgleich läuft" data-i18n-aria-label="Cloud-Abgleich läuft"></progress>
 <p id="overview-cloud-time" class="muted"></p><div id="overview-cloud-conflict" class="auto-conflict" hidden><p data-i18n="Beide Seiten wurden geändert. Wähle den Stand für dieses Spielprofil; die andere Version wird vorher gesichert.">Beide Seiten wurden geändert. Wähle den Stand für dieses Spielprofil; die andere Version wird vorher gesichert.</p><p id="overview-cloud-counts" class="muted"></p></div>
 <p id="overview-cloud-error" class="notice error" role="alert" hidden></p><div class="auto-actions">
+<button id="overview-cloud-sign-in" class="button dark" disabled hidden data-i18n="Erneut anmelden und abgleichen">Erneut anmelden und abgleichen</button>
 <button id="overview-cloud-retry" class="button secondary" disabled hidden data-i18n="Abgleich erneut versuchen">Abgleich erneut versuchen</button>
 <button id="overview-cloud-play-local" class="button secondary" disabled hidden data-i18n="Mit lokalen Spielständen spielen">Mit lokalen Spielständen spielen</button>
 <button id="overview-cloud-cloud" class="button dark" disabled hidden data-i18n="Cloud-Spielstand verwenden">Cloud-Spielstand verwenden</button>
@@ -230,6 +231,7 @@
 <progress id="auto-cloud-progress" hidden aria-label="Cloud-Abgleich läuft" data-i18n-aria-label="Cloud-Abgleich läuft"></progress>
 <p id="auto-cloud-time" class="muted"></p><div id="auto-cloud-conflict" class="auto-conflict" hidden><p data-i18n="Beide Seiten wurden geändert. Wähle den Stand für dieses Spielprofil; die andere Version wird vorher gesichert.">Beide Seiten wurden geändert. Wähle den Stand für dieses Spielprofil; die andere Version wird vorher gesichert.</p><p id="auto-cloud-counts" class="muted"></p></div>
 <p id="auto-cloud-error" class="notice error" role="alert" hidden></p><div class="auto-actions">
+<button id="auto-cloud-sign-in" class="button dark" disabled hidden data-i18n="Erneut anmelden und abgleichen">Erneut anmelden und abgleichen</button>
 <button id="auto-cloud-retry" class="button secondary" disabled hidden data-i18n="Abgleich erneut versuchen">Abgleich erneut versuchen</button>
 <button id="auto-cloud-play-local" class="button secondary" disabled hidden data-i18n="Mit lokalen Spielständen spielen">Mit lokalen Spielständen spielen</button>
 <button id="auto-cloud-cloud" class="button dark" disabled hidden data-i18n="Cloud-Spielstand verwenden">Cloud-Spielstand verwenden</button>
@@ -297,10 +299,36 @@
       </section>
       <section id="view-diagnostics" class="view" aria-labelledby="page-title" hidden>
         <div class="view-intro"><h2><span data-i18n="Einblick ohne private Rohlogs">Einblick ohne private Rohlogs</span></h2><p><span data-i18n="Dieser Bericht enthält die vom lokalen Dienst freigegebenen Status- und Prüfdaten. Er enthält keine Anmeldetokens oder privaten Spielprotokolle.">Dieser Bericht enthält die vom lokalen Dienst freigegebenen Status- und Prüfdaten. Er enthält keine Anmeldetokens oder privaten Spielprotokolle.</span></p></div>
+        <article class="panel problem-card" aria-labelledby="problem-title">
+          <h3 id="problem-title" data-i18n="Problem melden">Problem melden</h3>
+          <p class="muted" data-i18n="Beschreibe den Fehler. Flightdeck ergänzt bereinigte Diagnosedaten für einen E-Mail-Bericht. Du brauchst kein zusätzliches Konto.">Beschreibe den Fehler. Flightdeck ergänzt bereinigte Diagnosedaten für einen E-Mail-Bericht. Du brauchst kein zusätzliches Konto.</p>
+          <button id="problem-open" class="button secondary" type="button" data-i18n="Fehlerbericht erstellen">Fehlerbericht erstellen</button>
+          <form id="problem-form" hidden>
+            <div class="problem-fields">
+              <div class="field"><label for="problem-category" data-i18n="Kategorie">Kategorie</label><select id="problem-category"><option value="graphics" data-i18n="Grafik / NVIDIA">Grafik / NVIDIA</option><option value="cloud" data-i18n="Cloud-Sync">Cloud-Sync</option><option value="marketplace">Marketplace</option><option value="installation" data-i18n="Installation / Start">Installation / Start</option><option value="other" data-i18n="Anderer Fehler">Anderer Fehler</option></select></div>
+            </div>
+            <div class="field"><label for="problem-description" data-i18n="Was ist passiert?">Was ist passiert?</label><textarea id="problem-description" rows="4" minlength="10" maxlength="4000" required aria-describedby="problem-description-help"></textarea><p id="problem-description-help" class="field-help" data-i18n="Beschreibe den letzten Schritt und den sichtbaren Fehler. Bitte keine Passwörter, Tokens oder privaten Rohlogs einfügen.">Beschreibe den letzten Schritt und den sichtbaren Fehler. Bitte keine Passwörter, Tokens oder privaten Rohlogs einfügen.</p></div>
+            <fieldset id="problem-graphics"><legend data-i18n="Was siehst du? (optional)">Was siehst du? (optional)</legend><label><input id="problem-menus" type="checkbox"><span data-i18n="Menüs sind sichtbar">Menüs sind sichtbar</span></label><label><input id="problem-black" type="checkbox"><span data-i18n="Die Hauptansicht ist schwarz">Die Hauptansicht ist schwarz</span></label><label><input id="problem-second-works" type="checkbox"><span data-i18n="Ein zweites Renderfenster funktioniert">Ein zweites Renderfenster funktioniert</span></label><label><input id="problem-second-crashes" type="checkbox"><span data-i18n="Ein zweites Renderfenster verursacht einen Absturz">Ein zweites Renderfenster verursacht einen Absturz</span></label></fieldset>
+            <p class="field-help" data-i18n="Erfasst die letzte verfügbare Spielsitzung der ausgewählten Installation und den aktuellen Cloud-Status. Der gespeicherte Bericht bleibt danach unverändert; ein neuer Bericht ersetzt den bisherigen Entwurf.">Erfasst die letzte verfügbare Spielsitzung der ausgewählten Installation und den aktuellen Cloud-Status. Der gespeicherte Bericht bleibt danach unverändert; ein neuer Bericht ersetzt den bisherigen Entwurf.</p>
+            <button id="problem-prepare" class="button dark" type="submit" data-i18n="Bericht vorbereiten">Bericht vorbereiten</button>
+          </form>
+          <p id="problem-status" class="field-help" role="status" aria-live="polite"></p>
+          <section id="problem-review" hidden aria-labelledby="problem-review-title">
+            <h4 id="problem-review-title" data-i18n="Bericht prüfen und per E-Mail melden">Bericht prüfen und per E-Mail melden</h4>
+            <p id="problem-context"></p><p><span data-i18n="Berichtsnummer">Berichtsnummer</span>: <code id="problem-id"></code></p>
+            <p><span data-i18n="Empfänger">Empfänger</span>: <strong id="problem-recipient"></strong></p>
+            <p class="field-help" data-i18n="Beschreibung und Diagnosedaten stehen direkt im E-Mail-Text. Ein Anhang ist nicht nötig. Erst dein Mailprogramm versendet die Nachricht.">Beschreibung und Diagnosedaten stehen direkt im E-Mail-Text. Ein Anhang ist nicht nötig. Erst dein Mailprogramm versendet die Nachricht.</p>
+            <details class="diagnostic-details" open><summary data-i18n="E-Mail-Text ansehen">E-Mail-Text ansehen</summary><pre id="problem-message"></pre></details>
+            <p id="problem-long" class="field-help" hidden data-i18n="Dieser Bericht ist für einen Mail-Link zu lang. Kopiere den vollständigen E-Mail-Text und füge ihn in dein Mailprogramm oder Webmail ein.">Dieser Bericht ist für einen Mail-Link zu lang. Kopiere den vollständigen E-Mail-Text und füge ihn in dein Mailprogramm oder Webmail ein.</p>
+            <div class="update-actions"><a id="problem-mail" class="button dark" rel="noopener noreferrer" hidden data-i18n="E-Mail-Entwurf öffnen">E-Mail-Entwurf öffnen</a><button id="problem-copy" class="button secondary" type="button" data-i18n="E-Mail-Text kopieren">E-Mail-Text kopieren</button><button id="problem-download" class="button secondary" type="button" data-i18n="Als Text speichern">Als Text speichern</button></div>
+            <button id="problem-discard" class="text-link" type="button" data-i18n="Lokalen Entwurf löschen">Lokalen Entwurf löschen</button>
+          </section>
+        </article>
         <article class="panel store-check-card" aria-labelledby="store-check-title">
           <h3 id="store-check-title" data-i18n="Store prüfen">Store prüfen</h3>
           <p class="muted" data-i18n="Prüft Anmeldung, Produktkatalog, Spiellizenz, Bibliothek und die Anzeige des Store-Fensters. Dabei wird keine Kaufseite geöffnet und kein Kauf ausgeführt.">Prüft Anmeldung, Produktkatalog, Spiellizenz, Bibliothek und die Anzeige des Store-Fensters. Dabei wird keine Kaufseite geöffnet und kein Kauf ausgeführt.</p>
-          <div class="diagnostic-toolbar"><button id="store-check-start" class="button dark" disabled data-i18n="Store-Prüfung starten">Store-Prüfung starten</button><button id="store-check-cancel" class="button secondary" hidden data-i18n="Abbrechen">Abbrechen</button></div>
+          <p data-i18n="Abgelaufene Tickets werden automatisch erneuert. Falls Microsoft eine neue Anmeldung verlangt, beende den Simulator und melde dich hier erneut an.">Abgelaufene Tickets werden automatisch erneuert. Falls Microsoft eine neue Anmeldung verlangt, beende den Simulator und melde dich hier erneut an.</p>
+          <div class="diagnostic-toolbar"><button id="store-check-start" class="button dark" disabled data-i18n="Store-Prüfung starten">Store-Prüfung starten</button><button id="store-check-sign-in" class="button secondary" disabled data-i18n="Microsoft-Anmeldung erneuern">Microsoft-Anmeldung erneuern</button><button id="store-check-cancel" class="button secondary" hidden data-i18n="Abbrechen">Abbrechen</button></div>
           <p id="store-check-busy" class="muted" data-i18n="Beende zuerst das Spiel und laufende Einrichtungsvorgänge.">Beende zuerst das Spiel und laufende Einrichtungsvorgänge.</p>
           <p id="store-check-status" role="status" aria-live="polite"></p><p id="store-check-error" role="alert" class="muted" hidden></p>
           <ul id="store-check-steps" class="check-list"></ul>

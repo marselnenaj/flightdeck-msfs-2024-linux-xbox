@@ -20,6 +20,17 @@ class BuildWithResources(build_py):
         yield root / "compat" / "bootstrap.lock.json", target / "bootstrap.lock.json"
         for name in ("bundle.json", "release.json", "LICENSE"):
             yield root / "compat/fenix" / name, target / "fenix" / name
+        graphics = root / "flightdeck/resources/graphics"
+        if graphics.exists():
+            # Reuse the installer's pinned-input validation for wheel builds.
+            import importlib.util
+            spec = importlib.util.spec_from_file_location("flightdeck_installer", root / "scripts/install-launcher.py")
+            installer = importlib.util.module_from_spec(spec)
+            import sys
+            sys.modules[spec.name] = installer
+            spec.loader.exec_module(installer)
+            for relative in installer.graphics_snapshot(root):
+                yield root / relative, Path(self.build_lib) / relative
 
     def run(self):
         super().run()

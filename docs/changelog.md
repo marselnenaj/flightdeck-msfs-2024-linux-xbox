@@ -1,5 +1,46 @@
 # Changes and release status
 
+## 0.1.9 — 29 September 2026
+
+[Download Flightdeck 0.1.9](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.9).
+
+- Add local problem reports with a frozen diagnostic snapshot and an email
+  draft addressed to `contact@flightdeck-app.com`. Description and diagnostics
+  are included as plain text; no attachment, GitHub account or upload service
+  is required. Provide complete copy/download fallbacks for webmail and long
+  reports, with German and English UI.
+- Extend bounded diagnostic coverage with authentication, networking-policy
+  and audio error summaries, without including raw logs or account data.
+- Preserve the Store account context across a same-account ticket-expiry gap,
+  while rejecting expired credentials, account changes and logout. A failing
+  regression reproduces the permanent rejection after ticket renewal in 0.1.8.
+  See [Store session recovery](store-session-refresh.md) for scope and evidence.
+- Renew expiring Microsoft user/device tickets before Store and Xbox requests,
+  share concurrent renewal work, and allow enough IPC time for renewal plus the
+  Store request. Keep network/keyring failures distinct from sign-in challenges.
+- Add **Renew Microsoft sign-in** with same-account protection, cancellation and
+  subsequent license/library verification. **Sign in again and sync** retries
+  the captured cloud operation only after that verification succeeds.
+- Backport three upstream VKD3D fixes for NVIDIA low-latency swapchain ownership
+  and lifetime. Apply the matched D3D12 DLL pair to NVIDIA installations using
+  the pinned runner; preserve custom renderers and the shared Wine/Fenix runner.
+- Make Compatibility mode disable `VK_NV_low_latency2` as well as NVAPI/NGX.
+  Disabling NVAPI alone did not disable VKD3D's NVIDIA-specific presentation path.
+- Verify the renderer payload against source-release hashes during packaging,
+  installation and launch. Complete interrupted copies before starting a game;
+  restore managed copies from the runner when the runner changes.
+- Add a native multiwindow rendering/readback test, including unused secondary
+  windows, resize and destruction. This is not an MSFS or NVIDIA hardware test.
+- Document the unresolved NVIDIA black main view, repeated cloud-sync failures
+  and blocking in-game Marketplace session error in both languages. Replace
+  repeated graphics-log requests with the current status and defined rendering
+  checks.
+
+The black main scene reported on RTX 4060/5060 Ti is **not yet confirmed fixed**.
+See [renderer build and validation](nvidia-renderer.md). Native Store components are rebuilt as
+**0.1.9**; the reported in-game Marketplace dialog and repeated cloud errors
+are not yet confirmed resolved.
+
 ## 0.1.8 — 28 September 2026
 
 - Give Store inventory, package-update queries and Microsoft account ticket

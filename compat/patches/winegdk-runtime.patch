@@ -1,6 +1,5 @@
 diff --git c/dlls/xgameruntime/GDKComponent/System/ConnectedStorageAuth.inc w/dlls/xgameruntime/GDKComponent/System/ConnectedStorageAuth.inc
 new file mode 100644
-index 0000000..865c1cc
 --- /dev/null
 +++ w/dlls/xgameruntime/GDKComponent/System/ConnectedStorageAuth.inc
 @@ -0,0 +1,206 @@
@@ -212,7 +211,6 @@ index 0000000..865c1cc
 +}
 diff --git c/dlls/xgameruntime/GDKComponent/System/ExistingUserPicker.c w/dlls/xgameruntime/GDKComponent/System/ExistingUserPicker.c
 new file mode 100644
-index 0000000..69ed0b3
 --- /dev/null
 +++ w/dlls/xgameruntime/GDKComponent/System/ExistingUserPicker.c
 @@ -0,0 +1,176 @@
@@ -394,7 +392,6 @@ index 0000000..69ed0b3
 +}
 diff --git c/dlls/xgameruntime/GDKComponent/System/ExistingUserPicker.h w/dlls/xgameruntime/GDKComponent/System/ExistingUserPicker.h
 new file mode 100644
-index 0000000..272f166
 --- /dev/null
 +++ w/dlls/xgameruntime/GDKComponent/System/ExistingUserPicker.h
 @@ -0,0 +1,21 @@
@@ -421,7 +418,6 @@ index 0000000..272f166
 +#endif
 diff --git c/dlls/xgameruntime/GDKComponent/System/SignatureRequest.c w/dlls/xgameruntime/GDKComponent/System/SignatureRequest.c
 new file mode 100644
-index 0000000..fa74e19
 --- /dev/null
 +++ w/dlls/xgameruntime/GDKComponent/System/SignatureRequest.c
 @@ -0,0 +1,327 @@
@@ -754,7 +750,6 @@ index 0000000..fa74e19
 +}
 diff --git c/dlls/xgameruntime/GDKComponent/System/SignatureRequest.h w/dlls/xgameruntime/GDKComponent/System/SignatureRequest.h
 new file mode 100644
-index 0000000..2f1c716
 --- /dev/null
 +++ w/dlls/xgameruntime/GDKComponent/System/SignatureRequest.h
 @@ -0,0 +1,43 @@
@@ -802,15 +797,13 @@ index 0000000..2f1c716
 +
 +#endif
 diff --git c/dlls/xgameruntime/GDKComponent/System/Threading/XAsync.cpp w/dlls/xgameruntime/GDKComponent/System/Threading/XAsync.cpp
-index 6b30344..c65b334 100644
 --- c/dlls/xgameruntime/GDKComponent/System/Threading/XAsync.cpp
 +++ w/dlls/xgameruntime/GDKComponent/System/Threading/XAsync.cpp
-@@ -408 +408 @@ static HRESULT AllocState(XAsyncBlock* asyncBlock, size_t contextSize)
+@@ -408 +408 @@
 -    for (auto i = 0u; i < sizeof(asyncBlock->internal); ++i)
 +    for (auto i = 0u; i < sizeof(asyncBlock->internal) / sizeof(asyncBlock->internal[0]); ++i)
 diff --git c/dlls/xgameruntime/GDKComponent/System/TitleAuthHttp.c w/dlls/xgameruntime/GDKComponent/System/TitleAuthHttp.c
 new file mode 100644
-index 0000000..fa74c0f
 --- /dev/null
 +++ w/dlls/xgameruntime/GDKComponent/System/TitleAuthHttp.c
 @@ -0,0 +1,50 @@
@@ -866,7 +859,6 @@ index 0000000..fa74c0f
 +}
 diff --git c/dlls/xgameruntime/GDKComponent/System/TitleAuthHttp.h w/dlls/xgameruntime/GDKComponent/System/TitleAuthHttp.h
 new file mode 100644
-index 0000000..9cf920f
 --- /dev/null
 +++ w/dlls/xgameruntime/GDKComponent/System/TitleAuthHttp.h
 @@ -0,0 +1,7 @@
@@ -879,7 +871,6 @@ index 0000000..9cf920f
 +#endif
 diff --git c/dlls/xgameruntime/GDKComponent/System/TitleAuthentication.inc w/dlls/xgameruntime/GDKComponent/System/TitleAuthentication.inc
 new file mode 100644
-index 0000000..8325f2a
 --- /dev/null
 +++ w/dlls/xgameruntime/GDKComponent/System/TitleAuthentication.inc
 @@ -0,0 +1,202 @@
@@ -1087,7 +1078,6 @@ index 0000000..8325f2a
 +}
 diff --git c/dlls/xgameruntime/GDKComponent/System/UserLookup.inc w/dlls/xgameruntime/GDKComponent/System/UserLookup.inc
 new file mode 100644
-index 0000000..6d21ed7
 --- /dev/null
 +++ w/dlls/xgameruntime/GDKComponent/System/UserLookup.inc
 @@ -0,0 +1,30 @@
@@ -1123,7 +1113,6 @@ index 0000000..6d21ed7
 +}
 diff --git c/dlls/xgameruntime/GDKComponent/System/UserSessionCache.c w/dlls/xgameruntime/GDKComponent/System/UserSessionCache.c
 new file mode 100644
-index 0000000..35266bc
 --- /dev/null
 +++ w/dlls/xgameruntime/GDKComponent/System/UserSessionCache.c
 @@ -0,0 +1,62 @@
@@ -1191,7 +1180,6 @@ index 0000000..35266bc
 +}
 diff --git c/dlls/xgameruntime/GDKComponent/System/UserSessionCache.h w/dlls/xgameruntime/GDKComponent/System/UserSessionCache.h
 new file mode 100644
-index 0000000..7d88aed
 --- /dev/null
 +++ w/dlls/xgameruntime/GDKComponent/System/UserSessionCache.h
 @@ -0,0 +1,13 @@
@@ -1210,7 +1198,6 @@ index 0000000..7d88aed
 +#endif
 diff --git c/dlls/xgameruntime/GDKComponent/System/UserStoreAccount.inc w/dlls/xgameruntime/GDKComponent/System/UserStoreAccount.inc
 new file mode 100644
-index 0000000..964b8df
 --- /dev/null
 +++ w/dlls/xgameruntime/GDKComponent/System/UserStoreAccount.inc
 @@ -0,0 +1,27 @@
@@ -1242,7 +1229,6 @@ index 0000000..964b8df
 +    return matches;
 +}
 diff --git c/dlls/xgameruntime/GDKComponent/System/XUser.c w/dlls/xgameruntime/GDKComponent/System/XUser.c
-index 7891759..e1f421c 100644
 --- c/dlls/xgameruntime/GDKComponent/System/XUser.c
 +++ w/dlls/xgameruntime/GDKComponent/System/XUser.c
 @@ -29,0 +30,7 @@
@@ -1253,7 +1239,8 @@ index 7891759..e1f421c 100644
 +#include "ExistingUserPicker.h"
 +#include "SignatureRequest.h"
 +
-@@ -31,0 +39,41 @@ WINE_DEFAULT_DEBUG_CHANNEL(gdkc);
+@@ -30,0 +38,41 @@
++
 +C_ASSERT(sizeof(UINT64) == 8);
 +C_ASSERT(offsetof(IXUserImplVtbl, XUserGetId) == 11 * sizeof(void *));
 +C_ASSERT(offsetof(IXUserImpl6Vtbl, XUserGetId) == 11 * sizeof(void *));
@@ -1294,11 +1281,10 @@ index 7891759..e1f421c 100644
 +    return result;
 +}
 +
-+
-@@ -105 +153 @@ static HRESULT parse_json( const char *json, SIZE_T jsonLen, IJsonObject **objec
+@@ -105 +153 @@
 -    TRACE( "json %s, object %p.\n", debugstr_an( json, jsonLen ), object );
 +    TRACE( "json bytes %Iu, object %p.\n", jsonLen, object );
-@@ -131,8 +179 @@ cleanup:
+@@ -131,9 +179,3 @@
 -struct endpoint
 -{
 -    char *host;
@@ -1307,19 +1293,21 @@ index 7891759..e1f421c 100644
 -};
 -
 -static void free_endpoints( struct endpoint *endpoints, UINT32 count )
+-{
 +static void free_endpoints( struct xodus_signing_endpoint *endpoints, UINT32 count )
-@@ -139,0 +181 @@ static void free_endpoints( struct endpoint *endpoints, UINT32 count )
++{
 +    if (!endpoints) return;
-@@ -141,0 +184,2 @@ static void free_endpoints( struct endpoint *endpoints, UINT32 count )
+@@ -141,0 +184,2 @@
 +        free( endpoints[i].protocol );
 +        free( endpoints[i].hostType );
-@@ -149 +193 @@ static void free_endpoints( struct endpoint *endpoints, UINT32 count )
+@@ -149,5 +193,12 @@
 -struct policy
-+static void free_signing_policies(struct xodus_signing_policy *policies, UINT32 count)
-@@ -151,3 +195,10 @@ struct policy
+-{
 -    UINT32 version;
 -    UINT32 maxBodyBytes;
 -};
++static void free_signing_policies(struct xodus_signing_policy *policies, UINT32 count)
++{
 +    if (!policies) return;
 +    for (UINT32 i = 0; i < count; ++i)
 +    {
@@ -1330,13 +1318,13 @@ index 7891759..e1f421c 100644
 +}
 +
 +HRESULT xodus_store_current_account_context(char output[65]);
-@@ -160,0 +212,5 @@ struct XUser
+@@ -160,0 +212,5 @@
 +    char store_account_context[65];
 +    UINT64 store_account_xuid;
 +    BOOL xuid_syntax_valid;
 +    BOOL profile_xuid_known;
 +    BOOL profile_xuid_matches;
-@@ -169,0 +226,9 @@ struct XUser
+@@ -169,0 +226,9 @@
 +    HSTRING cloudToken, cloudUserHash;
 +    HSTRING cloudUserInput, cloudDeviceInput;
 +    BCRYPT_KEY_HANDLE cloudKey;
@@ -1346,7 +1334,8 @@ index 7891759..e1f421c 100644
 +    UINT64 deviceRpsExpires, deviceTokenExpires, titleTokenExpires, userTokenExpires;
 +    UINT64 xstsExpires, xstsDeadline;
 +    BOOL titleAuthenticated;
-@@ -172,0 +238,9 @@ struct XUser
+@@ -171,0 +237,9 @@
++
 +    /* Independent of the last requested RP token: only the successful Xbox
 +     * user response may publish these effective server-computed privileges. */
 +    SRWLOCK privilegeLock;
@@ -1355,18 +1344,15 @@ index 7891759..e1f421c 100644
 +    UINT64 privilegeBits[4];
 +    UINT64 privilegesNotAfter;
 +    UINT64 privilegesDeadline;
-+
-@@ -183 +257 @@ struct XUser
+@@ -183 +257 @@
 -    struct endpoint *endpoints;
 +    struct xodus_signing_endpoint *endpoints;
-@@ -185 +259 @@ struct XUser
+@@ -185 +259 @@
 -    struct policy *policies;
 +    struct xodus_signing_policy *policies;
-@@ -193 +267,2 @@ static struct XUser *impl_from_IUser( IUser *iface )
+@@ -193,42 +267,29 @@
 -static BOOL ascii_equal_i( const char *left, const char *right, SIZE_T length )
-+/* Privilege helpers are also compiled unchanged by the synthetic unit probe. */
-+static BOOL privilege_id_supported(UINT32 value)
-@@ -195,10 +270 @@ static BOOL ascii_equal_i( const char *left, const char *right, SIZE_T length )
+-{
 -    for (SIZE_T i = 0; i < length; ++i)
 -        if (tolower( (unsigned char)left[i] ) != tolower( (unsigned char)right[i] )) return FALSE;
 -    return TRUE;
@@ -1377,38 +1363,24 @@ index 7891759..e1f421c 100644
 -    SIZE_T pattern_length = strlen( pattern );
 -
 -    if (pattern_length > 2 && pattern[0] == '*' && pattern[1] == '.')
-+    switch (value)
-@@ -206,4 +272,9 @@ static BOOL endpoint_host_matches( const char *host, SIZE_T host_length, const c
+-    {
 -        ++pattern;
 -        --pattern_length;
 -        return host_length > pattern_length &&
 -                ascii_equal_i( host + host_length - pattern_length, pattern, pattern_length );
-+    case 185: case 188: case 189: case 190: case 196: case 198:
-+    case 203: case 207: case 208: case 209: case 220: case 247:
-+    case 252: case 254: case 255: return TRUE;
-+    /* XSAPI/XAL legacy CommsInGameVoice, observed through the GDK ABI.
-+     * It remains its own authoritative XSTS prv bit, never an alias for 252.
-+     * microsoft/xbox-live-api 8486ddd12ed26ec9e6dd755d08688334e09ebfb9:
-+     * External/Xal/Source/Xal/Include/Xal/xal_types.h (value 205). */
-+    case 205: return TRUE;
-+    default: return FALSE;
-@@ -211,3 +281,0 @@ static BOOL endpoint_host_matches( const char *host, SIZE_T host_length, const c
+-    }
 -    if (host_length == pattern_length) return ascii_equal_i( host, pattern, pattern_length );
 -    return host_length > pattern_length && host[host_length - pattern_length - 1] == '.' &&
 -            ascii_equal_i( host + host_length - pattern_length, pattern, pattern_length );
-@@ -216 +284 @@ static BOOL endpoint_host_matches( const char *host, SIZE_T host_length, const c
+-}
+-
 -static const char *user_GetRelyingParty( struct XUser *impl, const URL_COMPONENTSA *url )
-+static HRESULT privilege_parse_list(const WCHAR *text, UINT32 length, UINT64 bits[4])
-@@ -218,4 +286,4 @@ static const char *user_GetRelyingParty( struct XUser *impl, const URL_COMPONENT
+-{
 -    const struct endpoint *best = NULL;
 -    SIZE_T best_score = 0;
 -
 -    for (UINT32 i = 0; i < impl->endpointsLen; ++i)
-+    UINT32 offset = 0;
-+    memset(bits, 0, sizeof(UINT64) * 4);
-+    if ((!text && length) || length > 8192) return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
-+    while (offset < length)
-@@ -223,12 +291,5 @@ static const char *user_GetRelyingParty( struct XUser *impl, const URL_COMPONENT
+-    {
 -        const struct endpoint *endpoint = &impl->endpoints[i];
 -        SIZE_T path_length = endpoint->path ? strlen( endpoint->path ) : 0;
 -        SIZE_T score;
@@ -1421,15 +1393,38 @@ index 7891759..e1f421c 100644
 -            continue;
 -        score = strlen( endpoint->host ) + path_length;
 -        if (score > best_score)
++/* Privilege helpers are also compiled unchanged by the synthetic unit probe. */
++static BOOL privilege_id_supported(UINT32 value)
++{
++    switch (value)
++    {
++    case 185: case 188: case 189: case 190: case 196: case 198:
++    case 203: case 207: case 208: case 209: case 220: case 247:
++    case 252: case 254: case 255: return TRUE;
++    /* XSAPI/XAL legacy CommsInGameVoice, observed through the GDK ABI.
++     * It remains its own authoritative XSTS prv bit, never an alias for 252.
++     * microsoft/xbox-live-api 8486ddd12ed26ec9e6dd755d08688334e09ebfb9:
++     * External/Xal/Source/Xal/Include/Xal/xal_types.h (value 205). */
++    case 205: return TRUE;
++    default: return FALSE;
++    }
++}
++
++static HRESULT privilege_parse_list(const WCHAR *text, UINT32 length, UINT64 bits[4])
++{
++    UINT32 offset = 0;
++    memset(bits, 0, sizeof(UINT64) * 4);
++    if ((!text && length) || length > 8192) return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
++    while (offset < length)
++    {
 +        UINT32 value = 0;
 +        while (offset < length && text[offset] == ' ') ++offset;
 +        if (offset == length) break;
 +        if (text[offset] < '0' || text[offset] > '9') goto invalid;
 +        do
-@@ -236,3 +297,7 @@ static const char *user_GetRelyingParty( struct XUser *impl, const URL_COMPONENT
+@@ -236,2 +297,29 @@
 -            best = endpoint;
 -            best_score = score;
--        }
 +            UINT32 digit = text[offset++] - '0';
 +            if (value > (UINT32_MAX - digit) / 10) goto invalid;
 +            value = value * 10 + digit;
@@ -1437,17 +1432,13 @@ index 7891759..e1f421c 100644
 +        if (offset < length && text[offset] != ' ') goto invalid;
 +        /* Future privilege IDs are harmless; they must not alias a known bit. */
 +        if (value < 256) bits[value / 64] |= (UINT64)1 << (value % 64);
-@@ -240,5 +305,4 @@ static const char *user_GetRelyingParty( struct XUser *impl, const URL_COMPONENT
--
--    if (best) return best->relyingParty;
--    if (endpoint_host_matches( url->lpszHostName, url->dwHostNameLength, "playfabapi.com" ))
--        return "http://playfab.xboxlive.com/";
--    return "http://xboxlive.com";
++    }
 +    return S_OK;
 +invalid:
 +    memset(bits, 0, sizeof(UINT64) * 4);
 +    return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
-@@ -246,0 +311,113 @@ static const char *user_GetRelyingParty( struct XUser *impl, const URL_COMPONENT
++}
++
 +static HRESULT privilege_parse_not_after(const WCHAR *text, UINT32 length, UINT64 *expiry)
 +{
 +    SYSTEMTIME date = {0}, roundtrip;
@@ -1463,7 +1454,14 @@ index 7891759..e1f421c 100644
 +        {
 +            if (at >= length || text[at] < '0' || text[at] > '9') return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
 +            values[field] = values[field] * 10 + text[at++] - '0';
-+        }
+@@ -239,7 +327,96 @@
+-    }
+-
+-    if (best) return best->relyingParty;
+-    if (endpoint_host_matches( url->lpszHostName, url->dwHostNameLength, "playfabapi.com" ))
+-        return "http://playfab.xboxlive.com/";
+-    return "http://xboxlive.com";
+-}
 +        if (field < 5 && (at >= length || text[at++] != separators[field])) return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
 +    }
 +    if (at < length && text[at] == '.')
@@ -1560,39 +1558,35 @@ index 7891759..e1f421c 100644
 +    return hr;
 +}
 +/* End privilege helpers. */
-+
-@@ -263,0 +441,3 @@ static ULONG WINAPI user_Release( IUser *iface )
+@@ -263,0 +441,3 @@
 +        if (impl->deviceRps) WindowsDeleteString(impl->deviceRps);
 +        if (impl->deviceToken) WindowsDeleteString(impl->deviceToken);
 +        if (impl->titleToken) WindowsDeleteString(impl->titleToken);
-@@ -267,0 +448,4 @@ static ULONG WINAPI user_Release( IUser *iface )
+@@ -267,0 +448,4 @@
 +        if (impl->cloudToken) WindowsDeleteString(impl->cloudToken);
 +        if (impl->cloudUserHash) WindowsDeleteString(impl->cloudUserHash);
 +        if (impl->cloudUserInput) WindowsDeleteString(impl->cloudUserInput);
 +        if (impl->cloudDeviceInput) WindowsDeleteString(impl->cloudDeviceInput);
-@@ -276 +460,2 @@ static ULONG WINAPI user_Release( IUser *iface )
+@@ -276 +460,2 @@
 -        if (impl->policiesLen) free( impl->policies );
 +        free_signing_policies( impl->policies, impl->policiesLen );
 +        SecureZeroMemory(impl->store_account_context, sizeof(impl->store_account_context));
-@@ -436,0 +622,4 @@ cleanup:
+@@ -436,0 +622,4 @@
 +/* Auth helpers share the native key; no private key crosses IPC. */
 +#include "TitleAuthentication.inc"
 +#include "ConnectedStorageAuth.inc"
 +
-@@ -439,3 +628 @@ static HRESULT WINAPI user_RequestUserToken( IUser *iface )
+@@ -439,3 +628 @@
 -    const char *template = "{\"TokenType\":\"JWT\",\"RelyingParty\":\"http://auth.xboxlive.com\",\"Properties\":{\"AuthMethod\":\"RPS\",\"SiteName\":\"user.auth.xboxlive.com\",\"RpsTicket\":\"";
 -    struct XUser *impl = impl_from_IUser( iface );
 -    UINT32 tokenLen, wTokenLen;
 +    struct XUser *impl = impl_from_IUser(iface);
-@@ -443,4 +630,3 @@ static HRESULT WINAPI user_RequestUserToken( IUser *iface )
+@@ -443,37 +630,11 @@
 -    const WCHAR *wToken;
 -    UCHAR *buf = NULL;
 -    char *body = NULL;
 -    SIZE_T bufSize;
-+    UCHAR *buffer = NULL;
-+    char *quoted = NULL, *body = NULL;
-+    SIZE_T size, capacity;
-@@ -448,32 +634,7 @@ static HRESULT WINAPI user_RequestUserToken( IUser *iface )
+-    HRESULT hr;
 -
 -    TRACE( "iface %p.\n", iface );
 -
@@ -1625,6 +1619,10 @@ index 7891759..e1f421c 100644
 -
 -error:
 -    hr = HRESULT_FROM_WIN32( GetLastError() );
++    UCHAR *buffer = NULL;
++    char *quoted = NULL, *body = NULL;
++    SIZE_T size, capacity;
++    HRESULT hr;
 +    if (FAILED(hr = auth_quote_hstring(impl->accessToken, &quoted))) goto cleanup;
 +    capacity = strlen(quoted) + 256;
 +    if (!(body = malloc(capacity))) { hr = E_OUTOFMEMORY; goto cleanup; }
@@ -1632,29 +1630,29 @@ index 7891759..e1f421c 100644
 +    if (FAILED(hr = user_authenticated_http(impl, "POST", "user.auth.xboxlive.com", "/user/authenticate", body, NULL, &buffer, &size))) goto cleanup;
 +    if (FAILED(hr = parse_json((char *)buffer, size, &object))) goto cleanup;
 +    hr = auth_response_token(object, &impl->userToken, &impl->userTokenExpires);
-@@ -481,3 +642,2 @@ cleanup:
+@@ -481,3 +642,2 @@
 -    if (buf) free( buf );
 -    if (body) free( body );
 -    if (object) IJsonObject_Release( object );
 +    if (object) IJsonObject_Release(object);
 +    free(buffer); free(body); free(quoted);
-@@ -489,3 +648,0 @@ static HRESULT user_request_xsts_token( struct XUser *impl, const char *relyingP
+@@ -489,3 +648,0 @@
 -    static const char prefix[] = "{\"TokenType\":\"JWT\",\"RelyingParty\":\"";
 -    static const char properties[] = "\",\"Properties\":{\"SandboxId\":\"RETAIL\",\"ProofKey\":";
 -    static const char userTokens[] = ",\"UserTokens\":[\"";
-@@ -494,2 +651,2 @@ static HRESULT user_request_xsts_token( struct XUser *impl, const char *relyingP
+@@ -494,2 +651,2 @@
 -    UINT32 tokenLen, wTokenLen;
 -    char *body = NULL, *newRelyingParty = NULL, *token;
 +    UINT32 identityCount = 0;
 +    char *body = NULL, *newRelyingParty = NULL;
-@@ -496,0 +654 @@ static HRESULT user_request_xsts_token( struct XUser *impl, const char *relyingP
+@@ -496,0 +654 @@
 +    IVector_IJsonValue *identityVector = NULL;
-@@ -498 +655,0 @@ static HRESULT user_request_xsts_token( struct XUser *impl, const char *relyingP
+@@ -498 +655,0 @@
 -    const WCHAR *wToken;
-@@ -500 +657 @@ static HRESULT user_request_xsts_token( struct XUser *impl, const char *relyingP
+@@ -500 +657 @@
 -    UINT64 newXuid;
 +    UINT64 newXuid, newExpiry = 0, expiryNow;
-@@ -505,19 +662,2 @@ static HRESULT user_request_xsts_token( struct XUser *impl, const char *relyingP
+@@ -505,19 +662,2 @@
 -    wToken = WindowsGetStringRawBuffer( impl->userToken, &wTokenLen );
 -    if (!(tokenLen = WideCharToMultiByte( CP_UTF8, WC_ERR_INVALID_CHARS, wToken, wTokenLen, NULL, 0, NULL, NULL ))) goto error;
 -    if (!(body = calloc( strlen( prefix ) + strlen( relyingParty ) + strlen( properties ) +
@@ -1676,16 +1674,18 @@ index 7891759..e1f421c 100644
 -    if (FAILED(hr = http_request( L"POST", L"xsts.auth.xboxlive.com", L"/xsts/authorize", body, CT_JSON, ACCEPT_JSON, &buffer, &bufferSize ))) goto cleanup;
 +    if (FAILED(hr = user_xsts_body(impl, relyingParty, &body))) goto cleanup;
 +    if (FAILED(hr = user_authenticated_http(impl, "POST", "xsts.auth.xboxlive.com", "/xsts/authorize", body, NULL, &buffer, &bufferSize))) goto cleanup;
-@@ -525 +665,5 @@ static HRESULT user_request_xsts_token( struct XUser *impl, const char *relyingP
+@@ -525 +665,5 @@
 -    if (FAILED(hr = get_json_string( object, L"Token", &newToken ))) goto cleanup;
 +    if (impl->titleAuthenticated)
 +    {
 +        if (FAILED(hr = auth_response_token(object, &newToken, &newExpiry))) goto cleanup;
 +    }
 +    else if (FAILED(hr = get_json_string(object, L"Token", &newToken))) goto cleanup;
-@@ -534,0 +679 @@ static HRESULT user_request_xsts_token( struct XUser *impl, const char *relyingP
+@@ -534,0 +679 @@
 +        impl->xuid_syntax_valid = xuid_decimal_matches(xuid, newXuid);
-@@ -547,0 +693,21 @@ static HRESULT user_request_xsts_token( struct XUser *impl, const char *relyingP
+@@ -545,0 +691,21 @@
++    }
++
 +    expiryNow = privilege_utc_now();
 +    if (impl->titleAuthenticated && newExpiry <= expiryNow)
 +    {
@@ -1705,22 +1705,23 @@ index 7891759..e1f421c 100644
 +            user_publish_privileges(impl, HRESULT_FROM_WIN32(ERROR_INVALID_DATA), NULL, 0);
 +        else
 +            user_capture_privileges(impl, object, child, xuid, newXuid, identityCount);
-+    }
-+
-@@ -553,0 +720,2 @@ static HRESULT user_request_xsts_token( struct XUser *impl, const char *relyingP
+@@ -553,0 +720,2 @@
 +    impl->xstsExpires = newExpiry;
 +    impl->xstsDeadline = newExpiry ? GetTickCount64() + (newExpiry - expiryNow) / 10000 : 0;
-@@ -559,0 +728,2 @@ cleanup:
+@@ -559,0 +728,2 @@
 +    if (FAILED(hr) && !strcmp(relyingParty, "http://xboxlive.com"))
 +        user_publish_privileges(impl, hr, NULL, 0);
-@@ -565,0 +736 @@ cleanup:
+@@ -565,0 +736 @@
 +    if (identityVector) IVector_IJsonValue_Release(identityVector);
-@@ -572,3 +742,0 @@ cleanup:
+@@ -572,3 +742,0 @@
 -error:
 -    hr = HRESULT_FROM_WIN32( GetLastError() );
 -    goto cleanup;
-@@ -653 +821,8 @@ cleanup:
+@@ -653,4 +821,10 @@
 -static HRESULT WINAPI user_CacheEndpoints( IUser *iface )
+-{
+-    struct XUser *impl = impl_from_IUser( iface );
+-    IJsonObject *child = NULL, *object = NULL;
 +static void free_json_strings(char **strings, SIZE_T count)
 +{
 +    for (SIZE_T i = 0; i < count; ++i) free(strings[i]);
@@ -1729,32 +1730,16 @@ index 7891759..e1f421c 100644
 +
 +static HRESULT get_json_strings(IJsonObject *object, const WCHAR *name, BOOL optional,
 +        char ***strings, SIZE_T *count)
-@@ -655,6 +829,0 @@ static HRESULT WINAPI user_CacheEndpoints( IUser *iface )
--    struct XUser *impl = impl_from_IUser( iface );
--    IJsonObject *child = NULL, *object = NULL;
--    IVector_IJsonValue *vector = NULL;
++{
++    IJsonArray *array = NULL;
+@@ -658,3 +832,108 @@
 -    struct endpoint *endpoints = NULL;
 -    UINT32 endpointsLen = 0, policiesLen = 0;
 -    struct policy *policies = NULL;
-@@ -662,2 +831,4 @@ static HRESULT WINAPI user_CacheEndpoints( IUser *iface )
--    UCHAR *buffer = NULL;
--    SIZE_T size;
-+    IVector_IJsonValue *vector = NULL;
 +    HSTRING string = NULL;
 +    UINT32 size = 0;
 +    char **values = NULL;
-@@ -665,11 +836,9 @@ static HRESULT WINAPI user_CacheEndpoints( IUser *iface )
--
--    TRACE( "iface %p.\n", iface );
--
--    if (FAILED(hr = http_request( L"GET", L"title.mgmt.xboxlive.com", L"/titles/default/endpoints?type=1", NULL, NULL, ACCEPT_JSON, &buffer, &size )))
--        return hr;
--    if (FAILED(hr = parse_json( (char *)buffer, size, &object ))) goto cleanup;
--
--    if (FAILED(hr = get_json_array( object, L"SignaturePolicies", &array ))) goto cleanup;
--    if (FAILED(hr = IJsonArray_QueryInterface( array, &IID_IVector_IJsonValue, (void **)&vector ))) goto cleanup;
--    if (FAILED(hr = IVector_IJsonValue_get_Size( vector, &policiesLen ))) goto cleanup;
--    if (!(policies = calloc( policiesLen, sizeof(*policies) )))
++    HRESULT hr;
 +    *strings = NULL;
 +    *count = 0;
 +    hr = get_json_array(object, name, &array);
@@ -1764,89 +1749,16 @@ index 7891759..e1f421c 100644
 +    if (FAILED(hr = IVector_IJsonValue_get_Size(vector, &size))) goto cleanup;
 +    if (size && !(values = calloc(size, sizeof(*values)))) { hr = E_OUTOFMEMORY; goto cleanup; }
 +    for (UINT32 i = 0; i < size; ++i)
-@@ -677,46 +846,3 @@ static HRESULT WINAPI user_CacheEndpoints( IUser *iface )
--        hr = E_OUTOFMEMORY;
--        goto cleanup;
--    }
--
--    for (UINT32 i = 0; i < policiesLen; ++i)
--    {
--        DOUBLE maxBodyBytes, version;
--
--        if (FAILED(hr = IJsonArray_GetObjectAt( array, i, &child ))) goto cleanup;
--        if (FAILED(hr = get_json_number( child, L"MaxBodyBytes", &maxBodyBytes ))) goto cleanup;
--        if (FAILED(hr = get_json_number( child, L"Version", &version ))) goto cleanup;
--        policies[i].maxBodyBytes = maxBodyBytes;
--        policies[i].version = version;
--        IJsonObject_Release( child );
--        child = NULL;
--    }
--
--    IJsonArray_Release( array );
--    array = NULL;
--    IVector_IJsonValue_Release( vector );
--    vector = NULL;
--
--    if (FAILED(hr = get_json_array( object, L"EndPoints", &array ))) goto cleanup;
--    if (FAILED(hr = IJsonArray_QueryInterface( array, &IID_IVector_IJsonValue, (void **)&vector ))) goto cleanup;
--    if (FAILED(hr = IVector_IJsonValue_get_Size( vector, &endpointsLen ))) goto cleanup;
--    if (!(endpoints = calloc( endpointsLen, sizeof(*endpoints) )))
--    {
--        hr = E_OUTOFMEMORY;
--        goto cleanup;
--    }
--
--    for (UINT32 i = 0; i < endpointsLen; ++i)
--    {
--        HSTRING string = NULL;
--
--        if (FAILED(hr = IJsonArray_GetObjectAt( array, i, &child ))) goto cleanup;
--        if (FAILED(hr = get_json_utf8( child, L"Host", &endpoints[i].host ))) goto cleanup;
--        if (FAILED(hr = get_json_string( child, L"RelyingParty", &string )))
--        {
--            hr = S_OK;
--            IJsonObject_Release( child );
--            child = NULL;
--            continue;
--        }
--        hr = HSTRINGToMultiByte( string, &endpoints[i].relyingParty );
--        WindowsDeleteString( string );
++    {
 +        if (FAILED(hr = IJsonArray_GetStringAt(array, i, &string))) goto cleanup;
 +        if (FAILED(hr = HSTRINGToMultiByte(string, &values[i]))) goto cleanup;
 +        WindowsDeleteString(string);
-@@ -724,10 +849,0 @@ static HRESULT WINAPI user_CacheEndpoints( IUser *iface )
--        if (FAILED(hr)) goto cleanup;
--        if (SUCCEEDED(get_json_string( child, L"Path", &string )))
--        {
--            hr = HSTRINGToMultiByte( string, &endpoints[i].path );
--            WindowsDeleteString( string );
--            string = NULL;
--            if (FAILED(hr)) goto cleanup;
--        }
--        IJsonObject_Release( child );
--        child = NULL;
-@@ -735,10 +851,3 @@ static HRESULT WINAPI user_CacheEndpoints( IUser *iface )
--
--    free_endpoints( impl->endpoints, impl->endpointsLen );
--    free( impl->policies );
--    impl->endpoints = endpoints;
--    impl->endpointsLen = endpointsLen;
--    impl->policies = policies;
--    impl->policiesLen = policiesLen;
--    endpoints = NULL;
--    policies = NULL;
--
++        string = NULL;
++    }
 +    *strings = values;
 +    *count = size;
 +    values = NULL;
-@@ -746,7 +855,218 @@ cleanup:
--    free( buffer );
--    if (array) IJsonArray_Release( array );
--    if (child) IJsonObject_Release( child );
--    if (object) IJsonObject_Release( object );
--    if (vector) IVector_IJsonValue_Release( vector );
--    free_endpoints( endpoints, endpointsLen );
--    free( policies );
++cleanup:
 +    if (string) WindowsDeleteString(string);
 +    if (vector) IVector_IJsonValue_Release(vector);
 +    if (array) IJsonArray_Release(array);
@@ -1932,7 +1844,60 @@ index 7891759..e1f421c 100644
 +        UINT32 policyOffset, struct signing_document *document)
 +{
 +    IJsonObject *object = NULL, *child = NULL;
-+    IJsonArray *array = NULL;
+@@ -662,53 +941,18 @@
+-    UCHAR *buffer = NULL;
+-    SIZE_T size;
+-    HRESULT hr;
+-
+-    TRACE( "iface %p.\n", iface );
+-
+-    if (FAILED(hr = http_request( L"GET", L"title.mgmt.xboxlive.com", L"/titles/default/endpoints?type=1", NULL, NULL, ACCEPT_JSON, &buffer, &size )))
+-        return hr;
+-    if (FAILED(hr = parse_json( (char *)buffer, size, &object ))) goto cleanup;
+-
+-    if (FAILED(hr = get_json_array( object, L"SignaturePolicies", &array ))) goto cleanup;
+-    if (FAILED(hr = IJsonArray_QueryInterface( array, &IID_IVector_IJsonValue, (void **)&vector ))) goto cleanup;
+-    if (FAILED(hr = IVector_IJsonValue_get_Size( vector, &policiesLen ))) goto cleanup;
+-    if (!(policies = calloc( policiesLen, sizeof(*policies) )))
+-    {
+-        hr = E_OUTOFMEMORY;
+-        goto cleanup;
+-    }
+-
+-    for (UINT32 i = 0; i < policiesLen; ++i)
+-    {
+-        DOUBLE maxBodyBytes, version;
+-
+-        if (FAILED(hr = IJsonArray_GetObjectAt( array, i, &child ))) goto cleanup;
+-        if (FAILED(hr = get_json_number( child, L"MaxBodyBytes", &maxBodyBytes ))) goto cleanup;
+-        if (FAILED(hr = get_json_number( child, L"Version", &version ))) goto cleanup;
+-        policies[i].maxBodyBytes = maxBodyBytes;
+-        policies[i].version = version;
+-        IJsonObject_Release( child );
+-        child = NULL;
+-    }
+-
+-    IJsonArray_Release( array );
+-    array = NULL;
+-    IVector_IJsonValue_Release( vector );
+-    vector = NULL;
+-
+-    if (FAILED(hr = get_json_array( object, L"EndPoints", &array ))) goto cleanup;
+-    if (FAILED(hr = IJsonArray_QueryInterface( array, &IID_IVector_IJsonValue, (void **)&vector ))) goto cleanup;
+-    if (FAILED(hr = IVector_IJsonValue_get_Size( vector, &endpointsLen ))) goto cleanup;
+-    if (!(endpoints = calloc( endpointsLen, sizeof(*endpoints) )))
+-    {
+-        hr = E_OUTOFMEMORY;
+-        goto cleanup;
+-    }
+-
+-    for (UINT32 i = 0; i < endpointsLen; ++i)
+-    {
+-        HSTRING string = NULL;
+-
+-        if (FAILED(hr = IJsonArray_GetObjectAt( array, i, &child ))) goto cleanup;
+-        if (FAILED(hr = get_json_utf8( child, L"Host", &endpoints[i].host ))) goto cleanup;
+-        if (FAILED(hr = get_json_string( child, L"RelyingParty", &string )))
 +    IVector_IJsonValue *vector = NULL;
 +    char *tokenType = NULL;
 +    HRESULT hr;
@@ -1951,12 +1916,18 @@ index 7891759..e1f421c 100644
 +        if (document->policyCount && !(document->policies = calloc(document->policyCount, sizeof(*document->policies))))
 +        { hr = E_OUTOFMEMORY; goto cleanup; }
 +        for (UINT32 i = 0; i < document->policyCount; ++i)
-+        {
+@@ -716,2 +960,3 @@
+-            hr = S_OK;
+-            IJsonObject_Release( child );
 +            if (FAILED(hr = IJsonArray_GetObjectAt(array, i, &child))) goto cleanup;
 +            if (FAILED(hr = parse_signing_policy(child, &document->policies[i]))) goto cleanup;
 +            IJsonObject_Release(child);
-+            child = NULL;
-+        }
+@@ -719 +963,0 @@
+-            continue;
+@@ -721,3 +965,30 @@
+-        hr = HSTRINGToMultiByte( string, &endpoints[i].relyingParty );
+-        WindowsDeleteString( string );
+-        string = NULL;
 +        IVector_IJsonValue_Release(vector); vector = NULL;
 +        IJsonArray_Release(array); array = NULL;
 +    }
@@ -1987,12 +1958,39 @@ index 7891759..e1f421c 100644
 +        }
 +        else if (hr != WEB_E_JSON_VALUE_NOT_FOUND) goto cleanup;
 +        hr = xodus_prepare_signing_endpoint(endpoint, authenticatedTitle, tokenType, document->policyCount, policyOffset);
-+        if (FAILED(hr)) goto cleanup;
+@@ -725,20 +996,4 @@
+-        if (SUCCEEDED(get_json_string( child, L"Path", &string )))
+-        {
+-            hr = HSTRINGToMultiByte( string, &endpoints[i].path );
+-            WindowsDeleteString( string );
+-            string = NULL;
+-            if (FAILED(hr)) goto cleanup;
+-        }
+-        IJsonObject_Release( child );
+-        child = NULL;
+-    }
+-
+-    free_endpoints( impl->endpoints, impl->endpointsLen );
+-    free( impl->policies );
+-    impl->endpoints = endpoints;
+-    impl->endpointsLen = endpointsLen;
+-    impl->policies = policies;
+-    impl->policiesLen = policiesLen;
+-    endpoints = NULL;
+-    policies = NULL;
+-
 +        free(tokenType); tokenType = NULL;
 +        IJsonObject_Release(child); child = NULL;
 +    }
 +    hr = S_OK;
-+cleanup:
+@@ -746,7 +1001,72 @@
+-    free( buffer );
+-    if (array) IJsonArray_Release( array );
+-    if (child) IJsonObject_Release( child );
+-    if (object) IJsonObject_Release( object );
+-    if (vector) IVector_IJsonValue_Release( vector );
+-    free_endpoints( endpoints, endpointsLen );
+-    free( policies );
 +    free(tokenType);
 +    if (child) IJsonObject_Release(child);
 +    if (array) IJsonArray_Release(array);
@@ -2065,15 +2063,10 @@ index 7891759..e1f421c 100644
 +    free_signing_document(&defaults);
 +    free_signing_document(&title);
 +    free_signing_document(&merged);
-@@ -784,2 +1104,5 @@ static HRESULT finish_user_load( XUserHandle impl )
+@@ -784,11 +1104,10 @@
 -
 -    if (FAILED(hr = IUser_RequestUserToken( iface )))
-+    const char *stage = "proof_key";
-+    if (FAILED(hr = IUser_GenerateKeyPair(iface))) goto cleanup;
-+    stage = "user_token";
-+    if (FAILED(hr = IUser_RequestUserToken(iface))) goto cleanup;
-+    if (impl->deviceRps)
-@@ -787,7 +1110,2 @@ static HRESULT finish_user_load( XUserHandle impl )
+-    {
 -        WARN( "Xbox user-token exchange failed, hr %#lx.\n", hr );
 -        goto cleanup;
 -    }
@@ -2081,11 +2074,18 @@ index 7891759..e1f421c 100644
 -    {
 -        WARN( "Xbox proof-key generation failed, hr %#lx.\n", hr );
 -        goto cleanup;
+-    }
++    const char *stage = "proof_key";
++    if (FAILED(hr = IUser_GenerateKeyPair(iface))) goto cleanup;
++    stage = "user_token";
++    if (FAILED(hr = IUser_RequestUserToken(iface))) goto cleanup;
++    if (impl->deviceRps)
++    {
 +        stage = "device_title_tokens";
 +        if (FAILED(hr = user_request_device_and_title(impl))) goto cleanup;
-@@ -794,0 +1113 @@ static HRESULT finish_user_load( XUserHandle impl )
++    }
 +    stage = "xsts";
-@@ -799,0 +1119,8 @@ static HRESULT finish_user_load( XUserHandle impl )
+@@ -799,0 +1119,8 @@
 +    stage = "identity_validation";
 +    if (!impl->xuid || !WindowsGetStringLen( impl->xstsToken ) || !WindowsGetStringLen( impl->userHash ))
 +    {
@@ -2094,63 +2094,63 @@ index 7891759..e1f421c 100644
 +        goto cleanup;
 +    }
 +    stage = "endpoint_cache";
-@@ -818,0 +1146 @@ static HRESULT finish_user_load( XUserHandle impl )
+@@ -818,0 +1146 @@
 +    stage = "profile_http";
-@@ -823,0 +1152 @@ static HRESULT finish_user_load( XUserHandle impl )
+@@ -823,0 +1152 @@
 +    stage = "profile_json";
-@@ -824,0 +1154 @@ static HRESULT finish_user_load( XUserHandle impl )
+@@ -824,0 +1154 @@
 +    stage = "profile_fields";
-@@ -826,0 +1157,6 @@ static HRESULT finish_user_load( XUserHandle impl )
+@@ -826,0 +1157,6 @@
 +    {
 +        HSTRING profile_id = NULL;
 +        impl->profile_xuid_known = SUCCEEDED(get_json_string(profile, L"id", &profile_id));
 +        impl->profile_xuid_matches = impl->profile_xuid_known && xuid_decimal_matches(profile_id, impl->xuid);
 +        if (profile_id) WindowsDeleteString(profile_id);
 +    }
-@@ -839,0 +1176 @@ cleanup:
+@@ -839,0 +1176 @@
 +    fprintf(stderr, "xodus-user-auth: stage=%s hr=%08lx\n", stage, (ULONG)hr);
-@@ -854 +1191 @@ cleanup:
+@@ -854 +1191 @@
 -static HRESULT LoadMsaUser( const char *access_token, XUserHandle *user )
 +static HRESULT LoadMsaUser( const char *access_token, const char *device_rps, UINT64 device_expiry, XUserHandle *user )
-@@ -867,0 +1205,5 @@ static HRESULT LoadMsaUser( const char *access_token, XUserHandle *user )
+@@ -867,0 +1205,5 @@
 +    if (device_rps && *device_rps)
 +    {
 +        if (FAILED(hr = MultiByteToHSTRING(device_rps, strlen(device_rps), &impl->deviceRps))) goto error;
 +        impl->deviceRpsExpires = device_expiry;
 +    }
-@@ -974,0 +1317,5 @@ static HRESULT WINAPI x_user_XUserDuplicateHandle( IXUserImpl6 *iface, XUserHand
+@@ -974,0 +1317,5 @@
 +    static LONG diagnostic_calls;
 +    LONG diagnostic_call = InterlockedIncrement(&diagnostic_calls);
 +    if (diagnostic_call <= 4) fprintf(stderr, "xodus-user-api: %s call=%ld begin\n", __func__, diagnostic_call);
 +    x_user_diagnostic_caller(__func__, __builtin_return_address(0), diagnostic_call);
 +
-@@ -978 +1325 @@ static HRESULT WINAPI x_user_XUserDuplicateHandle( IXUserImpl6 *iface, XUserHand
+@@ -978 +1325 @@
 -    return S_OK;
 +    return x_user_diagnostic_result(__func__, S_OK, diagnostic_call);
-@@ -982,0 +1330,5 @@ static void WINAPI x_user_XUserCloseHandle( IXUserImpl6 *iface, XUserHandle user
+@@ -982,0 +1330,5 @@
 +    static LONG diagnostic_calls;
 +    LONG diagnostic_call = InterlockedIncrement(&diagnostic_calls);
 +    if (diagnostic_call <= 4) fprintf(stderr, "xodus-user-api: %s call=%ld begin\n", __func__, diagnostic_call);
 +    x_user_diagnostic_caller(__func__, __builtin_return_address(0), diagnostic_call);
 +
-@@ -989,0 +1342,5 @@ static INT32 WINAPI x_user_XUserCompare( IXUserImpl6 *iface, XUserHandle user1,
+@@ -989,0 +1342,5 @@
 +    static LONG diagnostic_calls;
 +    LONG diagnostic_call = InterlockedIncrement(&diagnostic_calls);
 +    if (diagnostic_call <= 4) fprintf(stderr, "xodus-user-api: %s call=%ld begin\n", __func__, diagnostic_call);
 +    x_user_diagnostic_caller(__func__, __builtin_return_address(0), diagnostic_call);
 +
-@@ -995,0 +1353,5 @@ static HRESULT WINAPI x_user_XUserGetMaxUsers( IXUserImpl6 *iface, UINT32 *maxUs
+@@ -995,0 +1353,5 @@
 +    static LONG diagnostic_calls;
 +    LONG diagnostic_call = InterlockedIncrement(&diagnostic_calls);
 +    if (diagnostic_call <= 4) fprintf(stderr, "xodus-user-api: %s call=%ld begin\n", __func__, diagnostic_call);
 +    x_user_diagnostic_caller(__func__, __builtin_return_address(0), diagnostic_call);
 +
-@@ -998 +1360 @@ static HRESULT WINAPI x_user_XUserGetMaxUsers( IXUserImpl6 *iface, UINT32 *maxUs
+@@ -998 +1360 @@
 -    return S_OK;
 +    return x_user_diagnostic_result(__func__, S_OK, diagnostic_call);
-@@ -1004,0 +1367 @@ struct XUserAddContext
+@@ -1004,0 +1367 @@
 +    volatile LONG cancelled;
-@@ -1008 +1371,21 @@ struct XUserAddContext
+@@ -1008 +1371,21 @@
 -DEFINE_ASYNC_COMPLETED_HANDLER( async_operation_msa_token_response, IAsyncOperationCompletedHandler_IMsaTokenResponse, IAsyncOperation_IMsaTokenResponse )
 +static DWORD await_IAsyncOperation_IMsaTokenResponse( IAsyncOperation_IMsaTokenResponse *operation, DWORD timeout, volatile LONG *cancelled )
 +{
@@ -2173,7 +2173,8 @@ index 7891759..e1f421c 100644
 +    IAsyncInfo_Release( info );
 +    return result;
 +}
-@@ -1010,0 +1394,89 @@ DEFINE_ASYNC_COMPLETED_HANDLER( async_operation_msa_token_response, IAsyncOperat
+@@ -1009,0 +1393,89 @@
++
 +/* Loading is serialized separately from the cache: no cache lock is held
 + * during HTTP, IPC or a picker. Shutdown closes the cache terminally. */
 +static SRWLOCK default_user_load_lock = SRWLOCK_INIT;
@@ -2262,15 +2263,14 @@ index 7891759..e1f421c 100644
 +    ReleaseSRWLockExclusive(&default_user_load_lock);
 +    return hr;
 +}
-+
-@@ -1027,0 +1500 @@ static HRESULT WINAPI XUserAddProvider( XAsyncOp op, const XAsyncProviderData *d
+@@ -1027,0 +1500 @@
 +            context->user = NULL; /* Transfer the owned reference to the result. */
-@@ -1031 +1504,3 @@ static HRESULT WINAPI XUserAddProvider( XAsyncOp op, const XAsyncProviderData *d
+@@ -1031 +1504,3 @@
 -#if XODUS_INTEROP
 +            hr = get_default_user_for_add(context);
 +            if (SUCCEEDED(hr) && !(context->options &
 +                    (XUserAddOptions_AddDefaultUserSilently | XUserAddOptions_AddDefaultUserAllowingUI)))
-@@ -1033,34 +1508,8 @@ static HRESULT WINAPI XUserAddProvider( XAsyncOp op, const XAsyncProviderData *d
+@@ -1033,34 +1508,2 @@
 -                IAsyncOperation_IMsaTokenResponse *operation = NULL;
 -                IMsaTokenResponse *response = NULL;
 -                const char *access_token = NULL;
@@ -2307,26 +2307,27 @@ index 7891759..e1f421c 100644
 -                }
 +                const WCHAR *label = WindowsGetStringRawBuffer(context->user->classicGamertag, NULL);
 +                hr = xodus_choose_existing_user(label, &context->cancelled);
-+            }
+@@ -1068,6 +1511,8 @@
+-#endif
+-            if (context->options & XUserAddOptions_AddDefaultUserSilently)
+-                hr = LoadDefaultUser( &context->user );
+-            else hr = E_ABORT;
+-
+-        complete:
 +            if (InterlockedCompareExchange(&context->cancelled, 0, 0) || xodus_default_user_stopped()) hr = E_ABORT;
 +            if (FAILED(hr) && context->user)
 +            {
 +                IUser_Release(&context->user->IUser_iface);
 +                context->user = NULL;
-@@ -1068,4 +1516,0 @@ static HRESULT WINAPI XUserAddProvider( XAsyncOp op, const XAsyncProviderData *d
--#endif
--            if (context->options & XUserAddOptions_AddDefaultUserSilently)
--                hr = LoadDefaultUser( &context->user );
--            else hr = E_ABORT;
-@@ -1073 +1518 @@ static HRESULT WINAPI XUserAddProvider( XAsyncOp op, const XAsyncProviderData *d
--        complete:
++            }
++
 +            x_user_diagnostic_result("XUserAddAsync.complete", hr, 0);
-@@ -1078,0 +1524 @@ static HRESULT WINAPI XUserAddProvider( XAsyncOp op, const XAsyncProviderData *d
+@@ -1078,0 +1524 @@
 +            if (context->user) IUser_Release( &context->user->IUser_iface );
-@@ -1082,0 +1529,2 @@ static HRESULT WINAPI XUserAddProvider( XAsyncOp op, const XAsyncProviderData *d
+@@ -1082,0 +1529,2 @@
 +            xodus_existing_user_picker_cancel(&context->cancelled);
 +            hr = S_OK;
-@@ -1091,0 +1540,7 @@ static HRESULT WINAPI x_user_XUserAddAsync( IXUserImpl6 *iface, XUserAddOptions
+@@ -1091,0 +1540,7 @@
 +    static LONG diagnostic_calls;
 +    LONG diagnostic_call = InterlockedIncrement(&diagnostic_calls);
 +    if (diagnostic_call <= 4) fprintf(stderr, "xodus-user-api: %s call=%ld begin\n", __func__, diagnostic_call);
@@ -2334,7 +2335,7 @@ index 7891759..e1f421c 100644
 +
 +    if (diagnostic_call <= 4) fprintf(stderr, "xodus-user-api: XUserAddAsync.options call=%ld flags=%u\n", diagnostic_call, (unsigned)options);
 +
-@@ -1098,2 +1553,6 @@ static HRESULT WINAPI x_user_XUserAddAsync( IXUserImpl6 *iface, XUserAddOptions
+@@ -1098,2 +1553,6 @@
 -    if (!async) return E_POINTER;
 -    if (FAILED(hr = QueryApiImpl( &CLSID_XThreadingImpl, &IID_IXThreadingImpl, (void **)&xthreading ))) return hr;
 +    if (((unsigned)options & ~7u) ||
@@ -2343,68 +2344,69 @@ index 7891759..e1f421c 100644
 +    if (xodus_default_user_stopped()) return x_user_diagnostic_result(__func__, E_ABORT, diagnostic_call);
 +    if (!async) return x_user_diagnostic_result(__func__, E_POINTER, diagnostic_call);
 +    if (FAILED(hr = QueryApiImpl( &CLSID_XThreadingImpl, &IID_IXThreadingImpl, (void **)&xthreading ))) return x_user_diagnostic_result(__func__, hr, diagnostic_call);
-@@ -1103 +1562 @@ static HRESULT WINAPI x_user_XUserAddAsync( IXUserImpl6 *iface, XUserAddOptions
+@@ -1103 +1562 @@
 -        return E_OUTOFMEMORY;
 +        return x_user_diagnostic_result(__func__, E_OUTOFMEMORY, diagnostic_call);
-@@ -1110 +1569 @@ static HRESULT WINAPI x_user_XUserAddAsync( IXUserImpl6 *iface, XUserAddOptions
+@@ -1110 +1569 @@
 -    return hr;
 +    return x_user_diagnostic_result(__func__, hr, diagnostic_call);
-@@ -1114,0 +1574,5 @@ static HRESULT WINAPI x_user_XUserAddResult( IXUserImpl6 *iface, XAsyncBlock *as
+@@ -1114,0 +1574,5 @@
 +    static LONG diagnostic_calls;
 +    LONG diagnostic_call = InterlockedIncrement(&diagnostic_calls);
 +    if (diagnostic_call <= 4) fprintf(stderr, "xodus-user-api: %s call=%ld begin\n", __func__, diagnostic_call);
 +    x_user_diagnostic_caller(__func__, __builtin_return_address(0), diagnostic_call);
 +
-@@ -1120,2 +1584,3 @@ static HRESULT WINAPI x_user_XUserAddResult( IXUserImpl6 *iface, XAsyncBlock *as
+@@ -1120,2 +1584,3 @@
 -    if (!async || !newUser) return E_POINTER;
 -    if (FAILED(hr = QueryApiImpl( &CLSID_XThreadingImpl, &IID_IXThreadingImpl, (void **)&xthreading ))) return hr;
 +    if (!async || !newUser) return x_user_diagnostic_result(__func__, E_POINTER, diagnostic_call);
 +    *newUser = NULL;
 +    if (FAILED(hr = QueryApiImpl( &CLSID_XThreadingImpl, &IID_IXThreadingImpl, (void **)&xthreading ))) return x_user_diagnostic_result(__func__, hr, diagnostic_call);
-@@ -1124 +1589 @@ static HRESULT WINAPI x_user_XUserAddResult( IXUserImpl6 *iface, XAsyncBlock *as
+@@ -1124 +1589 @@
 -    return hr;
 +    return x_user_diagnostic_result(__func__, hr, diagnostic_call);
-@@ -1128,0 +1594,5 @@ static HRESULT WINAPI x_user_XUserGetLocalId( IXUserImpl6 *iface, XUserHandle us
+@@ -1128,0 +1594,5 @@
 +    static LONG diagnostic_calls;
 +    LONG diagnostic_call = InterlockedIncrement(&diagnostic_calls);
 +    if (diagnostic_call <= 4) fprintf(stderr, "xodus-user-api: %s call=%ld begin\n", __func__, diagnostic_call);
 +    x_user_diagnostic_caller(__func__, __builtin_return_address(0), diagnostic_call);
 +
-@@ -1130 +1600 @@ static HRESULT WINAPI x_user_XUserGetLocalId( IXUserImpl6 *iface, XUserHandle us
+@@ -1130 +1600 @@
 -    if (!user || !userLocalId) return E_POINTER;
 +    if (!user || !userLocalId) return x_user_diagnostic_result(__func__, E_POINTER, diagnostic_call);
-@@ -1133 +1603 @@ static HRESULT WINAPI x_user_XUserGetLocalId( IXUserImpl6 *iface, XUserHandle us
+@@ -1133 +1603 @@
 -    return S_OK;
 +    return x_user_diagnostic_result(__func__, S_OK, diagnostic_call);
-@@ -1137,0 +1608,5 @@ static HRESULT WINAPI x_user_XUserFindUserByLocalId( IXUserImpl6 *iface, XUserLo
+@@ -1137,0 +1608,5 @@
 +    static LONG diagnostic_calls;
 +    LONG diagnostic_call = InterlockedIncrement(&diagnostic_calls);
 +    if (diagnostic_call <= 4) fprintf(stderr, "xodus-user-api: %s call=%ld begin\n", __func__, diagnostic_call);
 +    x_user_diagnostic_caller(__func__, __builtin_return_address(0), diagnostic_call);
 +
-@@ -1139 +1614 @@ static HRESULT WINAPI x_user_XUserFindUserByLocalId( IXUserImpl6 *iface, XUserLo
+@@ -1139 +1614 @@
 -    return E_NOTIMPL;
 +    return x_user_diagnostic_result(__func__, E_NOTIMPL, diagnostic_call);
-@@ -1143,0 +1619,5 @@ static HRESULT WINAPI x_user_XUserGetId( IXUserImpl6 *iface, XUserHandle user, U
+@@ -1143,0 +1619,5 @@
 +    static LONG diagnostic_calls;
 +    LONG diagnostic_call = InterlockedIncrement(&diagnostic_calls);
 +    if (diagnostic_call <= 4) fprintf(stderr, "xodus-user-api: %s call=%ld begin\n", __func__, diagnostic_call);
 +    x_user_diagnostic_caller(__func__, __builtin_return_address(0), diagnostic_call);
 +
-@@ -1144,0 +1625,2 @@ static HRESULT WINAPI x_user_XUserGetId( IXUserImpl6 *iface, XUserHandle user, U
+@@ -1144,0 +1625,2 @@
 +    if (!user || !userId) return x_user_diagnostic_result(__func__, E_POINTER, diagnostic_call);
 +    AcquireSRWLockShared(&user->xstsLock);
-@@ -1146 +1628,5 @@ static HRESULT WINAPI x_user_XUserGetId( IXUserImpl6 *iface, XUserHandle user, U
+@@ -1146,2 +1628,8 @@
 -    return S_OK;
+-}
 +    if (diagnostic_call <= 4)
 +        fprintf(stderr, "xodus-user-identity: id_nonzero=%u id_valid=%u profile_id_known=%u profile_id_matches=%u\n",
 +                *userId != 0, !!user->xuid_syntax_valid, !!user->profile_xuid_known, !!user->profile_xuid_matches);
 +    ReleaseSRWLockShared(&user->xstsLock);
 +    return x_user_diagnostic_result(__func__, S_OK, diagnostic_call);
-@@ -1148,0 +1635,2 @@ static HRESULT WINAPI x_user_XUserGetId( IXUserImpl6 *iface, XUserHandle user, U
-+#include "UserLookup.inc"
++}
 +
-@@ -1151,2 +1639,6 @@ static HRESULT WINAPI x_user_XUserFindUserById( IXUserImpl6 *iface, UINT64 userI
++#include "UserLookup.inc"
+@@ -1151,2 +1639,6 @@
 -    FIXME( "iface %p, userId %llu, handle %p stub!\n", iface, userId, handle );
 -    return E_NOTIMPL;
 +    static LONG diagnostic_calls;
@@ -2413,91 +2415,88 @@ index 7891759..e1f421c 100644
 +    x_user_diagnostic_caller(__func__, __builtin_return_address(0), diagnostic_call);
 +
 +    return x_user_diagnostic_result(__func__, x_user_find_by_id(userId, handle), diagnostic_call);
-@@ -1156,0 +1649,5 @@ static HRESULT WINAPI x_user_XUserGetIsGuest( IXUserImpl6 *iface, XUserHandle us
+@@ -1156,0 +1649,5 @@
 +    static LONG diagnostic_calls;
 +    LONG diagnostic_call = InterlockedIncrement(&diagnostic_calls);
 +    if (diagnostic_call <= 4) fprintf(stderr, "xodus-user-api: %s call=%ld begin\n", __func__, diagnostic_call);
 +    x_user_diagnostic_caller(__func__, __builtin_return_address(0), diagnostic_call);
 +
-@@ -1159 +1656 @@ static HRESULT WINAPI x_user_XUserGetIsGuest( IXUserImpl6 *iface, XUserHandle us
+@@ -1159 +1656 @@
 -    return S_OK;
 +    return x_user_diagnostic_result(__func__, S_OK, diagnostic_call);
-@@ -1163,0 +1661,5 @@ static HRESULT WINAPI x_user_XUserGetState( IXUserImpl6 *iface, XUserHandle user
+@@ -1163,0 +1661,5 @@
 +    static LONG diagnostic_calls;
 +    LONG diagnostic_call = InterlockedIncrement(&diagnostic_calls);
 +    if (diagnostic_call <= 4) fprintf(stderr, "xodus-user-api: %s call=%ld begin\n", __func__, diagnostic_call);
 +    x_user_diagnostic_caller(__func__, __builtin_return_address(0), diagnostic_call);
 +
-@@ -1164,0 +1667 @@ static HRESULT WINAPI x_user_XUserGetState( IXUserImpl6 *iface, XUserHandle user
+@@ -1164,0 +1667 @@
 +    if (!user || !state) return x_user_diagnostic_result(__func__, E_POINTER, diagnostic_call);
-@@ -1166 +1669 @@ static HRESULT WINAPI x_user_XUserGetState( IXUserImpl6 *iface, XUserHandle user
+@@ -1166 +1669 @@
 -    return S_OK;
 +    return x_user_diagnostic_result(__func__, S_OK, diagnostic_call);
-@@ -1272,0 +1776,5 @@ static HRESULT WINAPI x_user_XUserGetGamerPictureAsync( IXUserImpl6 *iface, XUse
+@@ -1272,0 +1776,5 @@
 +    static LONG diagnostic_calls;
 +    LONG diagnostic_call = InterlockedIncrement(&diagnostic_calls);
 +    if (diagnostic_call <= 4) fprintf(stderr, "xodus-user-api: %s call=%ld begin\n", __func__, diagnostic_call);
 +    x_user_diagnostic_caller(__func__, __builtin_return_address(0), diagnostic_call);
 +
-@@ -1279,2 +1787,2 @@ static HRESULT WINAPI x_user_XUserGetGamerPictureAsync( IXUserImpl6 *iface, XUse
+@@ -1279,2 +1787,2 @@
 -    if (!user || !async) return E_POINTER;
 -    if (FAILED(hr = QueryApiImpl( &CLSID_XThreadingImpl, &IID_IXThreadingImpl, (void **)&xthreading ))) return hr;
 +    if (!user || !async) return x_user_diagnostic_result(__func__, E_POINTER, diagnostic_call);
 +    if (FAILED(hr = QueryApiImpl( &CLSID_XThreadingImpl, &IID_IXThreadingImpl, (void **)&xthreading ))) return x_user_diagnostic_result(__func__, hr, diagnostic_call);
-@@ -1284 +1792 @@ static HRESULT WINAPI x_user_XUserGetGamerPictureAsync( IXUserImpl6 *iface, XUse
+@@ -1284 +1792 @@
 -        return E_OUTOFMEMORY;
 +        return x_user_diagnostic_result(__func__, E_OUTOFMEMORY, diagnostic_call);
-@@ -1291 +1799 @@ static HRESULT WINAPI x_user_XUserGetGamerPictureAsync( IXUserImpl6 *iface, XUse
+@@ -1291 +1799 @@
 -        return hr;
 +        return x_user_diagnostic_result(__func__, hr, diagnostic_call);
-@@ -1297 +1805 @@ static HRESULT WINAPI x_user_XUserGetGamerPictureAsync( IXUserImpl6 *iface, XUse
+@@ -1297 +1805 @@
 -    return hr;
 +    return x_user_diagnostic_result(__func__, hr, diagnostic_call);
-@@ -1301,0 +1810,5 @@ static HRESULT WINAPI x_user_XUserGetGamerPictureResultSize( IXUserImpl6 *iface,
+@@ -1301,0 +1810,5 @@
 +    static LONG diagnostic_calls;
 +    LONG diagnostic_call = InterlockedIncrement(&diagnostic_calls);
 +    if (diagnostic_call <= 4) fprintf(stderr, "xodus-user-api: %s call=%ld begin\n", __func__, diagnostic_call);
 +    x_user_diagnostic_caller(__func__, __builtin_return_address(0), diagnostic_call);
 +
-@@ -1307 +1820 @@ static HRESULT WINAPI x_user_XUserGetGamerPictureResultSize( IXUserImpl6 *iface,
+@@ -1307 +1820 @@
 -    if (FAILED(hr = QueryApiImpl( &CLSID_XThreadingImpl, &IID_IXThreadingImpl, (void **)&xthreading ))) return hr;
 +    if (FAILED(hr = QueryApiImpl( &CLSID_XThreadingImpl, &IID_IXThreadingImpl, (void **)&xthreading ))) return x_user_diagnostic_result(__func__, hr, diagnostic_call);
-@@ -1310 +1823 @@ static HRESULT WINAPI x_user_XUserGetGamerPictureResultSize( IXUserImpl6 *iface,
+@@ -1310 +1823 @@
 -    return hr;
 +    return x_user_diagnostic_result(__func__, hr, diagnostic_call);
-@@ -1314,0 +1828,5 @@ static HRESULT WINAPI x_user_XUserGetGamerPictureResult( IXUserImpl6 *iface, XAs
+@@ -1314,0 +1828,5 @@
 +    static LONG diagnostic_calls;
 +    LONG diagnostic_call = InterlockedIncrement(&diagnostic_calls);
 +    if (diagnostic_call <= 4) fprintf(stderr, "xodus-user-api: %s call=%ld begin\n", __func__, diagnostic_call);
 +    x_user_diagnostic_caller(__func__, __builtin_return_address(0), diagnostic_call);
 +
-@@ -1320 +1838 @@ static HRESULT WINAPI x_user_XUserGetGamerPictureResult( IXUserImpl6 *iface, XAs
+@@ -1320 +1838 @@
 -    if (FAILED(hr = QueryApiImpl( &CLSID_XThreadingImpl, &IID_IXThreadingImpl, (void **)&xthreading ))) return hr;
 +    if (FAILED(hr = QueryApiImpl( &CLSID_XThreadingImpl, &IID_IXThreadingImpl, (void **)&xthreading ))) return x_user_diagnostic_result(__func__, hr, diagnostic_call);
-@@ -1323 +1841 @@ static HRESULT WINAPI x_user_XUserGetGamerPictureResult( IXUserImpl6 *iface, XAs
--    return hr;
+@@ -1322,0 +1841,31 @@
 +    return x_user_diagnostic_result(__func__, hr, diagnostic_call);
-@@ -1327,0 +1846,5 @@ static HRESULT WINAPI x_user_XUserGetAgeGroup( IXUserImpl6 *iface, XUserHandle u
++}
++
++static HRESULT WINAPI x_user_XUserGetAgeGroup( IXUserImpl6 *iface, XUserHandle user, XUserAgeGroup *ageGroup )
++{
 +    static LONG diagnostic_calls;
 +    LONG diagnostic_call = InterlockedIncrement(&diagnostic_calls);
 +    if (diagnostic_call <= 4) fprintf(stderr, "xodus-user-api: %s call=%ld begin\n", __func__, diagnostic_call);
 +    x_user_diagnostic_caller(__func__, __builtin_return_address(0), diagnostic_call);
 +
-@@ -1329,2 +1852,5 @@ static HRESULT WINAPI x_user_XUserGetAgeGroup( IXUserImpl6 *iface, XUserHandle u
--    *ageGroup = XUserAgeGroup_Adult;
--    return S_OK;
++    TRACE( "iface %p, user %p, ageGroup %p.\n", iface, user, ageGroup );
 +    if (!ageGroup) return x_user_diagnostic_result(__func__, E_POINTER, diagnostic_call);
 +    *ageGroup = XUserAgeGroup_Unknown;
 +    if (!user) return x_user_diagnostic_result(__func__, E_POINTER, diagnostic_call);
 +    /* The bootstrap profile does not provide a verified age-group claim. */
 +    return x_user_diagnostic_result(__func__, E_NOTIMPL, diagnostic_call);
-@@ -1335,6 +1861,12 @@ static HRESULT WINAPI x_user_XUserCheckPrivilege( IXUserImpl6 *iface, XUserHandl
--    TRACE( "iface %p, user %p, options %d, privilege %d, hasPrivilege %p, reason %p.\n", iface, user, options, privilege, hasPrivilege, reason );
--    if (!user || !hasPrivilege) return E_POINTER;
--
--    *hasPrivilege = TRUE;
--    if (reason) *reason = XUserPrivilegeDenyReason_None;
--    return S_OK;
++}
++
++static HRESULT WINAPI x_user_XUserCheckPrivilege( IXUserImpl6 *iface, XUserHandle user, XUserPrivilegeOptions options, XUserPrivilege privilege, BOOLEAN *hasPrivilege, XUserPrivilegeDenyReason *reason )
++{
 +    static LONG diagnostic_calls;
 +    LONG diagnostic_call = InterlockedIncrement(&diagnostic_calls);
 +    HRESULT hr;
@@ -2509,33 +2508,50 @@ index 7891759..e1f421c 100644
 +        fprintf(stderr, "xodus-user-privilege: call=%lu privilege=%u options=%u granted=%u hr=%08lx\n",
 +                (ULONG)diagnostic_call, (UINT32)privilege, (UINT32)options,
 +                hasPrivilege ? *hasPrivilege : 0, (ULONG)hr);
-+    return hr;
-@@ -1344,0 +1877,5 @@ static HRESULT WINAPI x_user_XUserResolvePrivilegeWithUiAsync( IXUserImpl6 *ifac
+@@ -1326,17 +1874,0 @@
+-static HRESULT WINAPI x_user_XUserGetAgeGroup( IXUserImpl6 *iface, XUserHandle user, XUserAgeGroup *ageGroup )
+-{
+-    TRACE( "iface %p, user %p, ageGroup %p.\n", iface, user, ageGroup );
+-    *ageGroup = XUserAgeGroup_Adult;
+-    return S_OK;
+-}
+-
+-static HRESULT WINAPI x_user_XUserCheckPrivilege( IXUserImpl6 *iface, XUserHandle user, XUserPrivilegeOptions options, XUserPrivilege privilege, BOOLEAN *hasPrivilege, XUserPrivilegeDenyReason *reason )
+-{
+-    TRACE( "iface %p, user %p, options %d, privilege %d, hasPrivilege %p, reason %p.\n", iface, user, options, privilege, hasPrivilege, reason );
+-    if (!user || !hasPrivilege) return E_POINTER;
+-
+-    *hasPrivilege = TRUE;
+-    if (reason) *reason = XUserPrivilegeDenyReason_None;
+-    return S_OK;
+-}
+-
+@@ -1344,0 +1877,5 @@
 +    static LONG diagnostic_calls;
 +    LONG diagnostic_call = InterlockedIncrement(&diagnostic_calls);
 +    if (diagnostic_call <= 4) fprintf(stderr, "xodus-user-api: %s call=%ld begin\n", __func__, diagnostic_call);
 +    x_user_diagnostic_caller(__func__, __builtin_return_address(0), diagnostic_call);
 +
-@@ -1346 +1883 @@ static HRESULT WINAPI x_user_XUserResolvePrivilegeWithUiAsync( IXUserImpl6 *ifac
+@@ -1346 +1883 @@
 -    return E_NOTIMPL;
 +    return x_user_diagnostic_result(__func__, E_NOTIMPL, diagnostic_call);
-@@ -1350,0 +1888,5 @@ static HRESULT WINAPI x_user_XUserResolvePrivilegeWithUiResult( IXUserImpl6 *ifa
+@@ -1350,0 +1888,5 @@
 +    static LONG diagnostic_calls;
 +    LONG diagnostic_call = InterlockedIncrement(&diagnostic_calls);
 +    if (diagnostic_call <= 4) fprintf(stderr, "xodus-user-api: %s call=%ld begin\n", __func__, diagnostic_call);
 +    x_user_diagnostic_caller(__func__, __builtin_return_address(0), diagnostic_call);
 +
-@@ -1352 +1894 @@ static HRESULT WINAPI x_user_XUserResolvePrivilegeWithUiResult( IXUserImpl6 *ifa
+@@ -1352 +1894 @@
 -    return E_NOTIMPL;
 +    return x_user_diagnostic_result(__func__, E_NOTIMPL, diagnostic_call);
-@@ -1361,2 +1903,2 @@ struct XUserGetTokenAndSignatureContext
+@@ -1361,2 +1903,2 @@
 -    SIZE_T headersSize;
 -    char *headers;
 +    SIZE_T headerCount;
 +    struct xodus_signing_header *headers;
-@@ -1365,0 +1908 @@ struct XUserGetTokenAndSignatureContext
+@@ -1365,0 +1908 @@
 +    BOOL connectedStorage;
-@@ -1372,0 +1916,29 @@ struct XUserGetTokenAndSignatureContext
+@@ -1372,0 +1916,29 @@
 +static void x_user_signature_policy_diagnostic(const char *url,
 +    const struct xodus_signing_endpoint *endpoint, const struct xodus_signing_policy *policy, BOOL tokenOnly, HRESULT hr)
 +{
@@ -2565,22 +2581,22 @@ index 7891759..e1f421c 100644
 +        policy ? policy->version : 0, policy && policy->supported, tokenOnly, (ULONG)hr);
 +}
 +
-@@ -1375,3 +1947 @@ static HRESULT WINAPI XUserGetTokenAndSignatureProvider( XAsyncOp op, const XAsy
+@@ -1375,3 +1947 @@
 -    URL_COMPONENTSA uc = { .dwStructSize = sizeof(URL_COMPONENTSA), .dwHostNameLength = -1,
 -            .dwUrlPathLength = -1, .dwExtraInfoLength = -1 };
 -    UINT32 authLen, bufLen, dataSize = 0, pathAndQueryLen, tokenLen, userHashLen, wAuthLen, wTokenLen, wUserHashLen;
 +    UINT32 authLen, dataSize = 0, tokenLen, userHashLen, wAuthLen, wTokenLen, wUserHashLen;
-@@ -1379 +1949,4 @@ static HRESULT WINAPI XUserGetTokenAndSignatureProvider( XAsyncOp op, const XAsy
+@@ -1379 +1949,4 @@
 -    char *auth, *method, *ptr, *signature;
 +    char *auth = NULL, *signature;
 +    const struct xodus_signing_endpoint *endpoint = NULL;
 +    const struct xodus_signing_policy *policy = NULL;
 +    struct xodus_signing_request packed = {0};
-@@ -1386,2 +1959 @@ static HRESULT WINAPI XUserGetTokenAndSignatureProvider( XAsyncOp op, const XAsy
+@@ -1386,2 +1959 @@
 -    char *buf = NULL;
 -    BOOL xstsLocked = FALSE;
 +    BOOL xstsLocked = FALSE, tokenOnly = FALSE;
-@@ -1393,7 +1965,2 @@ static HRESULT WINAPI XUserGetTokenAndSignatureProvider( XAsyncOp op, const XAsy
+@@ -1393,7 +1965,2 @@
 -    /*
 -     * signatures constructed by following
 -     * https://learn.microsoft.com/gaming/gdk/docs/services/fundamentals/s2s-auth-calls/s2s-calls/live-title-service-calls-xbox-live#proof-keys
@@ -2590,20 +2606,20 @@ index 7891759..e1f421c 100644
 -     */
 +    /* Canonicalization and policy validation are isolated in SignatureRequest.c.
 +     * No request data, authorization value, signature, or URL is logged. */
-@@ -1412 +1979,2 @@ static HRESULT WINAPI XUserGetTokenAndSignatureProvider( XAsyncOp op, const XAsy
+@@ -1412 +1979,2 @@
 -                        (context->dataUtf16->tokenCount + context->dataUtf16->signatureCount + 2) * sizeof(WCHAR);
 +                        (context->dataUtf16->tokenCount + 1 + (context->dataUtf16->signatureCount ?
 +                         context->dataUtf16->signatureCount + 1 : 0)) * sizeof(WCHAR);
-@@ -1416 +1984 @@ static HRESULT WINAPI XUserGetTokenAndSignatureProvider( XAsyncOp op, const XAsy
+@@ -1416 +1984 @@
 -                result->signature = result->token + result->tokenCount + 1;
 +                result->signature = result->signatureCount ? result->token + result->tokenCount + 1 : NULL;
-@@ -1421 +1989 @@ static HRESULT WINAPI XUserGetTokenAndSignatureProvider( XAsyncOp op, const XAsy
+@@ -1421 +1989 @@
 -                SIZE_T size = sizeof(*result) + context->data->tokenSize + context->data->signatureSize + 2;
 +                SIZE_T size = sizeof(*result) + context->data->tokenSize + context->data->signatureSize;
-@@ -1425 +1993 @@ static HRESULT WINAPI XUserGetTokenAndSignatureProvider( XAsyncOp op, const XAsy
+@@ -1425 +1993 @@
 -                result->signature = result->token + result->tokenSize + 1;
 +                result->signature = result->signatureSize ? result->token + result->tokenSize : NULL;
-@@ -1430,3 +1998,12 @@ static HRESULT WINAPI XUserGetTokenAndSignatureProvider( XAsyncOp op, const XAsy
+@@ -1430,3 +1998,12 @@
 -            if (!InternetCrackUrlA( context->url, 0, 0, &uc )) goto error;
 -            pathAndQueryLen = uc.dwUrlPathLength + uc.dwExtraInfoLength;
 -            relyingParty = user_GetRelyingParty( context->user, &uc );
@@ -2619,7 +2635,7 @@ index 7891759..e1f421c 100644
 +                goto cleanup;
 +            }
 +            relyingParty = endpoint->relyingParty;
-@@ -1435 +2012,15 @@ static HRESULT WINAPI XUserGetTokenAndSignatureProvider( XAsyncOp op, const XAsy
+@@ -1435 +2012,15 @@
 -            if (!context->user->xstsRelyingParty || strcmp( context->user->xstsRelyingParty, relyingParty ))
 +            if (context->connectedStorage)
 +            {
@@ -2636,15 +2652,15 @@ index 7891759..e1f421c 100644
 +                !context->user->xstsRelyingParty || strcmp( context->user->xstsRelyingParty, relyingParty ) ||
 +                (context->user->titleAuthenticated && (context->user->xstsExpires <= privilege_utc_now() ||
 +                    context->user->xstsDeadline <= GetTickCount64())))
-@@ -1441,0 +2033 @@ static HRESULT WINAPI XUserGetTokenAndSignatureProvider( XAsyncOp op, const XAsy
+@@ -1441,0 +2033 @@
 +            }
-@@ -1446,4 +2038 @@ static HRESULT WINAPI XUserGetTokenAndSignatureProvider( XAsyncOp op, const XAsy
+@@ -1446,4 +2038 @@
 -            bufLen = strlen( context->method ) + pathAndQueryLen + authLen + context->headersSize + min( context->bodySize, 0x2000 ) + 18;
 -            GetSystemTimeAsFileTime( &timestamp );
 -
 -            if (!(buf = calloc( 1, bufLen )))
 +            if (!(auth = calloc(1, (SIZE_T)authLen + 1)))
-@@ -1454,45 +2043,21 @@ static HRESULT WINAPI XUserGetTokenAndSignatureProvider( XAsyncOp op, const XAsy
+@@ -1454,45 +2043,21 @@
 -
 -            /* version */
 -            buf[3] = 1;
@@ -2711,25 +2727,26 @@ index 7891759..e1f421c 100644
 +                if (FAILED(hr = IUser_SignData(&context->user->IUser_iface, packed.size,
 +                    packed.bytes, 64, rawSignature + 12))) goto cleanup;
 +            }
-@@ -1503 +2068 @@ static HRESULT WINAPI XUserGetTokenAndSignatureProvider( XAsyncOp op, const XAsy
+@@ -1503 +2068 @@
 -                dataSize = sizeof(*context->dataUtf16) + (wAuthLen + 104 + 2) * sizeof(WCHAR);
 +                dataSize = sizeof(*context->dataUtf16) + ((SIZE_T)wAuthLen + 1 + (tokenOnly ? 0 : 105)) * sizeof(WCHAR);
-@@ -1511 +2076 @@ static HRESULT WINAPI XUserGetTokenAndSignatureProvider( XAsyncOp op, const XAsy
+@@ -1511 +2076 @@
 -                context->dataUtf16->signatureCount = 104;
 +                context->dataUtf16->signatureCount = tokenOnly ? 0 : 104;
-@@ -1513 +2078 @@ static HRESULT WINAPI XUserGetTokenAndSignatureProvider( XAsyncOp op, const XAsy
+@@ -1513 +2078 @@
 -                wSignature = wAuth + wAuthLen + 1;
 +                wSignature = tokenOnly ? NULL : wAuth + wAuthLen + 1;
-@@ -1521 +2086 @@ static HRESULT WINAPI XUserGetTokenAndSignatureProvider( XAsyncOp op, const XAsy
+@@ -1521,4 +2086,2 @@
 -                encode_base64_utf16( 76, rawSignature, 104, wSignature, TRUE );
-+                if (!tokenOnly) encode_base64_utf16( 76, rawSignature, 104, wSignature, TRUE );
-@@ -1523,2 +2087,0 @@ static HRESULT WINAPI XUserGetTokenAndSignatureProvider( XAsyncOp op, const XAsy
+-
 -                TRACE( "token: %s\n", debugstr_wn( context->dataUtf16->token, context->dataUtf16->tokenCount ) );
 -                TRACE( "signature: %s\n", debugstr_wn( context->dataUtf16->signature, context->dataUtf16->signatureCount ) );
-@@ -1529 +2092 @@ static HRESULT WINAPI XUserGetTokenAndSignatureProvider( XAsyncOp op, const XAsy
++                if (!tokenOnly) encode_base64_utf16( 76, rawSignature, 104, wSignature, TRUE );
++
+@@ -1529 +2092 @@
 -                dataSize = sizeof(*context->data) + authLen + 106;
 +                dataSize = sizeof(*context->data) + (SIZE_T)authLen + 1 + (tokenOnly ? 0 : 105);
-@@ -1536,5 +2099,5 @@ static HRESULT WINAPI XUserGetTokenAndSignatureProvider( XAsyncOp op, const XAsy
+@@ -1536,5 +2099,5 @@
 -                context->data->tokenSize = authLen;
 -                context->data->signatureSize = 104;
 -                auth = (char *)context->data + sizeof(*context->data);
@@ -2740,74 +2757,76 @@ index 7891759..e1f421c 100644
 +                char *resultAuth = (char *)(context->data + 1);
 +                signature = tokenOnly ? NULL : resultAuth + authLen + 1;
 +                context->data->token = resultAuth;
-@@ -1543,2 +2106,2 @@ static HRESULT WINAPI XUserGetTokenAndSignatureProvider( XAsyncOp op, const XAsy
+@@ -1543,5 +2106,3 @@
 -                strcpy( auth, buf + strlen( context->method ) + pathAndQueryLen + 16 );
 -                encode_base64( 76, rawSignature, 104, signature, TRUE );
-+                memcpy(resultAuth, auth, (SIZE_T)authLen + 1);
-+                if (!tokenOnly) encode_base64( 76, rawSignature, 104, signature, TRUE );
-@@ -1546,2 +2108,0 @@ static HRESULT WINAPI XUserGetTokenAndSignatureProvider( XAsyncOp op, const XAsy
+-
 -                TRACE( "token: %s\n", debugstr_an( context->data->token, context->data->tokenSize ) );
 -                TRACE( "signature: %s\n", debugstr_an( context->data->signature, context->data->signatureSize ) );
-@@ -1548,0 +2110 @@ static HRESULT WINAPI XUserGetTokenAndSignatureProvider( XAsyncOp op, const XAsy
++                memcpy(resultAuth, auth, (SIZE_T)authLen + 1);
++                if (!tokenOnly) encode_base64( 76, rawSignature, 104, signature, TRUE );
++
+@@ -1548,0 +2110 @@
 +            if (context->connectedStorage && !user_cloud_cache_valid(context->user)) hr = HRESULT_FROM_WIN32(ERROR_LOGON_FAILURE);
-@@ -1555 +2117,2 @@ static HRESULT WINAPI XUserGetTokenAndSignatureProvider( XAsyncOp op, const XAsy
+@@ -1555 +2117,2 @@
 -            if (buf) free( buf );
 +            free(auth);
 +            free(packed.bytes);
-@@ -1561,0 +2125 @@ static HRESULT WINAPI XUserGetTokenAndSignatureProvider( XAsyncOp op, const XAsy
+@@ -1561,0 +2125 @@
 +            x_user_diagnostic_result("XUserGetTokenAndSignatureAsync.complete", hr, 0);
-@@ -1563 +2127,2 @@ static HRESULT WINAPI XUserGetTokenAndSignatureProvider( XAsyncOp op, const XAsy
+@@ -1563 +2127,2 @@
 -            hr = S_OK;
 +            /* Completion is already terminal; the queue worker must not complete again. */
 +            hr = E_PENDING;
-@@ -1580 +2145 @@ static HRESULT WINAPI XUserGetTokenAndSignatureProvider( XAsyncOp op, const XAsy
+@@ -1580,2 +2145,7 @@
 -static HRESULT WINAPI x_user_XUserGetTokenAndSignatureAsync( IXUserImpl6 *iface, XUserHandle user, XUserGetTokenAndSignatureOptions options, const char *method, const char *url, SIZE_T headerCount, const XUserGetTokenAndSignatureHttpHeader *headers, SIZE_T bodySize, const void *bodyBuffer, XAsyncBlock *async )
+-{
 +static HRESULT x_user_token_and_signature_begin( IXUserImpl6 *iface, XUserHandle user, XUserGetTokenAndSignatureOptions options, const char *method, const char *url, SIZE_T headerCount, const XUserGetTokenAndSignatureHttpHeader *headers, SIZE_T bodySize, const void *bodyBuffer, XAsyncBlock *async, BOOL connectedStorage )
-@@ -1581,0 +2147,5 @@ static HRESULT WINAPI x_user_XUserGetTokenAndSignatureAsync( IXUserImpl6 *iface,
++{
 +    static LONG diagnostic_calls;
 +    LONG diagnostic_call = InterlockedIncrement(&diagnostic_calls);
 +    if (diagnostic_call <= 4) fprintf(stderr, "xodus-user-api: %s call=%ld begin\n", __func__, diagnostic_call);
 +    x_user_diagnostic_caller(__func__, __builtin_return_address(0), diagnostic_call);
 +
-@@ -1583 +2153 @@ static HRESULT WINAPI x_user_XUserGetTokenAndSignatureAsync( IXUserImpl6 *iface,
+@@ -1583 +2153 @@
 -    SIZE_T contextSize, headersSize = 0;
 +    SIZE_T contextSize = sizeof(*context), headersSize = 0;
-@@ -1590,3 +2160,5 @@ static HRESULT WINAPI x_user_XUserGetTokenAndSignatureAsync( IXUserImpl6 *iface,
+@@ -1590 +2160,12 @@
 -    contextSize = sizeof(*context) + strlen( url ) + strlen( method ) + 2 + bodySize;
--    for (SIZE_T i = 0; i < headerCount; i++)
--        headersSize += (strlen( headers[i].value ) + 1);
 +    if (!user || !method || !url || !async || (headerCount && !headers) || (bodySize && !bodyBuffer))
 +        return x_user_diagnostic_result(__func__, E_POINTER, diagnostic_call);
 +    for (SIZE_T i = 0; i < headerCount; ++i)
 +        if (!headers[i].name || !headers[i].value) return x_user_diagnostic_result(__func__, E_POINTER, diagnostic_call);
 +    if (options & XUserGetTokenAndSignatureOptions_AllUsers) return x_user_diagnostic_result(__func__, E_NOTIMPL, diagnostic_call);
-@@ -1594 +2166,13 @@ static HRESULT WINAPI x_user_XUserGetTokenAndSignatureAsync( IXUserImpl6 *iface,
--    if (!(context = calloc( 1, contextSize + headersSize ))) return E_OUTOFMEMORY;
++
 +    if (headerCount > SIZE_MAX / sizeof(*context->headers)) return E_INVALIDARG;
 +    headersSize = headerCount * sizeof(*context->headers);
 +    if (!xodus_signing_size_add(&contextSize, strlen(url)) ||
 +        !xodus_signing_size_add(&contextSize, strlen(method)) ||
 +        !xodus_signing_size_add(&contextSize, 2) ||
 +        !xodus_signing_size_add(&contextSize, bodySize)) return E_INVALIDARG;
-+    for (SIZE_T i = 0; i < headerCount; i++)
+@@ -1592,3 +2173,6 @@
+-        headersSize += (strlen( headers[i].value ) + 1);
+-
+-    if (!(context = calloc( 1, contextSize + headersSize ))) return E_OUTOFMEMORY;
 +        if (!xodus_signing_size_add(&headersSize, strlen(headers[i].name)) ||
 +            !xodus_signing_size_add(&headersSize, strlen(headers[i].value)) ||
 +            !xodus_signing_size_add(&headersSize, 2)) return E_INVALIDARG;
 +    if (!xodus_signing_size_add(&contextSize, headersSize)) return E_INVALIDARG;
 +
 +    if (!(context = calloc( 1, contextSize ))) return x_user_diagnostic_result(__func__, E_OUTOFMEMORY, diagnostic_call);
-@@ -1598 +2182 @@ static HRESULT WINAPI x_user_XUserGetTokenAndSignatureAsync( IXUserImpl6 *iface,
+@@ -1598 +2182 @@
 -    context->headersSize = headersSize;
 +    context->headerCount = headerCount;
-@@ -1600,0 +2185 @@ static HRESULT WINAPI x_user_XUserGetTokenAndSignatureAsync( IXUserImpl6 *iface,
+@@ -1600,0 +2185 @@
 +    context->connectedStorage = connectedStorage;
-@@ -1603 +2188,2 @@ static HRESULT WINAPI x_user_XUserGetTokenAndSignatureAsync( IXUserImpl6 *iface,
+@@ -1603 +2188,2 @@
 -    ptr = (char *)context + sizeof(*context);
 +    context->headers = (struct xodus_signing_header *)(context + 1);
 +    ptr = (char *)(context->headers + headerCount);
-@@ -1608 +2193,0 @@ static HRESULT WINAPI x_user_XUserGetTokenAndSignatureAsync( IXUserImpl6 *iface,
+@@ -1608 +2193,0 @@
 -    context->headers = ptr;
-@@ -1610 +2195,6 @@ static HRESULT WINAPI x_user_XUserGetTokenAndSignatureAsync( IXUserImpl6 *iface,
+@@ -1610 +2195,6 @@
 -        ptr += (strlen( strcpy( ptr, headers[i].value ) ) + 1);
 +    {
 +        context->headers[i].name = ptr;
@@ -2815,14 +2834,14 @@ index 7891759..e1f421c 100644
 +        context->headers[i].value = ptr;
 +        ptr += strlen(strcpy(ptr, headers[i].value)) + 1;
 +    }
-@@ -1612 +2202,2 @@ static HRESULT WINAPI x_user_XUserGetTokenAndSignatureAsync( IXUserImpl6 *iface,
+@@ -1612 +2202,2 @@
 -    memcpy( (context->bodyBuffer = ptr), bodyBuffer, bodySize );
 +    context->bodyBuffer = ptr;
 +    if (bodySize) memcpy( context->bodyBuffer, bodyBuffer, bodySize );
-@@ -1618 +2209 @@ static HRESULT WINAPI x_user_XUserGetTokenAndSignatureAsync( IXUserImpl6 *iface,
+@@ -1618 +2209 @@
 -    return hr;
 +    return x_user_diagnostic_result(__func__, hr, diagnostic_call);
-@@ -1622 +2213,29 @@ error:
+@@ -1622 +2213,29 @@
 -    return hr;
 +    return x_user_diagnostic_result(__func__, hr, diagnostic_call);
 +}
@@ -2853,29 +2872,29 @@ index 7891759..e1f421c 100644
 +    if (!user_cloud_write_allowed(user, method, url, bodySize, body)) return E_ACCESSDENIED;
 +    return x_user_token_and_signature_begin(NULL, user, XUserGetTokenAndSignatureOptions_None,
 +        method, url, headerCount, headers, bodySize, body, async, TRUE);
-@@ -1626,0 +2246,5 @@ static HRESULT WINAPI x_user_XUserGetTokenAndSignatureResultSize( IXUserImpl6 *i
+@@ -1626,0 +2246,5 @@
 +    static LONG diagnostic_calls;
 +    LONG diagnostic_call = InterlockedIncrement(&diagnostic_calls);
 +    if (diagnostic_call <= 4) fprintf(stderr, "xodus-user-api: %s call=%ld begin\n", __func__, diagnostic_call);
 +    x_user_diagnostic_caller(__func__, __builtin_return_address(0), diagnostic_call);
 +
-@@ -1632 +2256,3 @@ static HRESULT WINAPI x_user_XUserGetTokenAndSignatureResultSize( IXUserImpl6 *i
+@@ -1632 +2256,3 @@
 -    if (FAILED(hr = QueryApiImpl( &CLSID_XThreadingImpl, &IID_IXThreadingImpl, (void **)&xthreading ))) return hr;
 +    if (bufferSize) *bufferSize = 0;
 +    if (!async || !bufferSize) return x_user_diagnostic_result(__func__, E_POINTER, diagnostic_call);
 +    if (FAILED(hr = QueryApiImpl( &CLSID_XThreadingImpl, &IID_IXThreadingImpl, (void **)&xthreading ))) return x_user_diagnostic_result(__func__, hr, diagnostic_call);
-@@ -1635 +2261 @@ static HRESULT WINAPI x_user_XUserGetTokenAndSignatureResultSize( IXUserImpl6 *i
+@@ -1635 +2261 @@
 -    return hr;
 +    return x_user_diagnostic_result(__func__, hr, diagnostic_call);
-@@ -1639,0 +2266,5 @@ static HRESULT WINAPI x_user_XUserGetTokenAndSignatureResult( IXUserImpl6 *iface
+@@ -1639,0 +2266,5 @@
 +    static LONG diagnostic_calls;
 +    LONG diagnostic_call = InterlockedIncrement(&diagnostic_calls);
 +    if (diagnostic_call <= 4) fprintf(stderr, "xodus-user-api: %s call=%ld begin\n", __func__, diagnostic_call);
 +    x_user_diagnostic_caller(__func__, __builtin_return_address(0), diagnostic_call);
 +
-@@ -1641,0 +2273 @@ static HRESULT WINAPI x_user_XUserGetTokenAndSignatureResult( IXUserImpl6 *iface
+@@ -1641,0 +2273 @@
 +    SIZE_T required = 0;
-@@ -1645,3 +2277,14 @@ static HRESULT WINAPI x_user_XUserGetTokenAndSignatureResult( IXUserImpl6 *iface
+@@ -1645,3 +2277,14 @@
 -    if (FAILED(hr = QueryApiImpl( &CLSID_XThreadingImpl, &IID_IXThreadingImpl, (void **)&xthreading ))) return hr;
 -    hr = IXThreadingImpl_XAsyncGetResult( xthreading, async, NULL, bufferSize, buffer, bufferUsed );
 -    *ptrToBuffer = (XUserGetTokenAndSignatureData *)buffer;
@@ -2893,16 +2912,16 @@ index 7891759..e1f421c 100644
 +        else hr = IXThreadingImpl_XAsyncGetResult( xthreading, async, NULL, bufferSize, buffer, bufferUsed );
 +    }
 +    if (SUCCEEDED(hr)) *ptrToBuffer = (XUserGetTokenAndSignatureData *)buffer;
-@@ -1649 +2292 @@ static HRESULT WINAPI x_user_XUserGetTokenAndSignatureResult( IXUserImpl6 *iface
+@@ -1649 +2292 @@
 -    return hr;
 +    return x_user_diagnostic_result(__func__, hr, diagnostic_call);
-@@ -1653,0 +2297,5 @@ static HRESULT WINAPI x_user_XUserGetTokenAndSignatureUtf16Async( IXUserImpl6 *i
+@@ -1653,0 +2297,5 @@
 +    static LONG diagnostic_calls;
 +    LONG diagnostic_call = InterlockedIncrement(&diagnostic_calls);
 +    if (diagnostic_call <= 4) fprintf(stderr, "xodus-user-api: %s call=%ld begin\n", __func__, diagnostic_call);
 +    x_user_diagnostic_caller(__func__, __builtin_return_address(0), diagnostic_call);
 +
-@@ -1663,3 +2311,14 @@ static HRESULT WINAPI x_user_XUserGetTokenAndSignatureUtf16Async( IXUserImpl6 *i
+@@ -1663,3 +2311,14 @@
 -    if (!(methodLen = WideCharToMultiByte( CP_UTF8, WC_ERR_INVALID_CHARS, method, -1, NULL, 0, NULL, NULL ))) return HRESULT_FROM_WIN32( GetLastError() );
 -    if (!(urlLen = WideCharToMultiByte( CP_UTF8, WC_ERR_INVALID_CHARS, url, -1, NULL, 0, NULL, NULL ))) return HRESULT_FROM_WIN32( GetLastError() );
 -    contextSize = sizeof(*context) + urlLen + methodLen + bodySize;
@@ -2920,73 +2939,76 @@ index 7891759..e1f421c 100644
 +    if (!xodus_signing_size_add(&contextSize, urlLen) ||
 +        !xodus_signing_size_add(&contextSize, methodLen) ||
 +        !xodus_signing_size_add(&contextSize, bodySize)) return E_INVALIDARG;
-@@ -1668,2 +2327,6 @@ static HRESULT WINAPI x_user_XUserGetTokenAndSignatureUtf16Async( IXUserImpl6 *i
+@@ -1668,5 +2327,10 @@
 -        if (!(size = WideCharToMultiByte( CP_UTF8, WC_ERR_INVALID_CHARS, headers[i].value, -1, NULL, 0, NULL, NULL ))) return HRESULT_FROM_WIN32( GetLastError() );
 -        headersSize += size;
+-    }
+-
+-    if (!(context = calloc( 1, contextSize + headersSize ))) return E_OUTOFMEMORY;
 +        if (!(size = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, headers[i].name, -1, NULL, 0, NULL, NULL)))
 +            return HRESULT_FROM_WIN32(GetLastError());
 +        if (!xodus_signing_size_add(&headersSize, size)) return E_INVALIDARG;
 +        if (!(size = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, headers[i].value, -1, NULL, 0, NULL, NULL)))
 +            return HRESULT_FROM_WIN32(GetLastError());
 +        if (!xodus_signing_size_add(&headersSize, size)) return E_INVALIDARG;
-@@ -1670,0 +2334 @@ static HRESULT WINAPI x_user_XUserGetTokenAndSignatureUtf16Async( IXUserImpl6 *i
++    }
 +    if (!xodus_signing_size_add(&contextSize, headersSize)) return E_INVALIDARG;
-@@ -1672 +2336 @@ static HRESULT WINAPI x_user_XUserGetTokenAndSignatureUtf16Async( IXUserImpl6 *i
--    if (!(context = calloc( 1, contextSize + headersSize ))) return E_OUTOFMEMORY;
++
 +    if (!(context = calloc( 1, contextSize ))) return x_user_diagnostic_result(__func__, E_OUTOFMEMORY, diagnostic_call);
-@@ -1676 +2340 @@ static HRESULT WINAPI x_user_XUserGetTokenAndSignatureUtf16Async( IXUserImpl6 *i
+@@ -1676 +2340 @@
 -    context->headersSize = headersSize;
 +    context->headerCount = headerCount;
-@@ -1681 +2345,3 @@ static HRESULT WINAPI x_user_XUserGetTokenAndSignatureUtf16Async( IXUserImpl6 *i
+@@ -1681 +2345,3 @@
 -    ptr = (char *)context + sizeof(*context);
 +    context->headers = (struct xodus_signing_header *)(context + 1);
 +    ptr = (char *)(context->headers + headerCount);
 +    context->url = ptr;
-@@ -1684,0 +2351 @@ static HRESULT WINAPI x_user_XUserGetTokenAndSignatureUtf16Async( IXUserImpl6 *i
+@@ -1684,0 +2351 @@
 +    context->method = ptr;
-@@ -1690,2 +2357,7 @@ static HRESULT WINAPI x_user_XUserGetTokenAndSignatureUtf16Async( IXUserImpl6 *i
+@@ -1690,2 +2357,3 @@
 -        if (!(size = WideCharToMultiByte( CP_UTF8, WC_ERR_INVALID_CHARS, headers[i].value, -1, NULL, 0, NULL, NULL ))) goto error_win32;
 -        if(!WideCharToMultiByte( CP_UTF8, WC_ERR_INVALID_CHARS, headers[i].value, -1, ptr, size, NULL, NULL )) goto error_win32;
 +        context->headers[i].name = ptr;
 +        if (!(size = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, headers[i].name, -1, NULL, 0, NULL, NULL))) goto error_win32;
 +        if (!WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, headers[i].name, -1, ptr, size, NULL, NULL)) goto error_win32;
-+        ptr += size;
+@@ -1692,0 +2361,4 @@
 +        context->headers[i].value = ptr;
 +        if (!(size = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, headers[i].value, -1, NULL, 0, NULL, NULL))) goto error_win32;
 +        if (!WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, headers[i].value, -1, ptr, size, NULL, NULL)) goto error_win32;
-@@ -1695 +2367,2 @@ static HRESULT WINAPI x_user_XUserGetTokenAndSignatureUtf16Async( IXUserImpl6 *i
++        ptr += size;
+@@ -1695 +2367,2 @@
 -    memcpy( (context->bodyBuffer = ptr), bodyBuffer, bodySize );
 +    context->bodyBuffer = ptr;
 +    if (bodySize) memcpy( context->bodyBuffer, bodyBuffer, bodySize );
-@@ -1701 +2374 @@ static HRESULT WINAPI x_user_XUserGetTokenAndSignatureUtf16Async( IXUserImpl6 *i
+@@ -1701 +2374 @@
 -    return hr;
 +    return x_user_diagnostic_result(__func__, hr, diagnostic_call);
-@@ -1708 +2381 @@ error:
+@@ -1708 +2381 @@
 -    return hr;
 +    return x_user_diagnostic_result(__func__, hr, diagnostic_call);
-@@ -1712,0 +2386,5 @@ static HRESULT WINAPI x_user_XUserGetTokenAndSignatureUtf16ResultSize( IXUserImp
+@@ -1712,0 +2386,5 @@
 +    static LONG diagnostic_calls;
 +    LONG diagnostic_call = InterlockedIncrement(&diagnostic_calls);
 +    if (diagnostic_call <= 4) fprintf(stderr, "xodus-user-api: %s call=%ld begin\n", __func__, diagnostic_call);
 +    x_user_diagnostic_caller(__func__, __builtin_return_address(0), diagnostic_call);
 +
-@@ -1718 +2396,3 @@ static HRESULT WINAPI x_user_XUserGetTokenAndSignatureUtf16ResultSize( IXUserImp
+@@ -1718 +2396,3 @@
 -    if (FAILED(hr = QueryApiImpl( &CLSID_XThreadingImpl, &IID_IXThreadingImpl, (void **)&xthreading ))) return hr;
 +    if (bufferSize) *bufferSize = 0;
 +    if (!async || !bufferSize) return x_user_diagnostic_result(__func__, E_POINTER, diagnostic_call);
 +    if (FAILED(hr = QueryApiImpl( &CLSID_XThreadingImpl, &IID_IXThreadingImpl, (void **)&xthreading ))) return x_user_diagnostic_result(__func__, hr, diagnostic_call);
-@@ -1721 +2401 @@ static HRESULT WINAPI x_user_XUserGetTokenAndSignatureUtf16ResultSize( IXUserImp
+@@ -1721 +2401 @@
 -    return hr;
 +    return x_user_diagnostic_result(__func__, hr, diagnostic_call);
-@@ -1725,0 +2406,5 @@ static HRESULT WINAPI x_user_XUserGetTokenAndSignatureUtf16Result( IXUserImpl6 *
+@@ -1725,0 +2406,5 @@
 +    static LONG diagnostic_calls;
 +    LONG diagnostic_call = InterlockedIncrement(&diagnostic_calls);
 +    if (diagnostic_call <= 4) fprintf(stderr, "xodus-user-api: %s call=%ld begin\n", __func__, diagnostic_call);
 +    x_user_diagnostic_caller(__func__, __builtin_return_address(0), diagnostic_call);
 +
-@@ -1727,0 +2413 @@ static HRESULT WINAPI x_user_XUserGetTokenAndSignatureUtf16Result( IXUserImpl6 *
+@@ -1727,0 +2413 @@
 +    SIZE_T required = 0;
-@@ -1731,3 +2417,14 @@ static HRESULT WINAPI x_user_XUserGetTokenAndSignatureUtf16Result( IXUserImpl6 *
+@@ -1731,3 +2417,14 @@
 -    if (FAILED(hr = QueryApiImpl( &CLSID_XThreadingImpl, &IID_IXThreadingImpl, (void **)&xthreading ))) return hr;
 -    hr = IXThreadingImpl_XAsyncGetResult( xthreading, async, NULL, bufferSize, buffer, bufferUsed );
 -    *ptrToBuffer = (XUserGetTokenAndSignatureUtf16Data *)buffer;
@@ -3004,10 +3026,10 @@ index 7891759..e1f421c 100644
 +        else hr = IXThreadingImpl_XAsyncGetResult( xthreading, async, NULL, bufferSize, buffer, bufferUsed );
 +    }
 +    if (SUCCEEDED(hr)) *ptrToBuffer = (XUserGetTokenAndSignatureUtf16Data *)buffer;
-@@ -1735 +2432 @@ static HRESULT WINAPI x_user_XUserGetTokenAndSignatureUtf16Result( IXUserImpl6 *
+@@ -1735 +2432 @@
 -    return hr;
 +    return x_user_diagnostic_result(__func__, hr, diagnostic_call);
-@@ -1740,2 +2437,7 @@ static HRESULT WINAPI x_user_XUserResolveIssueWithUiAsync( IXUserImpl6 *iface, X
+@@ -1740,2 +2437,7 @@
 -    FIXME( "iface %p, user %p, url %s, async %p stub!\n", iface, user, debugstr_a( url ), async );
 -    return E_NOTIMPL;
 +    static LONG diagnostic_calls;
@@ -3017,16 +3039,16 @@ index 7891759..e1f421c 100644
 +
 +    FIXME("%s is not implemented.\n", __func__);
 +    return x_user_diagnostic_result(__func__, E_NOTIMPL, diagnostic_call);
-@@ -1745,0 +2448,5 @@ static HRESULT WINAPI x_user_XUserResolveIssueWithUiResult( IXUserImpl6 *iface,
+@@ -1745,0 +2448,5 @@
 +    static LONG diagnostic_calls;
 +    LONG diagnostic_call = InterlockedIncrement(&diagnostic_calls);
 +    if (diagnostic_call <= 4) fprintf(stderr, "xodus-user-api: %s call=%ld begin\n", __func__, diagnostic_call);
 +    x_user_diagnostic_caller(__func__, __builtin_return_address(0), diagnostic_call);
 +
-@@ -1747 +2454 @@ static HRESULT WINAPI x_user_XUserResolveIssueWithUiResult( IXUserImpl6 *iface,
+@@ -1747 +2454 @@
 -    return E_NOTIMPL;
 +    return x_user_diagnostic_result(__func__, E_NOTIMPL, diagnostic_call);
-@@ -1752,2 +2459,7 @@ static HRESULT WINAPI x_user_XUserResolveIssueWithUiUtf16Async( IXUserImpl6 *ifa
+@@ -1752,2 +2459,7 @@
 -    FIXME( "iface %p, user %p, url %s, async %p stub!\n", iface, user, debugstr_w( url ), async );
 -    return E_NOTIMPL;
 +    static LONG diagnostic_calls;
@@ -3036,24 +3058,34 @@ index 7891759..e1f421c 100644
 +
 +    FIXME("%s is not implemented.\n", __func__);
 +    return x_user_diagnostic_result(__func__, E_NOTIMPL, diagnostic_call);
-@@ -1757,0 +2470,5 @@ static HRESULT WINAPI x_user_XUserResolveIssueWithUiUtf16Result( IXUserImpl6 *if
+@@ -1757,0 +2470,5 @@
 +    static LONG diagnostic_calls;
 +    LONG diagnostic_call = InterlockedIncrement(&diagnostic_calls);
 +    if (diagnostic_call <= 4) fprintf(stderr, "xodus-user-api: %s call=%ld begin\n", __func__, diagnostic_call);
 +    x_user_diagnostic_caller(__func__, __builtin_return_address(0), diagnostic_call);
 +
-@@ -1759 +2476 @@ static HRESULT WINAPI x_user_XUserResolveIssueWithUiUtf16Result( IXUserImpl6 *if
+@@ -1759,14 +2476,268 @@
 -    return E_NOTIMPL;
-+    return x_user_diagnostic_result(__func__, E_NOTIMPL, diagnostic_call);
-@@ -1762 +2479,3 @@ static HRESULT WINAPI x_user_XUserResolveIssueWithUiUtf16Result( IXUserImpl6 *if
+-}
+-
 -static HRESULT WINAPI x_user_XUserRegisterForChangeEvent( IXUserImpl6 *iface, XTaskQueueHandle queue, void *context, XUserChangeEventCallback *callback, XTaskQueueRegistrationToken *token )
-+/* Registrations own their queue and threading interface. Initial user addition
-+ * is reported by XUserAddResult, not by the SignedInAgain change event. */
-+struct user_change_registration
-@@ -1764,3 +2483,126 @@ static HRESULT WINAPI x_user_XUserRegisterForChangeEvent( IXUserImpl6 *iface, XT
+-{
 -    TRACE( "iface %p, queue %p, context %p, callback %p, token %p.\n", iface, queue, context, callback, token );
 -    token->token = 1;
 -    return S_OK;
+-}
+-
+-static BOOLEAN WINAPI x_user_XUserUnregisterForChangeEvent( IXUserImpl6 *iface, XTaskQueueRegistrationToken token, BOOLEAN wait )
+-{
+-    TRACE( "iface %p, token %llu, wait %d.\n", iface, token.token, wait );
+-    return TRUE;
++    return x_user_diagnostic_result(__func__, E_NOTIMPL, diagnostic_call);
++}
++
++/* Registrations own their queue and threading interface. Initial user addition
++ * is reported by XUserAddResult, not by the SignedInAgain change event. */
++struct user_change_registration
++{
 +    struct user_change_registration *next;
 +    LONG refs;
 +    UINT64 token;
@@ -3180,13 +3212,11 @@ index 7891759..e1f421c 100644
 +            free( job );
 +        }
 +    }
-@@ -1769 +2611,2 @@ static HRESULT WINAPI x_user_XUserRegisterForChangeEvent( IXUserImpl6 *iface, XT
--static BOOLEAN WINAPI x_user_XUserUnregisterForChangeEvent( IXUserImpl6 *iface, XTaskQueueRegistrationToken token, BOOLEAN wait )
++}
++
 +static HRESULT WINAPI x_user_XUserRegisterForChangeEvent( IXUserImpl6 *iface, XTaskQueueHandle queue,
 +        void *context, XUserChangeEventCallback *callback, XTaskQueueRegistrationToken *token )
-@@ -1771,2 +2614,130 @@ static BOOLEAN WINAPI x_user_XUserUnregisterForChangeEvent( IXUserImpl6 *iface,
--    TRACE( "iface %p, token %llu, wait %d.\n", iface, token.token, wait );
--    return TRUE;
++{
 +    static LONG diagnostic_calls;
 +    LONG diagnostic_call = InterlockedIncrement(&diagnostic_calls);
 +    if (diagnostic_call <= 4) fprintf(stderr, "xodus-user-api: %s call=%ld begin\n", __func__, diagnostic_call);
@@ -3317,16 +3347,16 @@ index 7891759..e1f421c 100644
 +        next = registration->next;
 +        user_change_release( registration ); /* Detached list ownership. */
 +    }
-@@ -1776,0 +2748,5 @@ static HRESULT WINAPI x_user_XUserGetSignOutDeferral( IXUserImpl6 *iface, XUserS
+@@ -1776,0 +2748,5 @@
 +    static LONG diagnostic_calls;
 +    LONG diagnostic_call = InterlockedIncrement(&diagnostic_calls);
 +    if (diagnostic_call <= 4) fprintf(stderr, "xodus-user-api: %s call=%ld begin\n", __func__, diagnostic_call);
 +    x_user_diagnostic_caller(__func__, __builtin_return_address(0), diagnostic_call);
 +
-@@ -1779 +2755 @@ static HRESULT WINAPI x_user_XUserGetSignOutDeferral( IXUserImpl6 *iface, XUserS
+@@ -1779 +2755 @@
 -    return E_GAMEUSER_DEFERRAL_NOT_AVAILABLE;
 +    return x_user_diagnostic_result(__func__, E_GAMEUSER_DEFERRAL_NOT_AVAILABLE, diagnostic_call);
-@@ -1789,2 +2765,7 @@ static HRESULT WINAPI x_user_XUserAddByIdWithUiAsync( IXUserImpl6 *iface, UINT64
+@@ -1789,2 +2765,7 @@
 -    FIXME( "iface %p, userId %llu, async %p stub!\n", iface, userId, async );
 -    return E_NOTIMPL;
 +    static LONG diagnostic_calls;
@@ -3336,16 +3366,16 @@ index 7891759..e1f421c 100644
 +
 +    FIXME("%s is not implemented.\n", __func__);
 +    return x_user_diagnostic_result(__func__, E_NOTIMPL, diagnostic_call);
-@@ -1794,0 +2776,5 @@ static HRESULT WINAPI x_user_XUserAddByIdWithUiResult( IXUserImpl6 *iface, XAsyn
+@@ -1794,0 +2776,5 @@
 +    static LONG diagnostic_calls;
 +    LONG diagnostic_call = InterlockedIncrement(&diagnostic_calls);
 +    if (diagnostic_call <= 4) fprintf(stderr, "xodus-user-api: %s call=%ld begin\n", __func__, diagnostic_call);
 +    x_user_diagnostic_caller(__func__, __builtin_return_address(0), diagnostic_call);
 +
-@@ -1796 +2782 @@ static HRESULT WINAPI x_user_XUserAddByIdWithUiResult( IXUserImpl6 *iface, XAsyn
+@@ -1796 +2782 @@
 -    return E_NOTIMPL;
 +    return x_user_diagnostic_result(__func__, E_NOTIMPL, diagnostic_call);
-@@ -1801,2 +2787,7 @@ static HRESULT WINAPI x_user_XUserGetMsaTokenSilentlyAsync( IXUserImpl6 *iface,
+@@ -1801,2 +2787,7 @@
 -    FIXME( "iface %p, user %p, options %u, scope %s, async %p stub!\n", iface, user, options, debugstr_a( scope ), async );
 -    return E_NOTIMPL;
 +    static LONG diagnostic_calls;
@@ -3355,28 +3385,29 @@ index 7891759..e1f421c 100644
 +
 +    FIXME("%s is not implemented.\n", __func__);
 +    return x_user_diagnostic_result(__func__, E_NOTIMPL, diagnostic_call);
-@@ -1806,0 +2798,5 @@ static HRESULT WINAPI x_user_XUserGetMsaTokenSilentlyResult( IXUserImpl6 *iface,
+@@ -1806,0 +2798,5 @@
 +    static LONG diagnostic_calls;
 +    LONG diagnostic_call = InterlockedIncrement(&diagnostic_calls);
 +    if (diagnostic_call <= 4) fprintf(stderr, "xodus-user-api: %s call=%ld begin\n", __func__, diagnostic_call);
 +    x_user_diagnostic_caller(__func__, __builtin_return_address(0), diagnostic_call);
 +
-@@ -1808 +2804 @@ static HRESULT WINAPI x_user_XUserGetMsaTokenSilentlyResult( IXUserImpl6 *iface,
+@@ -1808 +2804 @@
 -    return E_NOTIMPL;
 +    return x_user_diagnostic_result(__func__, E_NOTIMPL, diagnostic_call);
-@@ -1812,0 +2809,5 @@ static HRESULT WINAPI x_user_XUserGetMsaTokenSilentlyResultSize( IXUserImpl6 *if
+@@ -1812,0 +2809,5 @@
 +    static LONG diagnostic_calls;
 +    LONG diagnostic_call = InterlockedIncrement(&diagnostic_calls);
 +    if (diagnostic_call <= 4) fprintf(stderr, "xodus-user-api: %s call=%ld begin\n", __func__, diagnostic_call);
 +    x_user_diagnostic_caller(__func__, __builtin_return_address(0), diagnostic_call);
 +
-@@ -1814 +2815 @@ static HRESULT WINAPI x_user_XUserGetMsaTokenSilentlyResultSize( IXUserImpl6 *if
+@@ -1814,2 +2815,4 @@
 -    return E_NOTIMPL;
+-}
 +    return x_user_diagnostic_result(__func__, E_NOTIMPL, diagnostic_call);
-@@ -1816,0 +2818,2 @@ static HRESULT WINAPI x_user_XUserGetMsaTokenSilentlyResultSize( IXUserImpl6 *if
++}
++
 +#include "UserStoreAccount.inc"
-+
-@@ -1819,2 +2822,8 @@ static BOOLEAN WINAPI x_user_XUserIsStoreUser( IXUserImpl6 *iface, XUserHandle u
+@@ -1819,2 +2822,8 @@
 -    FIXME( "iface %p, user %p stub!\n", iface, user );
 -    return TRUE;
 +    static LONG diagnostic_calls;
@@ -3387,97 +3418,96 @@ index 7891759..e1f421c 100644
 +    BOOLEAN matches = x_user_is_store_account(user);
 +    if (diagnostic_call <= 16) fprintf(stderr, "xodus-user-store: matches=%d\n", !!matches);
 +    return matches;
-@@ -1824,0 +2834,5 @@ static HRESULT WINAPI x_user_XUserPlatformRemoteConnectSetEventHandlers( IXUserI
+@@ -1824,0 +2834,5 @@
 +    static LONG diagnostic_calls;
 +    LONG diagnostic_call = InterlockedIncrement(&diagnostic_calls);
 +    if (diagnostic_call <= 4) fprintf(stderr, "xodus-user-api: %s call=%ld begin\n", __func__, diagnostic_call);
 +    x_user_diagnostic_caller(__func__, __builtin_return_address(0), diagnostic_call);
 +
-@@ -1826 +2840 @@ static HRESULT WINAPI x_user_XUserPlatformRemoteConnectSetEventHandlers( IXUserI
+@@ -1826 +2840 @@
 -    return E_NOTIMPL;
 +    return x_user_diagnostic_result(__func__, E_NOTIMPL, diagnostic_call);
-@@ -1830,0 +2845,5 @@ static HRESULT WINAPI x_user_XUserPlatformRemoteConnectCancelPrompt( IXUserImpl6
+@@ -1830,0 +2845,5 @@
 +    static LONG diagnostic_calls;
 +    LONG diagnostic_call = InterlockedIncrement(&diagnostic_calls);
 +    if (diagnostic_call <= 4) fprintf(stderr, "xodus-user-api: %s call=%ld begin\n", __func__, diagnostic_call);
 +    x_user_diagnostic_caller(__func__, __builtin_return_address(0), diagnostic_call);
 +
-@@ -1832 +2851 @@ static HRESULT WINAPI x_user_XUserPlatformRemoteConnectCancelPrompt( IXUserImpl6
+@@ -1832 +2851 @@
 -    return E_NOTIMPL;
 +    return x_user_diagnostic_result(__func__, E_NOTIMPL, diagnostic_call);
-@@ -1836,0 +2856,5 @@ static HRESULT WINAPI x_user_XUserPlatformSpopPromptSetEventHandlers( IXUserImpl
+@@ -1836,0 +2856,5 @@
 +    static LONG diagnostic_calls;
 +    LONG diagnostic_call = InterlockedIncrement(&diagnostic_calls);
 +    if (diagnostic_call <= 4) fprintf(stderr, "xodus-user-api: %s call=%ld begin\n", __func__, diagnostic_call);
 +    x_user_diagnostic_caller(__func__, __builtin_return_address(0), diagnostic_call);
 +
-@@ -1838 +2862 @@ static HRESULT WINAPI x_user_XUserPlatformSpopPromptSetEventHandlers( IXUserImpl
+@@ -1838 +2862 @@
 -    return E_NOTIMPL;
 +    return x_user_diagnostic_result(__func__, E_NOTIMPL, diagnostic_call);
-@@ -1842,0 +2867,5 @@ static HRESULT WINAPI x_user_XUserPlatformSpopPromptComplete( IXUserImpl6 *iface
+@@ -1842,0 +2867,5 @@
 +    static LONG diagnostic_calls;
 +    LONG diagnostic_call = InterlockedIncrement(&diagnostic_calls);
 +    if (diagnostic_call <= 4) fprintf(stderr, "xodus-user-api: %s call=%ld begin\n", __func__, diagnostic_call);
 +    x_user_diagnostic_caller(__func__, __builtin_return_address(0), diagnostic_call);
 +
-@@ -1844 +2873 @@ static HRESULT WINAPI x_user_XUserPlatformSpopPromptComplete( IXUserImpl6 *iface
+@@ -1844 +2873 @@
 -    return E_NOTIMPL;
 +    return x_user_diagnostic_result(__func__, E_NOTIMPL, diagnostic_call);
-@@ -1848,0 +2878,5 @@ static BOOLEAN WINAPI x_user_XUserIsSignOutPresent( IXUserImpl6 *iface )
+@@ -1848,0 +2878,5 @@
 +    static LONG diagnostic_calls;
 +    LONG diagnostic_call = InterlockedIncrement(&diagnostic_calls);
 +    if (diagnostic_call <= 4) fprintf(stderr, "xodus-user-api: %s call=%ld begin\n", __func__, diagnostic_call);
 +    x_user_diagnostic_caller(__func__, __builtin_return_address(0), diagnostic_call);
 +
-@@ -1854,0 +2889,5 @@ static HRESULT WINAPI x_user_XUserSignOutAsync( IXUserImpl6 *iface, XUserHandle
+@@ -1854,0 +2889,5 @@
 +    static LONG diagnostic_calls;
 +    LONG diagnostic_call = InterlockedIncrement(&diagnostic_calls);
 +    if (diagnostic_call <= 4) fprintf(stderr, "xodus-user-api: %s call=%ld begin\n", __func__, diagnostic_call);
 +    x_user_diagnostic_caller(__func__, __builtin_return_address(0), diagnostic_call);
 +
-@@ -1856 +2895 @@ static HRESULT WINAPI x_user_XUserSignOutAsync( IXUserImpl6 *iface, XUserHandle
+@@ -1856 +2895 @@
 -    return E_NOTIMPL;
 +    return x_user_diagnostic_result(__func__, E_NOTIMPL, diagnostic_call);
-@@ -1860,0 +2900,5 @@ static HRESULT WINAPI x_user_XUserSignOutResult( IXUserImpl6 *iface, XAsyncBlock
+@@ -1860,0 +2900,5 @@
 +    static LONG diagnostic_calls;
 +    LONG diagnostic_call = InterlockedIncrement(&diagnostic_calls);
 +    if (diagnostic_call <= 4) fprintf(stderr, "xodus-user-api: %s call=%ld begin\n", __func__, diagnostic_call);
 +    x_user_diagnostic_caller(__func__, __builtin_return_address(0), diagnostic_call);
 +
-@@ -1862 +2906 @@ static HRESULT WINAPI x_user_XUserSignOutResult( IXUserImpl6 *iface, XAsyncBlock
+@@ -1862 +2906 @@
 -    return E_NOTIMPL;
 +    return x_user_diagnostic_result(__func__, E_NOTIMPL, diagnostic_call);
-@@ -1949,0 +2994,5 @@ static HRESULT WINAPI x_user_gamertag_XUserGetGamertag( IXUserGamertagImpl *ifac
+@@ -1949,0 +2994,5 @@
 +    static LONG diagnostic_calls;
 +    LONG diagnostic_call = InterlockedIncrement(&diagnostic_calls);
 +    if (diagnostic_call <= 4) fprintf(stderr, "xodus-user-api: %s call=%ld begin\n", __func__, diagnostic_call);
 +    x_user_diagnostic_caller(__func__, __builtin_return_address(0), diagnostic_call);
 +
-@@ -1956 +3005 @@ static HRESULT WINAPI x_user_gamertag_XUserGetGamertag( IXUserGamertagImpl *ifac
+@@ -1956 +3005 @@
 -    if (!user || !gamertag) return E_POINTER;
 +    if (!user || !gamertag) return x_user_diagnostic_result(__func__, E_POINTER, diagnostic_call);
-@@ -1973 +3022 @@ static HRESULT WINAPI x_user_gamertag_XUserGetGamertag( IXUserGamertagImpl *ifac
+@@ -1973 +3022 @@
 -            return E_INVALIDARG;
 +            return x_user_diagnostic_result(__func__, E_INVALIDARG, diagnostic_call);
-@@ -1979 +3028 @@ static HRESULT WINAPI x_user_gamertag_XUserGetGamertag( IXUserGamertagImpl *ifac
+@@ -1979 +3028 @@
 -        return HRESULT_FROM_WIN32( GetLastError() );
 +        return x_user_diagnostic_result(__func__, HRESULT_FROM_WIN32( GetLastError() ), diagnostic_call);
-@@ -1981 +3030 @@ static HRESULT WINAPI x_user_gamertag_XUserGetGamertag( IXUserGamertagImpl *ifac
+@@ -1981 +3030 @@
 -    if (gamertagSize <= gamertagLen) return HRESULT_FROM_WIN32( ERROR_INSUFFICIENT_BUFFER );
 +    if (gamertagSize <= gamertagLen) return x_user_diagnostic_result(__func__, HRESULT_FROM_WIN32( ERROR_INSUFFICIENT_BUFFER ), diagnostic_call);
-@@ -1984 +3033 @@ static HRESULT WINAPI x_user_gamertag_XUserGetGamertag( IXUserGamertagImpl *ifac
+@@ -1984 +3033 @@
 -        return HRESULT_FROM_WIN32( GetLastError() );
 +        return x_user_diagnostic_result(__func__, HRESULT_FROM_WIN32( GetLastError() ), diagnostic_call);
-@@ -1988 +3037 @@ static HRESULT WINAPI x_user_gamertag_XUserGetGamertag( IXUserGamertagImpl *ifac
+@@ -1988 +3037 @@
 -    return S_OK;
 +    return x_user_diagnostic_result(__func__, S_OK, diagnostic_call);
 diff --git c/dlls/xgameruntime/GDKComponent/Xodus/IPCLayer.cpp w/dlls/xgameruntime/GDKComponent/Xodus/IPCLayer.cpp
-index eb9107e..97ef447 100644
 --- c/dlls/xgameruntime/GDKComponent/Xodus/IPCLayer.cpp
 +++ w/dlls/xgameruntime/GDKComponent/Xodus/IPCLayer.cpp
 @@ -30,0 +31 @@
 +#include <mutex>
-@@ -116,3 +117,27 @@ public:
+@@ -116,3 +117,27 @@
 -        IAsyncAction *operation;
 -        TRACE("\n");
 -        return AsyncAction::Create( static_cast<IUnknown *>(this), nullptr, InitializeSocketThread, &operation );
@@ -3508,41 +3538,34 @@ index eb9107e..97ef447 100644
 +        std::lock_guard<std::mutex> requests(m_RequestMutex);
 +        if (m_StopEvent) { CloseHandle(m_StopEvent); m_StopEvent = nullptr; }
 +        return S_OK;
-@@ -126 +151,4 @@ public:
+@@ -126 +151,4 @@
 -        packet->AddRef();        
 +        if (!packet || !operation) return E_POINTER;
 +        *operation = nullptr;
 +        if (m_Stopped) return HRESULT_FROM_WIN32(ERROR_OPERATION_ABORTED);
 +        packet->AddRef();
-@@ -129 +157 @@ public:
+@@ -129 +157 @@
 -
 +        if (FAILED(hr)) packet->Release();
-@@ -135,0 +164 @@ public:
+@@ -135,0 +164 @@
 +        std::lock_guard<std::mutex> callbacks(m_CallbackMutex);
-@@ -151,0 +181 @@ public:
+@@ -151,0 +181 @@
 +        std::lock_guard<std::mutex> callbacks(m_CallbackMutex);
-@@ -161,0 +192 @@ public:
+@@ -161,0 +192 @@
 +                delete oldCallback;
-@@ -195,2 +226 @@ private:
+@@ -195,2 +226 @@
 -        BYTE* messageBuffer;
 -        DWORD asyncres;
 +        std::lock_guard<std::mutex> requests(iface->m_RequestMutex);
-@@ -199 +229,3 @@ private:
+@@ -199 +229,3 @@
 -        IPCFrame *frame = new IPCFrame();
 +        DWORD wait_result;
 +        BYTE *messageBuffer = nullptr;
 +        IPCFrame frame{};
-@@ -202,2 +234,7 @@ private:
+@@ -202,11 +234,64 @@
 -        SendRequestContext context{ .event = CreateEventW(nullptr, TRUE, FALSE, nullptr) };
 -        IPCResponseHandler *handler = new IPCResponseHandler( SendRequestResponseHandler, (PVOID)&context );
-+        bool registered = false;
-+        SendRequestContext context{};
-+        IPCResponseHandler *handler = nullptr;
-+        IBuffer *message = nullptr;
-+        IBufferByteAccess *access = nullptr;
-+        HANDLE waits[2] = {};
-+        if (iface->m_Stopped) { packet->Release(); return HRESULT_FROM_WIN32(ERROR_OPERATION_ABORTED); }
-@@ -205,50 +242,26 @@ private:
+-
 -        IBuffer *message;
 -        IBufferByteAccess *messageBufferByteAccess;
 -
@@ -3551,7 +3574,71 @@ index eb9107e..97ef447 100644
 -        packet->get_Magic( &header.Magic );
 -        packet->get_MessageType( &header.Message_Type );
 -        packet->get_Message( &message );
--        packet->Release();
++        bool registered = false;
++        SendRequestContext context{};
++        IPCResponseHandler *handler = nullptr;
++        IBuffer *message = nullptr;
++        IBufferByteAccess *access = nullptr;
++        HANDLE waits[2] = {};
++        if (iface->m_Stopped) { packet->Release(); return HRESULT_FROM_WIN32(ERROR_OPERATION_ABORTED); }
++
++        if (FAILED(status = packet->get_Magic(&header.Magic))) goto cleanup;
++        if (FAILED(status = packet->get_MessageType(&header.Message_Type))) goto cleanup;
++        if (FAILED(status = packet->get_Message(&message))) goto cleanup;
++        if (FAILED(status = message->get_Length(&frame.frameSize))) goto cleanup;
++        if (frame.frameSize > UINT16_MAX) { status = E_INVALIDARG; goto cleanup; }
++        if (FAILED(status = message->QueryInterface<IBufferByteAccess>(&access))) goto cleanup;
++        if (FAILED(status = access->Buffer(&messageBuffer))) goto cleanup;
++        header.MessageLength = frame.frameSize;
++        frame.frameSize += sizeof(header);
++        frame.frame = static_cast<BYTE *>(CoTaskMemAlloc(frame.frameSize));
++        if (!frame.frame) { status = E_OUTOFMEMORY; goto cleanup; }
++        memcpy(frame.frame, &header, sizeof(header));
++        if (header.MessageLength) memcpy(frame.frame + sizeof(header), messageBuffer, header.MessageLength);
++        context.event = CreateEventW(nullptr, TRUE, FALSE, nullptr);
++        if (!context.event) { status = HRESULT_FROM_WIN32(GetLastError()); goto cleanup; }
++        handler = new IPCResponseHandler(SendRequestResponseHandler, &context);
++        status = iface->add_ResponseReceived(handler, &token);
++        if (FAILED(status)) goto cleanup;
++        registered = true;
++        nts = __wine_unix_call(unixhandle, send_frame, &frame);
++        if (FAILED(nts)) {
++            /* A partially transmitted request cannot safely share this
++             * uncorrelated stream with a later request. */
++            iface->StopTransport();
++            status = HRESULT_FROM_NT(nts);
++            goto cleanup;
++        }
++        waits[0] = context.event;
++        waits[1] = iface->m_StopEvent;
++        wait_result = WaitForMultipleObjects(2, waits, FALSE,
++            (header.Message_Type == 3 /* MSA */ || header.Message_Type == 5 /* Account renewal */ ||
++             header.Message_Type == 7 /* License */ || header.Message_Type == 9 /* Purchase account */ ||
++             header.Message_Type == 11 /* License token */ || header.Message_Type == 13 /* Collections */ ||
++             header.Message_Type == 15 /* Inventory */ || header.Message_Type == 17 /* Package updates */)
++                ? IPC_NETWORK_TIMEOUT_MS : IPC_REQUEST_TIMEOUT_MS);
++        if (wait_result == WAIT_OBJECT_0 && context.response)
++        {
++            result->vt = VT_UNKNOWN;
++            result->punkVal = context.response;
++            context.response = nullptr;
++        }
++        else {
++            /* This protocol has no request identifier. Once a request times
++             * out, a late response must never satisfy a subsequent request.
++             * Do not call Shutdown here: it acquires m_RequestMutex. */
++            if (wait_result == WAIT_TIMEOUT) iface->StopTransport();
++            status = HRESULT_FROM_WIN32(wait_result == WAIT_TIMEOUT ? ERROR_TIMEOUT : ERROR_OPERATION_ABORTED);
++        }
++    cleanup:
++        if (registered) iface->remove_ResponseReceived(token);
++        if (handler) handler->Release();
++        if (context.response) context.response->Release();
++        if (context.event) CloseHandle(context.event);
++        if (frame.frame) CoTaskMemFree(frame.frame);
++        if (access) access->Release();
++        if (message) message->Release();
+@@ -214,47 +299,11 @@
 -
 -        status = message->get_Length( &frame->frameSize );
 -        if ( FAILED( status ) ) return status;
@@ -3593,69 +3680,15 @@ index eb9107e..97ef447 100644
 -        {
 -            WARN("Timeout while waiting for a Xodus response.\n");
 -            return HRESULT_FROM_NT( STATUS_TIMEOUT );
-+        if (FAILED(status = packet->get_Magic(&header.Magic))) goto cleanup;
-+        if (FAILED(status = packet->get_MessageType(&header.Message_Type))) goto cleanup;
-+        if (FAILED(status = packet->get_Message(&message))) goto cleanup;
-+        if (FAILED(status = message->get_Length(&frame.frameSize))) goto cleanup;
-+        if (frame.frameSize > UINT16_MAX) { status = E_INVALIDARG; goto cleanup; }
-+        if (FAILED(status = message->QueryInterface<IBufferByteAccess>(&access))) goto cleanup;
-+        if (FAILED(status = access->Buffer(&messageBuffer))) goto cleanup;
-+        header.MessageLength = frame.frameSize;
-+        frame.frameSize += sizeof(header);
-+        frame.frame = static_cast<BYTE *>(CoTaskMemAlloc(frame.frameSize));
-+        if (!frame.frame) { status = E_OUTOFMEMORY; goto cleanup; }
-+        memcpy(frame.frame, &header, sizeof(header));
-+        if (header.MessageLength) memcpy(frame.frame + sizeof(header), messageBuffer, header.MessageLength);
-+        context.event = CreateEventW(nullptr, TRUE, FALSE, nullptr);
-+        if (!context.event) { status = HRESULT_FROM_WIN32(GetLastError()); goto cleanup; }
-+        handler = new IPCResponseHandler(SendRequestResponseHandler, &context);
-+        status = iface->add_ResponseReceived(handler, &token);
-+        if (FAILED(status)) goto cleanup;
-+        registered = true;
-+        nts = __wine_unix_call(unixhandle, send_frame, &frame);
-+        if (FAILED(nts)) {
-+            /* A partially transmitted request cannot safely share this
-+             * uncorrelated stream with a later request. */
-+            iface->StopTransport();
-+            status = HRESULT_FROM_NT(nts);
-+            goto cleanup;
-@@ -255,0 +269,31 @@ private:
-+        waits[0] = context.event;
-+        waits[1] = iface->m_StopEvent;
-+        wait_result = WaitForMultipleObjects(2, waits, FALSE,
-+            (header.Message_Type == 3 /* MSA */ || header.Message_Type == 7 /* License */ ||
-+             header.Message_Type == 11 /* License token */ || header.Message_Type == 13 /* Collections */ ||
-+             header.Message_Type == 15 /* Inventory */ || header.Message_Type == 17 /* Package updates */)
-+                ? IPC_NETWORK_TIMEOUT_MS : IPC_REQUEST_TIMEOUT_MS);
-+        if (wait_result == WAIT_OBJECT_0 && context.response)
-+        {
-+            result->vt = VT_UNKNOWN;
-+            result->punkVal = context.response;
-+            context.response = nullptr;
-+        }
-+        else {
-+            /* This protocol has no request identifier. Once a request times
-+             * out, a late response must never satisfy a subsequent request.
-+             * Do not call Shutdown here: it acquires m_RequestMutex. */
-+            if (wait_result == WAIT_TIMEOUT) iface->StopTransport();
-+            status = HRESULT_FROM_WIN32(wait_result == WAIT_TIMEOUT ? ERROR_TIMEOUT : ERROR_OPERATION_ABORTED);
-+        }
-+    cleanup:
-+        if (registered) iface->remove_ResponseReceived(token);
-+        if (handler) handler->Release();
-+        if (context.response) context.response->Release();
-+        if (context.event) CloseHandle(context.event);
-+        if (frame.frame) CoTaskMemFree(frame.frame);
-+        if (access) access->Release();
-+        if (message) message->Release();
-+        packet->Release();
-+        return status;
-+    }
-@@ -257,4 +301,8 @@ private:
+-        }
+-
 -        result->vt = VT_UNKNOWN;
 -        result->punkVal = context.response;
 -
 -        return S_OK;
++        return status;
++    }
++
 +    void StopTransport()
 +    {
 +        /* Called with m_RequestMutex held; Shutdown cannot close m_StopEvent
@@ -3664,9 +3697,9 @@ index eb9107e..97ef447 100644
 +        m_Stopped = true;
 +        if (m_StopEvent) SetEvent(m_StopEvent);
 +        if (unixhandle) __wine_unix_call(unixhandle, disconnect_socket, nullptr);
-@@ -282,0 +331 @@ private:
+@@ -282,0 +332 @@
 +        if (ctx->response) return S_OK;
-@@ -289 +338,11 @@ private:
+@@ -289 +339,11 @@
 -    static HRESULT WINAPI 
 +    static DWORD WINAPI PumpThread(void *context)
 +    {
@@ -3679,22 +3712,22 @@ index eb9107e..97ef447 100644
 +    }
 +
 +    static HRESULT WINAPI
-@@ -322,0 +382 @@ private:
+@@ -322,0 +383 @@
 +                bufferFactory->Release();
-@@ -383 +442,0 @@ private:
+@@ -383 +443,0 @@
 -                LIST_FOR_EACH_ENTRY( currCallback, &iface->m_Callbacks, response_received_callback, entry )
-@@ -385 +444,3 @@ private:
+@@ -385 +445,3 @@
 -                    currCallback->handler->Invoke( xodusPacket );
 +                    std::lock_guard<std::mutex> callbacks(iface->m_CallbackMutex);
 +                    LIST_FOR_EACH_ENTRY(currCallback, &iface->m_Callbacks, response_received_callback, entry)
 +                        currCallback->handler->Invoke(xodusPacket);
-@@ -389,0 +451 @@ private:
+@@ -389,0 +452 @@
 +                message->Release();
-@@ -409,0 +472,3 @@ private:
+@@ -409,0 +473,3 @@
 +    std::mutex m_CallbackMutex, m_RequestMutex, m_LifecycleMutex;
 +    HANDLE m_Thread = nullptr, m_StopEvent = nullptr;
 +    std::atomic_bool m_Stopped{true};
-@@ -416,0 +482,5 @@ IIPCLayer *xodus_ipclayer = static_cast<IIPCLayer*>(&g_xodus_ipclayer);
+@@ -416,0 +483,5 @@
 +
 +extern "C" HRESULT xodus_ipc_shutdown(void)
 +{
@@ -3702,7 +3735,6 @@ index eb9107e..97ef447 100644
 +}
 diff --git c/dlls/xgameruntime/GDKComponent/Xodus/StoreCollectionsProvider.cpp w/dlls/xgameruntime/GDKComponent/Xodus/StoreCollectionsProvider.cpp
 new file mode 100644
-index 0000000..ea0f644
 --- /dev/null
 +++ w/dlls/xgameruntime/GDKComponent/Xodus/StoreCollectionsProvider.cpp
 @@ -0,0 +1,359 @@
@@ -3839,7 +3871,7 @@ index 0000000..ea0f644
 +}
 +HRESULT wait_response(IAsyncOperation<IXodusIPCPacket*> *operation,volatile LONG *cancelled){
 +    ::IAsyncInfo *info=nullptr;HRESULT hr=operation->QueryInterface(__uuidof(::IAsyncInfo),reinterpret_cast<void**>(&info));if(FAILED(hr))return hr;
-+    AsyncStatus state=Started;ULONGLONG deadline=GetTickCount64()+46000;
++    AsyncStatus state=Started;ULONGLONG deadline=GetTickCount64()+IPC_NETWORK_TIMEOUT_MS+1000;
 +    while(SUCCEEDED(hr=info->get_Status(&state))&&state==Started){
 +        if(InterlockedCompareExchange(cancelled,0,0)){hr=E_ABORT;break;}
 +        if(GetTickCount64()>=deadline){hr=HRESULT_FROM_WIN32(ERROR_TIMEOUT);break;}Sleep(10);
@@ -4067,7 +4099,6 @@ index 0000000..ea0f644
 +}
 diff --git c/dlls/xgameruntime/GDKComponent/Xodus/StoreCollectionsProvider.h w/dlls/xgameruntime/GDKComponent/Xodus/StoreCollectionsProvider.h
 new file mode 100644
-index 0000000..be7f09b
 --- /dev/null
 +++ w/dlls/xgameruntime/GDKComponent/Xodus/StoreCollectionsProvider.h
 @@ -0,0 +1,10 @@
@@ -4083,7 +4114,6 @@ index 0000000..be7f09b
 +    UINT32 kinds, UINT32 page_size, INT64 now, XodusStoreCollectionSnapshot **snapshot);
 diff --git c/dlls/xgameruntime/GDKComponent/Xodus/StoreCollectionsTypes.h w/dlls/xgameruntime/GDKComponent/Xodus/StoreCollectionsTypes.h
 new file mode 100644
-index 0000000..3264089
 --- /dev/null
 +++ w/dlls/xgameruntime/GDKComponent/Xodus/StoreCollectionsTypes.h
 @@ -0,0 +1,43 @@
@@ -4132,7 +4162,6 @@ index 0000000..3264089
 +#endif
 diff --git c/dlls/xgameruntime/GDKComponent/Xodus/StoreLicenseProvider.cpp w/dlls/xgameruntime/GDKComponent/Xodus/StoreLicenseProvider.cpp
 new file mode 100644
-index 0000000..b9a7dec
 --- /dev/null
 +++ w/dlls/xgameruntime/GDKComponent/Xodus/StoreLicenseProvider.cpp
 @@ -0,0 +1,287 @@
@@ -4271,7 +4300,7 @@ index 0000000..b9a7dec
 +HRESULT wait_response(IAsyncOperation<IXodusIPCPacket*> *operation,volatile LONG *cancelled) {
 +    ::IAsyncInfo *info=nullptr;HRESULT hr=operation->QueryInterface(__uuidof(::IAsyncInfo),reinterpret_cast<void**>(&info));
 +    if(FAILED(hr))return hr;
-+    AsyncStatus state=Started;ULONGLONG deadline=GetTickCount64()+46000;
++    AsyncStatus state=Started;ULONGLONG deadline=GetTickCount64()+IPC_NETWORK_TIMEOUT_MS+1000;
 +    while(SUCCEEDED(hr=info->get_Status(&state))&&state==Started){
 +        if(InterlockedCompareExchange(cancelled,0,0)){hr=E_ABORT;break;}
 +        if(GetTickCount64()>=deadline){hr=HRESULT_FROM_WIN32(ERROR_TIMEOUT);break;}
@@ -4425,7 +4454,6 @@ index 0000000..b9a7dec
 +}
 diff --git c/dlls/xgameruntime/GDKComponent/Xodus/StoreLicenseProvider.h w/dlls/xgameruntime/GDKComponent/Xodus/StoreLicenseProvider.h
 new file mode 100644
-index 0000000..7258767
 --- /dev/null
 +++ w/dlls/xgameruntime/GDKComponent/Xodus/StoreLicenseProvider.h
 @@ -0,0 +1,14 @@
@@ -4445,7 +4473,6 @@ index 0000000..7258767
 +#endif
 diff --git c/dlls/xgameruntime/GDKComponent/Xodus/StoreLicenseTokenProvider.cpp w/dlls/xgameruntime/GDKComponent/Xodus/StoreLicenseTokenProvider.cpp
 new file mode 100644
-index 0000000..718a9e6
 --- /dev/null
 +++ w/dlls/xgameruntime/GDKComponent/Xodus/StoreLicenseTokenProvider.cpp
 @@ -0,0 +1,163 @@
@@ -4536,7 +4563,7 @@ index 0000000..718a9e6
 +HRESULT wait_token_response(IAsyncOperation<IXodusIPCPacket*> *operation,volatile LONG *cancelled) {
 +    ::IAsyncInfo *info=nullptr;HRESULT hr=operation->QueryInterface(__uuidof(::IAsyncInfo),reinterpret_cast<void**>(&info));
 +    if(FAILED(hr))return hr;
-+    AsyncStatus state=Started;ULONGLONG deadline=GetTickCount64()+46000;
++    AsyncStatus state=Started;ULONGLONG deadline=GetTickCount64()+IPC_NETWORK_TIMEOUT_MS+1000;
 +    while(SUCCEEDED(hr=info->get_Status(&state))&&state==Started){
 +        if(InterlockedCompareExchange(cancelled,0,0)){hr=E_ABORT;break;}
 +        if(GetTickCount64()>=deadline){hr=HRESULT_FROM_WIN32(ERROR_TIMEOUT);break;}
@@ -4614,10 +4641,9 @@ index 0000000..718a9e6
 +}
 diff --git c/dlls/xgameruntime/GDKComponent/Xodus/StoreProvider.cpp w/dlls/xgameruntime/GDKComponent/Xodus/StoreProvider.cpp
 new file mode 100644
-index 0000000..ae51bea
 --- /dev/null
 +++ w/dlls/xgameruntime/GDKComponent/Xodus/StoreProvider.cpp
-@@ -0,0 +1,212 @@
+@@ -0,0 +1,214 @@
 +/* SPDX-License-Identifier: LGPL-2.1-or-later */
 +/* Isolated read-only Store account context provider. No purchase/license API. */
 +#include "../../private.h"
@@ -4695,6 +4721,8 @@ index 0000000..ae51bea
 +    }
 +    else if (!contextNode && !strcmp(status, "Unavailable")) hr = HRESULT_FROM_WIN32(ERROR_NOT_FOUND);
 +    else if (!contextNode && !strcmp(status, "Expired")) hr = HRESULT_FROM_WIN32(ERROR_LOGON_FAILURE);
++    else if (!contextNode && !strcmp(status, "Error")) hr = E_FAIL;
++    else if (!contextNode && !strcmp(status, "Timeout")) hr = HRESULT_FROM_WIN32(ERROR_TIMEOUT);
 +cleanup:
 +    xmlFreeDoc(document);
 +    return hr;
@@ -4707,7 +4735,7 @@ index 0000000..ae51bea
 +    HRESULT hr = operation->QueryInterface(__uuidof(::IAsyncInfo), reinterpret_cast<void **>(&info));
 +    if (FAILED(hr)) return hr;
 +    AsyncStatus status = Started;
-+    ULONGLONG deadline = GetTickCount64() + IPC_REQUEST_TIMEOUT_MS + 1000;
++    ULONGLONG deadline = GetTickCount64() + IPC_NETWORK_TIMEOUT_MS + 1000;
 +    while (SUCCEEDED(hr = info->get_Status(&status)) && status == Started && GetTickCount64() < deadline) Sleep(1);
 +    if (SUCCEEDED(hr) && status == Started) hr = HRESULT_FROM_WIN32(ERROR_TIMEOUT);
 +    info->Release();
@@ -4831,22 +4859,21 @@ index 0000000..ae51bea
 +    return hr;
 +}
 diff --git c/dlls/xgameruntime/GDKComponent/Xodus/Structs.cpp w/dlls/xgameruntime/GDKComponent/Xodus/Structs.cpp
-index 1fb0000..07a29f6 100644
 --- c/dlls/xgameruntime/GDKComponent/Xodus/Structs.cpp
 +++ w/dlls/xgameruntime/GDKComponent/Xodus/Structs.cpp
-@@ -225,0 +226,2 @@ MsaTokenResponse::Release() noexcept
+@@ -225,0 +226,2 @@
 +        if (device_rps) free( const_cast<char *>(device_rps) );
 +        if (Token) WindowsDeleteString(Token);
-@@ -235,0 +238,3 @@ MsaTokenResponse::get_Token( const char **out )
+@@ -235,0 +238,3 @@
 +    if (!out) return E_POINTER;
 +    *out = nullptr;
 +    if (!token) return E_UNEXPECTED;
-@@ -237 +242 @@ MsaTokenResponse::get_Token( const char **out )
+@@ -237 +242 @@
 -    return S_OK;
 +    return *out ? S_OK : E_OUTOFMEMORY;
-@@ -243,0 +249 @@ MsaTokenResponse::get_Expiry( ABI::Windows::Foundation::DateTime *out )
+@@ -243,0 +249 @@
 +    if (!out) return E_POINTER;
-@@ -246 +252,19 @@ MsaTokenResponse::get_Expiry( ABI::Windows::Foundation::DateTime *out )
+@@ -246 +252,19 @@
 -}
 \ No newline at end of file
 +}
@@ -4869,34 +4896,32 @@ index 1fb0000..07a29f6 100644
 +    return S_OK;
 +}
 diff --git c/dlls/xgameruntime/GDKComponent/Xodus/Structs.h w/dlls/xgameruntime/GDKComponent/Xodus/Structs.h
-index 6cc80df..eef8c02 100644
 --- c/dlls/xgameruntime/GDKComponent/Xodus/Structs.h
 +++ w/dlls/xgameruntime/GDKComponent/Xodus/Structs.h
-@@ -99 +99,3 @@ public:
+@@ -99 +99,3 @@
 -    MsaTokenResponse( const char *token ) : token(token) {};
 +    MsaTokenResponse( const char *token, ABI::Windows::Foundation::DateTime expiry = {},
 +        const char *device_rps = nullptr, ABI::Windows::Foundation::DateTime device_expiry = {} )
 +        : Expiry(expiry), token(token), DeviceExpiry(device_expiry), device_rps(device_rps) {};
-@@ -116,0 +119,2 @@ public:
+@@ -116,0 +119,2 @@
 +    HRESULT WINAPI get_DeviceRps( const char **out );
 +    HRESULT WINAPI get_DeviceExpiry( ABI::Windows::Foundation::DateTime *out );
-@@ -119,2 +123,2 @@ private:
+@@ -119,2 +123,2 @@
 -    ABI::Windows::Foundation::DateTime Expiry;
 -    HSTRING Token;
 +    ABI::Windows::Foundation::DateTime Expiry{};
 +    HSTRING Token = nullptr;
-@@ -122,0 +127,2 @@ private:
+@@ -122,0 +127,2 @@
 +    ABI::Windows::Foundation::DateTime DeviceExpiry{};
 +    const char *device_rps = nullptr;
 diff --git c/dlls/xgameruntime/GDKComponent/Xodus/Unix/socket.c w/dlls/xgameruntime/GDKComponent/Xodus/Unix/socket.c
-index c49e1dd..5afb2b4 100644
 --- c/dlls/xgameruntime/GDKComponent/Xodus/Unix/socket.c
 +++ w/dlls/xgameruntime/GDKComponent/Xodus/Unix/socket.c
 @@ -39,0 +40 @@
 +#include <fcntl.h>
 @@ -79,0 +81 @@
 +#include <stdatomic.h>
-@@ -110 +112,14 @@ WINE_DEFAULT_DEBUG_CHANNEL(xodus);
+@@ -110 +112,14 @@
 -static int sockfd = 0;
 +static int sockfd = -1;
 +static pthread_mutex_t sockfd_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -4912,25 +4937,25 @@ index c49e1dd..5afb2b4 100644
 +    pthread_mutex_unlock(&sockfd_mutex);
 +    return fd;
 +}
-@@ -120 +135 @@ typedef struct _IPCFrame
+@@ -120 +135 @@
 -    SIZE_T frameSize;
 +    UINT32 frameSize;
-@@ -130 +145 @@ static NTSTATUS conn_sock( void *args )
+@@ -130 +145 @@
 -    int error;
 +    int error, fd;
-@@ -143,2 +158,2 @@ static NTSTATUS conn_sock( void *args )
+@@ -143,2 +158,2 @@
 -    sockfd = socket( AF_UNIX, SOCK_STREAM, 0 );
 -    if (sockfd < 0)
 +    fd = socket( AF_UNIX, SOCK_STREAM, 0 );
 +    if (fd < 0)
-@@ -154 +169 @@ static NTSTATUS conn_sock( void *args )
+@@ -154 +169 @@
 -    if (connect( sockfd, (struct sockaddr *)&addr, sizeof(addr) ) < 0)
 +    if (connect( fd, (struct sockaddr *)&addr, sizeof(addr) ) < 0)
-@@ -158,2 +173 @@ static NTSTATUS conn_sock( void *args )
+@@ -158,2 +173 @@
 -        close( sockfd );
 -        sockfd = -1;
 +        close( fd );
-@@ -163,0 +178,9 @@ static NTSTATUS conn_sock( void *args )
+@@ -163,0 +178,9 @@
 +    pthread_mutex_lock(&sockfd_mutex);
 +    int previous = sockfd;
 +    sockfd = fd;
@@ -4940,22 +4965,22 @@ index c49e1dd..5afb2b4 100644
 +        close( previous );
 +    }
 +    pthread_mutex_unlock(&sockfd_mutex);
-@@ -174,0 +198 @@ static NTSTATUS poll_sock( void *args )
+@@ -174,0 +198 @@
 +    NTSTATUS status = STATUS_SUCCESS;
-@@ -178 +202,2 @@ static NTSTATUS poll_sock( void *args )
+@@ -178 +202,2 @@
 -    if ( !sockfd )
 +    int fd = retain_socket();
 +    if ( fd < 0 )
-@@ -181 +206 @@ static NTSTATUS poll_sock( void *args )
+@@ -181 +206 @@
 -    fds[0].fd = sockfd;
 +    fds[0].fd = fd;
-@@ -189 +214,4 @@ static NTSTATUS poll_sock( void *args )
+@@ -189 +214,4 @@
 -        return STATUS_CONNECTION_DISCONNECTED;
 +    {
 +        status = STATUS_CONNECTION_DISCONNECTED;
 +        goto done;
 +    }
-@@ -193,3 +221,6 @@ static NTSTATUS poll_sock( void *args )
+@@ -193,3 +221,6 @@
 -        n = read( sockfd, socket_args->curr_buffer + socket_args->curr_buffer_size, POLL_BUFFER_SIZE - socket_args->curr_buffer_size );
 -        if ( n <= 0 ) 
 -            return STATUS_CONNECTION_DISCONNECTED;
@@ -4965,24 +4990,25 @@ index c49e1dd..5afb2b4 100644
 +            status = STATUS_CONNECTION_DISCONNECTED;
 +            goto done;
 +        }
-@@ -198,0 +230,2 @@ static NTSTATUS poll_sock( void *args )
+@@ -199,2 +230,6 @@
+-
+-    return STATUS_SUCCESS;
 +    else if (fds[0].revents & (POLLERR | POLLHUP | POLLNVAL))
 +        status = STATUS_CONNECTION_DISCONNECTED;
-@@ -200 +233,3 @@ static NTSTATUS poll_sock( void *args )
--    return STATUS_SUCCESS;
++
 +done:
 +    close(fd);
 +    return status;
-@@ -206,0 +242,4 @@ static NTSTATUS send_frm( void *args )
+@@ -206,0 +242,4 @@
 +    int fd = retain_socket();
 +    NTSTATUS status = STATUS_SUCCESS;
 +
 +    if (fd < 0) return STATUS_CONNECTION_INVALID;
-@@ -217 +256,2 @@ static NTSTATUS send_frm( void *args )
+@@ -217 +256,2 @@
 -    TRACE("body is %s\n", debugstr_an(body, len));
 +    /* Frame bodies may contain credentials; never log them. */
 +    (void)body;
-@@ -221 +261,8 @@ static NTSTATUS send_frm( void *args )
+@@ -221 +261,8 @@
 -        ssize_t n = write( sockfd, (char *)frame->frame + sent, frame->frameSize - sent );
 +        /* A concurrent disconnect must report an error, never raise SIGPIPE. */
 +        ssize_t n = send( fd, (char *)frame->frame + sent, frame->frameSize - sent,
@@ -4992,13 +5018,13 @@ index c49e1dd..5afb2b4 100644
 +                          0
 +#endif
 +                        );
-@@ -227 +274,2 @@ static NTSTATUS send_frm( void *args )
+@@ -227 +274,2 @@
 -            return STATUS_CONNECTION_RESET;
 +            status = STATUS_CONNECTION_RESET;
 +            break;
-@@ -228,0 +277 @@ static NTSTATUS send_frm( void *args )
+@@ -228,0 +277 @@
 +        if (!n) { status = STATUS_CONNECTION_DISCONNECTED; break; }
-@@ -232,0 +282,17 @@ static NTSTATUS send_frm( void *args )
+@@ -232,0 +282,17 @@
 +    close(fd);
 +    return status;
 +}
@@ -5016,7 +5042,7 @@ index c49e1dd..5afb2b4 100644
 +        close( fd );
 +    }
 +    pthread_mutex_unlock(&sockfd_mutex);
-@@ -240,2 +306,3 @@ const unixlib_entry_t __wine_unix_call_funcs[] =
+@@ -240,2 +306,3 @@
 -    send_frm
 -};
 \ No newline at end of file
@@ -5024,12 +5050,12 @@ index c49e1dd..5afb2b4 100644
 +    disconnect_sock
 +};
 diff --git c/dlls/xgameruntime/GDKComponent/Xodus/XodusService.cpp w/dlls/xgameruntime/GDKComponent/Xodus/XodusService.cpp
-index 1c9bf5d..15f6a1c 100644
 --- c/dlls/xgameruntime/GDKComponent/Xodus/XodusService.cpp
 +++ w/dlls/xgameruntime/GDKComponent/Xodus/XodusService.cpp
 @@ -27,0 +28 @@
 +#include <new>
-@@ -35,0 +37,23 @@ using namespace ABI::Windows::Storage::Streams;
+@@ -34,0 +36,23 @@
++
 +struct OwnedMsaTokenRequestContext
 +{
 +    char *clientId = nullptr;
@@ -5052,11 +5078,10 @@ index 1c9bf5d..15f6a1c 100644
 +    info->Release();
 +    return hr;
 +}
-+
-@@ -113,0 +138,2 @@ public:
+@@ -113,0 +138,2 @@
 +        if (!operation) return E_POINTER;
 +        *operation = nullptr;
-@@ -120 +146,9 @@ public:
+@@ -120 +146,9 @@
 -        auto ctx = new MsaTokenRequestContext( { clientId, allowUi, fullTrust } );
 +        if (!operation) return E_POINTER;
 +        *operation = nullptr;
@@ -5067,43 +5092,42 @@ index 1c9bf5d..15f6a1c 100644
 +        if (!ctx->clientId) { delete ctx; return E_OUTOFMEMORY; }
 +        ctx->allowUi = allowUi;
 +        ctx->fullTrust = fullTrust;
-@@ -122,2 +156,4 @@ public:
+@@ -122,2 +156,4 @@
 -        return AsyncOperation<IMsaTokenResponse *>::Create( static_cast<IUnknown *>(this), ctx,
 -                                                            MsaTokenRequestAsync, operation );
 +        HRESULT hr = AsyncOperation<IMsaTokenResponse *>::Create( static_cast<IUnknown *>(this), ctx,
 +                                                                  MsaTokenRequestAsync, operation );
 +        if (FAILED(hr)) delete ctx;
 +        return hr;
-@@ -130,2 +166 @@ private:
+@@ -130,2 +166 @@
 -        DWORD ret;
 -        UINT16 messageType;
 +        UINT16 messageType = 0;
-@@ -133 +168 @@ private:
+@@ -133 +168 @@
 -        HSTRING bufferClass;
 +        HSTRING bufferClass = nullptr;
-@@ -135,0 +171 @@ private:
+@@ -135,0 +171 @@
 +        IXodusIPCPacket *responsePacket = nullptr;
-@@ -138 +174,3 @@ private:
+@@ -138 +174,3 @@
 -        IAsyncOperation<IXodusIPCPacket *> *response;
 +        IAsyncOperation<IXodusIPCPacket *> *response = nullptr;
 +
 +        memset(result, 0, sizeof(*result));
-@@ -143 +181 @@ private:
+@@ -143 +181 @@
 -        if ( FAILED( status ) ) return status;
 +        if ( FAILED( status ) ) goto cleanup;
-@@ -147 +185,2 @@ private:
+@@ -147 +185,2 @@
 -        if ( FAILED( status ) ) return status;
 +        bufferClass = nullptr;
 +        if ( FAILED( status ) ) goto cleanup;
-@@ -150 +189 @@ private:
+@@ -150 +189 @@
 -        if ( FAILED( status ) ) return status;
 +        if ( FAILED( status ) ) goto cleanup;
-@@ -153 +192 @@ private:
+@@ -153 +192 @@
 -        xodusPacket = new XodusIPCPacket(
 +        xodusPacket = new (std::nothrow) XodusIPCPacket(
-@@ -157,0 +197 @@ private:
-+        if (!xodusPacket) { status = E_OUTOFMEMORY; goto cleanup; }
-@@ -159,8 +199,2 @@ private:
+@@ -158,9 +197,4 @@
+-
 -        xodus_ipclayer->SendRequestAsync( xodusPacket, &response );
 -
 -        ret = AsyncOperationCompletedHandler<IXodusIPCPacket *>::await_AsyncOperation( response, INFINITE );
@@ -5112,9 +5136,11 @@ index 1c9bf5d..15f6a1c 100644
 -
 -        xodusPacket->Release();
 -        message->Release();
++        if (!xodusPacket) { status = E_OUTOFMEMORY; goto cleanup; }
++
 +        if (FAILED(status = xodus_ipclayer->SendRequestAsync(xodusPacket, &response))) goto cleanup;
 +        if (FAILED(status = wait_for_response(response))) goto cleanup;
-@@ -169,5 +203,3 @@ private:
+@@ -169,5 +203,3 @@
 -        status = response->GetResults( &xodusPacket );
 -        response->Release();
 -        if ( FAILED( status ) ) return status;
@@ -5123,7 +5149,7 @@ index 1c9bf5d..15f6a1c 100644
 +        if (FAILED(status = response->GetResults(&responsePacket))) goto cleanup;
 +        if (!responsePacket) { status = E_UNEXPECTED; goto cleanup; }
 +        if (FAILED(status = responsePacket->get_MessageType(&messageType))) goto cleanup;
-@@ -175,3 +207,9 @@ private:
+@@ -175,3 +207,9 @@
 -            return E_INVALIDARG;
 -        
 -        return S_OK;
@@ -5136,28 +5162,29 @@ index 1c9bf5d..15f6a1c 100644
 +        if (message) message->Release();
 +        if (bufferFactory) bufferFactory->Release();
 +        return status;
-@@ -186 +224 @@ private:
+@@ -186 +224 @@
 -        auto ctx = static_cast<MsaTokenRequestContext *>(param);
 +        auto ctx = static_cast<OwnedMsaTokenRequestContext *>(param);
-@@ -189,2 +227,2 @@ private:
+@@ -189,2 +227,2 @@
 -        IMsaTokenResponse *token;
 -        IBufferFactory *factory;
 +        IMsaTokenResponse *token = nullptr;
 +        IBufferFactory *factory = nullptr;
-@@ -195,0 +234,3 @@ private:
+@@ -195,0 +234,3 @@
 +        const char *stage = "buffer_factory";
 +
 +        memset(result, 0, sizeof(*result));
-@@ -199 +240 @@ private:
+@@ -199,3 +240,4 @@
 -                                                      &classNameHeader, &className ))) return hr;
-+                                                      &classNameHeader, &className ))) goto cleanup;
-@@ -201 +242,2 @@ private:
+-
 -        if (FAILED(hr = RoGetActivationFactory( className, __uuidof( IBufferFactory ), (void **)&factory ))) return hr;
++                                                      &classNameHeader, &className ))) goto cleanup;
++
 +        if (FAILED(hr = RoGetActivationFactory( className, __uuidof( IBufferFactory ), (void **)&factory ))) goto cleanup;
 +        stage = "request_xml";
-@@ -202,0 +245 @@ private:
+@@ -202,0 +245 @@
 +        stage = "request_buffer";
-@@ -210,7 +253,7 @@ private:
+@@ -210,8 +253,9 @@
 -        requestPacket = new XodusIPCPacket( MagicHeaderType::XML, messageType, requestMessage );
 -        xodus_ipclayer->SendRequestAsync( requestPacket, &asyncop );
 -        if (AsyncOperationCompletedHandler<IXodusIPCPacket *>::await_AsyncOperation( asyncop, INFINITE ))
@@ -5165,6 +5192,7 @@ index 1c9bf5d..15f6a1c 100644
 -            hr = E_FAIL;
 -            goto cleanup;
 -        }
+-
 +        stage = "request_packet";
 +        requestPacket = new (std::nothrow) XodusIPCPacket( MagicHeaderType::XML, messageType, requestMessage );
 +        if (!requestPacket) { hr = E_OUTOFMEMORY; goto cleanup; }
@@ -5172,43 +5200,42 @@ index 1c9bf5d..15f6a1c 100644
 +        if (FAILED(hr = xodus_ipclayer->SendRequestAsync(requestPacket, &asyncop))) goto cleanup;
 +        stage = "response_wait";
 +        if (FAILED(hr = wait_for_response(asyncop, IPC_NETWORK_TIMEOUT_MS + 1000))) goto cleanup;
-@@ -217,0 +261 @@ private:
++
 +        stage = "response_result";
-@@ -219 +263,3 @@ private:
+@@ -219 +263,3 @@
 -        responsePacket->get_MessageType( &messageType );
 +        if (!responsePacket) { hr = E_UNEXPECTED; goto cleanup; }
 +        stage = "response_type";
 +        if (FAILED(hr = responsePacket->get_MessageType(&messageType))) goto cleanup;
-@@ -226 +272,3 @@ private:
+@@ -226 +272,3 @@
 -        responsePacket->get_Message( &responseMessage );
 +        stage = "response_buffer";
 +        if (FAILED(hr = responsePacket->get_Message(&responseMessage))) goto cleanup;
 +        if (!responseMessage) { hr = E_UNEXPECTED; goto cleanup; }
-@@ -229 +277,3 @@ private:
+@@ -229 +277,3 @@
 -        xodus_xml_builder->FromMsaTokenResponseXml( reinterpret_cast<char *>(buffer), &token );
 +        stage = "response_xml";
 +        if (FAILED(hr = xodus_xml_builder->FromMsaTokenResponseXml(reinterpret_cast<char *>(buffer), &token))) goto cleanup;
 +        if (!token) { hr = E_UNEXPECTED; goto cleanup; }
-@@ -232,0 +283,2 @@ private:
+@@ -232,0 +283,2 @@
 +        token = nullptr;
 +        hr = S_OK;
-@@ -234,0 +287 @@ private:
+@@ -234,0 +287 @@
 +        fprintf(stderr, "xodus-msa-ipc: stage=%s hr=%08lx\n", stage, (ULONG)hr);
-@@ -243 +296,2 @@ private:
+@@ -243 +296,2 @@
 -        factory->Release();
 +        if (token) token->Release();
 +        if (factory) factory->Release();
 diff --git c/dlls/xgameruntime/GDKComponent/Xodus/XodusXMLBuilder.cpp w/dlls/xgameruntime/GDKComponent/Xodus/XodusXMLBuilder.cpp
-index e2b9d7e..ebb60ae 100644
 --- c/dlls/xgameruntime/GDKComponent/Xodus/XodusXMLBuilder.cpp
 +++ w/dlls/xgameruntime/GDKComponent/Xodus/XodusXMLBuilder.cpp
 @@ -31,0 +32 @@
 +#include <new>
-@@ -129,0 +131,3 @@ public:
+@@ -129,0 +131,3 @@
 +        if (!xml_string) return E_POINTER;
 +        *xml_string = nullptr;
 +        if (!clientId || !*clientId) return E_INVALIDARG;
-@@ -136,0 +141,7 @@ public:
+@@ -136,0 +141,7 @@
 +        if (!root || !doc)
 +        {
 +            if (root) xmlFreeNode(root);
@@ -5216,7 +5243,7 @@ index e2b9d7e..ebb60ae 100644
 +            return E_OUTOFMEMORY;
 +        }
 +
-@@ -138,3 +149,7 @@ public:
+@@ -138,3 +149,7 @@
 -        xmlNewChild( root, nullptr, BAD_CAST "ClientId", BAD_CAST clientId );
 -        xmlNewChild( root, nullptr, BAD_CAST "AllowUi", BAD_CAST (allowUi ? "true" : "false") );
 -        xmlNewChild( root, nullptr, BAD_CAST "MsaFullTrust", BAD_CAST (fullTrust ? "true" : "false") );
@@ -5227,52 +5254,25 @@ index e2b9d7e..ebb60ae 100644
 +            xmlFreeDoc(doc);
 +            return E_OUTOFMEMORY;
 +        }
-@@ -144 +159,4 @@ public:
+@@ -144 +159,4 @@
 -        *xml_string = reinterpret_cast<char *>(buffer);
 +        if (!buffer) return E_OUTOFMEMORY;
 +        *xml_string = strdup(reinterpret_cast<char *>(buffer));
 +        xmlFree(buffer);
 +        if (!*xml_string) return E_OUTOFMEMORY;
-@@ -151,3 +169,9 @@ public:
+@@ -151,24 +169,62 @@
 -        xmlNodePtr child, root;
 -        char *token = nullptr;
 -        xmlDocPtr doc;
-+        xmlDocPtr doc = nullptr;
-+        xmlNodePtr root;
-+        xmlChar *values[4] = {};
-+        const char *names[4] = {"Token", "Expiry", "DeviceRps", "DeviceExpiry"};
-+        bool seen[4] = {};
-+        DateTime expiry{}, device_expiry{};
-+        char *owned_token = nullptr, *owned_device = nullptr;
-+        HRESULT hr = E_INVALIDARG;
-+        size_t length;
-@@ -155,4 +179,8 @@ public:
+-
 -        TRACE( "xml_string %s, response %p.\n", debugstr_a( xml_string ), response );
 -
 -        if (!(doc = xmlReadMemory( xml_string, strlen( xml_string ), nullptr, nullptr, 0 ))) return E_FAIL;
 -        if (!(root = xmlDocGetRootElement( doc )))
-+        if (!response) return E_POINTER;
-+        *response = nullptr;
-+        if (!xml_string || !(length = strnlen(xml_string, 65536)) || length > 65535) return E_INVALIDARG;
-+        if (!(doc = xmlReadMemory(xml_string, length, nullptr, nullptr,
-+                XML_PARSE_NONET | XML_PARSE_NOERROR | XML_PARSE_NOWARNING))) return E_INVALIDARG;
-+        if (doc->intSubset || doc->extSubset || !(root = xmlDocGetRootElement(doc)) ||
-+            root->ns || root->properties || strcmp(reinterpret_cast<const char *>(root->name), "MSATokenResponse")) goto cleanup;
-+        for (xmlNodePtr child = root->children; child; child = child->next)
-@@ -160,2 +188,10 @@ public:
+-        {
 -            xmlFreeDoc( doc );
 -            return E_FAIL;
-+            if (child->type == XML_TEXT_NODE && xmlIsBlankNode(child)) continue;
-+            if (child->type != XML_ELEMENT_NODE || child->ns || child->properties) goto cleanup;
-+            unsigned int index;
-+            for (index = 0; index < 4; ++index)
-+                if (!strcmp(reinterpret_cast<const char *>(child->name), names[index])) break;
-+            if (index == 4 || seen[index]) goto cleanup;
-+            seen[index] = true;
-+            for (xmlNodePtr text = child->children; text; text = text->next)
-+                if (text->type != XML_TEXT_NODE && text->type != XML_CDATA_SECTION_NODE) goto cleanup;
-+            if (!(values[index] = xmlNodeGetContent(child))) { hr = E_OUTOFMEMORY; goto cleanup; }
-@@ -163,12 +199,32 @@ public:
+-        }
 -
 -        if (!strcmp( reinterpret_cast<const char *>(root->name), "MSATokenResponse" ))
 -            for (child = root->children; child != nullptr; child = child->next)
@@ -5285,6 +5285,36 @@ index e2b9d7e..ebb60ae 100644
 -        *response = new MsaTokenResponse( token );
 -        xmlFreeDoc( doc );
 -        return S_OK;
++        xmlDocPtr doc = nullptr;
++        xmlNodePtr root;
++        xmlChar *values[4] = {};
++        const char *names[4] = {"Token", "Expiry", "DeviceRps", "DeviceExpiry"};
++        bool seen[4] = {};
++        DateTime expiry{}, device_expiry{};
++        char *owned_token = nullptr, *owned_device = nullptr;
++        HRESULT hr = E_INVALIDARG;
++        size_t length;
++
++        if (!response) return E_POINTER;
++        *response = nullptr;
++        if (!xml_string || !(length = strnlen(xml_string, 65536)) || length > 65535) return E_INVALIDARG;
++        if (!(doc = xmlReadMemory(xml_string, length, nullptr, nullptr,
++                XML_PARSE_NONET | XML_PARSE_NOERROR | XML_PARSE_NOWARNING))) return E_INVALIDARG;
++        if (doc->intSubset || doc->extSubset || !(root = xmlDocGetRootElement(doc)) ||
++            root->ns || root->properties || strcmp(reinterpret_cast<const char *>(root->name), "MSATokenResponse")) goto cleanup;
++        for (xmlNodePtr child = root->children; child; child = child->next)
++        {
++            if (child->type == XML_TEXT_NODE && xmlIsBlankNode(child)) continue;
++            if (child->type != XML_ELEMENT_NODE || child->ns || child->properties) goto cleanup;
++            unsigned int index;
++            for (index = 0; index < 4; ++index)
++                if (!strcmp(reinterpret_cast<const char *>(child->name), names[index])) break;
++            if (index == 4 || seen[index]) goto cleanup;
++            seen[index] = true;
++            for (xmlNodePtr text = child->children; text; text = text->next)
++                if (text->type != XML_TEXT_NODE && text->type != XML_CDATA_SECTION_NODE) goto cleanup;
++            if (!(values[index] = xmlNodeGetContent(child))) { hr = E_OUTOFMEMORY; goto cleanup; }
++        }
 +        if (!seen[0] || !values[0][0] || xmlStrlen(values[0]) > 49152) goto cleanup;
 +        if (seen[2] != seen[3] || (seen[2] && xmlStrlen(values[2]) > 49152)) goto cleanup;
 +        /* The wire uses Unix seconds; WinRT DateTime uses 100ns since 1601.
@@ -5318,113 +5348,109 @@ index e2b9d7e..ebb60ae 100644
 +        xmlFreeDoc(doc);
 +        return hr;
 diff --git c/dlls/xgameruntime/Makefile.in w/dlls/xgameruntime/Makefile.in
-index 684e92a..de91d51 100644
 --- c/dlls/xgameruntime/Makefile.in
 +++ w/dlls/xgameruntime/Makefile.in
-@@ -3,2 +3,3 @@ EXTRAINCL = $(XML2_PE_CFLAGS)
+@@ -3,2 +3,3 @@
 -MODULE    = xgameruntime.dll
 -UNIXLIB   = xgameruntime.so
 +MODULE    = xodus_store_test.dll
 +UNIXLIB   = xodus_store_test.so
 +EXTRADEFS = -DWINE_NO_TRACE_MSGS
-@@ -27,0 +29,4 @@ SOURCES = \
+@@ -27,0 +29,4 @@
 +	GDKComponent/System/UserSessionCache.c \
 +	GDKComponent/System/ExistingUserPicker.c \
 +	GDKComponent/System/SignatureRequest.c \
 +	GDKComponent/System/TitleAuthHttp.c \
-@@ -28,0 +34,4 @@ SOURCES = \
+@@ -28,0 +34,4 @@
 +	GDKComponent/Xodus/StoreProvider.cpp \
 +	GDKComponent/Xodus/StoreLicenseProvider.cpp \
 +	GDKComponent/Xodus/StoreLicenseTokenProvider.cpp \
 +	GDKComponent/Xodus/StoreCollectionsProvider.cpp \
 diff --git c/dlls/xgameruntime/WineCoreUAP/Foundation/IWineAsync.cpp w/dlls/xgameruntime/WineCoreUAP/Foundation/IWineAsync.cpp
-index 2deb963..2c9f532 100755
 --- c/dlls/xgameruntime/WineCoreUAP/Foundation/IWineAsync.cpp
 +++ w/dlls/xgameruntime/WineCoreUAP/Foundation/IWineAsync.cpp
-@@ -82,2 +82,3 @@ AsyncInfo::Release() noexcept
+@@ -82,2 +82,3 @@
 -        if ( invoker ) invoker->Release();
 -
 +        if (invoker) invoker->Release();
 +        if (errorInfo) errorInfo->Release();
 +        PropVariantClear(&result);
-@@ -191,4 +192,2 @@ AsyncInfo::get_Result( PROPVARIANT *result ) noexcept
+@@ -191,4 +192,2 @@
 -        if ( status == Completed || status == Error )
 -        {
 -            PropVariantCopy( result, &this->result );
 -        }
 +        if (status != Completed && status != Error) return E_ILLEGAL_METHOD_CALL;
 +        PropVariantCopy(result, &this->result);
-@@ -334 +333 @@ AsyncInfo::async_info_callback( TP_CALLBACK_INSTANCE *instance, void *iface, TP_
+@@ -334 +333 @@
 -    PROPVARIANT result;
 +    PROPVARIANT result{};
-@@ -357,2 +356 @@ AsyncInfo::async_info_callback( TP_CALLBACK_INSTANCE *instance, void *iface, TP_
+@@ -357,2 +356 @@
 -            handler = impl->handler;
 -            handler->AddRef();
 +            handler = impl->handler; /* Transfer the stored reference. */
-@@ -368,0 +367,2 @@ AsyncInfo::async_info_callback( TP_CALLBACK_INSTANCE *instance, void *iface, TP_
+@@ -368,0 +367,2 @@
 +    PropVariantClear(&result);
 +    operation->Release(); /* Balance Start(), possibly deleting this info. */
-@@ -409 +409,3 @@ AsyncOperation<T>::Release() noexcept
+@@ -409 +409,3 @@
 -    if ( !curr )
 +    if (!curr)
 +    {
 +        if (info) info->Release();
-@@ -411 +413 @@ AsyncOperation<T>::Release() noexcept
+@@ -411 +413 @@
 -
 +    }
-@@ -484 +486,4 @@ AsyncOperation<T>::GetResults( T *results ) noexcept
+@@ -484 +486,4 @@
 -    if ( result.vt == VT_UNKNOWN )
 +    if (!results) { PropVariantClear(&result); return E_POINTER; }
 +    *results = nullptr;
 +    if (SUCCEEDED(hr) && result.vt == VT_UNKNOWN)
 +    {
-@@ -486,2 +491,3 @@ AsyncOperation<T>::GetResults( T *results ) noexcept
+@@ -486,2 +491,3 @@
 -
 -    PropVariantClear( &result );
 +        result.vt = VT_EMPTY; /* Transfer this owned reference to the caller. */
 +    }
 +    PropVariantClear(&result);
-@@ -503 +509 @@ AsyncOperation<T>::Create( IUnknown *invoker, PVOID param, async_operation_callb
+@@ -503 +509 @@
 -        impl->info->Release();
 +        if (impl->info) impl->info->Release();
-@@ -552 +558,3 @@ AsyncAction::Release() noexcept
+@@ -552 +558,3 @@
 -    if ( !curr )
 +    if (!curr)
 +    {
 +        if (info) info->Release();
-@@ -554 +562 @@ AsyncAction::Release() noexcept
+@@ -554 +562 @@
 -
 +    }
-@@ -620 +628 @@ AsyncAction::GetResults() noexcept
+@@ -620 +628 @@
 -
 +    PropVariantClear(&result);
-@@ -635 +643 @@ AsyncAction::Create( IUnknown *invoker, PVOID param, async_operation_callback ca
+@@ -635 +643 @@
 -        impl->info->Release();
 +        if (impl->info) impl->info->Release();
 diff --git c/dlls/xgameruntime/WineCoreUAP/Foundation/IWineAsync.hpp w/dlls/xgameruntime/WineCoreUAP/Foundation/IWineAsync.hpp
-index f6d4864..8dc25f7 100755
 --- c/dlls/xgameruntime/WineCoreUAP/Foundation/IWineAsync.hpp
 +++ w/dlls/xgameruntime/WineCoreUAP/Foundation/IWineAsync.hpp
-@@ -161 +161 @@ private:
+@@ -161 +161 @@
 -    IWineAsyncInfoImpl *info;
 +    IWineAsyncInfoImpl *info = nullptr;
-@@ -208 +208 @@ private:
+@@ -208 +208 @@
 -    IWineAsyncInfoImpl *info;
 +    IWineAsyncInfoImpl *info = nullptr;
 diff --git c/dlls/xgameruntime/main.c w/dlls/xgameruntime/main.c
-index 7c8ba38..a145251 100644
 --- c/dlls/xgameruntime/main.c
 +++ w/dlls/xgameruntime/main.c
 @@ -20,0 +21 @@
 +#include <stdio.h>
 @@ -22,0 +24 @@
 +#include "GDKComponent/Xodus/StoreLicenseProvider.h"
-@@ -32 +34,3 @@ static HMODULE xgameruntime;
+@@ -32 +34,3 @@
 -static HMODULE xgameruntime_threading;
 +static IXThreadingImpl *bound_threading;
 +static BOOLEAN shutdown_called;
 +static SRWLOCK runtime_lock = SRWLOCK_INIT;
-@@ -44,69 +47,0 @@ DEFINE_ASYNC_COMPLETED_HANDLER( async_action, IAsyncActionCompletedHandler, IAsy
+@@ -44,69 +47,0 @@
 -static VOID LoadOtherRuntime( DWORD *asked )
 -{
 -    HKEY hKey;
@@ -5494,17 +5520,16 @@ index 7c8ba38..a145251 100644
 -    return;
 -}
 -
-@@ -115 +50 @@ HRESULT WINAPI DllCanUnloadNow(void)
+@@ -115 +50 @@
 -    return xgameruntime != NULL ? S_FALSE : S_OK;
 +    return bound_threading ? S_FALSE : S_OK;
-@@ -128 +62,0 @@ BOOL WINAPI DllMain( HINSTANCE hinst, DWORD reason, void *reserved )
+@@ -128 +62,0 @@
 -            xgameruntime_threading = LoadLibraryA("xgameruntime.dll.threading");
-@@ -135 +68,0 @@ BOOL WINAPI DllMain( HINSTANCE hinst, DWORD reason, void *reserved )
+@@ -135 +68,0 @@
 -            if (xgameruntime_threading) FreeLibrary(xgameruntime_threading);
-@@ -144 +77 @@ typedef HRESULT (WINAPI *InitializeApiImplEx2_ext)( ULONG gdkVer, ULONG gsVer, C
+@@ -144,12 +77,5 @@
 -HRESULT WINAPI InitializeApiImplEx2( ULONG gdkVer, ULONG gsVer, CHAR mode, INITIALIZE_OPTIONS *options )
-+static HRESULT load_game_config(INITIALIZE_OPTIONS *options)
-@@ -146,10 +79,3 @@ HRESULT WINAPI InitializeApiImplEx2( ULONG gdkVer, ULONG gsVer, CHAR mode, INITI
+-{
 -    //  Initialization can be done however we want on our side.
 -    // You can choose to return `S_OK` once the full SDK is implemented.
 -    //
@@ -5515,13 +5540,73 @@ index 7c8ba38..a145251 100644
 -    //
 -
 -    CHAR filename[MAX_PATH], *last;
++static HRESULT load_game_config(INITIALIZE_OPTIONS *options)
++{
 +    CHAR filename[MAX_PATH], *last, *new_app_id = NULL;
 +    UINT32 new_title_id = 0;
 +    BOOLEAN new_full_trust = FALSE;
-@@ -158,67 +84 @@ HRESULT WINAPI InitializeApiImplEx2( ULONG gdkVer, ULONG gsVer, CHAR mode, INITI
+@@ -158 +84,59 @@
 -#if XODUS_INTEROP
--    HRESULT hr;
--    NTSTATUS nts;
++    HRESULT result = E_GAMERUNTIME_GAMECONFIG_BAD_FORMAT;
++    if (options)
++    {
++        if (!options->gameConfig) return E_INVALIDARG;
++        config = options->isInlineConfig
++            ? xmlReadMemory(options->gameConfig, strlen(options->gameConfig), NULL, NULL, XML_PARSE_NONET)
++            : xmlReadFile(options->gameConfig, NULL, XML_PARSE_NONET);
++        if (!config) return result;
++    }
++    else
++    {
++        if (!GetModuleFileNameA(NULL, filename, MAX_PATH)) return HRESULT_FROM_WIN32(GetLastError());
++        while ((last = strrchr(filename, '\\')))
++        {
++            *(last + 1) = 0;
++            if (strlen(filename) + strlen("MicrosoftGame.config") >= MAX_PATH)
++                return HRESULT_FROM_WIN32(ERROR_INSUFFICIENT_BUFFER);
++            strcat(filename, "MicrosoftGame.config");
++            if (PathFileExistsA(filename)) break;
++            *last = 0;
++            if (!strrchr(filename, '\\')) return E_GAME_MISSING_GAME_CONFIG;
++        }
++        config = xmlReadFile(filename, NULL, XML_PARSE_NONET);
++        if (!config) return result;
++    }
++    root = xmlDocGetRootElement(config);
++    if (!root || strcmp((char *)root->name, "Game")) goto cleanup;
++    for (child = root->children; child; child = child->next)
++    {
++        char *value;
++        if (child->type != XML_ELEMENT_NODE) continue;
++        value = (char *)xmlNodeGetContent(child);
++        if (!value) continue;
++        if (!strcmp((char *)child->name, "MSAAppId"))
++        {
++            free(new_app_id);
++            new_app_id = strdup(value);
++        }
++        else if (!strcmp((char *)child->name, "TitleId")) new_title_id = strtoul(value, NULL, 16);
++        else if (!strcmp((char *)child->name, "MSAFullTrust")) new_full_trust = !strcmp(value, "true");
++        xmlFree(value);
++    }
++    if (!new_app_id || !*new_app_id || !new_title_id) goto cleanup;
++    result = xodus_store_configure_title_xml(config);
++    if (FAILED(result)) goto cleanup;
++    free(msaAppId);
++    msaAppId = new_app_id;
++    new_app_id = NULL;
++    titleId = new_title_id;
++    fullTrust = new_full_trust;
++    result = S_OK;
++cleanup:
++    free(new_app_id);
++    xmlFreeDoc(config);
++    return result;
++}
++
++HRESULT WINAPI InitializeApiImplEx2(ULONG gdkVer, ULONG gsVer, CHAR mode, INITIALIZE_OPTIONS *options)
++{
+@@ -161,7 +145,19 @@
 -    DWORD async;
 -    LPCSTR xodus_prefix = XODUS_SOCKET_SUFFIX;
 -
@@ -5529,13 +5614,33 @@ index 7c8ba38..a145251 100644
 -
 -    if (initializeCalled) goto _INIT;
 -
--    nts = __wine_init_unix_call();
++    HMODULE pinned;
++    CHAR socket_suffix[108];
++    LPCSTR suffix = XODUS_SOCKET_SUFFIX;
++    DWORD length;
++    IAsyncAction *ping = NULL;
++    IAsyncInfo *info = NULL;
++    AsyncStatus status = Started;
++    ULONGLONG deadline;
++    AcquireSRWLockExclusive(&runtime_lock);
++    if (initializeCalled) { hr = S_OK; goto done; }
++    if (shutdown_called || !bound_threading) { hr = E_UNEXPECTED; goto done; }
++    if (FAILED(hr = load_game_config(options))) goto done;
++    /* Async work and retained queue callbacks can outlive title shutdown. */
++    if (!GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_PIN,
++                          (LPCWSTR)InitializeApiImplEx2, &pinned))
++    { hr = HRESULT_FROM_WIN32(GetLastError()); goto done; }
++    length = GetEnvironmentVariableA("XODUS_USER_SOCKET_SUFFIX", socket_suffix, sizeof(socket_suffix));
++    if (length >= sizeof(socket_suffix)) { hr = HRESULT_FROM_WIN32(ERROR_INSUFFICIENT_BUFFER); goto done; }
++    if (length) suffix = socket_suffix;
+@@ -169,5 +165 @@
 -    if (FAILED( nts ))
 -    {
 -        WARN("Failed to initialize unix lib, status %#lx\n", nts);
 -        return FALSE;
 -    }
--    unixhandle = __wine_unixlib_handle;
++    if (FAILED(nts)) { hr = HRESULT_FROM_NT(nts); goto done; }
+@@ -175,48 +167,11 @@
 -    nts = __wine_unix_call( unixhandle, conn_socket, (void *)xodus_prefix );
 -    if ( nts == STATUS_CONNECTION_REFUSED )
 -    {
@@ -5584,49 +5689,46 @@ index 7c8ba38..a145251 100644
 -    TRACE("gdkVer %ld, gsVer %ld, mode %d, options %p stub!\n", gdkVer, gsVer, mode, options);
 -
 -    if (initializeCalled) return S_OK;
--    initializeCalled = TRUE;
++    nts = __wine_unix_call(unixhandle, conn_socket, (void *)suffix);
++    if (FAILED(nts)) { hr = HRESULT_FROM_NT(nts); goto done; }
++    if (FAILED(hr = IIPCLayer_InitializeSocket(xodus_ipclayer))) goto failed_ipc;
++    if (FAILED(hr = IXodusService_Ping(xodus_service, &ping))) goto failed_ipc;
++    if (FAILED(hr = IAsyncAction_QueryInterface(ping, &IID_IAsyncInfo, (void **)&info))) goto failed_ipc;
++    deadline = GetTickCount64() + IPC_REQUEST_TIMEOUT_MS + 1000;
++    while (SUCCEEDED(hr = IAsyncInfo_get_Status(info, &status)) && status == Started && GetTickCount64() < deadline)
++        Sleep(1);
++    if (FAILED(hr)) goto failed_ipc;
++    if (status == Started) { hr = HRESULT_FROM_WIN32(ERROR_TIMEOUT); goto failed_ipc; }
++    if (FAILED(hr = IAsyncAction_GetResults(ping))) goto failed_ipc;
+@@ -224,55 +179,8 @@
 -
-+    HRESULT result = E_GAMERUNTIME_GAMECONFIG_BAD_FORMAT;
-@@ -227,4 +87,5 @@ _INIT:
+-    if (options)
+-    {
 -        if (options->isInlineConfig && !(config = xmlReadMemory( options->gameConfig, strlen( options->gameConfig ), NULL, NULL, 0 )))
 -            return E_GAMERUNTIME_GAMECONFIG_BAD_FORMAT;
 -        else if (!(config = xmlReadFile( options->gameConfig, NULL, 0 )))
 -            return E_GAMERUNTIME_GAMECONFIG_BAD_FORMAT;
-+        if (!options->gameConfig) return E_INVALIDARG;
-+        config = options->isInlineConfig
-+            ? xmlReadMemory(options->gameConfig, strlen(options->gameConfig), NULL, NULL, XML_PARSE_NONET)
-+            : xmlReadFile(options->gameConfig, NULL, XML_PARSE_NONET);
-+        if (!config) return result;
-@@ -234,3 +95,2 @@ _INIT:
+-    }
+-    else
+-    {
 -        if (!GetModuleFileNameA( NULL, filename, MAX_PATH )) return HRESULT_FROM_WIN32( GetLastError() );
 -        /* executable can be in a subdirectory, search up the tree until we find MicrosoftGame.config */
 -        while ((last = strrchr( filename, '\\' )))
-+        if (!GetModuleFileNameA(NULL, filename, MAX_PATH)) return HRESULT_FROM_WIN32(GetLastError());
-+        while ((last = strrchr(filename, '\\')))
-@@ -239,4 +99,4 @@ _INIT:
+-        {
+-            *(last + 1) = 0;
 -            if (strlen( filename ) + strlen( "MicrosoftGame.config" ) < MAX_PATH)
 -                strcat( filename, "MicrosoftGame.config" );
 -            else return HRESULT_FROM_WIN32( ERROR_INSUFFICIENT_BUFFER );
 -            if (PathFileExistsA( filename )) break;
-+            if (strlen(filename) + strlen("MicrosoftGame.config") >= MAX_PATH)
-+                return HRESULT_FROM_WIN32(ERROR_INSUFFICIENT_BUFFER);
-+            strcat(filename, "MicrosoftGame.config");
-+            if (PathFileExistsA(filename)) break;
-@@ -244 +104 @@ _INIT:
+-            *last = 0;
 -            if (!strrchr( filename, '\\' )) return E_GAME_MISSING_GAME_CONFIG;
-+            if (!strrchr(filename, '\\')) return E_GAME_MISSING_GAME_CONFIG;
-@@ -246 +106,2 @@ _INIT:
+-        }
 -        if (!(config = xmlReadFile( filename, NULL, 0 ))) return E_GAMERUNTIME_GAMECONFIG_BAD_FORMAT;
-+        config = xmlReadFile(filename, NULL, XML_PARSE_NONET);
-+        if (!config) return result;
-@@ -248,3 +109,3 @@ _INIT:
+-    }
 -
 -    if (!(root = xmlDocGetRootElement( config ))) goto badconfig;
 -    if (!strcmp( (char *)root->name, "Game" ))
-+    root = xmlDocGetRootElement(config);
-+    if (!root || strcmp((char *)root->name, "Game")) goto cleanup;
-+    for (child = root->children; child; child = child->next)
-@@ -252,18 +113,12 @@ _INIT:
+-    {
 -        for (child = root->children; child; child = child->next)
 -            if (child->type == XML_ELEMENT_NODE)
 -            {
@@ -5645,79 +5747,15 @@ index 7c8ba38..a145251 100644
 -                    free( value );
 -                }
 -            }
-+        char *value;
-+        if (child->type != XML_ELEMENT_NODE) continue;
-+        value = (char *)xmlNodeGetContent(child);
-+        if (!value) continue;
-+        if (!strcmp((char *)child->name, "MSAAppId"))
-+        {
-+            free(new_app_id);
-+            new_app_id = strdup(value);
-+        }
-+        else if (!strcmp((char *)child->name, "TitleId")) new_title_id = strtoul(value, NULL, 16);
-+        else if (!strcmp((char *)child->name, "MSAFullTrust")) new_full_trust = !strcmp(value, "true");
-+        xmlFree(value);
-@@ -271 +126,14 @@ _INIT:
+-    }
 -    else goto badconfig;
-+    if (!new_app_id || !*new_app_id || !new_title_id) goto cleanup;
-+    result = xodus_store_configure_title_xml(config);
-+    if (FAILED(result)) goto cleanup;
-+    free(msaAppId);
-+    msaAppId = new_app_id;
-+    new_app_id = NULL;
-+    titleId = new_title_id;
-+    fullTrust = new_full_trust;
-+    result = S_OK;
-+cleanup:
-+    free(new_app_id);
-+    xmlFreeDoc(config);
-+    return result;
-+}
-@@ -273,6 +141,46 @@ _INIT:
+-
 -    xmlFreeDoc( config );
 -    return S_OK;
 -
 -badconfig:
 -    xmlFreeDoc( config );
 -    return E_GAMERUNTIME_GAMECONFIG_BAD_FORMAT;
-+HRESULT WINAPI InitializeApiImplEx2(ULONG gdkVer, ULONG gsVer, CHAR mode, INITIALIZE_OPTIONS *options)
-+{
-+    HRESULT hr;
-+    NTSTATUS nts;
-+    HMODULE pinned;
-+    CHAR socket_suffix[108];
-+    LPCSTR suffix = XODUS_SOCKET_SUFFIX;
-+    DWORD length;
-+    IAsyncAction *ping = NULL;
-+    IAsyncInfo *info = NULL;
-+    AsyncStatus status = Started;
-+    ULONGLONG deadline;
-+    AcquireSRWLockExclusive(&runtime_lock);
-+    if (initializeCalled) { hr = S_OK; goto done; }
-+    if (shutdown_called || !bound_threading) { hr = E_UNEXPECTED; goto done; }
-+    if (FAILED(hr = load_game_config(options))) goto done;
-+    /* Async work and retained queue callbacks can outlive title shutdown. */
-+    if (!GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_PIN,
-+                          (LPCWSTR)InitializeApiImplEx2, &pinned))
-+    { hr = HRESULT_FROM_WIN32(GetLastError()); goto done; }
-+    length = GetEnvironmentVariableA("XODUS_USER_SOCKET_SUFFIX", socket_suffix, sizeof(socket_suffix));
-+    if (length >= sizeof(socket_suffix)) { hr = HRESULT_FROM_WIN32(ERROR_INSUFFICIENT_BUFFER); goto done; }
-+    if (length) suffix = socket_suffix;
-+    nts = __wine_init_unix_call();
-+    if (FAILED(nts)) { hr = HRESULT_FROM_NT(nts); goto done; }
-+    unixhandle = __wine_unixlib_handle;
-+    nts = __wine_unix_call(unixhandle, conn_socket, (void *)suffix);
-+    if (FAILED(nts)) { hr = HRESULT_FROM_NT(nts); goto done; }
-+    if (FAILED(hr = IIPCLayer_InitializeSocket(xodus_ipclayer))) goto failed_ipc;
-+    if (FAILED(hr = IXodusService_Ping(xodus_service, &ping))) goto failed_ipc;
-+    if (FAILED(hr = IAsyncAction_QueryInterface(ping, &IID_IAsyncInfo, (void **)&info))) goto failed_ipc;
-+    deadline = GetTickCount64() + IPC_REQUEST_TIMEOUT_MS + 1000;
-+    while (SUCCEEDED(hr = IAsyncInfo_get_Status(info, &status)) && status == Started && GetTickCount64() < deadline)
-+        Sleep(1);
-+    if (FAILED(hr)) goto failed_ipc;
-+    if (status == Started) { hr = HRESULT_FROM_WIN32(ERROR_TIMEOUT); goto failed_ipc; }
-+    if (FAILED(hr = IAsyncAction_GetResults(ping))) goto failed_ipc;
-+    initializeCalled = TRUE;
 +    goto done;
 +failed_ipc:
 +    xodus_ipc_shutdown();
@@ -5726,7 +5764,7 @@ index 7c8ba38..a145251 100644
 +    if (ping) IAsyncAction_Release(ping);
 +    ReleaseSRWLockExclusive(&runtime_lock);
 +    return hr;
-@@ -294,0 +203,9 @@ typedef HRESULT (WINAPI *QueryApiImpl_ext)( const GUID *runtimeClassId, REFIID i
+@@ -294,0 +203,9 @@
 +HRESULT WINAPI XodusUserSetThreading(IXThreadingImpl *threading)
 +{
 +    if (!threading) return E_POINTER;
@@ -5736,7 +5774,7 @@ index 7c8ba38..a145251 100644
 +    return S_OK;
 +}
 +
-@@ -297,2 +214,7 @@ HRESULT WINAPI QueryApiImpl( const GUID *runtimeClassId, REFIID interfaceId, voi
+@@ -297,2 +214,7 @@
 -    QueryApiImpl_ext func = (QueryApiImpl_ext)GetProcAddress( xgameruntime_threading, "QueryApiImpl" );
 -    DWORD asked;
 +    if (runtimeClassId && IsEqualGUID(runtimeClassId, &CLSID_XUserImpl) && interfaceId)
@@ -5746,7 +5784,7 @@ index 7c8ba38..a145251 100644
 +                interfaceId->Data4[4], interfaceId->Data4[5], interfaceId->Data4[6], interfaceId->Data4[7],
 +                __builtin_return_address(0));
 +
-@@ -313,6 +235,2 @@ HRESULT WINAPI QueryApiImpl( const GUID *runtimeClassId, REFIID interfaceId, voi
+@@ -313,6 +235,2 @@
 -        if (func) return func( runtimeClassId, interfaceId, out );
 -
 -        LoadOtherRuntime( &asked );
@@ -5755,7 +5793,7 @@ index 7c8ba38..a145251 100644
 -        return IXThreadingImpl_QueryInterface( x_threading_impl, interfaceId, out );
 +        if (!bound_threading) return E_UNEXPECTED;
 +        return IXThreadingImpl_QueryInterface(bound_threading, interfaceId, out);
-@@ -333,2 +251,11 @@ HRESULT WINAPI UninitializeApiImpl( void )
+@@ -333,2 +251,11 @@
 -    TRACE("stub!\n");
 -    return E_NOTIMPL;
 +    HRESULT hr;
@@ -5769,28 +5807,26 @@ index 7c8ba38..a145251 100644
 +    /* The bound interface and immutable title metadata remain alive for already
 +       scheduled async cleanup. The module is pinned; the process releases them. */
 +    return hr;
-@@ -341 +268 @@ HRESULT WINAPI XErrorReport( HRESULT status, LPCSTR message )
+@@ -341 +268 @@
 -}
 \ No newline at end of file
 +}
 diff --git c/dlls/xgameruntime/private.h w/dlls/xgameruntime/private.h
-index 9f96480..0045a57 100644
 --- c/dlls/xgameruntime/private.h
 +++ w/dlls/xgameruntime/private.h
 @@ -100,0 +101,3 @@
-+/* HTTP-backed broker calls may take up to 35 seconds. Local ping/account
-+ * requests stay short. Outer async waits must outlive the transport wait. */
-+#define IPC_NETWORK_TIMEOUT_MS 45000
-@@ -147 +150,2 @@ enum unix_funcs
++/* Silent renewal (20s) plus an HTTP-backed Store call (35s). Local ping
++ * stays short. Outer async waits must outlive the transport wait. */
++#define IPC_NETWORK_TIMEOUT_MS 65000
+@@ -147 +150,2 @@
 -    send_frame
 +    send_frame,
 +    disconnect_socket
-@@ -150,0 +155,2 @@ extern unixlib_handle_t unixhandle;
+@@ -150,0 +155,2 @@
 +EXTERN_C HRESULT xodus_ipc_shutdown(void);
 +EXTERN_C void x_user_shutdown(void);
 diff --git c/dlls/xgameruntime/xodus_store_test.spec w/dlls/xgameruntime/xodus_store_test.spec
 new file mode 100644
-index 0000000..1277823
 --- /dev/null
 +++ w/dlls/xgameruntime/xodus_store_test.spec
 @@ -0,0 +1,29 @@
@@ -5824,9 +5860,8 @@ index 0000000..1277823
 +
 +@ stdcall XodusStoreShowPurchase(ptr str str str ptr)
 diff --git c/dlls/xgameruntime/xodusprovider.idl w/dlls/xgameruntime/xodusprovider.idl
-index 8841454..3e528ad 100644
 --- c/dlls/xgameruntime/xodusprovider.idl
 +++ w/dlls/xgameruntime/xodusprovider.idl
-@@ -130,0 +131,2 @@ namespace Xodus
+@@ -130,0 +131,2 @@
 +        [propget] HRESULT DeviceRps( [out, retval] const char **out );
 +        [propget] HRESULT DeviceExpiry( [out, retval] Windows.Foundation.DateTime *out );

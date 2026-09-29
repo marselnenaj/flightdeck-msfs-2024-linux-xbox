@@ -20,6 +20,7 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE_ROOT = "flightdeck-linux/"
 NATIVE_ROOT = SOURCE_ROOT + "flightdeck/resources/native/"
+GRAPHICS_ROOT = SOURCE_ROOT + "flightdeck/resources/graphics/"
 NATIVE_FEATURES = ("connected-storage-read-v1", "connected-storage-sync-v1")
 NATIVE_FILES = frozenset(("bin/xodus-cli", "bin/xodus-service", "bin/flightdeck-connected-storage.exe",
                           "runtime/xgameruntime.dll",
@@ -115,7 +116,7 @@ def read_archive(data, *, native=False):
                 else:
                     if not name.startswith(SOURCE_ROOT) or name == SOURCE_ROOT.rstrip("/"):
                         raise ValueError("Source archive must have the flightdeck-linux root")
-                    if name.startswith(NATIVE_ROOT) or name == NATIVE_ROOT.rstrip("/"):
+                    if any(name.startswith(root) or name == root.rstrip("/") for root in (NATIVE_ROOT, GRAPHICS_ROOT)):
                         raise ValueError("Source archive already contains the reserved native path")
                     maximum = SOURCE_FILE_MAX
                 total += member.size
@@ -231,16 +232,44 @@ def write_archive(output, contents):
     return output
 
 
-def create(source, native, output):
+def graphics_files(sources, directory):
+    if directory is None:
+        return {}
+    if SOURCE_ROOT + "compat/graphics.lock.json" not in sources:
+        raise ValueError("Source archive has no graphics lock")
+    lock = read_json(sources[SOURCE_ROOT + "compat/graphics.lock.json"], "Graphics lock")
+    files = hash_map(lock.get("files"), "Graphics lock")
+    base = hash_map(lock.get("base"), "Graphics base")
+    if lock.get("schema") != 1 or set(files) != {"d3d12.dll", "d3d12core.dll"} or set(base) != set(files):
+        raise ValueError("Invalid graphics lock")
+    expected = {**files, "LICENSE": lock.get("license_sha256")}
+    if not isinstance(expected["LICENSE"], str) or not HASH.fullmatch(expected["LICENSE"]):
+        raise ValueError("Invalid graphics license hash")
+    if directory.is_symlink() or set(p.name for p in directory.iterdir()) != set(expected) | {"manifest.json"}:
+        raise ValueError("Unexpected graphics bundle contents")
+    values = {name: read_regular(directory / name, NATIVE_FILE_MAX) for name in expected}
+    if any(digest(values[name]) != checksum for name, checksum in expected.items()):
+        raise ValueError("Graphics bundle differs from source lock")
+    manifest = read_regular(directory / "manifest.json", JSON_MAX)
+    if read_json(manifest, "Graphics manifest") != {"schema": 1, "base": base, "files": files}:
+        raise ValueError("Graphics manifest differs from source lock")
+    values["manifest.json"] = manifest
+    return {GRAPHICS_ROOT + name: data for name, data in values.items()}
+
+
+def create(source, native, output, *, graphics=None):
     source_bytes = read_regular(source, SOURCE_ARCHIVE_MAX)
     sources = read_archive(source_bytes)
     lock, source_count = verify_sources(sources)
+    if SOURCE_ROOT + "compat/graphics.lock.json" in sources and graphics is None:
+        raise ValueError("This source release declares a renderer bundle; provide --graphics")
     native_bytes = read_regular(native, NATIVE_ARCHIVE_MAX)
     if digest(native_bytes) != lock["archive_sha256"]:
         raise ValueError("Native archive hash differs from the verified source lock")
     natives = read_archive(native_bytes, native=True)
     verify_native(natives, lock)
     combined = {**sources, **{NATIVE_ROOT + name: data for name, data in natives.items()}}
+    combined.update(graphics_files(sources, graphics))
     reject_parent_files(combined)
     destination = write_archive(output, combined)
     report = {"status": "PASS", "source_files": source_count, "native_files": len(natives),
@@ -254,8 +283,9 @@ if __name__ == "__main__":
     parser.add_argument("--source", type=Path, required=True)
     parser.add_argument("--native", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--graphics", type=Path, help="Hash-pinned renderer bundle (required when declared by source)")
     arguments = parser.parse_args()
     try:
-        create(arguments.source, arguments.native, arguments.output)
+        create(arguments.source, arguments.native, arguments.output, graphics=arguments.graphics)
     except (ValueError, OSError) as error:
         parser.exit(1, str(error) + "\n")

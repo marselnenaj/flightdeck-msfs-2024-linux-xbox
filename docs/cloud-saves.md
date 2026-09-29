@@ -7,12 +7,23 @@ It loads the cloud state before starting the simulator, keeps local backups,
 and uploads changes after the game exits. Cloud support remains experimental.
 The Xbox profile signed into the game determines which saves are used.
 
+**Known issue:** some users still report repeated cloud-sync failures after the
+0.1.8 timeout corrections. A successful sync on another installation does not
+establish that these failures are resolved. See [known issues](known-issues.md).
+
 With Flightdeck 0.1.1's edition selection, the selected runtime determines the
 game's cloud identity, helper profile and local backups. MSFS 2020 and MSFS 2024
 saves are not interchangeable. The new 2020 path still needs end-to-end gameplay
 validation; see [release status](changelog.md).
 
 ## Just start the simulator
+
+Flightdeck 0.1.9 renews expiring Microsoft tickets automatically. If a cloud
+request needs interactive login, choose **Sign in again and sync**. Sign in with
+the same Microsoft account; Flightdeck verifies the renewed session and retries
+that cloud operation. Cancellation or a failed check preserves the pending
+operation and local saves. Network failures alone do not force a new login.
+See [session recovery](store-session-refresh.md) for the implemented scope.
 
 1. Install the current full Flightdeck package and select **Start simulator**.
 2. Flightdeck backs up the local saves and checks the cloud. On first use, an

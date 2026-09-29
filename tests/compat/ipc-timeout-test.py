@@ -15,7 +15,7 @@ import threading
 import time
 
 ROOT = Path(__file__).resolve().parents[2]
-CASES = ("inventory-ok", "inventory-timeout", "auth", "updates", "local-timeout")
+CASES = ("inventory-ok", "inventory-timeout", "auth", "updates", "account-refresh", "account-timeout")
 
 
 def exact(stream, size):
@@ -32,8 +32,8 @@ def respond(kind, request, scenario):
     if kind == 1:
         return request
     if kind == 5:
-        if scenario == "local-timeout":
-            time.sleep(6)
+        if scenario in {"account-refresh", "account-timeout"}:
+            time.sleep(66 if scenario == "account-timeout" else 6)
         return b"<StoreAccountContextResponse><Status>Available</Status><Context>" + b"a" * 64 + b"</Context></StoreAccountContextResponse>"
     if kind == 3:
         time.sleep(6)
@@ -92,7 +92,7 @@ def run(args):
                     try:
                         connection, _ = listener.accept()
                         with connection:
-                            connection.settimeout(60)
+                            connection.settimeout(80)
                             while True:
                                 magic, kind, length = struct.unpack("<IHH", exact(connection, 8))
                                 assert magic == 0x58445358
@@ -105,7 +105,7 @@ def run(args):
                     except Exception as error:
                         errors.append(type(error).__name__ + ": " + str(error))
                 thread = threading.Thread(target=serve, daemon=True); thread.start()
-                result = subprocess.run([str(wine), str(binary), scenario], env=dict(env, XDG_RUNTIME_DIR=socket_dir), capture_output=True, timeout=60)
+                result = subprocess.run([str(wine), str(binary), scenario], env=dict(env, XDG_RUNTIME_DIR=socket_dir), capture_output=True, timeout=90)
                 thread.join(timeout=10)
                 output = result.stdout.decode(errors="replace")
                 (work / (scenario + ".log")).write_bytes(result.stdout + result.stderr)

@@ -60,9 +60,10 @@ let launcherUnavailable=false,launcherBarrier=null,releaseLauncher=null,launcher
 
 let cloudData={available:true,mode:'download_and_import',sync_supported:false,can_check:true,can_download:true,can_prepare_import:true,can_import:false,can_cancel:false,plan:null,job:null};
 let cloudReplies=0,cloudUnavailable=false,cloudBarrier=null,releaseCloud=null,cloudWaiting=false;
+let problemReport={recipient:'contact@flightdeck-app.com',draft:null,unreadable:false},problemFailure=false;
 let storeCheck={job:null};
 let maintenance={job:null,can_restore:false};
-const files = new Set(['store-check.js','maintenance.js','launcher-updates.js','notices.js','fenix.js','cloud-saves.js','manrope-variable.woff2','updates.js','mods.js','index.html','styles.css','app.js','setup.js','state.js','i18n.js','mark.svg','flight-panorama.png','flight-panorama-2020.png']);
+const files = new Set(['problem-reports.js','store-check.js','maintenance.js','launcher-updates.js','notices.js','fenix.js','cloud-saves.js','manrope-variable.woff2','updates.js','mods.js','index.html','styles.css','app.js','setup.js','state.js','i18n.js','mark.svg','flight-panorama.png','flight-panorama-2020.png']);
 const server = createServer(async (req,res) => {
   const url = new URL(req.url, 'http://localhost');
   if (url.pathname.startsWith('/api/')) {
@@ -70,6 +71,7 @@ const server = createServer(async (req,res) => {
     res.setHeader('Content-Type','application/json'); res.setHeader('Cache-Control','no-store');
     if (apiUnavailable) {res.writeHead(503); res.end(JSON.stringify({ok:false,error:'Fixture offline'}));return;}
     if (req.method === 'GET') {
+      if (url.pathname === '/api/problem-reports') {res.end(JSON.stringify(problemReport));return;}
       if (url.pathname === '/api/store-check') {res.end(JSON.stringify(storeCheck));return;}
       if (url.pathname === '/api/maintenance') {res.end(JSON.stringify(maintenance));return;}
       if (url.pathname === '/api/status') {if(statusBarrier){statusWaiting=true;await statusBarrier;}res.end(JSON.stringify({...status,runtime:{...status.runtime,checks:localizeChecks(status.runtime.checks,language)}}));return;}
@@ -109,9 +111,27 @@ const server = createServer(async (req,res) => {
       }
 
       if (req.headers['x-flightdeck-token'] !== csrf) {res.writeHead(403);res.end(JSON.stringify({ok:false,error:'Missing fixture CSRF'}));return;}
+      if (url.pathname === '/api/problem-reports/prepare') {
+        if(problemFailure){res.writeHead(409);res.end(JSON.stringify({ok:false,error:'Synthetic report capture failed'}));return;}
+        const data=JSON.parse(body);assert.equal(data.runtime_path,status.runtime.path);
+        const report={schema:1,id:'1234567890abcdef1234567890abcdef',created_at:'2026-09-29T12:00:00Z',category:data.category,description:data.description,
+          observations:data.observations,system:{distribution:'linuxmint',release:'22.3'},diagnostics:{generated_at:'2026-09-29T12:00:00Z',checks:[{id:'game',ok:true}],
+          summary:{context:{game_id:status.runtime.game_id,launcher_version:'0.1.9',cloud_sync_scope:'current_service'},graphics:{devices:[{name:'NVIDIA GeForce RTX 5060 Ti',driver_version:'595.91.07'}]},cloud_sync:{state:'attention',error_code:'transport',error_details:{http_status:503}}}}};
+        problemReport={...problemReport,draft:{report,sha256:'fixture'}};res.end(JSON.stringify({ok:true,...problemReport}));return;
+      }
+      if (url.pathname === '/api/problem-reports/discard') {
+        assert.equal(JSON.parse(body).report_id,problemReport.draft.report.id);problemReport={...problemReport,draft:null};res.end(JSON.stringify({ok:true,...problemReport}));return;
+      }
       if (url.pathname === '/api/store-check/start') {
         assert.deepEqual(JSON.parse(body),{});
         storeCheck={job:{id:'store-check-fixture',state:'running',started_at:'2026-09-27T20:00:00Z',finished_at:null,components:null,steps:['runtime','account','catalog','license','library','window'].map(stage=>({stage,state:'pending',code:'checking'}))}};
+        status.setup={busy:true};res.end(JSON.stringify({ok:true,...storeCheck}));return;
+      }
+      if (['/api/store-check/sign-in','/api/cloud-saves/sign-in'].includes(url.pathname)) {
+        assert.equal(req.headers['x-flightdeck-token'],csrf);
+        assert.deepEqual(JSON.parse(body),url.pathname.includes('cloud-saves')?{request_id:autoRequest}:{job_id:storeCheck.job.id});
+        storeCheck={job:{id:'sign-in-fixture',operation:'recover',state:'running',started_at:'2026-09-29T20:00:00Z',finished_at:null,
+          steps:['runtime','sign_in','account','catalog','license','library'].map(stage=>({stage,state:stage==='sign_in'?'running':'pending',code:stage==='sign_in'?'signing_in':'checking'}))}};
         status.setup={busy:true};res.end(JSON.stringify({ok:true,...storeCheck}));return;
       }
       if (url.pathname === '/api/store-check/cancel') {
@@ -944,6 +964,24 @@ try {
   await refresh("true");
   await until(()=>evaluate("document.getElementById('store-check-steps').textContent.includes('abgelaufen')"),'Expired Store sign-in detail missing');
   await language('en');await check('Store check messages change language',`document.getElementById('store-check-steps').textContent.includes('sign-in has expired')`);await screenshot('store-check-en.png');await language('de');
+  await click('store-check-sign-in');
+  await until(()=>evaluate("document.getElementById('store-check-steps').textContent.includes('demselben Konto')"),'Sign-in guidance missing');
+  await check('Sign-in recovery owns mutations and remains cancellable',`document.getElementById('launch-button').disabled && document.getElementById('store-check-sign-in').disabled && !document.getElementById('store-check-cancel').disabled`);
+  await evaluate("document.getElementById('store-check-status').scrollIntoView({block:'center'})");await screenshot('session-recovery-de.png');
+  await language('en');
+  await check('Interactive recovery guidance is translated',`document.getElementById('store-check-steps').textContent.includes('same account')`);
+  await call('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
+  await evaluate("document.getElementById('store-check-status').scrollIntoView({block:'center'})");await screenshot('session-recovery-mobile-en.png');
+  await check('Recovery fits mobile without horizontal scrolling',`document.documentElement.scrollWidth<=390`);
+  await click('store-check-cancel');
+  await until(()=>evaluate("document.getElementById('store-check-status').textContent.includes('cancelled')"),'Login cancellation missing');
+  await call('Emulation.setDeviceMetricsOverride',{width:1536,height:1024,deviceScaleFactor:1,mobile:false});await language('de');
+  status.cloud={...autoIdle(),state:'attention',phase:'before_start',request_id:autoRequest,error_code:'unauthorized',can_retry:true,can_sign_in:true};
+  await route('overview');await refresh("!document.getElementById('overview-cloud-sign-in').hidden");
+  await click('overview-cloud-sign-in');
+  await until(()=>evaluate("location.hash==='#diagnostics' && document.getElementById('store-check-steps').textContent.includes('demselben Konto')"),'Cloud login did not open recovery');
+  results.push('Cloud authentication recovery captures the request and shows cancellable progress');
+  await click('store-check-cancel');status.cloud=autoIdle();await refresh('true');
   await click('diagnostic-refresh');
   await until(()=>evaluate(`!document.getElementById('diagnostic-download').disabled`),'Diagnostics unavailable');
   await check('Diagnostic export excludes status/CSRF/extra fields',`!document.getElementById('diagnostic-json').textContent.includes(${JSON.stringify(csrf)}) && !document.getElementById('diagnostic-json').textContent.includes('MUST-NOT-EXPORT')`);
@@ -957,6 +995,36 @@ try {
   assert.deepEqual(Object.keys(exported),['summary','checks','generated_at']);results.push('Actual JSON download is safe report only');
   assert.deepEqual(exported.summary.store_catalog,[{stage:'inventory-mapping',hresult:'80004001'}]);
   assert.equal(exported.summary.cloud_sync.error_details.http_status,503);assert.equal(exported.summary.graphics.devices[0].name,'NVIDIA GeForce RTX 4060');
+  assert.equal(apiRequests.filter(p=>p.path.startsWith('/api/problem-reports')).length,0);results.push('Report collection waits for explicit action');
+  await click('problem-open');await until(()=>evaluate("!document.getElementById('problem-prepare').disabled"),'Report form not ready');
+  await evaluate(`document.getElementById('problem-description').value='Main view black, menus visible. <img src=x onerror="window.injected=1">';document.getElementById('problem-description').dispatchEvent(new Event('input'));document.getElementById('problem-black').click()`);
+  await click('problem-prepare');await until(()=>evaluate("!document.getElementById('problem-mail').hidden"),'Prepared email missing');
+  await check('Email draft contains description, GPU, driver and cloud error without attachment steps',`(()=>{const uri=new URL(document.getElementById('problem-mail').href),body=uri.searchParams.get('body');return uri.pathname==='contact@flightdeck-app.com'&&body.includes('Main view black')&&body.includes('595.91.07')&&body.includes('503')&&!body.includes(${JSON.stringify(csrf)})&&!body.includes('MUST-NOT-EXPORT')})()`);
+  await check('Report description is plain text and cannot inject markup',`document.getElementById('problem-message').textContent.includes('<img')&&!document.querySelector('#problem-message img')&&!window.injected`);
+  const frozenMessage=await evaluate(`document.getElementById('problem-message').textContent`);
+  await click('problem-download');
+  await until(async()=>{try{return(await readdir(join(temp,'downloads'))).includes('flightdeck-report-1234567890abcdef1234567890abcdef.txt');}catch{return false;}},'Text report download missing');
+  const reportDownload=await readFile(join(temp,'downloads/flightdeck-report-1234567890abcdef1234567890abcdef.txt'),'utf8');
+  assert.ok(reportDownload.includes('595.91.07'));assert.ok(reportDownload.includes('Main view black'));assert.ok(!reportDownload.includes(csrf));results.push('Downloaded plain-text report includes description and diagnostics');
+  await evaluate(`document.getElementById('problem-mail').addEventListener('click',e=>e.preventDefault());document.getElementById('problem-mail').click()`);
+  await check('Opening a draft never claims email delivery',`document.getElementById('problem-status').textContent.includes('E-Mail-Entwurf angefordert')`);
+  await refresh('true');assert.equal(await evaluate(`document.getElementById('problem-message').textContent`),frozenMessage);results.push('Polling preserves the captured report');
+  await evaluate(`document.getElementById('problem-review').scrollIntoView({block:'start'})`);await screenshot('problem-report-de-desktop.png');
+  await language('en');await check('Report email and controls translate to English',`document.getElementById('problem-message').textContent.includes('Automatically collected diagnostics')&&document.getElementById('problem-mail').textContent==='Open email draft'`);
+  await call('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
+  await check('Report controls and text fit mobile width',`document.documentElement.scrollWidth<=innerWidth&&[...document.querySelectorAll('.problem-card .button:not([hidden])')].every(x=>x.getBoundingClientRect().right<=innerWidth)`);
+  await evaluate(`document.getElementById('problem-review').scrollIntoView({block:'start'})`);await screenshot('problem-report-en-mobile.png');
+  await call('Page.reload');await until(()=>evaluate("document.getElementById('problem-open')&&!document.getElementById('problem-open').disabled"),'Reload did not restore app');await click('problem-open');
+  await until(()=>evaluate("!document.getElementById('problem-mail').hidden"),'Saved report missing after reload');
+  await check('Reload restores the saved description and observations',`document.getElementById('problem-description').value.includes('Main view black')&&document.getElementById('problem-black').checked`);
+  await evaluate(`document.getElementById('problem-description').value+=' Edited';document.getElementById('problem-description').dispatchEvent(new Event('input'))`);
+  await check('Editing invalidates old email and download until recaptured',`document.getElementById('problem-mail').hidden&&document.getElementById('problem-download').disabled`);
+  problemFailure=true;await click('problem-prepare');await until(()=>evaluate("document.getElementById('problem-status').textContent.includes('capture failed')"),'Report failure not displayed');
+  await check('Capture failure retains the old draft without enabling stale email',`!document.getElementById('problem-review').hidden&&document.getElementById('problem-mail').hidden`);problemFailure=false;
+  await click('problem-prepare');await until(()=>evaluate("!document.getElementById('problem-mail').hidden"),'Recapture failed');
+  await click('problem-discard');await until(()=>evaluate("document.getElementById('problem-review').hidden"),'Discard failed');
+  assert.equal(problemReport.draft,null);results.push('Explicit discard removes only the local draft');
+  await language('de');await call('Emulation.setDeviceMetricsOverride',{width:1536,height:1024,deviceScaleFactor:1,mobile:false});
   await screenshot('diagnostics-desktop.png');
   await call('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});await check('GPU and cloud diagnostics fit the mobile viewport',`document.documentElement.scrollWidth<=innerWidth`);await screenshot('diagnostics-mobile.png');
   await call('Emulation.setDeviceMetricsOverride',{width:1536,height:1024,deviceScaleFactor:1,mobile:false});

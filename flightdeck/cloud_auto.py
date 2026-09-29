@@ -26,7 +26,7 @@ MESSAGES = {
     "playing": "Cloud-Spielstände geladen. Änderungen werden nach dem Beenden synchronisiert.",
     "synced": "Deine Spielstände sind mit der Xbox-Cloud synchronisiert.",
     "conflict": "Auf diesem Rechner und in der Cloud gibt es unterschiedliche Änderungen. Welchen Stand möchtest du verwenden?",
-    "authentication": "Die Xbox-Anmeldung ist noch nicht verfügbar. Versuche es erneut oder starte das Spiel zur Anmeldung mit lokalen Spielständen.",
+    "authentication": "Die Xbox-Anmeldung muss erneuert werden. Melde dich mit demselben Microsoft-Konto an; danach wird der Cloud-Abgleich erneut versucht.",
     "failed_before": "Der Cloud-Abgleich konnte nicht abgeschlossen werden. Versuche es erneut oder spiele mit dem gesicherten lokalen Stand.",
     "failed_after": "Deine Spielstände sind lokal gesichert. Versuche den Cloud-Upload erneut oder spiele mit lokalen Spielständen weiter. Der ausstehende Abgleich bleibt erhalten.",
     "connection": "Die Xbox-Cloud ist gerade nicht erreichbar. Versuche es erneut oder spiele mit lokalen Spielständen weiter.",
@@ -165,6 +165,7 @@ class CloudAutomation:
                     "error_code": self.error_code if current else None,
                     "error_details": dict(self.error_details) if current else {},
                     "can_retry": attention and self.error_code != "unsafe_session",
+                    "can_sign_in": attention and self.error_code in {"authentication", "auth_required", "unauthorized"},
                     "can_play_local": attention and self.review is None and (
                         self.phase == "before_start" and self.error_code not in {"unsafe_session", "graphics"} or
                         self.phase == "after_exit" and self.error_code in _LOCAL_AFTER_ERRORS),
@@ -474,7 +475,7 @@ class CloudAutomation:
                 if self.cancel.is_set(): code = "cancelled"
                 if code not in {"conflict", "authentication", "auth_required", "unauthorized", "forbidden", "cancelled", "invalid_scope", "local_storage", "lease_lost", "changed", "unsafe_session", "transport", "deadline", "readback", "quota", "graphics"}:
                     code = "failed"
-                key = "unsafe_session" if code == "unsafe_session" else "conflict" if plan is not None else "authentication" if code in {"authentication", "auth_required", "unauthorized", "forbidden"} else "cancelled" if code == "cancelled" and active_phase == "before_start" else "failed_before" if active_phase == "before_start" else "failed_after"
+                key = "unsafe_session" if code == "unsafe_session" else "conflict" if plan is not None else "authentication" if code in {"authentication", "auth_required", "unauthorized"} else "cancelled" if code == "cancelled" and active_phase == "before_start" else "failed_before" if active_phase == "before_start" else "failed_after"
                 if plan is None and code in {"transport", "deadline", "lease_lost", "quota"}:
                     key = "connection" if code in {"transport", "deadline"} else "lease" if code == "lease_lost" else "quota"
                 self._set("idle" if code == "cancelled" and active_phase == "before_start" else "attention",

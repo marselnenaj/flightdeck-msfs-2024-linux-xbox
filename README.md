@@ -9,6 +9,7 @@
   <a href="#get-started"><strong>Get started</strong></a> &nbsp;·&nbsp;
   <a href="docs/addons.md">Add-ons</a> &nbsp;·&nbsp;
   <a href="docs/game-updates.md">Game updates</a> &nbsp;·&nbsp;
+  <a href="docs/known-issues.md">Known issues</a> &nbsp;·&nbsp;
   <a href="docs/changelog.md">Changes</a> &nbsp;·&nbsp;
   <a href="BUILDING.md">Build from source</a> &nbsp;·&nbsp;
   <a href="docs/readme.de.md">Deutsch</a>
@@ -20,11 +21,12 @@ Flightdeck installs and launches your **purchased Xbox PC / Microsoft Store copy
 of MSFS 2024 or 2020** on your Linux computer through Wine/Proton. Sign in with your
 Microsoft account, download the game and start it from one application.
 
-**Current public release: [Flightdeck 0.1.8](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.8).**
+**Current public release: [Flightdeck 0.1.9](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.9).**
 Update through **Updates → Flightdeck** or use the full installer.
-**0.1.8** fixes premature Store and cloud sign-in timeouts when server responses
-take longer than five seconds. Cloud connection failures are distinguished from
-rejected sign-ins.
+**0.1.9** renews expiring Microsoft sessions, adds sign-in recovery for Store and
+cloud saves, and prepares email problem reports with diagnostics. It also
+includes upstream NVIDIA renderer corrections; the reported black main view
+still needs verification on affected hardware.
 See [cloud saves](docs/cloud-saves.md), [Marketplace scope](docs/marketplace-collections.md)
 and the [release history](docs/changelog.md).
 
@@ -33,6 +35,11 @@ and takeoff. NVIDIA rendering and stability still require hardware validation;
 results can vary by driver and GPU. MSFS 2020 startup and complete-flight
 compatibility remain unconfirmed. Automatic Xbox cloud saves are experimental.
 [Compatibility and limitations](#compatibility)
+
+**Known issues:** some NVIDIA users report a black main 3D view with working
+menus. Repeated cloud-sync failures and a blocking “Marketplace session expired”
+message also remain reported. These issues are not confirmed fixed.
+[Current status and scope](docs/known-issues.md).
 
 ## Get started
 
@@ -110,7 +117,7 @@ Installing missing Linux system packages may require administrator rights.
 | **Fenix A320** | Download the pinned Linux patch, run your official Fenix installer, configure cockpit displays and open the livery manager. MSFS 2024 only. |
 | **Local saves** | Keep local save data and create backups while the simulator is stopped. |
 | **Xbox cloud saves** | Use the cloud state before play and upload changes after exit, with local backups and conflict recovery. Experimental. |
-| **Diagnostics** | Export selected checks without raw game logs, account tokens or save contents. |
+| **Diagnostics** | Export selected checks without raw game logs, account tokens or save contents. Prepare [email problem reports](docs/problem-reports.md) with diagnostics in the message body. |
 | **Deutsch / English** | Switch the interface language; installer and command-line localization are available too. |
 
 Flightdeck 0.1.7 adds **Diagnostics → Check Store**, a purchase-free
@@ -184,6 +191,7 @@ alone.
 | :--- | :--- |
 | [Install](docs/install.md) | Requirements, setup and launcher maintenance |
 | [Changes](docs/changelog.md) | Release history |
+| [Known issues](docs/known-issues.md) · [Deutsch](docs/known-issues.de.md) | NVIDIA black main view, cloud-sync failures and Marketplace session errors |
 | [NVIDIA graphics](docs/graphics.md) · [Deutsch](docs/graphics.de.md) | Driver requirements, graphics modes and troubleshooting |
 | [Cloud saves](docs/cloud-saves.md) · [Deutsch](docs/cloud-saves.de.md) | Automatic sync, conflict recovery, backups and current limits |
 | [Game maintenance](docs/game-updates.md) | Updates, file verification, full repair and rollback |

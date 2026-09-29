@@ -16,12 +16,14 @@ import uuid
 import xml.etree.ElementTree as ET
 
 from . import bootstrap, games, store_diagnostics
+from .game_install import run_cli
 from .backend import LauncherError, utc_now
 
 STAGES = ("runtime", "account", "catalog", "license", "library", "window")
 CODES = {"checking", "available", "verified", "local_session", "visible", "sign_in_required", "expired",
          "not_licensed", "unsupported", "invalid_config", "connection", "timeout", "account_changed",
          "keyring", "error", "cancelled", "runtime_update", "incomplete"}
+CODES.add("signing_in")
 STATES = {"running", "passed", "failed", "skipped", "cancelled"}
 
 
@@ -69,19 +71,27 @@ class StoreCheck:
         job = self.snapshot()["job"]
         return {key: job[key] for key in ("state", "started_at", "finished_at", "steps", "components")} if job else None
 
-    def start(self, language="en"):
+    def start(self, language="en", *, recover=False, job_id=None, cloud_request_id=None):
         with self.launcher.lock, self.lock:
             if self.thread and self.thread.is_alive():
                 raise LauncherError("Eine Store-Prüfung läuft bereits.")
             if self.launcher.runtime is None:
                 raise LauncherError("Zuerst eine Runtime auswählen.")
+            if job_id is not None and (not self.job or job_id != self.job["id"] or self.runtime != self.launcher.runtime):
+                raise LauncherError("Diese Store-Prüfung ist nicht mehr aktuell. Bitte den Status neu laden.")
+            if cloud_request_id is not None:
+                cloud = self.launcher.cloud_saves.automation.snapshot()
+                if not recover or not cloud["can_sign_in"] or cloud_request_id != cloud["request_id"]:
+                    raise LauncherError("Dieser Cloud-Vorgang ist nicht mehr aktuell. Bitte den Status neu laden.")
             self.launcher._require_cloud_idle(allow_attention=True)
             self.launcher.reserve_setup()
             self.runtime = self.launcher.runtime
             self.cancelled.clear()
-            self.job = {"id": uuid.uuid4().hex, "state": "running", "started_at": utc_now(), "finished_at": None,
-                        "steps": [{"stage": stage, "state": "pending", "code": "checking"} for stage in STAGES], "components": None}
-            self.thread = threading.Thread(target=self._run, args=(self.runtime, language), daemon=False)
+            stages = ("runtime", "sign_in", "account", "catalog", "license", "library") if recover else STAGES
+            self.job = {"id": uuid.uuid4().hex, "state": "running", "operation": "recover" if recover else "check",
+                        "started_at": utc_now(), "finished_at": None,
+                        "steps": [{"stage": stage, "state": "pending", "code": "checking"} for stage in stages], "components": None}
+            self.thread = threading.Thread(target=self._run, args=(self.runtime, language, recover, cloud_request_id), daemon=False)
             try:
                 self.thread.start()
             except Exception:
@@ -186,7 +196,7 @@ class StoreCheck:
                 if row["stage"] in stages and row["state"] in {"pending", "running"}:
                     row.update(state="cancelled" if code == "cancelled" else "failed", code=code)
 
-    def _run(self, runtime, language):
+    def _run(self, runtime, language, recover=False, cloud_request_id=None):
         try:
             with self.launcher.runtime_lock(operation="store-check"):
                 self._step("runtime", "running", "checking")
@@ -200,6 +210,15 @@ class StoreCheck:
                     self._step("runtime", "failed", "runtime_update")
                     return
                 self._step("runtime", "passed", "verified")
+                if recover:
+                    self._step("sign_in", "running", "signing_in")
+                    result = run_cli(runtime / "bin/xodus-cli", ["login", "--same-account"],
+                                     cwd=runtime / "private", cancel=self.cancelled, timeout=900,
+                                     xdg_root=runtime / "private/xdg")
+                    if result:
+                        self._step("sign_in", "failed", "sign_in_required")
+                        return
+                    self._step("sign_in", "passed", "verified")
                 online = {"account", "catalog", "license", "library"}
                 try:
                     payload = json.dumps(config(runtime)).encode()
@@ -208,12 +227,12 @@ class StoreCheck:
                 else:
                     code = self._process([str(runtime / "bin/xodus-service"), "--store-check"], payload, online, 125)
                     self._finish_pending(online, code if code != "available" else "incomplete")
-                if not self.cancelled.is_set():
+                if not recover and not self.cancelled.is_set():
                     self._step("window", "running", "checking")
                     code = self._process([str(runtime / "bin/xodus-cli"), "store-window-check", "--language", "de" if language == "de" else "en"], b"", {"window"}, 95)
                     self._finish_pending({"window"}, code if code != "available" else "incomplete")
         except Exception:
-            self._finish_pending(set(STAGES), "cancelled" if self.cancelled.is_set() else "error")
+            self._finish_pending({r["stage"] for r in self.job["steps"]}, "cancelled" if self.cancelled.is_set() else "error")
         finally:
             with self.lock:
                 for row in self.job["steps"]:
@@ -221,7 +240,16 @@ class StoreCheck:
                         row.update(state="cancelled" if self.cancelled.is_set() else "skipped", code="cancelled" if self.cancelled.is_set() else "incomplete")
                 states = {r["state"] for r in self.job["steps"]}
                 self.job.update(state="passed" if states == {"passed"} else "cancelled" if self.cancelled.is_set() else "failed" if "failed" in states else "incomplete", finished_at=utc_now())
-            self.launcher.release_setup()
+            # Release the lease before resuming precisely the cloud operation
+            # which requested login. A changed runtime/request can never resume.
+            with self.launcher.lock:
+                self.launcher.release_setup()
+                if (cloud_request_id and self.job["state"] == "passed" and not self.cancelled.is_set()
+                        and self.launcher.runtime == runtime):
+                    try:
+                        self.launcher.cloud_saves.automation.action("retry", cloud_request_id)
+                    except LauncherError:
+                        pass  # The original cloud attention remains actionable.
 
     def close(self):
         self.cancelled.set()

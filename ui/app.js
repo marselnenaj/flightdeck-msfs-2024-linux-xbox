@@ -1,6 +1,7 @@
 import {t, locale, plural, getLanguage, setLanguage, applyTranslations} from './i18n.js';
 import {createMaintenance} from './maintenance.js';
 import {createStoreCheck} from './store-check.js';
+import {createProblemReports} from './problem-reports.js';
 import {createSetup} from './setup.js';
 import {createMods} from './mods.js';
 import {createFenix} from './fenix.js';
@@ -15,6 +16,7 @@ const state = {status: null, online: false, pending: null, pendingGame: null, vi
 let statusRequest = null;
 let graphicsDraft = null;
 let storeCheckController = null;
+let problemReportsController = null;
 let storeCheckReserved = false;
 let maintenanceController = null;
 let maintenanceReserved = false;
@@ -141,6 +143,7 @@ function renderChecks(target, checks, empty = t('Noch keine Prüfergebnisse verf
 
 function renderStatus() {
   renderGraphics();
+  problemReportsController?.render();
   document.body.classList.toggle('game-switch-pending', state.pending === 'switch');
   storeCheckController?.render();
   maintenanceController?.render();
@@ -388,6 +391,7 @@ window.addEventListener('flightdeck-languagechange', () => {
 window.addEventListener('hashchange', setView);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) void refreshStatus(); });
 applyTranslations();
+problemReportsController = createProblemReports({request,getStatus:()=>state.status,isOnline:()=>state.online&&!state.pending});
 setupController = createSetup({request,getStatus:()=>state.status,isOnline:()=>state.online && !state.pending && !fenixReserved && !updateReserved && !cloudReserved && !launcherUpdateReserved&&!maintenanceReserved&&!storeCheckReserved && !automaticBusy(state.status),renderChecks,notice:showNotice,refreshStatus,changed:reserved=>{setupReserved=reserved;renderStatus();}});
 fenixController = createFenix({request,getStatus:()=>state.status,isOnline:()=>state.online&&!state.pending,isReserved:()=>setupReserved||updateReserved||cloudReserved||launcherUpdateReserved||maintenanceReserved||storeCheckReserved||automaticBusy(state.status),refreshStatus,notice:showNotice,changed:value=>{fenixReserved=value;renderStatus();}});
 modsController = createMods({request,getStatus:()=>state.status,isOnline:()=>state.online&&!state.pending,isReserved:()=>fenixReserved||setupReserved||updateReserved||cloudReserved||launcherUpdateReserved||maintenanceReserved||storeCheckReserved||automaticBusy(state.status),notice:showNotice});

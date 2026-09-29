@@ -69,6 +69,7 @@ export function automaticActions(status,{online=false,pending=false,reserved=fal
   const cloud=status?.cloud;
   const enabled=!!cloud?.enabled&&!!cloud.request_id&&online&&!pending&&!reserved&&!!status?.csrf_token&&status.runtime.configured&&status.game.state==='stopped';
   return {retry:enabled&&cloud.state==='attention'&&cloud.can_retry===true,
+    'sign-in':enabled&&!status.setup?.busy&&cloud.state==='attention'&&cloud.can_sign_in===true,
     'play-local':enabled&&cloud.state==='attention'&&!cloud.conflict&&cloud.can_play_local===true,
     'cancel-auto':enabled&&['syncing','attention'].includes(cloud.state)&&cloud.can_cancel===true,
     cloud:enabled&&cloud.state==='attention'&&cloud.conflict&&cloud.can_retry===true,
@@ -146,7 +147,7 @@ export function createCloudSaves({request,getStatus,isOnline,isReserved,refreshS
       const date=formatDate(cloud?.last_synced_at);
       text(prefix+'-time',date?t('Zuletzt synchronisiert: {time}',{time:date}):'');
       text(prefix+'-error',actionError);$(prefix+'-error').hidden=!actionError;
-      for(const action of ['retry','play-local','cancel-auto','cloud','local']) {
+      for(const action of ['sign-in','retry','play-local','cancel-auto','cloud','local']) {
         const button=$(prefix+'-'+action);
         button.hidden=!allowed[action]&&!(cloud?.conflict&&['cloud','local'].includes(action));
         button.disabled=!allowed[action];
@@ -164,6 +165,7 @@ export function createCloudSaves({request,getStatus,isOnline,isReserved,refreshS
       if(!allowed()[action]||getStatus().cloud?.request_id!==id||getStatus().runtime.path!==runtime)return;
       const choice=['cloud','local'].includes(action);
       await request('/api/cloud-saves/'+(choice?'resolve':action),{method:'POST',body:choice?{request_id:id,choice:action}:{request_id:id},token:getStatus().csrf_token});
+      if(action==='sign-in')location.hash='#diagnostics';
     } catch(failure){actionError=failure.message;}
     finally {
       await refreshStatus();
@@ -199,7 +201,7 @@ export function createCloudSaves({request,getStatus,isOnline,isReserved,refreshS
     }
   }
   for(const action of ['check','download','prepare-import','import','upload','restore','discard-plan','cancel'])$('cloud-'+action).addEventListener('click',()=>void mutate(action));
-  for(const prefix of ['overview-cloud','auto-cloud'])for(const action of ['retry','play-local','cancel-auto','cloud','local'])$(prefix+'-'+action).addEventListener('click',()=>void mutateAutomatic(action));
+  for(const prefix of ['overview-cloud','auto-cloud'])for(const action of ['sign-in','retry','play-local','cancel-auto','cloud','local'])$(prefix+'-'+action).addEventListener('click',()=>void mutateAutomatic(action));
   window.addEventListener('flightdeck-languagechange',()=>{actionError='';render();});
   $('cloud-refresh').addEventListener('click',()=>{actionError='';void load();});
   setInterval(()=>{if(!document.hidden&&!pending&&(location.hash==='#saves'||(sameRuntime()&&running(data))))void load({background:true});},1500);

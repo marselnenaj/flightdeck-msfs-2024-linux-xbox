@@ -38,3 +38,9 @@ test('pre/post sync and disabled capability have honest localized status',()=>{
  assert.equal(gamePresentation(normalizeStatus(raw({...cloud(),state:'syncing',phase:'after_exit'}))).action,'Saving progress …');
  setLanguage('de');
 });
+test('sign-in recovery requires an explicit authentication capability and an idle runtime',()=>{
+ const current=normalizeStatus(raw({...cloud(),state:'attention',phase:'after_exit',request_id:id,can_retry:true,can_sign_in:true}));
+ assert.equal(automaticActions(current,{online:true})['sign-in'],true);
+ for(const flags of [{online:false},{online:true,pending:true},{online:true,reserved:true}])assert.equal(automaticActions(current,flags)['sign-in'],false);
+ for(const value of [{...current,setup:{busy:true}},{...current,game:{state:'running'}},{...current,cloud:{...current.cloud,can_sign_in:false}}])assert.equal(automaticActions(value,{online:true})['sign-in'],false);
+});

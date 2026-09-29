@@ -1,8 +1,9 @@
 import {t} from './i18n.js';
 import {formatDate} from './state.js';
 
-const stages={runtime:'Store-Komponenten',account:'Gespeicherte Anmeldung',catalog:'Produktkatalog',license:'Spiellizenz',library:'Bibliothek',window:'Store-Fenster'};
+const stages={runtime:'Store-Komponenten',sign_in:'Microsoft-Anmeldung',account:'Gespeicherte Anmeldung',catalog:'Produktkatalog',license:'Spiellizenz',library:'Bibliothek',window:'Store-Fenster'};
 const codes={
+  signing_in:'Melde dich im Microsoft-Fenster mit demselben Konto an. Danach wird die Sitzung erneut geprüft.',
   checking:'Wird geprüft …', available:'Erreichbar', verified:'Geprüft', local_session:'Anmeldung vorhanden', visible:'Anzeige bestätigt',
   sign_in_required:'Bitte in Flightdeck anmelden.', expired:'Die Anmeldung ist abgelaufen. Bitte erneut anmelden.',
   not_licensed:'Für dieses Konto wurde keine gültige Spiellizenz bestätigt.', unsupported:'Diese Antwort wird noch nicht unterstützt.',
@@ -24,11 +25,13 @@ export function createStoreCheck({request,getStatus,isOnline,isReserved,refreshS
   function render(){
     const job=data.job, actions=allowed();
     $('store-check-start').disabled=!actions.start;
+    $('store-check-sign-in').disabled=!actions.start;
     $('store-check-cancel').hidden=!actions.running;
     $('store-check-cancel').disabled=!actions.cancel;
     $('store-check-busy').hidden=actions.start||actions.running;
     const labels={running:'Store-Prüfung läuft …',passed:'Alle Prüfschritte erfolgreich',failed:'Store-Prüfung mit Fehlern',cancelled:'Store-Prüfung abgebrochen',incomplete:'Store-Prüfung unvollständig'};
     $('store-check-status').textContent=job?t(labels[job.state]||'Store-Prüfung unvollständig')+(job.finished_at?' · '+formatDate(job.finished_at):''):t('Noch keine Store-Prüfung durchgeführt.');
+    if(job?.operation==='recover'&&actions.running)$('store-check-status').textContent=t('Anmeldung wird erneuert und geprüft …');
     $('store-check-error').textContent=error;$('store-check-error').hidden=!error;
     $('store-check-steps').replaceChildren(...(job?.steps||[]).filter(row=>Object.hasOwn(stages,row.stage)).map(row=>{
       const li=document.createElement('li');li.className='check-row';
@@ -50,6 +53,7 @@ export function createStoreCheck({request,getStatus,isOnline,isReserved,refreshS
     finally{pending=false;reserve();await refreshStatus();render();}
   }
   $('store-check-start').addEventListener('click',()=>{if(allowed().start)void action('/api/store-check/start');});
+  $('store-check-sign-in').addEventListener('click',()=>{if(allowed().start)void action('/api/store-check/sign-in',{job_id:data.job?.id});});
   $('store-check-cancel').addEventListener('click',()=>{if(allowed().cancel)void action('/api/store-check/cancel',{job_id:data.job.id});});
   return {render,load,poll:()=>{if(reserved||location.hash==='#diagnostics')void load();}};
 }

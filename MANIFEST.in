@@ -2,6 +2,8 @@ include build_support.py
 include LICENSE
 include compat/upstreams.lock.json
 include compat/bootstrap.lock.json
+include compat/graphics.lock.json
+include compat/patches/vkd3d-nvidia-low-latency.patch
 include scripts/runtime/*.sh
 include scripts/runtime/xodus-wine-launch
 include ui/flight-panorama.png

@@ -112,6 +112,66 @@ class StoreCheckTests(unittest.TestCase):
         self.assertFalse(self.check._event('{"stage":"account","state":"passed","code":"verified"}', {"account"}))
         self.assertEqual(self.check.job["steps"][0]["code"], "expired")
 
+    def test_recovery_runs_real_cli_contract_then_rechecks_without_a_test_window(self):
+        self.helper("xodus-cli", "import json,os,sys\nopen('login-call','w').write(json.dumps({'args':sys.argv[1:],'cwd':os.getcwd()}))\n")
+        self.check.start(recover=True)
+        job = self.done()
+        self.assertEqual(job["state"], "passed")
+        call = json.loads((self.runtime / "private/login-call").read_text())
+        self.assertEqual(call["args"], ["login", "--same-account"])
+        self.assertEqual(call["cwd"], str(self.runtime / "private"))
+        self.assertEqual([r["stage"] for r in job["steps"]], ["runtime", "sign_in", "account", "catalog", "license", "library"])
+
+    def test_unsuccessful_login_never_checks_or_resumes_cloud(self):
+        self.helper("xodus-cli", "raise SystemExit(1)\n")
+        with patch.object(self.check, "_process") as process, patch.object(self.launcher.cloud_saves.automation, "action") as resume:
+            self.check.start(recover=True)
+            job = self.done()
+            process.assert_not_called()
+            resume.assert_not_called()
+        self.assertEqual(job["state"], "failed")
+        self.assertEqual(job["steps"][1]["code"], "sign_in_required")
+
+    def test_successful_login_requires_online_verification_before_cloud_resume(self):
+        cloud = self.launcher.cloud_saves.automation
+        for fails in (True, False):
+            if fails:
+                self.helper("xodus-service", "print('{\"stage\":\"account\",\"state\":\"failed\",\"code\":\"connection\"}',flush=True)\n")
+            else:
+                self.helper("xodus-service", "import json\nfor s,c in [('account','local_session'),('catalog','available'),('license','verified'),('library','available')]: print(json.dumps({'stage':s,'state':'passed','code':c}),flush=True)\n")
+            with patch.object(cloud, "snapshot", return_value={"can_sign_in":True,"request_id":"captured"}), patch.object(cloud, "action") as resume:
+                self.check.start(recover=True, cloud_request_id="captured")
+                job = self.done()
+                if fails:
+                    resume.assert_not_called()
+                    self.assertEqual(job["state"], "failed")
+                else:
+                    resume.assert_called_once_with("retry", "captured")
+                    self.assertEqual(job["state"], "passed")
+
+    def test_recovery_rejects_stale_job_cloud_and_running_game_before_login(self):
+        with patch.object(store_check, "run_cli") as login:
+            with self.assertRaises(LauncherError): self.check.start(recover=True, job_id="stale")
+            with patch.object(self.launcher.cloud_saves.automation, "snapshot", return_value={"can_sign_in":False,"request_id":"new"}):
+                with self.assertRaises(LauncherError): self.check.start(recover=True, cloud_request_id="old")
+            with patch.object(self.launcher, "reserve_setup", side_effect=LauncherError("running")):
+                with self.assertRaises(LauncherError): self.check.start(recover=True)
+            login.assert_not_called()
+
+    def test_cancelling_login_reaps_it_and_keeps_cloud_attention(self):
+        self.helper("xodus-cli", "import os,time\nopen('login-ready','w').write(str(os.getpid()))\ntime.sleep(30)\n")
+        cloud = self.launcher.cloud_saves.automation
+        with patch.object(cloud, "snapshot", return_value={"can_sign_in":True,"request_id":"captured"}), patch.object(cloud, "action") as resume:
+            job = self.check.start(recover=True, cloud_request_id="captured")["job"]
+            ready = self.runtime / "private/login-ready"
+            end = time.monotonic()+3
+            while not ready.exists() and time.monotonic()<end: time.sleep(.01)
+            self.assertTrue(ready.exists())
+            self.check.cancel(job["id"])
+            self.assertEqual(self.done()["state"], "cancelled")
+            resume.assert_not_called()
+            with self.assertRaises(ProcessLookupError): os.kill(int(ready.read_text()), 0)
+
 
 class StoreDiagnosticsTests(unittest.TestCase):
     def test_bounded_log_no_overlap_and_gap_is_marked(self):

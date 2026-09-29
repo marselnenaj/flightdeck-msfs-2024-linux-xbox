@@ -234,6 +234,7 @@ class GraphicsTests(unittest.TestCase):
         env, report = graphics.prepare(self.runtime, original)
         self.assertEqual(env["DXVK_ENABLE_NVAPI"], "0")
         self.assertEqual(env["WINE_HIDE_NVIDIA_GPU"], "1")
+        self.assertEqual(env["VKD3D_DISABLE_EXTENSIONS"], "VK_NV_low_latency2")
         self.assertTrue(env["DXVK_CONFIG"].endswith("; dxgi.hideNvidiaGpu = True"))
         self.assertIn("dxgi.maxFrameRate = 60", env["DXVK_CONFIG"])
         from flightdeck.graphics_diagnostics import environment_overrides
@@ -254,7 +255,26 @@ class GraphicsTests(unittest.TestCase):
         self.assertEqual(restored["DXVK_ENABLE_NVAPI"], "1")
         self.assertNotIn("WINE_HIDE_NVIDIA_GPU", restored)
         self.assertNotIn("DXVK_CONFIG", restored)
+        self.assertNotIn("VKD3D_DISABLE_EXTENSIONS", restored)
         self.assertFalse(report["hide_nvidia"])
+
+    def test_compatibility_disables_renderer_reflex_without_losing_extension_preferences(self):
+        settings = self.runtime / "private" / graphics.SETTINGS_FILE
+        settings.write_text(json.dumps({"schema": 1, "nvidia_mode": "compatibility"}))
+        original = {"VKD3D_DISABLE_EXTENSIONS": "VK_EXT_present_timing"}
+        env, _ = graphics.prepare(self.runtime, original)
+        self.assertEqual(env["VKD3D_DISABLE_EXTENSIONS"], "VK_EXT_present_timing;VK_NV_low_latency2")
+        repeated, _ = graphics.prepare(self.runtime, env)
+        self.assertEqual(repeated["VKD3D_DISABLE_EXTENSIONS"], env["VKD3D_DISABLE_EXTENSIONS"])
+        self.assertEqual(original, {"VKD3D_DISABLE_EXTENSIONS": "VK_EXT_present_timing"})
+
+    def test_compatibility_keeps_a_valid_extension_exclusion_with_inherited_spaces(self):
+        # VKD3D recognizes only comma/semicolon boundaries; a space before the
+        # extension must not make Flightdeck think it is already disabled.
+        inherited = "VK_EXT_present_timing; VK_NV_low_latency2"
+        environment = {"VKD3D_DISABLE_EXTENSIONS": inherited}
+        graphics._nvidia_mode(environment, "compatibility")
+        self.assertEqual(environment["VKD3D_DISABLE_EXTENSIONS"], inherited + ";VK_NV_low_latency2")
 
     def test_proton_hide_option_is_translated_for_wine_and_dxgi(self):
         for flag in ("PROTON_HIDE_NVIDIA_GPU", "WINE_HIDE_NVIDIA_GPU"):

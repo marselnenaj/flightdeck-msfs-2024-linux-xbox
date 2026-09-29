@@ -13,6 +13,34 @@ from flightdeck.server import Handler, Server
 
 
 class ServerTests(unittest.TestCase):
+    def test_problem_reports_are_explicit_local_and_require_session_token(self):
+        from flightdeck.problem_reports import encoded
+        import hashlib
+        manager = self.server.launcher.problem_reports
+        headers = {"Content-Type":"application/json", "X-Flightdeck-Token":self.server.token, "Accept-Language":"en"}
+        diagnostic = {"generated_at":"2026-09-29T12:00:00Z", "summary":{"context":{"game_id":None}, "run_found":False}, "checks":[]}
+        body = json.dumps({"category":"other", "description":"Beschreibung mit Umlauten: Menü", "runtime_path":None})
+        with patch.object(self.server.launcher, "diagnostics", return_value=diagnostic) as capture:
+            self.assertEqual(self.request("GET", "/problem-reports.js")[0], 200)
+            self.assertIsNone(json.loads(self.request("GET", "/api/problem-reports")[2])["draft"])
+            self.assertEqual(self.request("POST", "/api/problem-reports/prepare", body, {"Content-Type":"application/json"})[0], 403)
+            capture.assert_not_called()
+            code, _, raw = self.request("POST", "/api/problem-reports/prepare", body, headers)
+            self.assertEqual(code, 200)
+            saved = json.loads(raw)["draft"]
+            self.assertEqual(saved["sha256"], hashlib.sha256(encoded(saved["report"])).hexdigest())
+            self.assertEqual(saved["report"]["description"], "Beschreibung mit Umlauten: Menü")
+            for locale in ("en", "de"):
+                self.assertEqual(json.loads(self.request("GET", "/api/problem-reports", headers={"Accept-Language":locale})[2])["draft"], saved)
+            self.assertEqual(self.request("POST", "/api/problem-reports/send", "{}", headers)[0], 404)
+            self.assertEqual(self.request("POST", "/api/problem-reports/discard", "{}", headers)[0], 409)
+            self.assertTrue(manager.path.exists())
+            self.assertEqual(self.request("POST", "/api/problem-reports/discard", json.dumps({"report_id":saved["report"]["id"]}), headers)[0], 200)
+            self.assertFalse(manager.path.exists())
+            code, _, raw = self.request("POST", "/api/problem-reports/prepare", '{"category":"invalid"}', headers)
+            self.assertEqual(code, 409)
+            self.assertEqual(json.loads(raw)["error"], "Select a problem category.")
+
     def test_store_check_is_explicit_and_session_protected(self):
         manager = self.server.launcher.store_check
         headers = {"Content-Type":"application/json", "X-Flightdeck-Token":self.server.token, "Accept-Language":"de"}
@@ -26,6 +54,19 @@ class ServerTests(unittest.TestCase):
         with patch.object(manager, "cancel", return_value={"ok":True}) as cancel:
             self.assertEqual(self.request("POST", "/api/store-check/cancel", '{"job_id":"current"}', headers)[0],200)
             cancel.assert_called_once_with("current")
+
+    def test_sign_in_routes_require_session_and_preserve_request_binding(self):
+        manager = self.server.launcher.store_check
+        headers = {"Content-Type":"application/json", "X-Flightdeck-Token":self.server.token, "Accept-Language":"de"}
+        for route, body, expected in [
+            ("/api/store-check/sign-in", {"job_id":"captured"}, {"recover":True, "job_id":"captured"}),
+            ("/api/cloud-saves/sign-in", {"request_id":"captured"}, {"recover":True, "cloud_request_id":"captured"}),
+        ]:
+            with patch.object(manager, "start", return_value={"ok":True}) as start:
+                self.assertEqual(self.request("POST", route, json.dumps(body), {"Content-Type":"application/json"})[0],403)
+                start.assert_not_called()
+                self.assertEqual(self.request("POST", route, json.dumps(body), headers)[0],200)
+                start.assert_called_once_with("de", **expected)
 
     def test_graphics_settings_require_session_token_and_bind_to_selected_runtime(self):
         with patch.object(self.server.launcher, "configure_graphics", return_value={"ok": True}) as configure:

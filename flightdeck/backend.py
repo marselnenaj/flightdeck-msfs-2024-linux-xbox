@@ -135,6 +135,8 @@ class Launcher:
         self.maintenance = Maintenance(self)
         from .store_check import StoreCheck
         self.store_check = StoreCheck(self)
+        from .problem_reports import ProblemReports
+        self.problem_reports = ProblemReports(self)
 
     @staticmethod
     def validate_runtime(value):

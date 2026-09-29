@@ -64,6 +64,23 @@ class InstallerTests(unittest.TestCase):
         path = self.source / "ui/index.html"
         path.write_text(path.read_text() + "\n<!-- updated synthetic fixture -->\n")
 
+    def test_optional_renderer_bundle_survives_full_install(self):
+        bundle = self.source / "flightdeck/resources/graphics"
+        bundle.mkdir(parents=True)
+        values = {"d3d12.dll": b"synthetic wrapper", "d3d12core.dll": b"x" * (installer.MAX_FILE + 1)}
+        hashes = {name: installer.digest(data) for name, data in values.items()}
+        base = {name: "0" * 64 for name in values}
+        license = b"Synthetic renderer license"
+        for name, data in {**values, "LICENSE": license}.items():
+            (bundle / name).write_bytes(data)
+        (bundle / "manifest.json").write_text(json.dumps({"schema": 1, "base": base, "files": hashes}))
+        (self.source / "compat/graphics.lock.json").write_text(json.dumps({
+            "schema": 1, "base": base, "files": hashes, "license_sha256": installer.digest(license)}))
+        installed = self.install()
+        folder = installer.verify_release(self.data, installed["current"])
+        for name, data in values.items():
+            self.assertEqual((folder / "flightdeck/resources/graphics" / name).read_bytes(), data)
+
     def test_reproducible_install_and_setup_resources(self):
         first = self.install()
         repeated = self.install()

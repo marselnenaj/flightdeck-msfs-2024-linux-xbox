@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "base": {
+    "d3d12.dll": "a27349f30c15833929afe601fd1eeeda54bed5777d2cc7ce33c1e86d48ef6f80",
+    "d3d12core.dll": "b4898ba5be58fb0b319a72c253f12bc269625a23674b5be84192311663526018"
+  },
+  "files": {
+    "d3d12.dll": "daf216c8f8ed2513f32bcd9604f1b7582d66e4a73c4f49369b2423111ee10d50",
+    "d3d12core.dll": "7d00c9867a0dfbc1de712a545b3f69003436e16752b16cd586a3569522ad3af9"
+  },
+  "license_sha256": "f4b3c9b39f17b821b424c4bc0d6056ab4185526166ce675abc8506eddf6e96e5",
+  "source": {
+    "repository": "https://github.com/HansKristian-Work/vkd3d-proton",
+    "revision": "651f17762e439feeef22dbb4ee7eff167ee503d4",
+    "patch": "compat/patches/vkd3d-nvidia-low-latency.patch",
+    "patch_sha256": "879ff16c32b3df392be59f242950ece017e94ebb1014f2f3c8c7c39c04dfa08d",
+    "backports": [
+      "a74426fb3fe92642186a270941a39a997737b3ef",
+      "7a3eb926b959ab27ad3cbb6a028381d807b39e0b",
+      "e14020081a14f2d595d03049b091fea748684a4f"
+    ]
+  }
+}

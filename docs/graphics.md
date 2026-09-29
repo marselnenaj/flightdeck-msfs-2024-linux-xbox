@@ -2,6 +2,11 @@
 
 [Deutsch](graphics.de.md)
 
+**Flightdeck 0.1.9** includes upstream corrections for NVIDIA
+multiwindow swapchain lifetime. Compatibility mode also disables VKD3D's
+independent Reflex path. The black main scene on RTX 4060/5060 Ti is not yet
+confirmed fixed on NVIDIA hardware. See [scope, build and validation](nvidia-renderer.md).
+
 Flightdeck prepares NVIDIA graphics for both MSFS 2024 and MSFS 2020. It uses
 the graphics components supplied with its runner and the NVIDIA driver installed
 on Linux. On systems with one discrete NVIDIA card and integrated graphics, it
@@ -51,20 +56,19 @@ AMD/Intel-only systems do not display the NVIDIA controls.
 
 ## If rendering still fails
 
-A black 3D scene with working menus has been reported on Linux Mint 22.3 with
-an RTX 5060 Ti and NVIDIA 580.178.04 in both graphics modes. Creating a second
-render window briefly displayed the scene but subsequently caused crashes.
-The 0.1.7 adapter-selection correction needs to be tested on this system;
-successful in-game rendering has not yet been confirmed.
+A black main 3D view with working menus remains reported on NVIDIA, including
+RTX 4060, RTX 4080 and RTX 5060 Ti systems. Both graphics modes have been tried
+without resolving the main view in affected installations. In one report, a
+driver update stopped crashes in the second render window, but the primary
+window remained black. A second render window is therefore not a confirmed
+workaround. See [known issues](known-issues.md).
 
-Run the same simulator scene once in each mode. In **Diagnostics**, load and
-download a report after each attempt. Include the Flightdeck version, simulator
-edition, GPU, driver version and a short description of when rendering fails.
-The report includes available Vulkan adapters and the settings requested for the
-last launcher-managed start; it does not certify successful rendering.
-In 0.1.7, it also includes detected renderer versions, filtered-out adapters and
-counts of presents without rendering from the available log excerpt. A
-present without rendering is an observation, not a diagnosis of a faulty driver.
+Flightdeck 0.1.9 is not yet a confirmed fix for this symptom. Confirmation requires checking
+the main-menu globe, free-flight map, primary cockpit view and use of a second
+window, followed by another game start. The
+[maintainer reference](nvidia-steam-parity.md) records this scope and the
+upstream evidence. Repeatedly exporting the same failure is not required by
+this guide.
 
 Checking game files repairs the base game. Resetting the Wine environment creates
 a new profile. Neither replaces graphics drivers or establishes that a rendering

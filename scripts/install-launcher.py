@@ -175,7 +175,7 @@ def directory(path: Path) -> None:
 
 def read_regular(path: Path, limit: int | None = None) -> bytes:
     if limit is None:
-        if path.name in {Path(name).name for name in NATIVE_FILES}:
+        if path.name in {Path(name).name for name in NATIVE_FILES} | {"d3d12.dll", "d3d12core.dll"}:
             limit = NATIVE_FILE_MAX
         elif path.name == "THIRD-PARTY-NOTICES.txt":
             limit = NATIVE_NOTICE_MAX
@@ -271,7 +271,36 @@ def source_snapshot(source: Path) -> dict[str, bytes]:
     if sum(map(len, result.values())) > MAX_SOURCE:
         raise InstallError(tr('Das Launcher-Quellpaket überschreitet 16 MiB.'))
     result.update(native_snapshot(source, result["flightdeck/resources/bootstrap.lock.json"]))
+    result.update(graphics_snapshot(source))
     return result
+
+
+def graphics_snapshot(source: Path) -> dict[str, bytes]:
+    """Admit only the matched renderer pair specified by this source release."""
+    root = source / "flightdeck/resources/graphics"
+    no_links(root)
+    if not root.exists():
+        return {}
+    try:
+        lock = json.loads(read_regular(source / "compat/graphics.lock.json"))
+        files, base = lock["files"], lock["base"]
+        if (lock.get("schema") != 1 or not isinstance(files, dict) or not isinstance(base, dict)
+                or set(files) != {"d3d12.dll", "d3d12core.dll"} or set(base) != set(files)
+                or any(not isinstance(v, str) or not HASH.fullmatch(v) for v in [*files.values(), *base.values(), lock["license_sha256"]])):
+            raise ValueError()
+        hashes = {**files, "LICENSE": lock["license_sha256"]}
+        if set(p.name for p in root.iterdir()) != set(hashes) | {"manifest.json"}:
+            raise ValueError()
+        manifest = read_regular(root / "manifest.json")
+        if json.loads(manifest) != {"schema": 1, "base": base, "files": files}:
+            raise ValueError()
+        values = {name: read_regular(root / name, NATIVE_FILE_MAX) for name in hashes}
+        if any(digest(values[name]) != checksum for name, checksum in hashes.items()):
+            raise ValueError()
+        values["manifest.json"] = manifest
+        return {"flightdeck/resources/graphics/" + name: data for name, data in values.items()}
+    except (ValueError, KeyError, TypeError):
+        raise InstallError(tr("Die Beschreibung des Kompatibilitätspakets ist ungültig.")) from None
 
 
 def native_snapshot(source: Path, specification: bytes) -> dict[str, bytes]:

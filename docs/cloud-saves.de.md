@@ -8,12 +8,25 @@ Sicherungen bleiben erhalten und nach dem Beenden werden Änderungen
 hochgeladen. Die Funktion ist experimentell. Entscheidend ist das Xbox-Profil,
 mit dem du im Spiel angemeldet bist.
 
+**Bekanntes Problem:** Einige Nutzer melden auch nach den Timeout-Korrekturen
+aus 0.1.8 wiederholte Cloud-Sync-Fehler. Ein erfolgreicher Abgleich auf einer
+anderen Installation bestätigt nicht die Behebung dieser Fehler.
+Siehe [bekannte Probleme](known-issues.de.md).
+
 Mit der Simulatorauswahl in Flightdeck 0.1.1 bestimmt die ausgewählte Runtime
 auch die Cloud-Spielkennung, das Hilfsprofil und die lokalen Backups.
 MSFS-2020- und MSFS-2024-Spielstände sind nicht austauschbar. Der neue 2020-Pfad
 benötigt noch einen vollständigen Spieltest; siehe [Veröffentlichungsstand](changelog.md).
 
 ## Einfach den Simulator starten
+
+Flightdeck 0.1.9 erneuert ablaufende Microsoft-Tickets automatisch. Wenn ein
+Cloud-Vorgang eine interaktive Anmeldung benötigt, wähle **Erneut anmelden und
+abgleichen**. Melde dich mit demselben Microsoft-Konto an. Flightdeck prüft die
+erneuerte Sitzung und versucht diesen Cloud-Vorgang anschließend erneut.
+Bei Abbruch oder fehlgeschlagener Prüfung bleiben der ausstehende Vorgang und
+die lokalen Spielstände erhalten. Ein Verbindungsfehler allein erzwingt keine
+neue Anmeldung. [Umfang der Sitzungserneuerung (Englisch)](store-session-refresh.md).
 
 1. Das aktuelle vollständige Flightdeck-Paket installieren und **Simulator
    starten** wählen.

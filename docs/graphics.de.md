@@ -2,6 +2,12 @@
 
 [English](graphics.md)
 
+**Flightdeck 0.1.9** enthält Upstream-Korrekturen für
+NVIDIAs Verwaltung mehrerer Renderfenster. Ihr Kompatibilitätsmodus deaktiviert
+zusätzlich den eigenständigen Reflex-Pfad in VKD3D. Die Behebung der schwarzen
+Hauptszene auf RTX 4060/5060 Ti ist damit noch nicht auf NVIDIA-Hardware bestätigt.
+[Umfang, Build und Prüfungen](nvidia-renderer.md).
+
 Flightdeck richtet die NVIDIA-Grafik für MSFS 2024 und MSFS 2020 ein. Dafür
 verwendet es die Grafikkomponenten des Runners und den unter Linux installierten
 NVIDIA-Treiber. Auf Rechnern mit einer dedizierten NVIDIA-Karte und integrierter
@@ -54,23 +60,20 @@ NVIDIA-Auswahl nicht angezeigt.
 
 ## Wenn die Darstellung weiterhin fehlschlägt
 
-Unter Linux Mint 22.3 mit RTX 5060 Ti und NVIDIA 580.178.04 wurde in beiden
-Grafikmodi eine schwarze 3D-Szene bei funktionierenden Menüs gemeldet. Ein
-zweites Renderfenster zeigte die Szene kurz an, führte später jedoch zu
-Abstürzen. Die korrigierte Grafikkartenauswahl aus 0.1.7 muss auf diesem System
-noch getestet werden; eine erfolgreiche Darstellung im Spiel ist bislang nicht
-bestätigt.
+Eine schwarze 3D-Hauptansicht bei funktionierenden Menüs wird weiterhin auf
+NVIDIA gemeldet, darunter Systeme mit RTX 4060, RTX 4080 und RTX 5060 Ti. Auf
+betroffenen Installationen haben beide Grafikmodi die Hauptansicht nicht
+wiederhergestellt. In einem Bericht beendete ein Treiberupdate die Abstürze
+beim zweiten Renderfenster; das Hauptfenster blieb jedoch schwarz. Ein zweites
+Renderfenster ist deshalb keine bestätigte Umgehung des Fehlers.
+Siehe [bekannte Probleme](known-issues.de.md).
 
-Teste dieselbe Szene einmal pro Modus. Lade nach jedem Versuch unter
-**Diagnose** einen neuen Bericht und speichere ihn. Gib bei einer Fehlermeldung
-Flightdeck-Version, Simulator-Ausgabe, Grafikkarte, Treiberversion und den
-Zeitpunkt des Darstellungsfehlers an. Der Bericht enthält verfügbare
-Vulkan-Grafikkarten und die angeforderten Einstellungen des letzten Starts über
-Flightdeck; er bestätigt keine erfolgreiche Darstellung.
-Ab 0.1.7 enthält er außerdem erkannte Renderer-Versionen, ausgefilterte
-Grafikkarten sowie Zähler für Bildausgaben ohne vorheriges Rendering aus dem
-verfügbaren Log-Ausschnitt. Eine solche Bildausgabe ist eine Beobachtung und
-allein kein Nachweis für einen Treiberfehler.
+Flightdeck 0.1.9 ist noch kein bestätigter Fix für diesen Fehler. Zur Bestätigung müssen
+Menü-Globus, Free-Flight-Karte, Hauptansicht im Cockpit und ein zweites Fenster
+sowie ein erneuter Spielstart geprüft werden. Die
+[Entwicklerreferenz](nvidia-steam-parity.md) hält diesen Umfang und die
+Upstream-Nachweise fest. Diese Anleitung verlangt keine wiederholten
+Diagnoseexporte desselben Fehlers.
 
 Die Dateiprüfung repariert das Basisspiel. Das Zurücksetzen der Wine-Umgebung
 erstellt ein neues Profil. Beides ersetzt keine Grafiktreiber oder bestätigt die
