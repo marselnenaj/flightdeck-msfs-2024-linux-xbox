@@ -230,6 +230,28 @@ class InstallerTests(unittest.TestCase):
             self.install()
         self.assertFalse(self.data.exists())
 
+    def test_future_resource_verification_keeps_hash_type_and_size_checks(self):
+        name = "flightdeck/resources/graphics/future-renderer.dll"
+        payload = b"synthetic future component" * 100000
+        self.assertGreater(len(payload), installer.MAX_FILE)
+        files = {**installer.source_snapshot(self.source), name: payload}
+        with patch.object(installer, "source_snapshot", return_value=files):
+            installed = self.install()
+        folder = installer.verify_release(self.data, installed["current"])
+        target = folder / name
+        target.write_bytes(payload[:-1] + b"!")
+        with self.assertRaisesRegex(installer.InstallError, "geändert"):
+            installer.verify_release(self.data, installed["current"])
+        target.unlink()
+        target.symlink_to(self.state / "config.json")
+        with self.assertRaises(installer.InstallError):
+            installer.verify_release(self.data, installed["current"])
+        target.unlink()
+        with target.open("wb") as output:
+            output.truncate(installer.NATIVE_FILE_MAX + 1)
+        with self.assertRaisesRegex(installer.InstallError, "große"):
+            installer.verify_release(self.data, installed["current"])
+
     def test_source_links_and_special_files_are_rejected(self):
         path = self.source / "ui/index.html"
         path.unlink()

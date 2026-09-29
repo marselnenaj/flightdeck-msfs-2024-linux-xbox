@@ -6,7 +6,7 @@ not contain Microsoft game files, a Wine prefix, account data, Linux system
 libraries or the upstream Proton runner. The Git repository and source-only
 archive still exclude compiled runtime binaries.
 
-Flightdeck **0.1.11** uses the unchanged **0.1.9** native components and their
+Flightdeck **0.1.12** uses the unchanged **0.1.9** native components and their
 matching source archive. Use the component version
 pinned by the selected package's `compat/bootstrap.lock.json`; see
 [release changes](changelog.md).

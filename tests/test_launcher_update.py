@@ -272,7 +272,16 @@ class UpdateTests(unittest.TestCase):
         old = wait_for(lambda record: desktop.verified_service(launcher.state_dir, record))
         self.assertEqual(old["pid"], process.pid)
         (source / "flightdeck/__init__.py").write_text('__version__ = "0.1.5"\n')
-        installer.install(source, data, self.root / "bin", self.root / "apps", language="de", expected_current=initial["current"])
+        # A future package can admit resources unknown to the running version.
+        # Its installer still freezes them into the ordinary checked manifest.
+        future_name = "flightdeck/resources/graphics/future-renderer.dll"
+        files = {**installer.source_snapshot(source), future_name: b"x" * (installer.MAX_FILE + 1)}
+        with patch.object(installer, "source_snapshot", return_value=files):
+            updated = installer.install(source, data, self.root / "bin", self.root / "apps", language="de", expected_current=initial["current"])
+        # The source-import reader deliberately still rejects unknown large
+        # files. Restart verification must not reuse that admission policy.
+        with self.assertRaises(installer.InstallError):
+            installer.read_regular(data / "releases" / updated["current"] / future_name)
         self.assertTrue(desktop.request(old, "/api/launcher-update")["pending_restart"])
         self.assertTrue(desktop.request(old, "/api/launcher-update/restart", {})["ok"])
         new = wait_for(lambda record: record["pid"] != old["pid"] and desktop.verified_service(launcher.state_dir, record))

@@ -21,8 +21,13 @@ Flightdeck installs and launches your **purchased Xbox PC / Microsoft Store copy
 of MSFS 2024 or 2020** on your Linux computer through Wine/Proton. Sign in with your
 Microsoft account, download the game and start it from one application.
 
-**Current public release: [Flightdeck 0.1.11](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.11).**
+**Current public release: [Flightdeck 0.1.12](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.12).**
 Update through **Updates → Flightdeck** or use the full installer.
+**0.1.12** corrects update/restart verification of larger, newly introduced
+runtime libraries. If an older launcher reports that the installed version
+could not be identified after updating, close and reopen Flightdeck once.
+The NVIDIA and Store components are unchanged from 0.1.11.
+
 **0.1.11** makes NVIDIA compatibility the automatic default and corrects DXVK's
 ignored Low Latency opt-out, covering both DirectX 11 and 12. DLSS, Reflex and
 NVIDIA Frame Generation are disabled by default; **NVIDIA features (experimental)**

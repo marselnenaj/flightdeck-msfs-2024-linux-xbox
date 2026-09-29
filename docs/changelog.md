@@ -1,5 +1,21 @@
 # Changes and release status
 
+## 0.1.12 — 29 September 2026
+
+[Download Flightdeck 0.1.12](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.12).
+
+- Separate installed-resource verification from the source-import DLL name
+  list and 2 MiB text-file limit. Preserve every checksum, regular-file and
+  symlink check, with the existing 128 MiB binary limit.
+- Cover a real service update, restart and rollback with a newly introduced
+  resource larger than the source limit; retain the same browser origin.
+- An already-running 0.1.10 process cannot receive this verifier correction
+  before restarting. If it reports that the installed version could not be
+  identified after an otherwise successful update, close and reopen Flightdeck
+  once through the application menu. Game files and saves are unaffected.
+- NVIDIA/Store binaries are unchanged from 0.1.11. This is a launcher update
+  correction and does not add a new NVIDIA rendering claim.
+
 ## 0.1.11 — 29 September 2026
 
 [Download Flightdeck 0.1.11](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.11).

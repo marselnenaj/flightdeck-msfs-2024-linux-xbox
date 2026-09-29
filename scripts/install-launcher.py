@@ -415,7 +415,12 @@ def verify_release(root: Path, identity: str) -> Path:
         if not path.is_dir() and str(path.relative_to(folder)) not in expected:
             raise InstallError(tr('Fremde Datei in der installierten Version: {path}', path=path))
     for name, checksum in record["files"].items():
-        if digest(read_regular(folder / name)) != checksum:
+        # Installation already admitted the selected package's exact payload.
+        # An older running launcher must be able to verify newer resources
+        # without knowing each new DLL basename. Keep source-import limits
+        # separate, retain the binary bound and verify every recorded hash.
+        limit = NATIVE_FILE_MAX if Path(name).parts[:2] == ("flightdeck", "resources") else None
+        if digest(read_regular(folder / name, limit=limit)) != checksum:
             raise InstallError(tr('Installierte Quelldatei wurde geändert: {name}', name=name))
     return folder
 

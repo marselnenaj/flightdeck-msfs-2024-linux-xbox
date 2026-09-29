@@ -1,6 +1,6 @@
 # Install the Flightdeck launcher
 
-This guide covers **Flightdeck 0.1.11**, including Store diagnostics, launcher
+This guide covers **Flightdeck 0.1.12**, including Store diagnostics, launcher
 updates, selectable NVIDIA graphics modes, installation maintenance and
 cloud-upload recovery. See [changes](changelog.md) and [NVIDIA graphics](graphics.md).
 
@@ -205,6 +205,16 @@ notes. Choose **Download & install**, then **Restart Flightdeck now** when the
 installation finishes. Downloads show progress and can be cancelled before
 installation begins. The full package's size and SHA256 digest are checked
 before installation. Your settings and game installations remain in place.
+
+Version 0.1.12 separates installed-resource verification from source-import
+size limits, so new binary names do not block the next update's restart.
+An already-running 0.1.10 process can report that the installed version could
+not be identified when it checks the larger DXVK libraries introduced in 0.1.11.
+If that happens after successful installation, close Flightdeck and open it
+again through the application menu. The corrected verifier cannot take effect
+inside a process still running the older code. Do not reinstall MSFS or reset
+its Wine environment for this launcher-only error.
+
 Flightdeck 0.1.7 reloads the existing window after an in-app
 restart, including when restoring the previous launcher. Its address and saved
 language preference are retained. The updated installer also handles restart
