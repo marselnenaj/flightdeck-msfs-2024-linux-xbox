@@ -299,7 +299,9 @@ try {
   await check('Startup update notice is translated and fits mobile',`document.documentElement.scrollWidth<=innerWidth && document.getElementById('available-updates-label').textContent==='Updates for Flightdeck and MSFS are available.'`);
   await screenshot('startup-updates-en-mobile.png');
   await evaluate(`document.querySelector('#available-updates a').click()`);await until(()=>evaluate(`location.hash==='#updates' && document.getElementById('launcher-update-title').textContent==='Flightdeck 0.1.5 is available'`),'Startup notice did not open update actions');
-  await check('Background MSFS discovery requires explicit preflight before download',`document.getElementById('update-start').hidden && !document.getElementById('update-check').disabled`);
+  // Launcher and simulator panels load independently after navigation.
+  // The launcher title does not establish that the simulator request finished.
+  await eventualCheck('Background MSFS discovery requires explicit preflight before download',`document.getElementById('update-start').hidden && !document.getElementById('update-check').disabled`);
   await refresh(`!document.getElementById('launch-button').disabled`);assert.equal(startupRequests.length,1);results.push('Language, navigation and status refresh do not repeat startup discovery');
   startupFixture=false;launcherUpdate=launcherDefault();gameUpdate={...gameUpdate,latest_version:null,update_available:null};
   // A saved NVIDIA choice applies to the current edition and survives reloads.
