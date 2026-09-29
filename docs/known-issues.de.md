@@ -2,7 +2,13 @@
 
 [English](known-issues.md)
 
-Stand: Flightdeck 0.1.9, 29. September 2026.
+Stand: Flightdeck 0.1.10, 29. September 2026.
+
+**Komponentenupdates:** 0.1.10 behebt, dass ältere Store-Binaries bei angepassten
+Startskripten erhalten blieben. Aktualisiere Flightdeck und öffne es bei
+geschlossenem Simulator erneut; die Store-Prüfung sollte anschließend den
+Komponentenschritt bestehen. Eigene Skripte bleiben erhalten. Die weiteren
+Online-Prüfungen sind damit noch nicht bestätigt.
 
 Die Behebung der folgenden gemeldeten Fehler ist noch nicht bestätigt. Sie betreffen nicht
 jede Installation. Priorität hat die schwarze NVIDIA-Hauptansicht, danach

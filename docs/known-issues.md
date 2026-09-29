@@ -2,7 +2,12 @@
 
 [Deutsch](known-issues.de.md)
 
-Status: Flightdeck 0.1.9, 29 September 2026.
+Status: Flightdeck 0.1.10, 29 September 2026.
+
+**Component updates:** 0.1.10 fixes older Store binaries being left behind when
+launch scripts were customized. Update and reopen Flightdeck with the simulator
+closed; the Store check should then pass its component step. Customized scripts
+are retained. This does not by itself confirm the online checks below.
 
 The following reported issues are not yet confirmed resolved and do not affect every
 installation. The NVIDIA black main view is the current priority, followed by

@@ -1,6 +1,6 @@
 # Install the Flightdeck launcher
 
-This guide covers **Flightdeck 0.1.9**, including Store diagnostics, launcher
+This guide covers **Flightdeck 0.1.10**, including Store diagnostics, launcher
 updates, selectable NVIDIA graphics modes, installation maintenance and
 cloud-upload recovery. See [changes](changelog.md) and [NVIDIA graphics](graphics.md).
 
@@ -251,16 +251,24 @@ retry or apply the update from a terminal, run:
 ~/.local/bin/flightdeck --refresh-components
 ```
 
+From 0.1.10, customized launch scripts no longer block an update of recognized
+native Store components. The scripts stay unchanged. Earlier versions could
+show the new launcher version while retaining older Store binaries; **Check
+Store** then stopped at the component check. Update Flightdeck and reopen it
+with the simulator closed to apply the component update.
+
 This checks every installed component against the runtime's import manifest,
-checks the new bundle against its release hashes, and updates native files and
-the six runtime scripts together under the runtime lock. Older manifests without
-script hashes migrate only when all existing scripts match a pinned release.
+checks the new bundle against its release hashes, and updates native files under
+the runtime lock. The six runtime scripts update in the same transaction only
+when their complete set is recognized and unchanged. Customized scripts and
+their existing manifest entry are preserved. Older manifests without script
+hashes migrate those scripts only when they match a pinned release.
 Script-only updates are detected even if the native files are already current.
 Game files, saves, account data and the Proton
 runner are left in place. A recorded backup restores the old binaries, scripts
 and import manifest if
 you reopen Flightdeck or run the command again after an interruption. Until then, the launcher
-blocks game start. If any old file was changed manually, Flightdeck
+blocks game start. If an installed native file was changed manually, Flightdeck
 stops without overwriting it. An older development runtime without an import
 manifest cannot be updated in place. Use **Prepare a new runtime** to import its
 existing game files into a separate, managed runtime. A custom component set

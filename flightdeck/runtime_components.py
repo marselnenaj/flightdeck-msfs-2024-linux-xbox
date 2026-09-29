@@ -153,10 +153,14 @@ def update_state(root):
             _hashes(value)
         if installed != current and installed not in upgrades:
             return "custom"
-        old_scripts, new_scripts = _scripts(root, record, lock)
+        try:
+            old_scripts, new_scripts = _scripts(root, record, lock)
+        except CustomScripts:
+            # Start-script customization does not turn a known native release
+            # into a custom binary build. Its native update remains applicable;
+            # the scripts themselves stay outside that transaction.
+            return "pending" if installed != current else "custom"
         return "current" if installed == current and old_scripts == new_scripts else "pending"
-    except CustomScripts:
-        return "custom"
     except (ComponentUpdateError, OSError, ValueError, KeyError, TypeError):
         return "invalid"
 
@@ -294,7 +298,14 @@ def refresh(launcher):
                 raise ComponentUpdateError("Diese ältere Runtime hat keine verwaltete Komponentenliste. Bitte eine neue Runtime über die Einrichtung anlegen und vorhandene Spieldateien dort importieren.")
             record, old = _read_manifest(manifest, root)
             _verify_targets(root, old)
-            old_scripts, new_scripts = _scripts(root, record, lock)
+            if old != new and old not in upgrade_from:
+                raise ComponentUpdateError("Diese Runtime verwendet eigene oder unbekannte Komponenten. Das automatische Update ist dafür nicht freigegeben.")
+            try:
+                old_scripts, new_scripts = _scripts(root, record, lock)
+            except CustomScripts:
+                # Only the hash-pinned native set is updated. Keep customized
+                # scripts and their existing provenance record byte-for-byte.
+                old_scripts, new_scripts = {}, {}
             scripts, _ = resource_paths()
             for name, expected in new_scripts.items():
                 path = scripts / name
@@ -303,8 +314,6 @@ def refresh(launcher):
                     raise ComponentUpdateError("Ein neues Runtime-Skript stimmt nicht mit dem geprüften Launcher überein.")
             if old == new and old_scripts == new_scripts:
                 return False
-            if old != new and old not in upgrade_from:
-                raise ComponentUpdateError("Diese Runtime verwendet eigene oder unbekannte Komponenten. Das automatische Update ist dafür nicht freigegeben.")
             journal_path = private / JOURNAL
             if journal_path.exists() or journal_path.is_symlink():
                 raise ComponentUpdateError("Ein Komponentenupdate ist noch nicht abgeschlossen.")

@@ -116,7 +116,8 @@ class RuntimeComponentTests(unittest.TestCase):
         self.assertTrue(components.refresh_on_startup(self.launcher))
         self.assert_scripts(self.new_scripts); self.assert_files(self.new)
 
-    def test_user_script_edits_are_preserved_before_any_native_write(self):
+    def test_user_script_edits_do_not_block_known_native_update_or_store_check(self):
+        from flightdeck import store_check
         for recorded in (False, True):
             with self.subTest(recorded=recorded):
                 if not hasattr(self, "old_scripts"):
@@ -126,12 +127,48 @@ class RuntimeComponentTests(unittest.TestCase):
                 self.manifest.write_text(json.dumps(record))
                 target = self.root / "tools/xodus-wine-launch"
                 target.write_bytes(b"#!/bin/sh\n# user settings")
-                self.assertEqual(components.update_state(self.root), "custom")
-                with self.assertRaises(components.CustomScripts):
-                    components.refresh(self.launcher)
-                self.assert_files(self.old)
+                # Restore the older native set for each provenance variant.
+                for name, paths in components._targets(self.root).items():
+                    for path in paths:
+                        path.write_bytes(("old " + name).encode())
+                record["artifacts"]["files"] = self.old
+                self.manifest.write_text(json.dumps(record))
+                before_scripts = {name: (self.root / "tools" / name).read_bytes() for name in components.RUNTIME_FILES}
+                with self.assertRaises(ValueError):
+                    store_check.verify_runtime(self.root, self.source)
+                self.assertEqual(components.update_state(self.root), "pending")
+                self.assertTrue(components.refresh_on_startup(self.launcher))
+                self.assert_files(self.new)
+                self.assertIsNotNone(store_check.verify_runtime(self.root, self.source))
                 self.assertEqual(target.read_bytes(), b"#!/bin/sh\n# user settings")
+                self.assertEqual({name: (self.root / "tools" / name).read_bytes() for name in components.RUNTIME_FILES}, before_scripts)
+                self.assertEqual(json.loads(self.manifest.read_text()).get("runtime_files"), record.get("runtime_files"))
+                self.assertEqual(components.update_state(self.root), "custom")
+                self.assertFalse(components.refresh_on_startup(self.launcher))
+                self.assertFalse(components.refresh(self.launcher))
                 self.assertFalse((self.private / components.JOURNAL).exists())
+
+    def test_native_update_failure_preserves_custom_scripts_and_restores_manifest(self):
+        self.scripts(recorded=True)
+        target = self.root / "tools/launch-msfs.sh"
+        target.write_bytes(b"#!/bin/sh\n# user launch options\n")
+        before_manifest = self.manifest.read_bytes()
+        before_scripts = {name: (self.root / "tools" / name).read_bytes() for name in components.RUNTIME_FILES}
+        original = components._copy_verified
+        def interrupt(source, destination, expected):
+            if source == self.native / "runtime/xgameruntime.dll":
+                raise KeyboardInterrupt()
+            return original(source, destination, expected)
+        with patch.object(components, "_copy_verified", side_effect=interrupt):
+            with self.assertRaises(KeyboardInterrupt):
+                components.refresh(self.launcher)
+        self.assertEqual(components.update_state(self.root), "interrupted")
+        components._recover(self.root)
+        self.assert_files(self.old)
+        self.assertEqual(self.manifest.read_bytes(), before_manifest)
+        self.assertEqual({name: (self.root / "tools" / name).read_bytes() for name in components.RUNTIME_FILES}, before_scripts)
+        self.assertFalse((self.private / components.JOURNAL).exists())
+        self.assertEqual(components.update_state(self.root), "pending")
 
     def test_unverified_new_script_is_rejected_before_native_write(self):
         self.scripts()

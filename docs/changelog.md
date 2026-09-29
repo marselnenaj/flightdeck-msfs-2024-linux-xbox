@@ -1,5 +1,22 @@
 # Changes and release status
 
+## 0.1.10 — 29 September 2026
+
+[Download Flightdeck 0.1.10](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.10).
+
+- Fix native component updates being skipped when a runtime has customized
+  launch scripts. The launcher could show 0.1.9 while the older Store binaries
+  remained installed, causing **Diagnostics → Check Store** to stop at the
+  component check and preventing the new session fixes from taking effect.
+- Update the recognized native component set independently. Preserve customized
+  scripts and their provenance record; retain existing checks for custom or
+  modified binaries, busy runtimes and interrupted-update recovery.
+
+Native compatibility components and the NVIDIA renderer remain the same as in
+0.1.9. This release fixes delivery of those Store components to affected managed
+runtimes; it does not establish a fix for NVIDIA's black main view or every
+reported in-game Marketplace/cloud error.
+
 ## 0.1.9 — 29 September 2026
 
 [Download Flightdeck 0.1.9](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.9).
