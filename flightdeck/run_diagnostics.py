@@ -58,9 +58,7 @@ class GameLog:
         calls += [(store_diagnostics.METHODS[int(kind)], hr) for kind, hr in
                   re.findall(r"\[xodus-store-query\] kind=(10|[0-9]) hr=([0-9a-fA-F]{8})(?=\s|$)", text)]
         self.add("store_calls", ({"method": method, "hresult": hr.lower()} for method, hr in calls if method in STORE_METHODS))
-        self.add("store_catalog", ({"stage": stage, "hresult": hr.lower()} for stage, hr in
-            re.findall(r"\[xodus-store-catalog\] stage=([a-z-]{1,32})(?: products=\d{1,10} skus=\d{1,10})? hr=([0-9a-fA-F]{8})(?=\s|$)", text)
-            if stage in store_diagnostics.CATALOG))
+        self.add("store_catalog", store_diagnostics.catalog_rows(text))
         self.add("user_calls", ({"method": method, "hresult": hr.lower()} for method, hr in
             re.findall(r"xodus-user-api: ([A-Za-z0-9_.]{1,90}) call=\d{1,10} hr=([0-9a-fA-F]{8})(?=\s|$)", text) if method in USER_METHODS))
         self.add("policy_cache", ({"stage": stage, "hresult": hr.lower()} for stage, hr in

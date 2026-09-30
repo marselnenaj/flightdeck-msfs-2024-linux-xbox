@@ -12,13 +12,15 @@ using CoinPlan = std::shared_ptr<const CoinCatalogPlan>;
 // Product.raw_json must contain the exact validated catalog document. The
 // supported first subset is non-subscription consumables with explicit title
 // association, simple public pricing and no downloadable/media payload.
+// On unsupported shapes, reason receives a static diagnostic category, never
+// catalog text or identifiers. It is cleared at the start of every call.
 HRESULT plan_coins(const std::vector<Product> &catalog,
                    const std::vector<std::string> &ids, UINT32 kinds,
                    const std::vector<std::string> &actions,
                    const std::string &parent, const std::string &market,
                    const std::string &language, INT64 now, CoinPlan *out,
                    std::vector<XodusStoreCollectionRequestItem> *requests,
-                   bool entitled = false);
+                   bool entitled = false, const char **reason = nullptr);
 HRESULT coin_page(const CoinPlan &plan,
                   const XodusStoreCollectionSnapshot *collection, INT64 now,
                   XodusStoreProductPage **out, const char *continuation = nullptr);

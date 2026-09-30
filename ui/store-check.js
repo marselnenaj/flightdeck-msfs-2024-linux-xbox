@@ -29,7 +29,7 @@ export function createStoreCheck({request,getStatus,isOnline,isReserved,refreshS
     $('store-check-cancel').hidden=!actions.running;
     $('store-check-cancel').disabled=!actions.cancel;
     $('store-check-busy').hidden=actions.start||actions.running;
-    const labels={running:'Store-Prüfung läuft …',passed:'Alle Prüfschritte erfolgreich',failed:'Store-Prüfung mit Fehlern',cancelled:'Store-Prüfung abgebrochen',incomplete:'Store-Prüfung unvollständig'};
+    const labels={running:'Store-Prüfung läuft …',passed:'Store-Basisprüfungen erfolgreich',failed:'Store-Prüfung mit Fehlern',cancelled:'Store-Prüfung abgebrochen',incomplete:'Store-Prüfung unvollständig'};
     $('store-check-status').textContent=job?t(labels[job.state]||'Store-Prüfung unvollständig')+(job.finished_at?' · '+formatDate(job.finished_at):''):t('Noch keine Store-Prüfung durchgeführt.');
     if(job?.operation==='recover'&&actions.running)$('store-check-status').textContent=t('Anmeldung wird erneuert und geprüft …');
     $('store-check-error').textContent=error;$('store-check-error').hidden=!error;

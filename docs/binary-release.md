@@ -6,8 +6,10 @@ not contain Microsoft game files, a Wine prefix, account data, Linux system
 libraries or the upstream Proton runner. The Git repository and source-only
 archive still exclude compiled runtime binaries.
 
-Flightdeck **0.1.12** uses the unchanged **0.1.9** native components and their
-matching source archive. Use the component version
+Flightdeck **0.1.13** includes an updated native Store catalog mapper and the
+matching **0.1.13** native component/source archives. The other five native
+binaries are unchanged from 0.1.9, with identical corresponding sources verified
+against the staged source manifests. Use the component version
 pinned by the selected package's `compat/bootstrap.lock.json`; see
 [release changes](changelog.md).
 

@@ -71,6 +71,26 @@ class RunDiagnosticsTests(unittest.TestCase):
         self.assertNotIn("status", report["audio"])
         self.assertEqual(report["audio"]["error_counts"], {})
 
+    def test_catalog_mapping_reasons_are_allowlisted_in_summary_and_timeline(self):
+        text = (
+            "[xodus-store-catalog] stage=mapping hr=80004001 time_ms=1790623216000 reason=sku-selection\n"
+            "[xodus-store-catalog] stage=inventory-mapping hr=80004001 time_ms=1790623216001 reason=product-language\n"
+            "[xodus-store-catalog] stage=mapping hr=80004001 time_ms=1790623216002 reason=private-token\n"
+            "[xodus-store-catalog] stage=mapping hr=80004001 time_ms=1790623216003\n"
+            "[xodus-store-catalog] stage=catalog hr=80004005 time_ms=1790623216004 reason=sku-selection\n"
+        )
+        report = self.read(text)
+        (self.run / "service.log").write_text("")
+        session = store_diagnostics.session(self.run)
+        self.assertEqual(report["store_catalog"], [
+            {"stage": "catalog", "hresult": "80004005"},
+            {"stage": "inventory-mapping", "hresult": "80004001", "reason": "product-language"},
+            {"stage": "mapping", "hresult": "80004001"},
+            {"stage": "mapping", "hresult": "80004001", "reason": "sku-selection"}])
+        self.assertEqual([row.get("reason") for row in session["events"]],
+                         ["sku-selection", "product-language", None, None, None])
+        self.assertNotIn("private-token", json.dumps([report, session]))
+
     def test_signal_exit_is_not_silently_dropped(self):
         report = self.read("xodus-wine-launch: wine_pid=123 signal=11 shell_exit_code=139 elapsed_seconds=2.250\n")
         self.assertEqual(report["exit"], {"signal": 11, "code": 139, "seconds": 2.25})

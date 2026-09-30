@@ -26,7 +26,24 @@ METHODS = ("XStoreQueryGameLicenseAsync", "XStoreQueryEntitledProductsAsync", "X
 PHASES = {"prepare", "catalog", "authentication", "window_open", "bootstrap_started", "bootstrap_ready", "bootstrap_error", "window_ready", "checkout_ready", "load_timeout", "session_timeout", "expired", "error", "complete", "cancel"}
 OUTCOMES = {"started", "passed", "failed", "cancelled", "expired", "timeout", "unsupported", "busy", "succeeded"}
 CATALOG = {"inventory", "inventory-catalog", "inventory-mapping", "inventory-page", "catalog", "mapping", "collections", "page", "result"}
+MAPPING_REASONS = {"action-filters", "product-kind", "title-association", "sku-selection", "trial-sku",
+                   "package-payload", "bundle-sku", "subscription-sku", "product-videos", "sku-videos",
+                   "product-language", "sku-language", "offer-association", "offer-price", "offer-conditions",
+                   "price-precision", "no-offer", "ambiguous-price"}
 ASYNC = {"schedule", "work_enter", "cancel", "cleanup", "begin_return", "context_retain"}
+
+
+def catalog_rows(text):
+    """Keep only native stage/result fields and fixed mapping reason names."""
+    for line in text.splitlines():
+        match = re.search(r"\[xodus-store-catalog\] stage=([a-z-]{1,32})(?: products=\d{1,10} skus=\d{1,10})? hr=([a-fA-F0-9]{8})(?=\s|$)", line)
+        if not match or match[1] not in CATALOG:
+            continue
+        row = {"stage": match[1], "hresult": match[2].lower()}
+        reason = re.search(r"\breason=([a-z-]{1,32})(?=\s|$)", line)
+        if match[1] in {"mapping", "inventory-mapping"} and reason and reason[1] in MAPPING_REASONS:
+            row["reason"] = reason[1]
+        yield row
 
 
 def launch_record(runtime):
@@ -106,14 +123,14 @@ def session(run):
                 row = {"time_ms": int(timestamp[1]), "source": source}
                 match = re.search(r"\[xodus-store-query\] kind=(\d{1,2}) hr=([a-fA-F0-9]{8})\b", line)
                 phase = re.search(r"\[xodus-store-async\] kind=(\d{1,2}) stage=([a-z_]{1,20}) hr=([a-fA-F0-9]{8})\b", line)
-                catalog = re.search(r"\[xodus-store-catalog\] stage=([a-z-]{1,32}) hr=([a-fA-F0-9]{8})\b", line)
+                catalog = next(catalog_rows(line), None)
                 event = re.search(r"\[flightdeck-store-event\] time_ms=\d{13} seq=\d{1,6} phase=([a-z_]{1,24}) outcome=([a-z]{1,16})(?=\s|$)", line)
                 if match and int(match[1]) < len(METHODS):
                     row.update(method=METHODS[int(match[1])], phase="result", hresult=match[2].lower())
                 elif phase and int(phase[1]) < len(METHODS) and phase[2] in ASYNC:
                     row.update(method=METHODS[int(phase[1])], phase=phase[2], hresult=phase[3].lower())
-                elif catalog and catalog[1] in CATALOG:
-                    row.update(phase=catalog[1], hresult=catalog[2].lower())
+                elif catalog:
+                    row.update(phase=catalog.pop("stage"), **catalog)
                 elif event and event[1] in PHASES and event[2] in OUTCOMES:
                     row.update(phase=event[1], outcome=event[2])
                 else:

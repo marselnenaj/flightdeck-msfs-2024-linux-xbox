@@ -10,6 +10,7 @@ static Json source;
 static std::atomic<int> fetches{0}, joins{0}, releases{0};
 static int response_mode = 0;
 static bool fetch_fails = false;
+static std::string request_language = "en-US";
 static INT64 now_utc() {
   FILETIME ft;
   GetSystemTimeAsFileTime(&ft);
@@ -67,7 +68,7 @@ static HRESULT mock_fetch(const std::string &id, const std::string &market,
     return E_FAIL;
   if (*cancel)
     return E_ABORT;
-  if (market != "AT" || language != "en-US")
+  if (market != "AT" || language != request_language)
     return E_INVALIDARG;
   return parse(source.dump(), id, keep, out);
 }
@@ -136,7 +137,7 @@ static HRESULT query(XodusStoreProductPage **out, UINT32 kinds = 31,
   volatile LONG cancel = 0;
   const char *id = "ABCD1234EFGH";
   return query_coins(reader, provider, reinterpret_cast<void *>(0x1234),
-                     "PARENT123456", "AT", "en-US", kinds, &id, 1,
+                     "PARENT123456", "AT", request_language, kinds, &id, 1,
                      action ? &action : nullptr, action ? 1 : 0, nullptr,
                      &cancel, out);
 }
@@ -179,6 +180,60 @@ int main() {
     check("release-twice-not-owned", !release_coin_page(page));
   }
   source = complete_fixture();
+  request_language = "de-DE";
+  page = nullptr;
+  check("explicit-market-translation-fallback",
+        query(&page) == S_OK && page && page->product_count == 1 &&
+            !strcmp(page->products[0].language, "en") &&
+            !strcmp(page->products[0].skus[0].language, "en") &&
+            page->products[0].price.price == 10.25f &&
+            !strcmp(page->products[0].price.currencyCode, "EUR") &&
+            !page->products[0].isInUserCollection);
+  if (page) release_coin_page(page);
+  auto german_text = source["Product"]["LocalizedProperties"][0];
+  german_text["Language"] = "de-DE";
+  german_text["ProductTitle"] = "Deutscher Produkttitel";
+  source["Product"]["LocalizedProperties"].push_back(german_text);
+  auto german_sku = source["Product"]["DisplaySkuAvailabilities"][0]["Sku"]["LocalizedProperties"][0];
+  german_sku["Language"] = "de-DE";
+  source["Product"]["DisplaySkuAvailabilities"][0]["Sku"]["LocalizedProperties"].push_back(german_sku);
+  page = nullptr;
+  check("explicit-exact-german-translation-preferred",
+        query(&page) == S_OK && page && !strcmp(page->products[0].language, "de-DE") &&
+            !strcmp(page->products[0].title, "Deutscher Produkttitel") &&
+            !strcmp(page->products[0].skus[0].language, "de-DE"));
+  if (page) release_coin_page(page);
+  source = complete_fixture();
+  source["Product"]["LocalizedProperties"][0]["Markets"] = Json::array({"US"});
+  page = nullptr;
+  check("explicit-translation-never-crosses-market", FAILED(query(&page)) && !page);
+  source = complete_fixture();
+  source["Product"]["LocalizedProperties"][0]["Language"] = "en-GB";
+  source["Product"]["DisplaySkuAvailabilities"][0]["Sku"]["LocalizedProperties"][0]["Language"] = "en-GB";
+  request_language = "en-AU";
+  page = nullptr;
+  check("explicit-regional-translation-fallback",
+        query(&page) == S_OK && page && !strcmp(page->products[0].language, "en-GB"));
+  if (page) release_coin_page(page);
+  request_language = "en-US";
+  source = complete_fixture();
+  Product reason_catalog;
+  CoinPlan reason_plan;
+  std::vector<XodusStoreCollectionRequestItem> reason_requests;
+  const char *reason = nullptr;
+  source["Product"]["DisplaySkuAvailabilities"].push_back(source["Product"]["DisplaySkuAvailabilities"][0]);
+  source["Product"]["DisplaySkuAvailabilities"][1]["Sku"]["SkuId"] = "0002";
+  source["Product"]["DisplaySkuAvailabilities"][1]["Availabilities"] = Json::array();
+  check("mapping-reason-multiple-skus-catalog", parse(source.dump(), "ABCD1234EFGH", true, &reason_catalog) == S_OK);
+  check("mapping-reason-distinguishes-sku-selection",
+        plan_coins({reason_catalog}, {"ABCD1234EFGH"}, 31, {}, "PARENT123456", "AT", "en-US", now_utc(),
+                   &reason_plan, &reason_requests, false, &reason) == E_NOTIMPL &&
+            reason && !strcmp(reason, "sku-selection") && !reason_plan && reason_requests.empty());
+  source = complete_fixture();
+  check("mapping-reason-success-catalog", parse(source.dump(), "ABCD1234EFGH", true, &reason_catalog) == S_OK);
+  check("mapping-reason-cleared-on-success",
+        plan_coins({reason_catalog}, {"ABCD1234EFGH"}, 31, {}, "PARENT123456", "AT", "en-US", now_utc(),
+                   &reason_plan, &reason_requests, false, &reason) == S_OK && !reason);
   response_mode = 1;
   page = nullptr;
   check("actual-owned-item",

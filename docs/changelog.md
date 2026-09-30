@@ -1,5 +1,25 @@
 # Changes and release status
 
+## 0.1.13 — 30 September 2026
+
+[Download Flightdeck 0.1.13](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.13).
+
+- Accept Microsoft's fallback product translations in explicit Marketplace
+  queries, as already supported for the owned library. Prefer the requested
+  language and preserve the selected Store region, pricing and ownership checks.
+- Include fixed mapping-failure categories in diagnostic summaries and session
+  timelines, without product IDs, account data or raw catalog text. Existing
+  reports with only `80004001` cannot identify the rejected product feature.
+- Label successful Store diagnostics as **Basic Store checks passed** and
+  explain that these checks do not test in-game Marketplace product queries.
+- Ship the rebuilt Store runtime and recognize the previous native component
+  set for automatic updates of managed installations.
+
+The translation regression is reproduced and tested with synthetic catalog data.
+Native catalog, diagnostic-export, browser and package-update checks passed.
+This does not yet establish that the reported in-game Marketplace error is fixed
+for every affected installation. German Store and game-language settings can be retained.
+
 ## 0.1.12 — 29 September 2026
 
 [Download Flightdeck 0.1.12](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.12).

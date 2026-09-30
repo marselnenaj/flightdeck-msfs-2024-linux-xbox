@@ -49,7 +49,7 @@ bool contains(const Json &array, const std::string &v) {
 }
 const Text *language_text(const std::vector<Text> &values,
                           const std::string &language,
-                          const std::string &market, bool entitled) {
+                          const std::string &market) {
   const Text *fallback = nullptr, *regional = nullptr, *market_fallback = nullptr;
   const auto short_name = language.substr(0, language.find('-'));
   for (const auto &v : values) {
@@ -65,9 +65,10 @@ const Text *language_text(const std::vector<Text> &values,
     if (!market_fallback)
       market_fallback = &v;
   }
-  // Owned content remains owned when the catalog has no exact translation.
-  // Keep the actual returned language, and never borrow another market's text.
-  return fallback ? fallback : entitled ? (regional ? regional : market_fallback) : nullptr;
+  // Both inventory and explicit product queries can receive a fallback
+  // translation from the catalog. Preserve its actual language and market;
+  // display text does not change offer eligibility or account ownership.
+  return fallback ? fallback : regional ? regional : market_fallback;
 }
 bool utc(const std::string &s, INT64 *out) {
   if (s.size() < 20 || s.back() != 'Z' || s[4] != '-' || s[7] != '-' ||
@@ -241,7 +242,12 @@ HRESULT plan_coins(const std::vector<Product> &catalog,
                    const std::string &parent, const std::string &market,
                    const std::string &language, INT64 now, CoinPlan *out,
                    std::vector<XodusStoreCollectionRequestItem> *requests,
-                   bool entitled) {
+                   bool entitled, const char **reason) {
+  if (reason) *reason = nullptr;
+  const auto unsupported = [reason](const char *value) {
+    if (reason) *reason = value;
+    return E_NOTIMPL;
+  };
   if (!out || !requests)
     return E_POINTER;
   out->reset();
@@ -249,7 +255,7 @@ HRESULT plan_coins(const std::vector<Product> &catalog,
   if ((!entitled && ids.empty()) || ids.size() > 100 || !kinds || (kinds & ~31u))
     return E_INVALIDARG;
   if (actions.size() > 1)
-    return E_NOTIMPL;
+    return unsupported("action-filters");
   try {
     auto plan = std::make_shared<CoinCatalogPlan>();
     plan->entitled = entitled;
@@ -271,43 +277,48 @@ HRESULT plan_coins(const std::vector<Product> &catalog,
       // Their ownership is reported only with a positive Collections record;
       // absence is unknown because device-shared licenses are not covered.
       if (product.kind != 1 && product.kind != 2 && product.kind != 16 && !(entitled && product.kind == 4))
-        return E_NOTIMPL;
+        return unsupported("product-kind");
       if (product.raw_json.empty())
         return E_INVALIDARG;
       auto json = Json::parse(product.raw_json);
       const auto &p = json.at("Product");
       if (!(entitled && product.id == parent) && !associated(p, parent, market, "addOnParent"))
-        return E_NOTIMPL;
+        return unsupported("title-association");
       auto selected = std::find_if(product.skus.begin(), product.skus.end(),
           [&](const Sku &candidate) { return sku.empty() || candidate.id == sku; });
       if ((!entitled && product.skus.size() != 1) || selected == product.skus.end() || (entitled && sku.empty()))
-        return E_NOTIMPL;
+        return unsupported("sku-selection");
       const auto selected_index = static_cast<size_t>(selected - product.skus.begin());
       const auto &s = p.at("DisplaySkuAvailabilities")[selected_index].at("Sku");
       const auto &props = s.at("Properties");
-      if (!boolean_is(props, "IsTrial", false) || !props.count("Packages") ||
-          !props.at("Packages").is_array() || (!entitled && !props.at("Packages").empty()) ||
-          (!entitled && !empty_media(props, "BundledSkus")) ||
+      if (!boolean_is(props, "IsTrial", false))
+        return unsupported("trial-sku");
+      if (!props.count("Packages") || !props.at("Packages").is_array() ||
+          (!entitled && !props.at("Packages").empty()))
+        return unsupported("package-payload");
+      if ((!entitled && !empty_media(props, "BundledSkus")) ||
           (entitled && props.count("BundledSkus") && !props.at("BundledSkus").is_null() &&
-           !props.at("BundledSkus").is_array()) || !s.count("RecurrencePolicy") ||
+           !props.at("BundledSkus").is_array()))
+        return unsupported("bundle-sku");
+      if (!s.count("RecurrencePolicy") ||
           !s.at("RecurrencePolicy").is_null() ||
           !s.count("SubscriptionPolicyId") ||
           !s.at("SubscriptionPolicyId").is_null())
-        return E_NOTIMPL;
+        return unsupported("subscription-sku");
       // Bundle metadata is descriptive for an already-owned exact SKU. Its
       // children need their own authenticated entitlement records; never expand
       // ownership from BundledSkus or apply checkout restrictions to inventory.
       for (const auto &localized : p.at("LocalizedProperties"))
         if (!entitled && !empty_media(localized, "Videos"))
-          return E_NOTIMPL;
+          return unsupported("product-videos");
       for (const auto &localized : s.at("LocalizedProperties"))
         if (!entitled && !empty_media(localized, "Videos"))
-          return E_NOTIMPL;
-      const auto *pt = language_text(product.localized, language, market, entitled);
+          return unsupported("sku-videos");
+      const auto *pt = language_text(product.localized, language, market);
       const auto *st =
-          language_text(selected->localized, language, market, entitled);
-      if (!pt || !st)
-        return E_NOTIMPL;
+          language_text(selected->localized, language, market);
+      if (!pt) return unsupported("product-language");
+      if (!st) return unsupported("sku-language");
       Coin coin;
       coin.id = id;
       coin.sku = selected->id;
@@ -341,7 +352,7 @@ HRESULT plan_coins(const std::vector<Product> &catalog,
                 a.actions.end() &&
             !associated(p, parent, market, "SellableBy")) {
           if (entitled) continue;
-          return E_NOTIMPL;
+          return unsupported("offer-association");
         }
         if (!utc(a.start_date, &start) || !utc(a.end_date, &end))
           return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
@@ -349,13 +360,13 @@ HRESULT plan_coins(const std::vector<Product> &catalog,
           continue;
         if (!a.has_price || !unrestricted(raw_offers.at(i))) {
           if (entitled) continue;
-          return E_NOTIMPL;
+          return unsupported(a.has_price ? "offer-conditions" : "offer-price");
         }
         if (std::abs(std::round(a.price.list_price * 100) -
                      a.price.list_price * 100) > 0.00001 ||
             std::abs(std::round(a.price.base_price * 100) -
                      a.price.base_price * 100) > 0.00001)
-          return E_NOTIMPL;
+          return unsupported("price-precision");
         coin.offers.push_back(Offer{a.id, a.price.currency, a.price.base_price,
                                     a.price.list_price, end,
                                     std::find(a.actions.begin(), a.actions.end(), "Purchase") != a.actions.end()});
@@ -363,12 +374,12 @@ HRESULT plan_coins(const std::vector<Product> &catalog,
       if (coin.offers.empty() && !entitled) {
         if (!actions.empty())
           continue;
-        return E_NOTIMPL;
+        return unsupported("no-offer");
       }
       for (const auto &o : coin.offers)
         if (o.currency != coin.offers[0].currency ||
             o.price != coin.offers[0].price || o.base != coin.offers[0].base) {
-          if (!entitled) return E_NOTIMPL;
+          if (!entitled) return unsupported("ambiguous-price");
           // Personalized/ambiguous prices are not needed to list an owned SKU.
           coin.offers.clear(); break;
         }

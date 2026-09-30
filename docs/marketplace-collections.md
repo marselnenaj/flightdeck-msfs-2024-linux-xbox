@@ -65,6 +65,10 @@ query (`inventory`), metadata retrieval (`inventory-catalog`), product conversio
 indicates an unsupported operation or product shape, not necessarily a network
 outage. The cloud-sync section and `store_check` describe the current launcher
 service, which may differ from the session recorded in the game log.
+Mapping failures also include a fixed `reason` category in newly built runtimes,
+such as `sku-selection`, `product-language` or `offer-conditions`. Both the
+summary and session timeline preserve this category without product IDs or
+catalog text. Older logs cannot identify which mapping restriction failed.
 
 ## Check Store without a purchase
 
@@ -84,8 +88,12 @@ does not prove that the window is visible. Closing it or waiting past its
 90-second limit leaves the display step unconfirmed. The check can be cancelled
 from the launcher, and it excludes simultaneous game starts and setup changes.
 Results belong to the selected runtime and remain available in diagnostics for
-the current launcher service. Passing these checks does not establish that
-Microsoft's payment page loads or that a paid transaction succeeds.
+the current launcher service. The UI labels success as **Basic Store checks
+passed**. These checks do not execute the native `XStoreQueryProductsAsync`
+mapper used by the in-game Marketplace. They can pass while that query fails
+in the game; the latest session's result remains in the diagnostic report.
+Passing also does not establish that Microsoft's payment page loads or that a
+paid transaction succeeds.
 
 The integration uses the configured Store market
 for game licensing. The sections below document the supported API scope for
@@ -249,9 +257,13 @@ records or unavailable catalog metadata return errors, never empty success.
 The current mapping supports non-trial, non-subscription products. In Flightdeck
 0.1.7, an owned bundle SKU can be listed using its exact
 authenticated entitlement. Catalog bundle membership does not grant ownership
-of child products. Inventory also accepts a fallback translation returned for
-the selected market, preserving its actual language. Explicit purchase-offer
-queries retain their narrower restrictions.
+of child products. Inventory and explicit product queries accept a fallback
+translation returned for the selected market, preserving its actual language.
+Exact requested translations take priority, followed by the base language,
+another regional translation of that language, and the catalog's fallback for
+the same market. This does not change the Store region, currency, offer
+conditions or ownership. Explicit purchase-offer queries retain their other
+restrictions.
 The service reports direct and satisfying account coverage explicitly;
 device-shared rights are not covered. This is not full GDK Store parity.
 

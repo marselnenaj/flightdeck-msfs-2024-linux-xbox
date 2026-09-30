@@ -20,13 +20,13 @@ INT64 now_ms() {
   return static_cast<INT64>(value.QuadPart / 10000) - 11644473600000LL;
 }
 INT64 now_utc() { return now_ms()/1000; }
-HRESULT diagnose(const char *stage, HRESULT hr) {
+HRESULT diagnose(const char *stage, HRESULT hr, const char *reason = nullptr) {
   static std::atomic<unsigned> calls{0};
   const auto index=calls.fetch_add(1);
   if(index==2048)std::fprintf(stderr,"[flightdeck-store-events-truncated]\n");
   if (index < 2048)
-    std::fprintf(stderr, "[xodus-store-catalog] stage=%s hr=%08lx time_ms=%lld\n", stage,
-                 static_cast<ULONG>(hr), now_ms());
+    std::fprintf(stderr, "[xodus-store-catalog] stage=%s hr=%08lx time_ms=%lld%s%s\n", stage,
+                 static_cast<ULONG>(hr), now_ms(), reason ? " reason=" : "", reason ? reason : "");
   return hr;
 }
 bool root_id(const std::string &value) {
@@ -120,8 +120,9 @@ HRESULT query_entitled(CatalogReader &reader, const InventoryProvider &provider,
     }
     CoinPlan plan;
     std::vector<XodusStoreCollectionRequestItem> requests;
-    hr = plan_coins(products, ids, kinds, {}, parent, market, language, now_utc(), &plan, &requests, true);
-    if (FAILED(hr)) return diagnose("inventory-mapping", hr);
+    const char *reason = nullptr;
+    hr = plan_coins(products, ids, kinds, {}, parent, market, language, now_utc(), &plan, &requests, true, &reason);
+    if (FAILED(hr)) return diagnose("inventory-mapping", hr, reason);
     if (cancelled_now(cancelled)) return E_ABORT;
     if (snapshot->expires_at <= now_utc()) return HRESULT_FROM_WIN32(ERROR_TIMEOUT);
     hr = coin_page(plan, snapshot.get(), now_utc(), out, snapshot->continuation);
@@ -186,10 +187,11 @@ HRESULT query_coins(CatalogReader &reader, const CollectionsProvider &provider,
       return diagnose("catalog", hr);
     CoinPlan plan;
     std::vector<XodusStoreCollectionRequestItem> requests;
+    const char *reason = nullptr;
     hr = plan_coins(catalog, requested, kinds, filters, parent, market,
-                    language, now_utc(), &plan, &requests);
+                    language, now_utc(), &plan, &requests, false, &reason);
     if (FAILED(hr))
-      return diagnose("mapping", hr);
+      return diagnose("mapping", hr, reason);
     if (cancelled_now(cancelled))
       return E_ABORT;
     XodusStoreCollectionSnapshot *raw = nullptr;

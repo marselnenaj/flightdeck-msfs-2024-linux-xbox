@@ -21,8 +21,15 @@ Flightdeck installiert und startet deine **gekaufte Xbox-PC-/Microsoft-Store-
 Version von MSFS 2024 oder 2020** unter Linux mit Wine/Proton. Mit dem Microsoft-Konto
 anmelden, das Spiel herunterladen und im Launcher starten.
 
-**Aktuelle öffentliche Version: [Flightdeck 0.1.12](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.12).**
+**Aktuelle öffentliche Version: [Flightdeck 0.1.13](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.13).**
 Aktualisiere über **Updates → Flightdeck** oder verwende den vollständigen Installer.
+**0.1.13** korrigiert fehlgeschlagene Marketplace-Produktabfragen, wenn Microsoft
+einen Ersatztext für die gewählte Store-Region liefert. Bei deutscher Sprache
+haben vorhandene deutsche Texte Vorrang; Region und Preise bleiben erhalten.
+Berichte benennen nicht unterstützte Produktmerkmale genauer. Der Store-Check
+kennzeichnet jetzt ausdrücklich, dass er keine Produktabfragen im Spiel prüft.
+Die Behebung des gemeldeten Marketplace-Fehlers muss noch im betroffenen Spiel bestätigt werden.
+
 **0.1.12** korrigiert die Update-/Neustart-Prüfung größerer, neu hinzugekommener
 Runtime-Bibliotheken. Meldet ein älterer Launcher nach dem Update, dass die
 installierte Version nicht zugeordnet werden konnte, schließe Flightdeck und
