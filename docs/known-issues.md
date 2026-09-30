@@ -2,7 +2,7 @@
 
 [Deutsch](known-issues.de.md)
 
-Status: Flightdeck 0.1.11, 29 September 2026.
+Status: Flightdeck 0.1.14, 30 September 2026.
 
 **Component updates:** 0.1.10 fixes older Store binaries being left behind when
 launch scripts were customized. Update and reopen Flightdeck with the simulator
@@ -10,11 +10,17 @@ closed; the Store check should then pass its component step. Customized scripts
 are retained. This does not by itself confirm the online checks below.
 
 The following reported issues are not yet confirmed resolved and do not affect every
-installation. The NVIDIA black main view is the current priority, followed by
-cloud-sync and Marketplace session reliability.
+installation. A sign-in failure can prevent testing simulator rendering.
 
 ## Current scope
 
+- **Microsoft sign-in:** the login window is reported to close immediately
+  with a generic sign-in failure before the simulator starts. The login
+  component was unchanged between 0.1.12 and 0.1.13. Version 0.1.14 preserves
+  Microsoft follow-up challenges that could previously be discarded as terminal
+  failures. It does not yet establish the cause of
+  every closing window or a connection to the NVIDIA rendering problem.
+  [Correction and validation scope](store-session-refresh.md#interactive-challenge-correction-0114).
 - **NVIDIA:** MSFS 2024 can show working menus and overlays while the world map
   and primary 3D view stay black. 0.1.11 corrects DXVK's ignored Low Latency
   opt-out and automatically uses the complete DirectX 11/12 compatibility

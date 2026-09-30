@@ -1,5 +1,25 @@
 # Changes and release status
 
+## 0.1.14 — 30 September 2026
+
+[Download Flightdeck 0.1.14](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.14).
+
+- Preserve a Microsoft follow-up sign-in URL when the token exchange also
+  reports a credential fault. Since 0.1.9, this combination could end the
+  interactive login before displaying the required next step. Silent renewal
+  continues to require sign-in; a challenge does not count as successful login.
+- Share the existing Microsoft HTTPS challenge validation between renewal and
+  interactive login. Keep credential rejection without a valid challenge as a
+  failure, and retain account binding and root-ticket validation.
+
+- Ship rebuilt login and broker components and recognize the 0.1.13 component
+  set for automatic updates of managed installations.
+
+A synthetic regression test reproduces the discarded challenge in 0.1.13 and
+passes with this correction. Authentication and session-renewal tests and the
+native build pass. Confirmation of the reported immediately closing login
+window on affected hardware remains pending; NVIDIA rendering is not changed.
+
 ## 0.1.13 — 30 September 2026
 
 [Download Flightdeck 0.1.13](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.13).

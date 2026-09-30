@@ -573,9 +573,16 @@ diff --git c/crates/xodus-cli/src/commands/login.rs w/crates/xodus-cli/src/comma
 +        if self.expected.as_ref().is_some_and(|puid| puid != &data.puid) {
 +            return Err("Please sign in with the existing Microsoft account".into());
 +        }
-@@ -149 +152,0 @@
+@@ -145,3 +149 @@
+-                if let Some(pp) = pp
+-                    && let Some(auth_url) = pp.inline_auth_url
+-                {
++                if let Some(auth_url) = pp.as_ref().and_then(soap::PP::interactive_auth_url) {
+@@ -149,2 +151 @@
 -                    self.finish = true;
-@@ -160,7 +163,3 @@
+-                    runtime.open_session(webview::finalize_request(auth_url));
++                    runtime.open_session(webview::finalize_request(auth_url.to_owned()));
+@@ -160,7 +161,3 @@
 -                self.tokens
 -                    .save_user(&xodus::models::secrets::User {
 -                        puid: data.puid,
@@ -6930,13 +6937,14 @@ diff --git c/crates/xodus/src/api/live/mod.rs w/crates/xodus/src/api/live/mod.rs
 +    let secret = BASE64_STANDARD.decode(token.binary_secret.as_ref().ok_or(rst::RSTError::InvalidCredential)?)?;
 +    let secret: [u8; 4096] = secret.try_into().map_err(|_| rst::RSTError::InvalidCredential)?;
 +    if u32::from_le_bytes(secret[..4].try_into().map_err(|_|rst::RSTError::InvalidCredential)?) != 4 { return Err(rst::RSTError::InvalidCredential); }
-@@ -76,2 +79,2 @@
+@@ -76,4 +79,4 @@
 -            let token = collection.security_tokens.remove(0);
 -            Ok(token)
+-        }
+-        b => unimplemented!("Exchange token supports only singular token right now {b:?}"),
 +            if collection.security_tokens.len() != 1 { return Err(rst::RSTError::InvalidResponse); }
 +            Ok(collection.security_tokens.remove(0))
-@@ -79 +82 @@
--        b => unimplemented!("Exchange token supports only singular token right now {b:?}"),
++        }
 +        _ => Err(rst::RSTError::InvalidResponse),
 @@ -96,2 +99,3 @@
 -    let secret = BASE64_STANDARD.decode(device_token.binary_secret.as_ref().unwrap())?;
@@ -6944,7 +6952,7 @@ diff --git c/crates/xodus/src/api/live/mod.rs w/crates/xodus/src/api/live/mod.rs
 +    let secret = BASE64_STANDARD.decode(device_token.binary_secret.as_ref().ok_or(rst::RSTError::InvalidCredential)?)?;
 +    let secret: [u8; 4096] = secret.try_into().map_err(|_| rst::RSTError::InvalidCredential)?;
 +    if u32::from_le_bytes(secret[..4].try_into().map_err(|_|rst::RSTError::InvalidCredential)?) != 4 { return Err(rst::RSTError::InvalidCredential); }
-@@ -126,2 +130,7 @@
+@@ -126,2 +130,12 @@
 -    Ok(match envelope.body.body {
 -        soap::BodyContent::Fault(_) => ExchangeUserTokenOutcome::Fault(envelope.header.pp),
 +    user_exchange_outcome(envelope.body.body, envelope.header.pp)
@@ -6952,14 +6960,60 @@ diff --git c/crates/xodus/src/api/live/mod.rs w/crates/xodus/src/api/live/mod.rs
 +
 +fn user_exchange_outcome(body: soap::BodyContent, pp: Option<soap::PP>) -> Result<ExchangeUserTokenOutcome, rst::RSTError> {
 +    Ok(match body {
-+        soap::BodyContent::Fault(fault) if fault.rejects_credentials() => return Err(rst::RSTError::AuthenticationRejected),
++        // A credential fault may carry the next interactive sign-in step.
++        // Preserve it for the login handler; silent renewal still reports that
++        // sign-in is required. Only a rejection without that step is terminal.
++        soap::BodyContent::Fault(fault) if fault.rejects_credentials()
++            && pp.as_ref().and_then(soap::PP::interactive_auth_url).is_none() =>
++                return Err(rst::RSTError::AuthenticationRejected),
 +        soap::BodyContent::Fault(_) => ExchangeUserTokenOutcome::Fault(pp),
-@@ -129,0 +139,21 @@
+@@ -129,0 +144,62 @@
 +}
 +
 +#[cfg(test)]
 +mod auth_fault_tests {
 +    use super::*;
++    #[test]
++    fn credential_fault_with_inline_challenge_remains_interactive() {
++        for xml in [
++            "<Fault><faultcode>wsse:FailedAuthentication</faultcode></Fault>",
++            "<Fault><Code><Value>s:Sender</Value><Subcode><Value>wsse:InvalidSecurityToken</Value></Subcode></Code></Fault>",
++        ] {
++            for challenge in ["https://login.live.com/continue", "https://account.live.com/continue"] {
++                let fault = quick_xml::de::from_str::<soap::Fault>(xml).unwrap();
++                let pp = quick_xml::de::from_str::<soap::PP>(&format!(
++                    "<PP><inlineauthurl>{challenge}</inlineauthurl></PP>"
++                )).unwrap();
++                let outcome = user_exchange_outcome(soap::BodyContent::Fault(fault), Some(pp));
++                let Ok(ExchangeUserTokenOutcome::Fault(Some(pp))) = outcome else {
++                    panic!("An interactive challenge was discarded as a terminal login failure");
++                };
++                assert_eq!(pp.inline_auth_url.as_deref(), Some(challenge));
++                assert_eq!(pp.interactive_auth_url(), Some(challenge));
++                assert_eq!(crate::tokens::session::fault(Some(&pp)),
++                    crate::tokens::session::SessionError::SignInRequired);
++            }
++        }
++    }
++    #[test]
++    fn credential_fault_without_valid_challenge_stays_rejected() {
++        for challenge in [
++            "", "relative/path", "http://login.live.com/continue",
++            "https://example.invalid/continue", "https://login.live.com.example.invalid/continue",
++            "https://login.live.com:444/continue", "https://user@login.live.com/continue",
++            "https://user:password@login.live.com/continue", "javascript:void(0)",
++        ] {
++            let fault = quick_xml::de::from_str::<soap::Fault>(
++                "<Fault><faultcode>wsse:FailedAuthentication</faultcode></Fault>"
++            ).unwrap();
++            let pp = quick_xml::de::from_str::<soap::PP>(&format!(
++                "<PP><inlineauthurl>{challenge}</inlineauthurl></PP>"
++            )).unwrap();
++            assert_eq!(pp.interactive_auth_url(), None);
++            assert!(matches!(user_exchange_outcome(soap::BodyContent::Fault(fault), Some(pp)),
++                Err(rst::RSTError::AuthenticationRejected)));
++        }
++    }
 +    #[test]
 +    fn credential_rejection_without_inline_url_requires_login_but_service_faults_do_not() {
 +        for (xml, requires_login) in [
@@ -6976,7 +7030,7 @@ diff --git c/crates/xodus/src/api/live/mod.rs w/crates/xodus/src/api/live/mod.rs
 +            } else { assert!(matches!(result,Ok(ExchangeUserTokenOutcome::Fault(None)))); }
 +        }
 +    }
-@@ -145 +175 @@
+@@ -145 +221 @@
 -        ensure_device_credentials(&client, &mgr).await;
 +        ensure_device_credentials(&client, &mgr).await.unwrap();
 diff --git c/crates/xodus/src/api/live/rst/error.rs w/crates/xodus/src/api/live/rst/error.rs
@@ -7058,6 +7112,23 @@ diff --git c/crates/xodus/src/models/soap/base.rs w/crates/xodus/src/models/soap
 +            code.and_then(|c|c.subcode.as_ref()).and_then(|c|c.value.as_deref())]
 +            .into_iter().flatten().any(|value| matches!(value.rsplit(':').next(),
 +                Some("FailedAuthentication" | "InvalidSecurityToken")))
++    }
++}
+@@ -121,0 +148,16 @@
++
++impl PP {
++    /// The same Microsoft HTTPS challenge is usable by interactive login and
++    /// reported as requiring sign-in by silent renewal. It is not a credential.
++    pub fn interactive_auth_url(&self) -> Option<&str> {
++        self.inline_auth_url.as_deref().filter(|value| {
++            url::Url::parse(value).is_ok_and(|url| {
++                url.scheme() == "https"
++                    && matches!(url.host_str(), Some("login.live.com" | "account.live.com"))
++                    && url.username().is_empty()
++                    && url.password().is_none()
++                    && url.port_or_known_default() == Some(443)
++            })
++        })
 +    }
 +}
 diff --git c/crates/xodus/src/models/xgameruntime/xuser.rs w/crates/xodus/src/models/xgameruntime/xuser.rs
@@ -7618,7 +7689,7 @@ diff --git c/crates/xodus/src/tokens/session.rs w/crates/xodus/src/tokens/sessio
 new file mode 100644
 --- /dev/null
 +++ w/crates/xodus/src/tokens/session.rs
-@@ -0,0 +1,174 @@
+@@ -0,0 +1,172 @@
 +// SPDX-License-Identifier: GPL-3.0-only
 +//! Real, silent renewal shared by all broker connections. No synthetic tickets,
 +//! device provisioning, interactive windows, or credential deletion on failure.
@@ -7712,9 +7783,7 @@ new file mode 100644
 +pub fn fault(pp: Option<&soap::PP>) -> SessionError {
 +    // Only an explicit Microsoft interactive challenge is a login requirement.
 +    // Unknown SOAP faults (including service outages) do not log the user out.
-+    let challenge = pp.and_then(|p| p.inline_auth_url.as_deref()).and_then(|s|url::Url::parse(s).ok());
-+    if challenge.is_some_and(|u| u.scheme()=="https" && matches!(u.host_str(),Some("login.live.com" | "account.live.com"))
-+        && u.username().is_empty() && u.password().is_none() && u.port_or_known_default()==Some(443)) {
++    if pp.and_then(soap::PP::interactive_auth_url).is_some() {
 +        SessionError::SignInRequired
 +    } else { SessionError::Connection }
 +}

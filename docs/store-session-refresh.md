@@ -74,3 +74,30 @@ using launcher recovery. NVIDIA rendering is a separate issue; see
 The source changes are pinned in `compat/patches/xodus-broker.patch` and
 `compat/patches/winegdk-runtime.patch`, with their reviewed source deltas and
 upstream hashes. A clean stage must reproduce them before packaging.
+
+## Interactive challenge correction (0.1.14)
+
+The credential-fault classification added to the shared token exchange in 0.1.9
+ran before checking the accompanying interactive challenge. A reply containing both a
+credential fault and a Microsoft follow-up URL therefore terminated the login
+instead of opening the next sign-in step. The CLI reduced this to its generic
+window-or-flow error. The same message can have other causes and does not by
+itself establish a WebKit or GPU crash.
+
+Flightdeck 0.1.14 preserves the challenge for the interactive handler.
+Both interactive login and silent renewal use the existing HTTPS validation for
+`login.live.com` and `account.live.com`. Silent renewal still reports sign-in
+required; credential faults without a valid challenge still fail. Account
+matching, root-ticket validation and credential storage after successful
+completion are unchanged.
+
+Synthetic tests cover both supported SOAP credential-fault forms, both challenge
+hosts, malformed and disallowed URLs, and rejection without an inline URL.
+The positive regression fails against the 0.1.13 source and passes with the
+correction. The immediately closing window still needs confirmation on an
+affected installation. Update and restart Flightdeck before retrying sign-in.
+
+A local X11/GTK/WebKit probe using the actual login webview module and a fresh
+isolated browser profile displayed Microsoft's real sign-in form and kept the
+window open. It did not initialize account storage, exchange credentials or
+complete an account sign-in. This verifies local page rendering only.
