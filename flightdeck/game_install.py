@@ -220,6 +220,11 @@ def _check_login_result(result):
         70: "Das Microsoft-Anmeldefenster oder der Anmeldeablauf ist fehlgeschlagen. Flightdeck aus der grafischen Sitzung starten und erneut versuchen.",
         71: "Die Microsoft-Anmeldung konnte nicht vorbereitet werden. Schlüsselbund und Netzwerk prüfen und erneut versuchen.",
         72: "Die Microsoft-Anmeldedaten konnten nicht gespeichert werden. Den Linux-Schlüsselbund prüfen und erneut versuchen.",
+        73: "Die Verbindung zu Microsoft ist während der Anmeldung fehlgeschlagen (Anmeldecode 73). Bitte die Verbindung prüfen und erneut versuchen.",
+        74: "Die Microsoft-Anmeldeantwort konnte nicht verarbeitet werden (Anmeldecode 74). Bitte diesen Code beim Fehlerbericht angeben.",
+        75: "Microsoft hat die Anmeldung ohne einen unterstützten Verifizierungsschritt abgelehnt (Anmeldecode 75). Bitte diesen Code beim Fehlerbericht angeben.",
+        76: "Bitte mit demselben Microsoft-Konto wie zuvor anmelden (Anmeldecode 76).",
+        79: "Microsoft hat keinen unterstützten Verifizierungsschritt zurückgegeben (Anmeldecode 79). Bitte diesen Code beim Fehlerbericht angeben.",
         101: "Die Microsoft-Anmeldung wurde unerwartet beendet. Grafische Sitzung, GTK/WebKitGTK und Schlüsselbund prüfen und erneut versuchen.",
     }
     if result in failures:

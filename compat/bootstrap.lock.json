@@ -1,12 +1,12 @@
 {
   "format": 1,
   "native": {
-    "archive_url": "https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/download/v0.1.14/flightdeck-compat-0.1.14-linux-x86_64.tar.gz",
-    "archive_sha256": "2f5182c50b324978f13854187ff3e69fbd6c23cb886095abb19bb62b6426e01c",
+    "archive_url": "https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/download/v0.1.15/flightdeck-compat-0.1.15-linux-x86_64.tar.gz",
+    "archive_sha256": "eb7fa8f4b2d01559fc671de954bd75672c54a7ed4ca678a7450c95431797971a",
     "minimum_glibc": "2.39",
     "files": {
       "bin/flightdeck-connected-storage.exe": "0fdc1ba8754f68ac1cc964e6411925dd728eb5e5d82fec14bf11f71aa299db54",
-      "bin/xodus-cli": "fe13817a89206b46478337837822dd23091cfa246800abd1486c81450086eb64",
+      "bin/xodus-cli": "67d2060883909b2def86a85b42dd445cf150f086770d556ddf741f4097c75d18",
       "bin/xodus-service": "bde1b6d6afaa245280837382880a8b2c7d32d8b528d388e7237f5eb4c6a78549",
       "builtin/x86_64-unix/xodus_store_test.so": "1d40f99aefab727e67f32eb4cd7aeee56d7685fa4e4fecde72d18dbd2881dc64",
       "builtin/x86_64-windows/xodus_store_test.dll": "cae1492a9e5ccad8154b812cc55cac8f2631296967569e0a614bea01012ae159",
@@ -156,9 +156,17 @@
         "builtin/x86_64-unix/xodus_store_test.so": "1d40f99aefab727e67f32eb4cd7aeee56d7685fa4e4fecde72d18dbd2881dc64",
         "builtin/x86_64-windows/xodus_store_test.dll": "cae1492a9e5ccad8154b812cc55cac8f2631296967569e0a614bea01012ae159",
         "runtime/xgameruntime.dll": "87f20504a191d8472730035aba998093160d879a7a0c7f56449c7908b02aa932"
+      },
+      {
+        "bin/flightdeck-connected-storage.exe": "0fdc1ba8754f68ac1cc964e6411925dd728eb5e5d82fec14bf11f71aa299db54",
+        "bin/xodus-cli": "fe13817a89206b46478337837822dd23091cfa246800abd1486c81450086eb64",
+        "bin/xodus-service": "bde1b6d6afaa245280837382880a8b2c7d32d8b528d388e7237f5eb4c6a78549",
+        "builtin/x86_64-unix/xodus_store_test.so": "1d40f99aefab727e67f32eb4cd7aeee56d7685fa4e4fecde72d18dbd2881dc64",
+        "builtin/x86_64-windows/xodus_store_test.dll": "cae1492a9e5ccad8154b812cc55cac8f2631296967569e0a614bea01012ae159",
+        "runtime/xgameruntime.dll": "87f20504a191d8472730035aba998093160d879a7a0c7f56449c7908b02aa932"
       }
     ],
-    "notice_sha256": "c2ed40a39237db31f2e0f582a2d50b4984b59406134753ba05bccc8e635066b1",
+    "notice_sha256": "7c70e8de1434a377239ef7b64ef44163a4dff1d1b955552cbe88c1b8d6f40b10",
     "cli_features": [
       "streaming-resume-files-v1",
       "package-info-json-v1",

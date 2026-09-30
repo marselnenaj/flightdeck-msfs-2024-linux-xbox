@@ -137,6 +137,20 @@ a real Store page.
 See [the runtime contract](docs/runtime.md) to prepare a local installation from
 the built artifacts and user-owned runner, package and Wine prefix.
 
+The Microsoft sign-in browser handoff has a separate native regression check:
+
+```sh
+python3 tests/compat/login-flow-test.py --stage build/compat \
+  --output build/login-flow-check --backend x11
+# Use --backend wayland to check the native Wayland attachment as well.
+```
+
+This requires the same Cargo environment and an active graphical session.
+It uses only loopback pages and synthetic tokens, without Microsoft requests or
+keyring access. The production webview must retain session cookies and ignore
+callbacks from previous views through two follow-up steps. A separate case
+checks response-error classification. The output directory must be new.
+
 ## Graphics adapter regression check
 
 Flightdeck 0.1.9 also has a separately pinned NVIDIA VKD3D backport and a

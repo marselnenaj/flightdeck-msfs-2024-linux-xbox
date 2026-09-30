@@ -490,9 +490,45 @@ diff --git c/crates/xodus-cli/src/commands/extract.rs w/crates/xodus-cli/src/com
 diff --git c/crates/xodus-cli/src/commands/login.rs w/crates/xodus-cli/src/commands/login.rs
 --- c/crates/xodus-cli/src/commands/login.rs
 +++ w/crates/xodus-cli/src/commands/login.rs
-@@ -13,2 +13,8 @@
+@@ -13,2 +13,44 @@
 -pub async fn run(client: &reqwest::Client, tokens: &TokenManager) -> ExitCode {
 -    let token = tokens.get_device_sts_token().unwrap();
++#[derive(Debug)]
++enum LoginFlowError {
++    AccountMismatch,
++    MissingChallenge,
++}
++
++impl std::fmt::Display for LoginFlowError {
++    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
++        f.write_str(match self {
++            Self::AccountMismatch => "Please sign in with the existing Microsoft account",
++            Self::MissingChallenge => "Microsoft did not return a supported verification step",
++        })
++    }
++}
++
++impl std::error::Error for LoginFlowError {}
++
++// Only fixed exit codes cross into the launcher. Do not log the error itself:
++// network, XML and signature errors can contain account data or response text.
++fn failure_code(error: &(dyn std::error::Error + 'static)) -> u8 {
++    use xodus::api::live::RSTError;
++    if let Some(error) = error.downcast_ref::<RSTError>() {
++        return match error {
++            RSTError::InvalidCredential => 71,
++            RSTError::Request(_) => 73,
++            RSTError::AuthenticationRejected => 75,
++            _ => 74,
++        };
++    }
++    match error.downcast_ref::<LoginFlowError>() {
++        Some(LoginFlowError::AccountMismatch) => 76,
++        Some(LoginFlowError::MissingChallenge) => 79,
++        None => 70,
++    }
++}
++
 +pub async fn run(client: &reqwest::Client, tokens: &TokenManager, same_account: bool) -> ExitCode {
 +    let token = match tokens.get_device_sts_token() {
 +        Ok(token) => token,
@@ -501,7 +537,7 @@ diff --git c/crates/xodus-cli/src/commands/login.rs w/crates/xodus-cli/src/comma
 +            return ExitCode::from(71);
 +        }
 +    };
-@@ -19,7 +25,11 @@
+@@ -19,27 +61,27 @@
 -    let handler = LoginHandler::new(client.clone(), token, tokens.clone());
 -    let output = webview::run_sessions(handler)
 -        .expect("failed to login")
@@ -509,25 +545,14 @@ diff --git c/crates/xodus-cli/src/commands/login.rs w/crates/xodus-cli/src/comma
 -    let issued_tokens = match output {
 -        Some(soap::BodyContent::RequestSecurityTokenResponseCollection(collection)) => {
 -            collection.security_tokens
-+    let expected = if same_account { match tokens.get_user() {
-+        Ok(user) if !user.puid.is_empty() => Some(user.puid),
-+        Err(xodus::tokens::store::TokenStoreError::NotFound) => None,
-+        _ => return ExitCode::from(71),
-+    }} else { None };
-+    let handler = LoginHandler::new(client.clone(), token, expected);
-+    let output = match webview::run_sessions(handler) {
-+        Ok(output) => output.flatten(),
-+        Err(_) => {
-+            eprintln!("Microsoft sign-in window or flow failed");
-+            return ExitCode::from(70);
-@@ -27,6 +36,0 @@
+-        }
 -        Some(soap::BodyContent::RequestSecurityTokenResponse(token)) => vec![*token],
 -        None => {
 -            eprintln!("Didn't log in");
 -            vec![]
 -        }
 -        _ => unreachable!(),
-@@ -34,10 +38,10 @@
+-    };
 -
 -    for token in issued_tokens {
 -        let address = token.applies_to.endpoint_reference.address.clone();
@@ -538,51 +563,73 @@ diff --git c/crates/xodus-cli/src/commands/login.rs w/crates/xodus-cli/src/comma
 -            address
 -        };
 -        tokens.save_user_token(address, token).unwrap();
+-    }
+-
++    let expected = if same_account { match tokens.get_user() {
++        Ok(user) if !user.puid.is_empty() => Some(user.puid),
++        Err(xodus::tokens::store::TokenStoreError::NotFound) => None,
++        _ => return ExitCode::from(71),
++    }} else { None };
++    let handler = LoginHandler::new(client.clone(), token, expected);
++    let output = match webview::run_sessions(handler) {
++        Ok(output) => output.flatten(),
++        Err(error) => {
++            let code = failure_code(error.as_ref());
++            eprintln!("Microsoft sign-in failed (code {code})");
++            return ExitCode::from(code);
++        }
++    };
 +    let Some((user, body)) = output else { return ExitCode::FAILURE; };
 +    // Commit only after the complete exchange issued a usable root credential.
 +    // A closed window or incomplete exchange leaves the existing account intact.
 +    let root = match xodus::tokens::session::renewed_sts(body) {
 +        Ok(root) => root,
-+        Err(_) => return ExitCode::FAILURE,
++        Err(_) => return ExitCode::from(74),
 +    };
 +    if tokens.save_user_token(xodus::tokens::PASSPORT_STS.into(), secrets::Token::Legacy(root)).is_err()
 +        || tokens.save_user(&user).is_err() {
 +        return ExitCode::from(72);
-@@ -45,0 +50 @@
++    }
++
 +    println!("Login completed; credentials stored.");
-@@ -53,2 +58 @@
+@@ -53,2 +95 @@
 -    finish: bool,
 -    tokens: TokenManager,
 +    expected: Option<String>,
-@@ -61 +65 @@
+@@ -61 +102 @@
 -        tokens: TokenManager,
 +        expected: Option<String>,
-@@ -67,2 +71 @@
+@@ -67,2 +108 @@
 -            finish: false,
 -            tokens,
 +            expected,
-@@ -100,3 +103 @@
+@@ -100,3 +140 @@
 -                if self.finish {
 -                    scopes.push(("http://Passport.NET/tb".to_string(), None));
 -                }
 +                scopes.push(("http://Passport.NET/tb".to_string(), None));
-@@ -122 +123 @@
+@@ -122 +160 @@
 -    type Output = Option<soap::BodyContent>;
 +    type Output = Option<(secrets::User, soap::BodyContent)>;
-@@ -140,0 +142,3 @@
+@@ -140,0 +179,3 @@
 +        if self.expected.as_ref().is_some_and(|puid| puid != &data.puid) {
-+            return Err("Please sign in with the existing Microsoft account".into());
++            return Err(LoginFlowError::AccountMismatch.into());
 +        }
-@@ -145,3 +149 @@
+@@ -145,3 +186 @@
 -                if let Some(pp) = pp
 -                    && let Some(auth_url) = pp.inline_auth_url
 -                {
 +                if let Some(auth_url) = pp.as_ref().and_then(soap::PP::interactive_auth_url) {
-@@ -149,2 +151 @@
+@@ -149,2 +188 @@
 -                    self.finish = true;
 -                    runtime.open_session(webview::finalize_request(auth_url));
 +                    runtime.open_session(webview::finalize_request(auth_url.to_owned()));
-@@ -160,7 +161,3 @@
+@@ -154 +191,0 @@
+-                println!("User token exchange returned a fault without inline auth");
+@@ -156 +193 @@
+-                Ok(webview::HandlerControl::Complete(None))
++                Err(LoginFlowError::MissingChallenge.into())
+@@ -160,7 +197,3 @@
 -                self.tokens
 -                    .save_user(&xodus::models::secrets::User {
 -                        puid: data.puid,
@@ -593,6 +640,35 @@ diff --git c/crates/xodus-cli/src/commands/login.rs w/crates/xodus-cli/src/comma
 +                Ok(webview::HandlerControl::Complete(Some((
 +                    secrets::User { puid: data.puid, username: data.username }, da,
 +                ))))
+@@ -178,0 +212,28 @@
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++    use xodus::api::live::RSTError;
++
++    #[test]
++    fn response_and_verification_failures_are_not_window_errors() {
++        for (error, code) in [
++            (RSTError::InvalidCredential, 71),
++            (RSTError::InvalidResponse, 74),
++            (RSTError::MissingNonce, 74),
++            (RSTError::InvalidResponseSignature("SYNTHETIC-PRIVATE-RESPONSE".into()), 74),
++            (RSTError::AuthenticationRejected, 75),
++        ] {
++            assert_eq!(failure_code(&error), code);
++        }
++        assert_eq!(failure_code(&LoginFlowError::AccountMismatch), 76);
++        assert_eq!(failure_code(&LoginFlowError::MissingChallenge), 79);
++        assert_eq!(failure_code(&std::io::Error::other("window creation")), 70);
++    }
++
++    #[test]
++    fn request_failure_is_reported_without_its_url_or_response() {
++        let error = reqwest::Client::new().get("https://[synthetic-private-value").build().unwrap_err();
++        assert_eq!(failure_code(&RSTError::Request(error)), 73);
++    }
++}
 diff --git c/crates/xodus-cli/src/commands/package_info.rs w/crates/xodus-cli/src/commands/package_info.rs
 new file mode 100644
 --- /dev/null
@@ -2875,16 +2951,62 @@ new file mode 100644
 diff --git c/crates/xodus-cli/src/webview.rs w/crates/xodus-cli/src/webview.rs
 --- c/crates/xodus-cli/src/webview.rs
 +++ w/crates/xodus-cli/src/webview.rs
-@@ -381 +381,4 @@
+@@ -7 +7 @@
+-use wry::{PageLoadEvent, WebView, WebViewBuilder};
++use wry::{PageLoadEvent, WebContext, WebView, WebViewBuilder};
+@@ -75,0 +76,3 @@
++    // Keep the password and follow-up verification in the same browser context.
++    // A new default WebContext for each view discards in-memory session cookies.
++    web_context: WebContext,
+@@ -77 +80 @@
+-    error: Option<String>,
++    error: Option<Box<dyn std::error::Error>>,
+@@ -165,0 +169 @@
++        web_context: WebContext::default(),
+@@ -189 +193 @@
+-                    state.error = Some(err.to_string());
++                    state.error = Some(err);
+@@ -207,6 +211,12 @@
+-                apply_handler_result(
+-                    &proxy,
+-                    target,
+-                    &mut state,
+-                    move |handler, runtime| handler.on_token(session_id, data, runtime),
+-                );
++                // Both the page and our post.srf fallback can enqueue a token.
++                // The first callback may already have opened the email-code
++                // challenge; a queued callback from that old view must not
++                // exchange its credential again or terminate the new step.
++                if state.active_session == Some(session_id) {
++                    apply_handler_result(
++                        &proxy,
++                        target,
++                        &mut state,
++                        move |handler, runtime| handler.on_token(session_id, data, runtime),
++                    );
++                }
+@@ -234 +244 @@
+-        return Err(std::io::Error::other(error).into());
++        return Err(error);
+@@ -277 +287 @@
+-        Err(err) => state.error = Some(err.to_string()),
++        Err(err) => state.error = Some(err),
+@@ -300 +310 @@
+-                    state.error = Some(err.to_string());
++                    state.error = Some(err);
+@@ -335 +345 @@
+-    let builder = WebViewBuilder::new()
++    let builder = WebViewBuilder::new_with_web_context(&mut state.web_context)
+@@ -381 +391,4 @@
 -        builder.build_gtk(window.default_vbox().unwrap()).unwrap()
 +        let container = window.default_vbox().ok_or_else(|| {
 +            std::io::Error::other("login window has no GTK container")
 +        })?;
 +        builder.build_gtk(container)?
-@@ -384 +387 @@
+@@ -384 +397 @@
 -    let webview = builder.build(&window).unwrap();
 +    let webview = builder.build(&window)?;
-@@ -387,0 +391,2 @@
+@@ -387,0 +401,2 @@
 +    window.set_visible(true);
 +    window.set_focus();
 diff --git c/crates/xodus-service/Cargo.toml w/crates/xodus-service/Cargo.toml

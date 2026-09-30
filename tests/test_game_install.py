@@ -111,6 +111,24 @@ sys.exit(settings.get('download_exit', 0))
         self.assertEqual(len(commands), 1)
         self.assertEqual(commands[0][-3:], ["--resume-files", "--expect-package", "a" * 64])
 
+    def test_login_verification_failures_have_distinct_localized_codes(self):
+        for code, hint in ((73, "connection"), (74, "response"), (75, "rejected"),
+                           (76, "same Microsoft account"), (79, "verification step")):
+            with self.subTest(code=code):
+                self.destination = self.root / f"challenge-{code}"
+                self.settings(login_exit=code)
+                with self.assertRaises(game_install.GameInstallError) as result:
+                    self.invoke()
+                german = error_message(result.exception)
+                english = translate_message(german, "en")
+                self.assertIn(str(code), german)
+                self.assertIn(str(code), english)
+                self.assertIn(hint, english)
+                self.assertNotIn("graphical desktop", english)
+                self.assertNotIn("sensitive", english)
+                self.assertNotIn("invalid.example", english)
+                self.assertEqual(self.arguments()[-1], ["login"])
+
     def test_changed_package_revision_is_a_recheck_error(self):
         self.settings(complete=False, download_exit=78)
         with self.assertRaisesRegex(game_install.GameInstallError, "Paketrevision"):

@@ -101,3 +101,37 @@ A local X11/GTK/WebKit probe using the actual login webview module and a fresh
 isolated browser profile displayed Microsoft's real sign-in form and kept the
 window open. It did not initialize account storage, exchange credentials or
 complete an account sign-in. This verifies local page rendering only.
+
+## Browser challenge handoff (0.1.15)
+
+An email-code verification failure after password submission remains reported
+on 0.1.14. The window opens and accepts credentials before this failure. The
+earlier rendering probe did not exercise that transition.
+
+The browser runtime had two further handoff problems. Each follow-up view used
+a new default WebKit context, losing the previous view's in-memory session
+cookies. It also accepted queued token callbacks from inactive views: both
+Microsoft's page and the `post.srf` fallback can deliver a token, and an old
+callback could repeat its exchange after a verification view had opened.
+
+Version 0.1.15 retains one `WebContext` for the entire interactive
+attempt and dispatches tokens only for the active session. Cookies remain
+scoped to that browser context; a new attempt creates a new context. Required
+verification is not skipped, and account matching, challenge URL validation,
+root-ticket validation and storage after successful completion still apply.
+
+The runtime also preserves typed errors so the launcher can show fixed codes:
+73 for a request failure, 74 for an unusable Microsoft response, 75 for credential
+rejection without a supported challenge, 76 for a different account and 79 for
+a fault without a supported challenge. Codes 70–72 retain their existing
+window/preparation/storage meanings, including compatibility with older native
+components. URLs, email addresses, tokens, codes entered by the user and raw
+responses are not included in these messages.
+
+`tests/compat/login-flow-test.py` runs the production webview with synthetic
+loopback pages through password, email code and final completion. It reproduces
+lost HttpOnly session cookies and duplicate callbacks on 0.1.14, checks both
+handoffs together, and verifies that response errors retain their classification.
+It does not contact Microsoft or initialize account storage. These regressions
+establish defects in the handoff, but do not prove the cause of every affected
+account's error or replace a real email-code sign-in test.

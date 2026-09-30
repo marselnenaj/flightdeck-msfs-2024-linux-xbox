@@ -21,13 +21,14 @@ Flightdeck installiert und startet deine **gekaufte Xbox-PC-/Microsoft-Store-
 Version von MSFS 2024 oder 2020** unter Linux mit Wine/Proton. Mit dem Microsoft-Konto
 anmelden, das Spiel herunterladen und im Launcher starten.
 
-**Aktuelle öffentliche Version: [Flightdeck 0.1.14](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.14).**
+**Aktuelle öffentliche Version: [Flightdeck 0.1.15](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.15).**
 Aktualisiere über **Updates → Flightdeck** oder verwende den vollständigen Installer.
-**0.1.14** korrigiert einen Anmeldefehler, der einen nötigen weiteren
-Microsoft-Anmeldeschritt verwerfen und das Fenster mit einer allgemeinen
-Fehlermeldung schließen konnte. Aktualisiere Flightdeck und starte es vor dem
-nächsten Anmeldeversuch neu. Die Behebung des gemeldeten Fehlers muss noch auf
-einer betroffenen Installation bestätigt werden.
+**0.1.15** korrigiert zwei weitere Fehler beim Übergang vom Passwort zur
+Microsoft-Verifizierung: Sitzungscookies bleiben erhalten und Rückmeldungen
+vorheriger Schritte werden ignoriert. Anmeldefehler erhalten genauere Fehlercodes.
+Aktualisiere Flightdeck und starte es vor dem nächsten Anmeldeversuch neu.
+Lokale Regressionstests unter X11 und Wayland bestehen; die E-Mail-Code-Anmeldung
+mit einem betroffenen Microsoft-Konto muss noch bestätigt werden.
 
 **0.1.13** korrigiert fehlgeschlagene Marketplace-Produktabfragen, wenn Microsoft
 einen Ersatztext für die gewählte Store-Region liefert. Bei deutscher Sprache
@@ -61,8 +62,8 @@ experimentell. [Kompatibilität und Grenzen](#aktueller-stand)
 bei funktionierenden Menüs. Wiederholte Cloud-Sync-Fehler und eine blockierende
 Meldung „Marketplace-Sitzung abgelaufen“ werden ebenfalls weiterhin gemeldet.
 Die Behebung dieser Fehler ist noch nicht bestätigt.
-Ein sofort geschlossenes Microsoft-Anmeldefenster wird ebenfalls untersucht;
-die Anmeldekorrektur aus 0.1.14 muss noch auf betroffenen Installationen bestätigt werden.
+Die Korrektur der Microsoft-E-Mail-Code-Anmeldung in 0.1.15 muss noch mit einem
+betroffenen Konto bestätigt werden.
 [Aktueller Stand und Umfang](known-issues.de.md).
 
 ## Loslegen

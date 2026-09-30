@@ -1,5 +1,26 @@
 # Changes and release status
 
+## 0.1.15 — 30 September 2026
+
+[Download Flightdeck 0.1.15](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.15).
+
+- Keep one browser context throughout interactive Microsoft sign-in, preserving
+  session cookies when opening a follow-up verification view.
+- Ignore queued token callbacks from a previous view after the next step has
+  opened. A duplicate callback can no longer repeat the old exchange and end
+  the current verification step.
+- Distinguish connection errors, invalid Microsoft responses, credential
+  rejection, account mismatch and missing supported challenges using fixed,
+  localized sign-in codes. Raw authentication responses are never displayed.
+- Ship the rebuilt login component and recognize the 0.1.14 native component
+  set for automatic updates of managed installations.
+
+Native GTK/WebKit tests use a loopback password → email code → completion flow.
+The 0.1.14 baseline loses cookies and fails on duplicate callbacks; the corrected
+runtime passes both checks and the combined case under X11 and Wayland. This
+does not yet confirm successful Microsoft email-code verification on an
+affected account. Update and restart Flightdeck before retrying sign-in.
+
 ## 0.1.14 — 30 September 2026
 
 [Download Flightdeck 0.1.14](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.14).
