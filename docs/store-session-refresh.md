@@ -135,3 +135,106 @@ handoffs together, and verifies that response errors retain their classification
 It does not contact Microsoft or initialize account storage. These regressions
 establish defects in the handoff, but do not prove the cause of every affected
 account's error or replace a real email-code sign-in test.
+
+## SOAP response correction (0.1.16)
+
+One affected user reports successful Store access on 0.1.15. Another still
+reports code 74 after choosing password sign-in. Password and emailed security
+code are offered as alternatives; an additional email challenge after the
+password is not established by that description alone.
+
+The response decoder reused the outgoing request's mandatory `Action`, `To`
+and `Security` fields. Microsoft's plain SOAP fault shape can omit those
+fields, as illustrated in the pinned Xodus `docs/xbox/MSAUserLogin.md` example.
+SOAP also permits an absent Header ([SOAP 1.2 message structure](https://www.w3.org/TR/soap12-part1/#soapenvelope)).
+An otherwise readable fault and its inline verification URL therefore failed
+deserialization before the interactive handler could inspect either one.
+
+Responses now have a separate header model. Shortened headers are accepted
+only for faults; successful and encrypted token responses retain the previous
+header requirements. Present signatures are verified before the challenge is
+used, and an invalid signature cannot fall back to an unsigned response.
+The existing HTTPS/host validation, same-account check and usable-root-ticket
+requirement still govern browser handoff and credential storage.
+
+The encrypted response decoder now uses the actual plaintext length and a
+bounded buffer, rather than parsing an entire fixed 8-KB allocation. It applies
+[XML Encryption CBC padding](https://www.w3.org/TR/xmlenc-core1/#sec-Padding),
+which permits arbitrary padding bytes before the final length byte. Missing
+key references, truncated ciphertext, invalid padding and invalid UTF-8 return
+errors instead of unwinding the login process.
+
+The regression fixtures contain only synthetic keys, ciphertext and accounts.
+They cover minimal faults with and without a challenge, both supported hosts,
+HTTP 200/500 faults, signed and encrypted challenges, responses over 8 KB,
+tampered signatures, malformed cipher data and distinct processing failures.
+The minimal-header fixture fails on 0.1.15 and succeeds with the correction.
+This demonstrates the parser defect; it does not establish that every code-74
+report has that cause.
+
+### Verification inside a multi-scope response
+
+A local password sign-in reproduced code 88. A temporary probe emitted only
+predefined XML element names and the missing field name: the first
+`RequestSecurityTokenResponse` had `AppliesTo` and a `pp` verification block,
+including `inlineauthurl`, while the second contained a complete root-token
+response. Requiring `TokenType` on every collection member rejected the whole
+response before the login handler could open verification.
+
+The collection decoder now separates complete tokens from explicit scoped
+verification replies. An interactive challenge takes precedence over any issued
+root token, and silent renewal reports that sign-in is required. Root-token
+validation independently rejects a collection with pending challenges. An
+incomplete token without a verification block still fails; unsupported challenge
+URLs cannot turn a partial response into successful login. The original scope
+request is retained so the required Xbox verification is completed.
+
+Signed and encrypted fixtures cover both challenge hosts, either response order,
+the final successful root response, disallowed verification URLs and malformed
+partial replies. The earlier parser fails the mixed-response regression with
+the same missing `TokenType` field. Account diagnostics and interactive sign-in
+are separate checks; a successful exit alone does not establish Store recovery.
+
+The corrected scoped exchange completed a fresh interactive sign-in on the
+local account with exit code 0. A new broker process then passed the account,
+catalog, signed-license and authenticated-library checks using the newly stored
+session. The GitHub reporter's account and Fedora system still need their own
+confirmation; no private response values were retained for these regressions.
+
+### Sign-in diagnostic codes
+
+Codes identify the failed processing step, not a Microsoft account error code.
+Only fixed messages and the process exit code enter launcher diagnostics.
+Installation, Store recovery and game update use the same message mapping.
+
+| Code | Meaning |
+| --- | --- |
+| 1 | Sign-in window closed before completion |
+| 70 | Window or other interactive flow error |
+| 71 | Device credentials, account storage or login preparation |
+| 72 | Saving the completed sign-in |
+| 73 | Transport/request failure |
+| 74 | Legacy component's combined response error |
+| 75 | Credential rejection without a supported challenge |
+| 76 | Different account selected during same-account recovery |
+| 79 | SOAP fault without a supported verification step |
+| 80 | Building or signing the token request |
+| 81 | Response exceeds the 2-MB limit |
+| 82 | Response is not valid UTF-8 |
+| 83 | Outer SOAP XML cannot be decoded |
+| 84 | Response signature/key/nonce verification |
+| 85 | Decrypting the verification header |
+| 86 | Parsing the decrypted verification header XML |
+| 87 | Decrypting the response body |
+| 88 | Parsing the decrypted body XML |
+| 89 | Incomplete or unexpected token response structure |
+| 90 | HTTP error without a usable SOAP fault |
+| 91 | No usable root credential after completion |
+| 92 | Token request timeout |
+| 93 | HTTP 429 / too many sign-in attempts |
+| 101 | Unexpected native process panic |
+
+For 83–88, the code distinguishes where decoding failed; underlying parser
+messages are deliberately not shown because they can embed account data.
+Report the code together with Flightdeck and native component versions and
+whether the failure occurred before or after a Microsoft follow-up prompt.

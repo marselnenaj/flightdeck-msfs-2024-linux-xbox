@@ -1,5 +1,35 @@
 # Changes and release status
 
+## 0.1.16 — 1 October 2026
+
+[Download Flightdeck 0.1.16](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.16).
+
+- Preserve verification steps embedded in individual replies of a multi-scope
+  Microsoft token exchange. A response can require Xbox verification while
+  already issuing a Microsoft root token; the login now completes that step
+  before storing credentials. The previous decoder rejected this response
+  because the verification reply had no issued-token fields.
+- Accept Microsoft's shortened SOAP fault headers so an accompanying supported
+  verification link reaches the sign-in window instead of failing with code 74.
+  Successful token responses still require their normal headers; signature
+  verification and account/root-credential checks remain in place.
+- Decode encrypted verification steps and token responses using bounded buffers
+  and the XML Encryption CBC padding rules. Valid responses larger than 8 KB no
+  longer overflow the old fixed buffer; malformed cipher data returns a typed
+  failure instead of panicking.
+- Replace the broad response-error category with fixed codes 80–93 for request
+  construction, response size/encoding/XML, signatures, challenge/body decoding,
+  incomplete responses, HTTP errors, root tokens, timeouts and rate limiting.
+  The Store recovery report and game updater preserve these codes and their
+  localized explanations, without including raw authentication output.
+- Rebuild both Xodus components because they share the response parser. Managed
+  component updates recognize the published 0.1.15 binaries.
+
+Update through **Updates → Flightdeck** and restart Flightdeck before retrying
+sign-in. See [sign-in recovery](store-session-refresh.md#soap-response-correction-0116)
+for the diagnostic codes and validation scope. Other reported NVIDIA,
+in-game Marketplace and cloud-sync problems still need separate confirmation.
+
 ## 0.1.15 — 30 September 2026
 
 [Download Flightdeck 0.1.15](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.15).

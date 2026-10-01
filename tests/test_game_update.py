@@ -213,6 +213,19 @@ class UpdateTests(unittest.TestCase):
             manager.check({"mode":"update"}); manager.thread.join(3)
         self.assertTrue(manager.job["auth_required"]); self.assertEqual(manager.job["state"], "failed")
 
+    def test_update_login_preserves_specific_failure_before_catalog_access(self):
+        from flightdeck.i18n import error_message, translate_message
+        with patch.object(update, "tools", return_value=(self.tool, self.sha, [update.FEATURE])), \
+             patch("flightdeck.mods._locations", return_value=([], False)), \
+             patch.object(update, "run_cli", return_value=83), \
+             patch.object(update, "package_info") as catalog:
+            with self.assertRaises(update.AuthRequired) as caught:
+                update.check(self.launcher, {"sign_in": True}, notify=lambda *args: None, cancel=self.cancel)
+            catalog.assert_not_called()
+        english = translate_message(error_message(caught.exception), "en")
+        self.assertIn("83", english)
+        self.assertIn("XML", english)
+
     def test_up_to_date_check_completes_without_download_or_reservation(self):
         plan = self.plan(); plan.latest = info(game_version="1.1.0.0")
         with patch.object(update, "check", return_value=plan):

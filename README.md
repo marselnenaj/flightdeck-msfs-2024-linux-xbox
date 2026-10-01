@@ -21,14 +21,13 @@ Flightdeck installs and launches your **purchased Xbox PC / Microsoft Store copy
 of MSFS 2024 or 2020** on your Linux computer through Wine/Proton. Sign in with your
 Microsoft account, download the game and start it from one application.
 
-**Current public release: [Flightdeck 0.1.15](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.15).**
+**Current public release: [Flightdeck 0.1.16](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.16).**
 Update through **Updates → Flightdeck** or use the full installer.
-**0.1.15** fixes two further handoff errors when Microsoft opens a verification
-step after the password: session cookies are preserved and callbacks from
-earlier steps are ignored. Sign-in failures now have more specific error codes.
-Update and restart Flightdeck before retrying. Local X11 and Wayland regression
-checks pass; email-code sign-in with an affected Microsoft account still needs
-confirmation.
+**0.1.16** fixes Microsoft sign-in failing with code 74 when a token response
+also contains a required verification step. Flightdeck now opens that step and
+completes verification before saving the login. Additional SOAP response fixes
+and distinct processing codes make remaining failures easier to identify.
+Update and restart Flightdeck before retrying sign-in.
 
 **0.1.13** fixes Marketplace product queries failing when Microsoft returns a
 fallback translation for the selected Store region. Available German text stays
@@ -59,8 +58,8 @@ compatibility remain unconfirmed. Automatic Xbox cloud saves are experimental.
 **Known issues:** some NVIDIA users report a black main 3D view with working
 menus. Repeated cloud-sync failures and a blocking “Marketplace session expired”
 message also remain reported. These issues are not confirmed fixed.
-The Microsoft email-code sign-in correction in 0.1.15 still needs confirmation
-on an affected account.
+If Microsoft sign-in still fails on 0.1.16, include the displayed error code
+and Flightdeck version in your report.
 [Current status and scope](docs/known-issues.md).
 
 ## Get started

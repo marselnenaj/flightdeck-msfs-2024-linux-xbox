@@ -25,7 +25,7 @@ import xml.etree.ElementTree as ET
 
 from .backend import LauncherError, atomic_json
 from .game_install import (MSFS_STORE_ID, RESUME_FEATURE, verify_cli, run_cli,
-                           download_game, _stop_owned)
+                           download_game, _stop_owned, login_error_message)
 from .setup import SetupError, interrupted
 from .mods import _read
 from . import games
@@ -270,7 +270,7 @@ def check(launcher, data, *, notify, cancel, source_root=None):
             result = run_cli(cli, ["login"], cwd=runtime / "private", cancel=cancel, timeout=900,
                              xdg_root=runtime / "private/xdg")
             if result:
-                raise AuthRequired("Die Microsoft-Anmeldung wurde nicht abgeschlossen. Bitte ausdrücklich erneut anmelden.")
+                raise AuthRequired(login_error_message(result))
         notify("package_check", "Installierte Spielversion und aktuelle Store-Paketversion werden geprüft …")
         latest = package_info(cli, cli_hash, runtime, market, cancel)
     if version(latest["version"]) < version(current["version"]):

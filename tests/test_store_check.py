@@ -132,6 +132,22 @@ class StoreCheckTests(unittest.TestCase):
         self.assertEqual(job["state"], "failed")
         self.assertEqual(job["steps"][1]["code"], "sign_in_required")
 
+    def test_login_diagnostic_code_survives_store_report_and_translation(self):
+        from flightdeck.i18n import localize
+        for code, hint in [(74, "response"), (83, "XML"), (85, "decrypted"), (91, "root sign-in token")]:
+            with self.subTest(code=code):
+                self.helper("xodus-cli", "import sys\nprint('SYNTHETIC_PRIVATE_TOKEN',file=sys.stderr)\nraise SystemExit(" + str(code) + ")\n")
+                with patch.object(self.check, "_process") as process:
+                    self.check.start(recover=True)
+                    self.done()
+                    process.assert_not_called()
+                report = localize(self.check.report(), "en")
+                row = report["steps"][1]
+                self.assertEqual(row["exit_code"], code)
+                self.assertIn(str(code), row["message"])
+                self.assertIn(hint, row["message"])
+                self.assertNotIn("SYNTHETIC_PRIVATE", json.dumps(report))
+
     def test_successful_login_requires_online_verification_before_cloud_resume(self):
         cloud = self.launcher.cloud_saves.automation
         for fails in (True, False):

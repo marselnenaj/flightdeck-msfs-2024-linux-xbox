@@ -113,7 +113,12 @@ sys.exit(settings.get('download_exit', 0))
 
     def test_login_verification_failures_have_distinct_localized_codes(self):
         for code, hint in ((73, "connection"), (74, "response"), (75, "rejected"),
-                           (76, "same Microsoft account"), (79, "verification step")):
+                           (76, "same Microsoft account"), (79, "verification step"),
+                           (80, "built"), (81, "size limit"), (82, "encoding"), (83, "XML"),
+                           (84, "signature"), (85, "verification step could not be decrypted"),
+                           (86, "decrypted Microsoft verification"), (87, "token response could not be decrypted"),
+                           (88, "decrypted Microsoft token"), (89, "incomplete"), (90, "HTTP"),
+                           (91, "root sign-in token"), (92, "timed out"), (93, "too many")):
             with self.subTest(code=code):
                 self.destination = self.root / f"challenge-{code}"
                 self.settings(login_exit=code)

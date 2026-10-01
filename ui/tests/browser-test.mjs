@@ -72,7 +72,10 @@ const server = createServer(async (req,res) => {
     if (apiUnavailable) {res.writeHead(503); res.end(JSON.stringify({ok:false,error:'Fixture offline'}));return;}
     if (req.method === 'GET') {
       if (url.pathname === '/api/problem-reports') {res.end(JSON.stringify(problemReport));return;}
-      if (url.pathname === '/api/store-check') {res.end(JSON.stringify(storeCheck));return;}
+      if (url.pathname === '/api/store-check') {
+        const job=storeCheck.job;
+        res.end(JSON.stringify({job:job?{...job,steps:job.steps.map(row=>row.exit_code===83&&language==='en'?{...row,message:'The Microsoft sign-in response XML could not be read (sign-in code 83).'}:row)}:null}));return;
+      }
       if (url.pathname === '/api/maintenance') {res.end(JSON.stringify(maintenance));return;}
       if (url.pathname === '/api/status') {if(statusBarrier){statusWaiting=true;await statusBarrier;}res.end(JSON.stringify({...status,runtime:{...status.runtime,checks:localizeChecks(status.runtime.checks,language)}}));return;}
       if (url.pathname === '/api/setup/discover') {res.end(JSON.stringify({ok:true,runtimes:discovered,checked_count:discovered.length,limited:false}));return;}
@@ -988,7 +991,15 @@ try {
   await check('Recovery fits mobile without horizontal scrolling',`document.documentElement.scrollWidth<=390`);
   await click('store-check-cancel');
   await until(()=>evaluate("document.getElementById('store-check-status').textContent.includes('cancelled')"),'Login cancellation missing');
+  storeCheck.job={...storeCheck.job,state:'failed',steps:storeCheck.job.steps.map(row=>row.stage==='sign_in'?{...row,state:'failed',code:'sign_in_required',exit_code:83,message:'Die XML-Struktur der Microsoft-Anmeldeantwort konnte nicht gelesen werden (Anmeldecode 83).'}:row)};
+  await refresh("document.getElementById('store-check-steps').textContent.includes('sign-in code 83')");
+  await check('Store recovery preserves the exact login failure in English',`document.getElementById('store-check-steps').textContent.includes('XML could not be read') && !document.getElementById('store-check-sign-in').disabled`);
+  await evaluate("document.getElementById('store-check-status').scrollIntoView({block:'center'})");await screenshot('login-response-error-mobile-en.png');
+  await check('Specific sign-in error fits the mobile viewport',`document.documentElement.scrollWidth<=390`);
   await call('Emulation.setDeviceMetricsOverride',{width:1536,height:1024,deviceScaleFactor:1,mobile:false});await language('de');
+  await until(()=>evaluate("document.getElementById('store-check-steps').textContent.includes('Anmeldecode 83')"),'Localized login diagnostic missing');
+  await check('Specific sign-in code changes language without losing the diagnostic',`document.getElementById('store-check-steps').textContent.includes('XML-Struktur') && document.getElementById('store-check-steps').textContent.includes('Anmeldecode 83')`);
+  await evaluate("document.getElementById('store-check-status').scrollIntoView({block:'center'})");await screenshot('login-response-error-desktop-de.png');
   status.cloud={...autoIdle(),state:'attention',phase:'before_start',request_id:autoRequest,error_code:'unauthorized',can_retry:true,can_sign_in:true};
   await route('overview');await refresh("!document.getElementById('overview-cloud-sign-in').hidden");
   await click('overview-cloud-sign-in');

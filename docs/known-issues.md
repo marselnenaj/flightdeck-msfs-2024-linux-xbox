@@ -2,7 +2,7 @@
 
 [Deutsch](known-issues.de.md)
 
-Status: Flightdeck 0.1.15, 30 September 2026.
+Status: Flightdeck 0.1.16, 1 October 2026.
 
 **Component updates:** 0.1.10 fixes older Store binaries being left behind when
 launch scripts were customized. Update and reopen Flightdeck with the simulator
@@ -14,14 +14,14 @@ installation. A sign-in failure can prevent testing simulator rendering.
 
 ## Current scope
 
-- **Microsoft sign-in:** on 0.1.14 the window opens and accepts credentials,
-  but a generic failure can appear after the password when email-code
-  verification should take over. Version 0.1.14's token-exchange correction
-  is insufficient for this report. Version 0.1.15 preserves session
-  cookies between sign-in views and ignores stale callbacks. Local synthetic
-  tests reproduce these two handoff failures; a real sign-in with an affected
-  account is still unverified. A connection to the NVIDIA issue is not established.
-  [Correction and validation scope](store-session-refresh.md#browser-challenge-handoff-0115).
+- **Microsoft sign-in:** 0.1.16 handles verification steps embedded in a
+  multi-token response, shortened SOAP fault headers and encrypted replies
+  that previously failed with code 74. It retains the session-cookie and
+  callback fixes from 0.1.15. Update and restart before retrying. If sign-in
+  still fails, report the displayed code and version; successful sign-in on
+  every affected setup is not yet established. A connection to the NVIDIA
+  issue is not established.
+  [Correction and validation scope](store-session-refresh.md#soap-response-correction-0116).
 - **NVIDIA:** MSFS 2024 can show working menus and overlays while the world map
   and primary 3D view stay black. 0.1.11 corrects DXVK's ignored Low Latency
   opt-out and automatically uses the complete DirectX 11/12 compatibility

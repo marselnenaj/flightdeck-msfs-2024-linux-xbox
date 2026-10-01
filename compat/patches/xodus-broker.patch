@@ -490,7 +490,7 @@ diff --git c/crates/xodus-cli/src/commands/extract.rs w/crates/xodus-cli/src/com
 diff --git c/crates/xodus-cli/src/commands/login.rs w/crates/xodus-cli/src/commands/login.rs
 --- c/crates/xodus-cli/src/commands/login.rs
 +++ w/crates/xodus-cli/src/commands/login.rs
-@@ -13,2 +13,44 @@
+@@ -13,2 +13,62 @@
 -pub async fn run(client: &reqwest::Client, tokens: &TokenManager) -> ExitCode {
 -    let token = tokens.get_device_sts_token().unwrap();
 +#[derive(Debug)]
@@ -513,13 +513,31 @@ diff --git c/crates/xodus-cli/src/commands/login.rs w/crates/xodus-cli/src/comma
 +// Only fixed exit codes cross into the launcher. Do not log the error itself:
 +// network, XML and signature errors can contain account data or response text.
 +fn failure_code(error: &(dyn std::error::Error + 'static)) -> u8 {
-+    use xodus::api::live::RSTError;
++    use xodus::api::live::{RSTError, ResponseStep};
 +    if let Some(error) = error.downcast_ref::<RSTError>() {
 +        return match error {
-+            RSTError::InvalidCredential => 71,
++            RSTError::InvalidCredential | RSTError::Base64(_) => 71,
++            RSTError::Request(error) if error.is_timeout() => 92,
 +            RSTError::Request(_) => 73,
 +            RSTError::AuthenticationRejected => 75,
-+            _ => 74,
++            RSTError::Serialization(_) | RSTError::Builder(_) => 80,
++            RSTError::Deserialization(_) => 83,
++            RSTError::MissingNonce | RSTError::HmacKey | RSTError::Bergshamra(_)
++                | RSTError::InvalidResponseSignature(_) => 84,
++            RSTError::InvalidResponse => 89,
++            RSTError::Response { step, .. } => match step {
++                ResponseStep::Size => 81,
++                ResponseStep::Encoding => 82,
++                ResponseStep::Envelope => 83,
++                ResponseStep::Signature => 84,
++                ResponseStep::ChallengeDecryption => 85,
++                ResponseStep::ChallengeXml => 86,
++                ResponseStep::BodyDecryption => 87,
++                ResponseStep::BodyXml => 88,
++                ResponseStep::Shape => 89,
++                ResponseStep::HttpStatus => 90,
++                ResponseStep::RateLimit => 93,
++            },
 +        };
 +    }
 +    match error.downcast_ref::<LoginFlowError>() {
@@ -537,7 +555,9 @@ diff --git c/crates/xodus-cli/src/commands/login.rs w/crates/xodus-cli/src/comma
 +            return ExitCode::from(71);
 +        }
 +    };
-@@ -19,27 +61,27 @@
+@@ -17,29 +77,32 @@
+-        return ExitCode::FAILURE;
+-    };
 -    let handler = LoginHandler::new(client.clone(), token, tokens.clone());
 -    let output = webview::run_sessions(handler)
 -        .expect("failed to login")
@@ -565,6 +585,8 @@ diff --git c/crates/xodus-cli/src/commands/login.rs w/crates/xodus-cli/src/comma
 -        tokens.save_user_token(address, token).unwrap();
 -    }
 -
++        return ExitCode::from(71);
++    };
 +    let expected = if same_account { match tokens.get_user() {
 +        Ok(user) if !user.puid.is_empty() => Some(user.puid),
 +        Err(xodus::tokens::store::TokenStoreError::NotFound) => None,
@@ -584,7 +606,10 @@ diff --git c/crates/xodus-cli/src/commands/login.rs w/crates/xodus-cli/src/comma
 +    // A closed window or incomplete exchange leaves the existing account intact.
 +    let root = match xodus::tokens::session::renewed_sts(body) {
 +        Ok(root) => root,
-+        Err(_) => return ExitCode::from(74),
++        Err(_) => {
++            eprintln!("Microsoft sign-in failed (code 91)");
++            return ExitCode::from(91);
++        }
 +    };
 +    if tokens.save_user_token(xodus::tokens::PASSPORT_STS.into(), secrets::Token::Legacy(root)).is_err()
 +        || tokens.save_user(&user).is_err() {
@@ -592,44 +617,44 @@ diff --git c/crates/xodus-cli/src/commands/login.rs w/crates/xodus-cli/src/comma
 +    }
 +
 +    println!("Login completed; credentials stored.");
-@@ -53,2 +95 @@
+@@ -53,2 +116 @@
 -    finish: bool,
 -    tokens: TokenManager,
 +    expected: Option<String>,
-@@ -61 +102 @@
+@@ -61 +123 @@
 -        tokens: TokenManager,
 +        expected: Option<String>,
-@@ -67,2 +108 @@
+@@ -67,2 +129 @@
 -            finish: false,
 -            tokens,
 +            expected,
-@@ -100,3 +140 @@
+@@ -100,3 +161 @@
 -                if self.finish {
 -                    scopes.push(("http://Passport.NET/tb".to_string(), None));
 -                }
 +                scopes.push(("http://Passport.NET/tb".to_string(), None));
-@@ -122 +160 @@
+@@ -122 +181 @@
 -    type Output = Option<soap::BodyContent>;
 +    type Output = Option<(secrets::User, soap::BodyContent)>;
-@@ -140,0 +179,3 @@
+@@ -140,0 +200,3 @@
 +        if self.expected.as_ref().is_some_and(|puid| puid != &data.puid) {
 +            return Err(LoginFlowError::AccountMismatch.into());
 +        }
-@@ -145,3 +186 @@
+@@ -145,3 +207 @@
 -                if let Some(pp) = pp
 -                    && let Some(auth_url) = pp.inline_auth_url
 -                {
 +                if let Some(auth_url) = pp.as_ref().and_then(soap::PP::interactive_auth_url) {
-@@ -149,2 +188 @@
+@@ -149,2 +209 @@
 -                    self.finish = true;
 -                    runtime.open_session(webview::finalize_request(auth_url));
 +                    runtime.open_session(webview::finalize_request(auth_url.to_owned()));
-@@ -154 +191,0 @@
+@@ -154 +212,0 @@
 -                println!("User token exchange returned a fault without inline auth");
-@@ -156 +193 @@
+@@ -156 +214 @@
 -                Ok(webview::HandlerControl::Complete(None))
 +                Err(LoginFlowError::MissingChallenge.into())
-@@ -160,7 +197,3 @@
+@@ -160,7 +218,3 @@
 -                self.tokens
 -                    .save_user(&xodus::models::secrets::User {
 -                        puid: data.puid,
@@ -640,7 +665,7 @@ diff --git c/crates/xodus-cli/src/commands/login.rs w/crates/xodus-cli/src/comma
 +                Ok(webview::HandlerControl::Complete(Some((
 +                    secrets::User { puid: data.puid, username: data.username }, da,
 +                ))))
-@@ -178,0 +212,28 @@
+@@ -178,0 +233,43 @@
 +
 +#[cfg(test)]
 +mod tests {
@@ -651,9 +676,9 @@ diff --git c/crates/xodus-cli/src/commands/login.rs w/crates/xodus-cli/src/comma
 +    fn response_and_verification_failures_are_not_window_errors() {
 +        for (error, code) in [
 +            (RSTError::InvalidCredential, 71),
-+            (RSTError::InvalidResponse, 74),
-+            (RSTError::MissingNonce, 74),
-+            (RSTError::InvalidResponseSignature("SYNTHETIC-PRIVATE-RESPONSE".into()), 74),
++            (RSTError::InvalidResponse, 89),
++            (RSTError::MissingNonce, 84),
++            (RSTError::InvalidResponseSignature("SYNTHETIC-PRIVATE-RESPONSE".into()), 84),
 +            (RSTError::AuthenticationRejected, 75),
 +        ] {
 +            assert_eq!(failure_code(&error), code);
@@ -667,6 +692,21 @@ diff --git c/crates/xodus-cli/src/commands/login.rs w/crates/xodus-cli/src/comma
 +    fn request_failure_is_reported_without_its_url_or_response() {
 +        let error = reqwest::Client::new().get("https://[synthetic-private-value").build().unwrap_err();
 +        assert_eq!(failure_code(&RSTError::Request(error)), 73);
++    }
++
++    #[test]
++    fn response_steps_have_unique_codes_without_private_error_text() {
++        use xodus::api::live::ResponseStep::*;
++        let mut codes = std::collections::HashSet::new();
++        for (step, expected) in [(Size, 81), (Encoding, 82), (Envelope, 83), (Signature, 84),
++            (ChallengeDecryption, 85), (ChallengeXml, 86), (BodyDecryption, 87),
++            (BodyXml, 88), (Shape, 89), (HttpStatus, 90), (RateLimit, 93)]
++        {
++            let error = RSTError::InvalidResponseSignature("SYNTHETIC-PRIVATE-RESPONSE".into()).at(step);
++            assert_eq!(failure_code(&error), expected);
++            assert!(codes.insert(expected));
++            assert!(!error.to_string().contains("SYNTHETIC-PRIVATE"));
++        }
 +    }
 +}
 diff --git c/crates/xodus-cli/src/commands/package_info.rs w/crates/xodus-cli/src/commands/package_info.rs
@@ -7040,7 +7080,7 @@ diff --git c/crates/xodus/src/api/live/mod.rs w/crates/xodus/src/api/live/mod.rs
 --- c/crates/xodus/src/api/live/mod.rs
 +++ w/crates/xodus/src/api/live/mod.rs
 @@ -11,0 +12 @@
-+pub use rst::RSTError;
++pub use rst::{RSTError, ResponseStep};
 @@ -18,2 +19,2 @@
 -) -> reqwest::Result<DeviceAddResponse> {
 -    let data = quick_xml::se::to_string(&data).unwrap();
@@ -7053,6 +7093,9 @@ diff --git c/crates/xodus/src/api/live/mod.rs w/crates/xodus/src/api/live/mod.rs
 -    let resp: DeviceAddResponse = quick_xml::de::from_str(&text).expect("Failed to de xml");
 +    let text = response.error_for_status()?.text().await?;
 +    let resp: DeviceAddResponse = quick_xml::de::from_str(&text)?;
+@@ -38 +40 @@
+-) -> Result<soap::Envelope, rst::RSTError> {
++) -> Result<soap::ResponseEnvelope, rst::RSTError> {
 @@ -55,2 +57,3 @@
 -    let secret = BASE64_STANDARD.decode(token.binary_secret.as_ref().unwrap())?;
 -    let secret: [u8; 4096] = secret.try_into().unwrap();
@@ -7064,7 +7107,7 @@ diff --git c/crates/xodus/src/api/live/mod.rs w/crates/xodus/src/api/live/mod.rs
 -            Ok(token)
 -        }
 -        b => unimplemented!("Exchange token supports only singular token right now {b:?}"),
-+            if collection.security_tokens.len() != 1 { return Err(rst::RSTError::InvalidResponse); }
++            if !collection.challenges.is_empty() || collection.security_tokens.len() != 1 { return Err(rst::RSTError::InvalidResponse); }
 +            Ok(collection.security_tokens.remove(0))
 +        }
 +        _ => Err(rst::RSTError::InvalidResponse),
@@ -7074,7 +7117,7 @@ diff --git c/crates/xodus/src/api/live/mod.rs w/crates/xodus/src/api/live/mod.rs
 +    let secret = BASE64_STANDARD.decode(device_token.binary_secret.as_ref().ok_or(rst::RSTError::InvalidCredential)?)?;
 +    let secret: [u8; 4096] = secret.try_into().map_err(|_| rst::RSTError::InvalidCredential)?;
 +    if u32::from_le_bytes(secret[..4].try_into().map_err(|_|rst::RSTError::InvalidCredential)?) != 4 { return Err(rst::RSTError::InvalidCredential); }
-@@ -126,2 +130,12 @@
+@@ -126,2 +130,22 @@
 -    Ok(match envelope.body.body {
 -        soap::BodyContent::Fault(_) => ExchangeUserTokenOutcome::Fault(envelope.header.pp),
 +    user_exchange_outcome(envelope.body.body, envelope.header.pp)
@@ -7082,6 +7125,16 @@ diff --git c/crates/xodus/src/api/live/mod.rs w/crates/xodus/src/api/live/mod.rs
 +
 +fn user_exchange_outcome(body: soap::BodyContent, pp: Option<soap::PP>) -> Result<ExchangeUserTokenOutcome, rst::RSTError> {
 +    Ok(match body {
++        // Microsoft can put PP inside a scope's RSTR, alongside an issued root
++        // token for another scope. Complete the required verification before
++        // accepting or storing any token from that collection.
++        soap::BodyContent::RequestSecurityTokenResponseCollection(collection)
++            if !collection.challenges.is_empty() => {
++                let pp = collection.challenges.into_iter().map(|challenge| challenge.pp)
++                    .find(|pp| pp.interactive_auth_url().is_some())
++                    .ok_or(rst::RSTError::AuthenticationRejected)?;
++                ExchangeUserTokenOutcome::Fault(Some(pp))
++            }
 +        // A credential fault may carry the next interactive sign-in step.
 +        // Preserve it for the login handler; silent renewal still reports that
 +        // sign-in is required. Only a rejection without that step is terminal.
@@ -7089,7 +7142,7 @@ diff --git c/crates/xodus/src/api/live/mod.rs w/crates/xodus/src/api/live/mod.rs
 +            && pp.as_ref().and_then(soap::PP::interactive_auth_url).is_none() =>
 +                return Err(rst::RSTError::AuthenticationRejected),
 +        soap::BodyContent::Fault(_) => ExchangeUserTokenOutcome::Fault(pp),
-@@ -129,0 +144,62 @@
+@@ -129,0 +154,62 @@
 +}
 +
 +#[cfg(test)]
@@ -7152,50 +7205,474 @@ diff --git c/crates/xodus/src/api/live/mod.rs w/crates/xodus/src/api/live/mod.rs
 +            } else { assert!(matches!(result,Ok(ExchangeUserTokenOutcome::Fault(None)))); }
 +        }
 +    }
-@@ -145 +221 @@
+@@ -145 +231 @@
 -        ensure_device_credentials(&client, &mgr).await;
 +        ensure_device_credentials(&client, &mgr).await.unwrap();
 diff --git c/crates/xodus/src/api/live/rst/error.rs w/crates/xodus/src/api/live/rst/error.rs
 --- c/crates/xodus/src/api/live/rst/error.rs
 +++ w/crates/xodus/src/api/live/rst/error.rs
-@@ -2,0 +3,6 @@
+@@ -0,0 +1,15 @@
++#[derive(Debug, Clone, Copy, PartialEq, Eq)]
++pub enum ResponseStep {
++    Size,
++    Encoding,
++    Envelope,
++    Signature,
++    ChallengeDecryption,
++    ChallengeXml,
++    BodyDecryption,
++    BodyXml,
++    Shape,
++    HttpStatus,
++    RateLimit,
++}
++
+@@ -2,0 +18,14 @@
++    // This context is fixed metadata. Never display the source: parser and
++    // signature errors may contain credentials, URLs or server response text.
++    #[error("Microsoft response processing failed at {step:?}")]
++    Response {
++        step: ResponseStep,
++        #[source]
++        source: Box<RSTError>,
++    },
 +    #[error("Microsoft rejected the user credential")]
 +    AuthenticationRejected,
 +    #[error("Invalid local credential")]
 +    InvalidCredential,
 +    #[error("Invalid token response")]
 +    InvalidResponse,
+@@ -23,0 +53,6 @@
++impl RSTError {
++    pub fn at(self, step: ResponseStep) -> Self {
++        Self::Response { step, source: Box::new(self) }
++    }
++}
++
 diff --git c/crates/xodus/src/api/live/rst/request.rs w/crates/xodus/src/api/live/rst/request.rs
 --- c/crates/xodus/src/api/live/rst/request.rs
 +++ w/crates/xodus/src/api/live/rst/request.rs
-@@ -20 +20 @@
+@@ -6,0 +7,3 @@
++use super::{RSTError, ResponseStep};
++
++const MAX_RESPONSE_BYTES: usize = 2 * 1024 * 1024;
+@@ -18 +21 @@
+-    ) -> Result<soap::Envelope, super::RSTError> {
++    ) -> Result<soap::ResponseEnvelope, RSTError> {
+@@ -20 +23 @@
 -        let response = client
 +        let mut response = client
-@@ -25,0 +26 @@
+@@ -25,0 +29 @@
 +        .timeout(std::time::Duration::from_secs(15))
-@@ -29 +30,9 @@
+@@ -29,2 +33,18 @@
 -        let response_text = response.text().await?;
+-        let envelope: soap::Envelope = quick_xml::de::from_str(&response_text)?;
 +        // SOAP faults can use HTTP 500. Parse them, but bound the body before
 +        // allocation and never treat an HTTP error with an issued token as success.
 +        let status = response.status();
++        if status == reqwest::StatusCode::TOO_MANY_REQUESTS {
++            return Err(RSTError::InvalidResponse.at(ResponseStep::RateLimit));
++        }
 +        let mut bytes = Vec::new();
 +        while let Some(chunk) = response.chunk().await? {
-+            if bytes.len() + chunk.len() > 2 * 1024 * 1024 { return Err(super::RSTError::InvalidResponse); }
++            if bytes.len() + chunk.len() > MAX_RESPONSE_BYTES {
++                return Err(RSTError::InvalidResponse.at(ResponseStep::Size));
++            }
 +            bytes.extend_from_slice(&chunk);
 +        }
-+        let response_text = String::from_utf8(bytes).map_err(|_| super::RSTError::InvalidResponse)?;
-@@ -31,2 +40,5 @@
--
++        let response_text = String::from_utf8(bytes)
++            .map_err(|_| RSTError::InvalidResponse.at(ResponseStep::Encoding))?;
++        parse_response(self.signature, response_text, status)
++    }
++}
+@@ -32 +52,12 @@
 -        verify_and_decrypt_envelope(self.signature, response_text, envelope)
-+        let envelope = verify_and_decrypt_envelope(self.signature, response_text, envelope)?;
-+        if !status.is_success() && !matches!(envelope.body.body, soap::BodyContent::Fault(_)) {
-+            return Err(super::RSTError::InvalidResponse);
++fn parse_response(
++    signature: Option<super::RSTSignature<'_>>,
++    response_text: String,
++    status: reqwest::StatusCode,
++) -> Result<soap::ResponseEnvelope, RSTError> {
++    let envelope: soap::ResponseEnvelope = quick_xml::de::from_str(&response_text)
++        .map_err(|error| RSTError::Deserialization(error).at(if status.is_success() {
++            ResponseStep::Envelope
++        } else { ResponseStep::HttpStatus }))?;
++    let envelope = verify_and_decrypt_envelope(signature, response_text, envelope)?;
++    if !status.is_success() && !matches!(envelope.body.body, soap::BodyContent::Fault(_)) {
++        return Err(RSTError::InvalidResponse.at(ResponseStep::HttpStatus));
+@@ -33,0 +65 @@
++    Ok(envelope)
+@@ -39,2 +71,10 @@
+-    mut envelope: soap::Envelope,
+-) -> Result<soap::Envelope, super::RSTError> {
++    mut envelope: soap::ResponseEnvelope,
++) -> Result<soap::ResponseEnvelope, RSTError> {
++    // Only faults may omit the normal reply headers. A shortened header must
++    // never make an incomplete token response acceptable as a successful login.
++    if !matches!(envelope.body.body, soap::BodyContent::Fault(_))
++        && (envelope.header.action.is_none() || envelope.header.to.is_none()
++            || envelope.header.security.is_none())
++    {
++        return Err(RSTError::InvalidResponse.at(ResponseStep::Shape));
++    }
+@@ -44,0 +85,6 @@
++    let Some(security) = envelope.header.security.as_ref() else {
++        if envelope.header.encrypted_pp.is_some() {
++            return Err(RSTError::MissingNonce.at(ResponseStep::ChallengeDecryption));
 +        }
-+        Ok(envelope)
-@@ -58 +70,2 @@
++        return Ok(envelope); // A plain fault, never an issued or encrypted token.
++    };
+@@ -46,3 +92 @@
+-    let nonces: HashMap<String, String> = envelope
+-        .header
+-        .security
++    let nonces: HashMap<String, String> = security
+@@ -54,3 +98,3 @@
+-    if let Some(security_signature) = &envelope.header.security.signature
+-        && let Some(key_info) = &security_signature.key_info
+-    {
++    if let Some(security_signature) = &security.signature {
++        (|| -> Result<(), RSTError> {
++        let key_info = security_signature.key_info.as_ref().ok_or(RSTError::MissingNonce)?;
+@@ -58 +102,2 @@
 -        let nonce = nonces.get(&id[1..]).ok_or(super::RSTError::MissingNonce)?;
 +        let id = id.strip_prefix('#').filter(|id| !id.is_empty()).ok_or(super::RSTError::MissingNonce)?;
 +        let nonce = nonces.get(id).ok_or(super::RSTError::MissingNonce)?;
+@@ -70,0 +116,2 @@
++        Ok(())
++        })().map_err(|error| error.at(ResponseStep::Signature))?;
+@@ -81 +128 @@
+-        )?;
++        ).map_err(|error| at_decryption(error, ResponseStep::ChallengeDecryption, ResponseStep::ChallengeXml))?;
+@@ -87 +134,2 @@
+-        envelope.body.body = utils::decrypt_soap_encrypted_data(enc_data, &signature, &nonces)?;
++        envelope.body.body = utils::decrypt_soap_encrypted_data(enc_data, &signature, &nonces)
++            .map_err(|error| at_decryption(error, ResponseStep::BodyDecryption, ResponseStep::BodyXml))?;
+@@ -91,0 +140,8 @@
++
++fn at_decryption(error: RSTError, decryption: ResponseStep, xml: ResponseStep) -> RSTError {
++    let step = if matches!(error, RSTError::Deserialization(_)) { xml } else { decryption };
++    error.at(step)
++}
++
++#[cfg(test)]
++mod tests;
+diff --git c/crates/xodus/src/api/live/rst/request/tests.rs w/crates/xodus/src/api/live/rst/request/tests.rs
+new file mode 100644
+--- /dev/null
++++ w/crates/xodus/src/api/live/rst/request/tests.rs
+@@ -0,0 +1,267 @@
++use super::*;
++use crate::models::live::ExchangeUserTokenOutcome;
++
++// Same response shape documented in Xodus docs/xbox/MSAUserLogin.md:
++// Microsoft SOAP faults omit Action, To and Security. All values here are synthetic.
++fn plain_fault(challenge: &str) -> String {
++    format!(r#"<S:Envelope xmlns:S="http://www.w3.org/2003/05/soap-envelope"
++        xmlns:psf="http://schemas.microsoft.com/Passport/SoapServices/SOAPFault">
++      <S:Header><psf:pp><psf:inlineauthurl>{challenge}</psf:inlineauthurl></psf:pp></S:Header>
++      <S:Body><S:Fault><S:Code><S:Value>S:Sender</S:Value><S:Subcode>
++        <S:Value>wsse:FailedAuthentication</S:Value>
++      </S:Subcode></S:Code></S:Fault></S:Body></S:Envelope>"#)
++}
++
++#[test]
++fn minimal_fault_header_preserves_microsoft_verification_step() {
++    for host in ["login.live.com", "account.live.com"] {
++        let url = format!("https://{host}/synthetic-verification");
++        for status in [reqwest::StatusCode::OK, reqwest::StatusCode::INTERNAL_SERVER_ERROR] {
++            let signature = super::super::RSTSignature::Hmac {
++                clep_secret: b"synthetic-device-secret", tpm_secret: &[],
++            };
++            let reply = parse_response(Some(signature), plain_fault(&url), status)
++                .expect("a plain SOAP challenge must survive response decoding");
++            let outcome = crate::api::live::user_exchange_outcome(reply.body.body, reply.header.pp).unwrap();
++            let ExchangeUserTokenOutcome::Fault(Some(pp)) = outcome else { panic!("challenge lost") };
++            assert_eq!(pp.interactive_auth_url(), Some(url.as_str()));
++        }
++    }
++}
++
++#[test]
++fn minimal_fault_without_supported_challenge_does_not_become_success() {
++    for url in ["", "http://login.live.com/no", "https://example.invalid/no",
++        "https://user@login.live.com/no", "https://login.live.com:444/no"]
++    {
++        let reply = parse_response(None, plain_fault(url), reqwest::StatusCode::BAD_REQUEST).unwrap();
++        assert!(matches!(crate::api::live::user_exchange_outcome(reply.body.body, reply.header.pp),
++            Err(RSTError::AuthenticationRejected)));
++    }
++    let xml = plain_fault("");
++    let start = xml.find("<S:Header>").unwrap();
++    let end = xml.find("</S:Header>").unwrap() + "</S:Header>".len();
++    let xml = format!("{}{}", &xml[..start], &xml[end..]);
++    let reply = parse_response(None, xml, reqwest::StatusCode::BAD_REQUEST).unwrap();
++    assert!(reply.header.pp.is_none());
++    assert!(matches!(reply.body.body, soap::BodyContent::Fault(_)));
++}
++
++fn signature() -> super::super::RSTSignature<'static> {
++    super::super::RSTSignature::Hmac { clep_secret: b"synthetic-device-secret", tpm_secret: &[] }
++}
++
++fn encrypt(plaintext: &[u8], arbitrary_padding: bool) -> soap::EncryptedData {
++    use aes::cipher::{BlockModeEncrypt, KeyIvInit, block_padding::NoPadding};
++    let nonce = b"synthetic-response-nonce";
++    let key = signature().hmac_key(nonce).unwrap();
++    let iv = [23_u8; 16];
++    let padding = 16 - plaintext.len() % 16;
++    let mut padded = plaintext.to_vec();
++    padded.extend(std::iter::repeat_n(if arbitrary_padding { 0xa5 } else { padding as u8 }, padding - 1));
++    padded.push(padding as u8);
++    let mut ciphertext = vec![0; padded.len()];
++    cbc::Encryptor::<aes::Aes256>::new(&key.into(), &iv.into())
++        .encrypt_padded_b2b::<NoPadding>(&padded, &mut ciphertext).unwrap();
++    let mut bytes = iv.to_vec();
++    bytes.extend(ciphertext);
++    soap::EncryptedData {
++        id: "SyntheticEncrypted".into(), xmlns: "http://www.w3.org/2001/04/xmlenc#".into(),
++        el_type: "http://www.w3.org/2001/04/xmlenc#Element".into(),
++        encryption_method: soap::EncryptionMethod {
++            algorithm: "http://www.w3.org/2001/04/xmlenc#aes256-cbc".into(), val: None,
++        },
++        key_info: soap::KeyInfoWrap {
++            ds: None, key_name: None,
++            security_token_reference: Some(soap::SecurityTokenReference {
++                reference: soap::ReferenceUri { uri: "#SignKey".into() },
++            }),
++        },
++        cipher_data: soap::CipherData::new(BASE64_STANDARD.encode(bytes)),
++    }
++}
++
++const FAULT: &str = "<Fault><faultcode>wsse:FailedAuthentication</faultcode></Fault>";
++const PP: &str = "<pp><inlineauthurl>https://login.live.com/synthetic-verification</inlineauthurl></pp>";
++
++fn signed_response(body: &str, pp: &str) -> String {
++    let nonce = b"synthetic-response-nonce";
++    let mut template = soap::Signature::empty_hmac();
++    template.signed_info.reference = vec![soap::SignatureReference::exclusive("#ResponseBody"),
++        soap::SignatureReference::exclusive("#ResponseHeader")];
++    let template = quick_xml::se::to_string(&template).unwrap();
++    let pp = pp.replacen('>', " wsu:Id=\"ResponseHeader\">", 1);
++    let xml = format!(r##"<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope"
++      xmlns:ds="http://www.w3.org/2000/09/xmldsig#"
++      xmlns:wsa="http://www.w3.org/2005/08/addressing"
++      xmlns:wsu="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd"
++      xmlns:wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd"
++      xmlns:wssc="http://schemas.xmlsoap.org/ws/2005/02/sc">
++      <s:Header><wsa:Action>synthetic-response</wsa:Action><wsa:To>synthetic-client</wsa:To>
++      <wsse:Security><wsu:Timestamp><wsu:Created>2026-10-01T00:00:00Z</wsu:Created>
++      <wsu:Expires>2026-10-01T00:05:00Z</wsu:Expires></wsu:Timestamp>
++      <wssc:DerivedKeyToken wsu:Id="SignKey" Algorithm="urn:liveid:SP800108_CTR_HMAC_SHA256_DOUBLEDERIVED">
++      <wssc:Nonce>{}</wssc:Nonce></wssc:DerivedKeyToken>{template}</wsse:Security>
++      {pp}</s:Header>
++      <s:Body wsu:Id="ResponseBody">{body}</s:Body></s:Envelope>"##, BASE64_STANDARD.encode(nonce));
++    utils::sign_xml(Some(&signature()), nonce, xml).unwrap()
++}
++
++#[test]
++fn signed_fault_is_checked_before_handoff() {
++    let xml = signed_response(FAULT, PP);
++    let reply = parse_response(Some(signature()), xml.clone(), reqwest::StatusCode::OK).unwrap();
++    assert!(reply.header.pp.unwrap().interactive_auth_url().is_some());
++    let tampered = xml.replace("wsse:FailedAuthentication", "s:Receiver");
++    assert!(matches!(parse_response(Some(signature()), tampered, reqwest::StatusCode::OK),
++        Err(RSTError::Response { step: ResponseStep::Signature, .. })));
++    let tampered = xml.replace("/synthetic-verification", "/tampered");
++    assert!(matches!(parse_response(Some(signature()), tampered, reqwest::StatusCode::OK),
++        Err(RSTError::Response { step: ResponseStep::Signature, .. })));
++}
++
++#[test]
++fn encrypted_challenge_and_body_support_xml_padding_and_large_responses() {
++    for arbitrary in [false, true] {
++        let pp = quick_xml::se::to_string(&soap::EncryptedPP { encrypted_data: encrypt(PP.as_bytes(), arbitrary) }).unwrap();
++        let body = format!("<Fault><faultcode>wsse:FailedAuthentication</faultcode><faultstring>{}</faultstring></Fault>", "x".repeat(9000));
++        let mut encrypted = encrypt(body.as_bytes(), arbitrary);
++        encrypted.id = "SyntheticBody".into();
++        let body = quick_xml::se::to_string(&encrypted).unwrap();
++        let reply = parse_response(Some(signature()), signed_response(&body, &pp), reqwest::StatusCode::OK).unwrap();
++        assert!(reply.header.pp.unwrap().interactive_auth_url().is_some());
++        assert!(matches!(reply.body.body, soap::BodyContent::Fault(_)));
++    }
++}
++
++// Hand-written wire response: exercise the entire decoder and root selection,
++// rather than constructing the already-deserialized credential model.
++const ISSUED_ROOT_COLLECTION: &str = r#"<wst:RequestSecurityTokenResponseCollection
++      xmlns:wst="http://schemas.xmlsoap.org/ws/2005/02/trust"
++      xmlns:wsp="http://schemas.xmlsoap.org/ws/2004/09/policy"
++      xmlns:wsa="http://www.w3.org/2005/08/addressing"
++      xmlns:wsu="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd">
++      <wst:RequestSecurityTokenResponse>
++        <wst:TokenType>urn:passport:legacy</wst:TokenType>
++        <wsp:AppliesTo><wsa:EndpointReference><wsa:Address>http://Passport.NET/tb</wsa:Address></wsa:EndpointReference></wsp:AppliesTo>
++        <wst:Lifetime><wsu:Created>2026-01-01T00:00:00Z</wsu:Created><wsu:Expires>2999-01-01T00:00:00Z</wsu:Expires></wst:Lifetime>
++        <wst:RequestedSecurityToken>
++          <EncryptedData xmlns="http://www.w3.org/2001/04/xmlenc#" Id="SyntheticRoot" Type="http://www.w3.org/2001/04/xmlenc#Element">
++            <EncryptionMethod Algorithm="http://www.w3.org/2001/04/xmlenc#tripledes-cbc"/>
++            <ds:KeyInfo xmlns:ds="http://www.w3.org/2000/09/xmldsig#"><ds:KeyName>http://Passport.NET/STS</ds:KeyName></ds:KeyInfo>
++            <CipherData><CipherValue>SYNTHETIC-ROOT</CipherValue></CipherData>
++          </EncryptedData>
++        </wst:RequestedSecurityToken>
++      </wst:RequestSecurityTokenResponse>
++    </wst:RequestSecurityTokenResponseCollection>"#;
++
++#[test]
++fn encrypted_successful_exchange_produces_a_usable_root_credential() {
++    for arbitrary in [false, true] {
++        let body = quick_xml::se::to_string(&encrypt(ISSUED_ROOT_COLLECTION.as_bytes(), arbitrary)).unwrap();
++        let reply = parse_response(Some(signature()), signed_response(&body, PP), reqwest::StatusCode::OK).unwrap();
++        let root = crate::tokens::session::renewed_sts(reply.body.body).unwrap();
++        assert_eq!(root.key_name.as_deref(), Some("http://Passport.NET/STS"));
++        assert!(root.token.contains("SYNTHETIC-ROOT"));
++    }
++}
++
++#[test]
++fn crypto_and_xml_failures_keep_the_exact_response_step() {
++    for (plaintext, expected_pp, expected_body) in [
++        (b"<not-closed>".as_slice(), ResponseStep::ChallengeXml, ResponseStep::BodyXml),
++        (b"\xff".as_slice(), ResponseStep::ChallengeDecryption, ResponseStep::BodyDecryption),
++    ] {
++        let data = encrypt(plaintext, false);
++        let body = quick_xml::se::to_string(&data).unwrap();
++        let pp = quick_xml::se::to_string(&soap::EncryptedPP { encrypted_data: data }).unwrap();
++        for (body, pp, expected) in [(FAULT, pp.as_str(), expected_pp), (body.as_str(), PP, expected_body)] {
++            let error = parse_response(Some(signature()), signed_response(body, pp), reqwest::StatusCode::OK).unwrap_err();
++            assert!(matches!(error, RSTError::Response { step, .. } if step == expected));
++        }
++    }
++}
++
++#[test]
++fn malformed_ciphertext_returns_errors_without_panicking() {
++    let nonces = HashMap::from([("SignKey".into(), BASE64_STANDARD.encode(b"synthetic-response-nonce"))]);
++    for length in [0, 1, 15, 16, 17, 31, 33] {
++        let mut encrypted = encrypt(PP.as_bytes(), false);
++        encrypted.cipher_data.cipher_value = BASE64_STANDARD.encode(vec![0; length]);
++        assert!(utils::decrypt_soap_encrypted_data::<soap::PP>(Box::new(encrypted), &signature(), &nonces).is_err());
++    }
++    for uri in ["", "#", "SignKey", "#unknown", "é"] {
++        let mut encrypted = encrypt(PP.as_bytes(), false);
++        encrypted.key_info.security_token_reference.as_mut().unwrap().reference.uri = uri.into();
++        assert!(utils::decrypt_soap_encrypted_data::<soap::PP>(Box::new(encrypted), &signature(), &nonces).is_err());
++    }
++}
++
++#[test]
++fn malformed_responses_and_http_errors_are_distinct() {
++    for (status, expected) in [(reqwest::StatusCode::OK, ResponseStep::Envelope),
++        (reqwest::StatusCode::SERVICE_UNAVAILABLE, ResponseStep::HttpStatus)]
++    {
++        assert!(matches!(parse_response(None, "<html>unavailable</html>".into(), status),
++            Err(RSTError::Response { step, .. }) if step == expected));
++    }
++    let data = quick_xml::se::to_string(&encrypt(FAULT.as_bytes(), false)).unwrap();
++    let short = format!("<Envelope><Body>{data}</Body></Envelope>");
++    assert!(matches!(parse_response(Some(signature()), short, reqwest::StatusCode::OK),
++        Err(RSTError::Response { step: ResponseStep::Shape, .. })));
++}
++
++fn scoped_challenge(url: &str) -> String {
++    format!(r#"<wst:RequestSecurityTokenResponse>
++      <wsp:AppliesTo><wsa:EndpointReference><wsa:Address>scope=service::user.auth.xboxlive.com::MBI_SSL&amp;api-version=2.0</wsa:Address></wsa:EndpointReference></wsp:AppliesTo>
++      <psf:pp xmlns:psf="http://schemas.microsoft.com/Passport/SoapServices/SOAPFault">
++        <psf:reqstatus>synthetic-verification-required</psf:reqstatus>
++        <psf:inlineauthurl>{url}</psf:inlineauthurl>
++      </psf:pp>
++    </wst:RequestSecurityTokenResponse>"#)
++}
++
++#[test]
++fn scoped_verification_precedes_an_issued_root_in_a_mixed_response() {
++    for host in ["login.live.com", "account.live.com"] {
++        let url = format!("https://{host}/synthetic-scope-verification");
++        for before_root in [true, false] {
++            let challenge = scoped_challenge(&url);
++            let mixed = if before_root {
++                ISSUED_ROOT_COLLECTION.replacen("<wst:RequestSecurityTokenResponse>",
++                    &format!("{challenge}<wst:RequestSecurityTokenResponse>"), 1)
++            } else {
++                ISSUED_ROOT_COLLECTION.replace("</wst:RequestSecurityTokenResponseCollection>",
++                    &format!("{challenge}</wst:RequestSecurityTokenResponseCollection>"))
++            };
++            for encrypted in [true, false] {
++                let body = if encrypted { quick_xml::se::to_string(&encrypt(mixed.as_bytes(), true)).unwrap() }
++                    else { mixed.clone() };
++                let reply = parse_response(Some(signature()), signed_response(&body, "<pp></pp>"), reqwest::StatusCode::OK).unwrap();
++                assert!(crate::tokens::session::renewed_sts(reply.body.body.clone()).is_err(),
++                    "must not persist the issued root while a scope still requires verification");
++                let outcome = crate::api::live::user_exchange_outcome(reply.body.body, reply.header.pp).unwrap();
++                let ExchangeUserTokenOutcome::Fault(Some(pp)) = outcome else { panic!("scoped challenge lost") };
++                assert_eq!(pp.interactive_auth_url(), Some(url.as_str()));
++                assert_eq!(crate::tokens::session::fault(Some(&pp)), crate::tokens::session::SessionError::SignInRequired);
++            }
++        }
++    }
++}
++
++#[test]
++fn scoped_rejection_cannot_silently_commit_an_issued_root() {
++    for url in ["", "http://login.live.com/no", "https://example.invalid/no"] {
++        let mixed = ISSUED_ROOT_COLLECTION.replacen("<wst:RequestSecurityTokenResponse>",
++            &format!("{}<wst:RequestSecurityTokenResponse>", scoped_challenge(url)), 1);
++        let body = quick_xml::se::to_string(&encrypt(mixed.as_bytes(), false)).unwrap();
++        let reply = parse_response(Some(signature()), signed_response(&body, "<pp></pp>"), reqwest::StatusCode::OK).unwrap();
++        assert!(crate::tokens::session::renewed_sts(reply.body.body.clone()).is_err());
++        assert!(matches!(crate::api::live::user_exchange_outcome(reply.body.body, reply.header.pp),
++            Err(RSTError::AuthenticationRejected)));
++    }
++    let incomplete = ISSUED_ROOT_COLLECTION.replace("<wst:TokenType>urn:passport:legacy</wst:TokenType>", "");
++    let body = quick_xml::se::to_string(&encrypt(incomplete.as_bytes(), false)).unwrap();
++    assert!(matches!(parse_response(Some(signature()), signed_response(&body, "<pp></pp>"), reqwest::StatusCode::OK),
++        Err(RSTError::Response { step: ResponseStep::BodyXml, .. })));
++}
+diff --git c/crates/xodus/src/api/live/utils.rs w/crates/xodus/src/api/live/utils.rs
+--- c/crates/xodus/src/api/live/utils.rs
++++ w/crates/xodus/src/api/live/utils.rs
+@@ -4 +4 @@
+-use aes::cipher::block_padding::Pkcs7;
++use aes::cipher::block_padding::NoPadding;
+@@ -104,4 +104,2 @@
+-    let id = &encrypted_data
+-        .key_info
+-        .as_signature()
+-        .security_token_reference
++    let id = &encrypted_data.key_info.security_token_reference
++        .as_ref().ok_or(rst::RSTError::MissingNonce)?
+@@ -111 +109,2 @@
+-    let nonce = nonces.get(&id[1..]).ok_or(rst::RSTError::MissingNonce)?;
++    let id = id.strip_prefix('#').filter(|id| !id.is_empty()).ok_or(rst::RSTError::MissingNonce)?;
++    let nonce = nonces.get(id).ok_or(rst::RSTError::MissingNonce)?;
+@@ -115,0 +115,6 @@
++    if encrypted_data.encryption_method.algorithm != "http://www.w3.org/2001/04/xmlenc#aes256-cbc"
++        || cipher_value.len() < 32 || cipher_value.len() > 2 * 1024 * 1024
++        || cipher_value.len() % 16 != 0
++    {
++        return Err(rst::RSTError::InvalidResponse);
++    }
+@@ -117 +122 @@
+-    let iv: &[u8; 16] = iv.try_into().unwrap();
++    let iv: &[u8; 16] = iv.try_into().map_err(|_| rst::RSTError::InvalidResponse)?;
+@@ -119,6 +124,11 @@
+-    let mut block = [0; 8192];
+-
+-    decryptor
+-        .decrypt_padded_b2b::<Pkcs7>(encrypted, &mut block)
+-        .expect("Failed");
+-    let result = std::str::from_utf8(&block).unwrap();
++    let mut block = vec![0; encrypted.len()];
++    let plaintext = decryptor.decrypt_padded_b2b::<NoPadding>(encrypted, &mut block)
++        .map_err(|_| rst::RSTError::InvalidResponse)?;
++    // XML Encryption CBC padding permits arbitrary bytes followed by the pad
++    // length (W3C XML Encryption 1.1, section 5.2.1), not only PKCS#7 bytes.
++    let padding = usize::from(*plaintext.last().ok_or(rst::RSTError::InvalidResponse)?);
++    if !(1..=16).contains(&padding) || padding > plaintext.len() {
++        return Err(rst::RSTError::InvalidResponse);
++    }
++    let result = std::str::from_utf8(&plaintext[..plaintext.len() - padding])
++        .map_err(|_| rst::RSTError::InvalidResponse)?;
 diff --git c/crates/xodus/src/licensing/splicense.rs w/crates/xodus/src/licensing/splicense.rs
 --- c/crates/xodus/src/licensing/splicense.rs
 +++ w/crates/xodus/src/licensing/splicense.rs
@@ -7252,6 +7729,36 @@ diff --git c/crates/xodus/src/models/soap/base.rs w/crates/xodus/src/models/soap
 +            })
 +        })
 +    }
++}
+diff --git c/crates/xodus/src/models/soap/envelope.rs w/crates/xodus/src/models/soap/envelope.rs
+--- c/crates/xodus/src/models/soap/envelope.rs
++++ w/crates/xodus/src/models/soap/envelope.rs
+@@ -9,0 +10,26 @@
++
++// Response headers differ from the headers we send. In particular, Microsoft
++// can return a plain SOAP fault containing only PP and its inline challenge.
++// Keep request construction strict, and validate successful response headers
++// separately before accepting any tokens.
++#[derive(Debug, Deserialize)]
++pub struct ResponseEnvelope {
++    #[serde(rename = "Header", default)]
++    pub header: ResponseHeader,
++    #[serde(rename = "Body")]
++    pub body: Body,
++}
++
++#[derive(Debug, Default, Deserialize)]
++pub struct ResponseHeader {
++    #[serde(rename = "Action")]
++    pub action: Option<MustUnderstandValue>,
++    #[serde(rename = "To")]
++    pub to: Option<MustUnderstandValue>,
++    #[serde(rename = "Security")]
++    pub security: Option<Security>,
++    #[serde(rename = "EncryptedPP")]
++    pub encrypted_pp: Option<EncryptedPP>,
++    #[serde(rename = "pp")]
++    pub pp: Option<PP>,
 +}
 diff --git c/crates/xodus/src/models/xgameruntime/xuser.rs w/crates/xodus/src/models/xgameruntime/xuser.rs
 --- c/crates/xodus/src/models/xgameruntime/xuser.rs
@@ -7882,7 +8389,7 @@ new file mode 100644
 +pub fn renewed_sts(body: soap::BodyContent) -> Result<LegacyToken, SessionError> {
 +    let replies = match body {
 +        soap::BodyContent::RequestSecurityTokenResponse(t) => vec![*t],
-+        soap::BodyContent::RequestSecurityTokenResponseCollection(c) => c.security_tokens,
++        soap::BodyContent::RequestSecurityTokenResponseCollection(c) if c.challenges.is_empty() => c.security_tokens,
 +        _ => return Err(SessionError::InvalidResponse),
 +    };
 +    let mut result = None;
@@ -8094,7 +8601,7 @@ new file mode 100644
 +    for wrong in [reply("https://other.invalid", "SYNTHETIC"), reply(PASSPORT_STS, "")] {
 +        assert!(renewed_sts(soap::BodyContent::RequestSecurityTokenResponse(Box::new(wrong))).is_err());
 +    }
-+    assert!(renewed_sts(soap::BodyContent::RequestSecurityTokenResponseCollection(soap::RequestSecurityTokenResponseCollection {security_tokens:vec![valid.clone(), valid]})).is_err());
++    assert!(renewed_sts(soap::BodyContent::RequestSecurityTokenResponseCollection(soap::RequestSecurityTokenResponseCollection {security_tokens:vec![valid.clone(), valid],challenges:vec![]})).is_err());
 +}
 +
 +#[test]
@@ -8120,3 +8627,72 @@ diff --git c/crates/xodus/src/tokens/store.rs w/crates/xodus/src/tokens/store.rs
 +    ) -> Result<(), TokenStoreError> {
 +        self.set(key, &update(self.get(key)?)?)
 +    }
+diff --git c/crates/xodus/src/models/soap/tokens.rs w/crates/xodus/src/models/soap/tokens.rs
+--- c/crates/xodus/src/models/soap/tokens.rs
++++ w/crates/xodus/src/models/soap/tokens.rs
+@@ -3 +3 @@
+-use super::base::{AppliesTo, PolicyReference, Timestamp};
++use super::base::{AppliesTo, PP, PolicyReference, Timestamp};
+@@ -96 +96 @@
+-#[derive(Debug, Clone, Serialize, Deserialize)]
++#[derive(Debug, Clone, Serialize)]
+@@ -102,0 +103,2 @@
++    #[serde(rename = "wst:RequestSecurityTokenResponse", skip_serializing_if = "Vec::is_empty")]
++    pub challenges: Vec<ScopedTokenChallenge>,
+@@ -103,0 +106,56 @@
++
++#[derive(Debug, Clone, Serialize)]
++pub struct ScopedTokenChallenge {
++    #[serde(rename = "wsp:AppliesTo")]
++    pub applies_to: AppliesTo,
++    #[serde(rename = "psf:pp")]
++    pub pp: PP,
++}
++
++// A multi-scope reply can issue one token and return a verification step for
++// another scope. Only this wire model accepts absent issued-token fields;
++// callers still receive either a complete token or an explicit challenge.
++#[derive(Deserialize)]
++struct TokenResponseWire {
++    #[serde(rename = "AppliesTo")]
++    applies_to: AppliesTo,
++    #[serde(rename = "TokenType")]
++    token_type: Option<String>,
++    #[serde(rename = "Lifetime")]
++    lifetime: Option<Timestamp>,
++    #[serde(rename = "RequestedSecurityToken")]
++    requested_security_token: Option<RequestedSecurityToken>,
++    #[serde(rename = "RequestedProofToken")]
++    requested_proof_token: Option<RequestedProofToken>,
++    #[serde(rename = "pp")]
++    pp: Option<PP>,
++}
++
++impl<'de> Deserialize<'de> for RequestSecurityTokenResponseCollection {
++    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
++        #[derive(Deserialize)]
++        struct CollectionWire {
++            #[serde(rename = "RequestSecurityTokenResponse")]
++            responses: Vec<TokenResponseWire>,
++        }
++        let wire = CollectionWire::deserialize(deserializer)?;
++        let mut result = Self { security_tokens: Vec::new(), challenges: Vec::new() };
++        for response in wire.responses {
++            match (response.token_type, response.lifetime, response.requested_security_token) {
++                (Some(token_type), Some(lifetime), Some(requested_security_token)) => {
++                    result.security_tokens.push(RequestSecurityTokenResponse {
++                        token_type, lifetime, requested_security_token,
++                        applies_to: response.applies_to,
++                        requested_proof_token: response.requested_proof_token,
++                    });
++                }
++                (None, None, None) if response.requested_proof_token.is_none() => {
++                    let pp = response.pp.ok_or_else(|| serde::de::Error::custom("missing token or verification step"))?;
++                    result.challenges.push(ScopedTokenChallenge { applies_to: response.applies_to, pp });
++                }
++                _ => return Err(serde::de::Error::custom("incomplete token response")),
++            }
++        }
++        Ok(result)
++    }
++}

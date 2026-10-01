@@ -16,7 +16,7 @@ import uuid
 import xml.etree.ElementTree as ET
 
 from . import bootstrap, games, store_diagnostics
-from .game_install import run_cli
+from .game_install import run_cli, login_error_message
 from .backend import LauncherError, utc_now
 
 STAGES = ("runtime", "account", "catalog", "license", "library", "window")
@@ -216,7 +216,10 @@ class StoreCheck:
                                      cwd=runtime / "private", cancel=self.cancelled, timeout=900,
                                      xdg_root=runtime / "private/xdg")
                     if result:
-                        self._step("sign_in", "failed", "sign_in_required")
+                        with self.lock:
+                            self._step("sign_in", "failed", "sign_in_required")
+                            row = next(r for r in self.job["steps"] if r["stage"] == "sign_in")
+                            row.update(exit_code=result, message=login_error_message(result))
                         return
                     self._step("sign_in", "passed", "verified")
                 online = {"account", "catalog", "license", "library"}

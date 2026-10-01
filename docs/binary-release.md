@@ -6,9 +6,9 @@ not contain Microsoft game files, a Wine prefix, account data, Linux system
 libraries or the upstream Proton runner. The Git repository and source-only
 archive still exclude compiled runtime binaries.
 
-Flightdeck **0.1.15** includes the rebuilt Xodus login component and the
-matching **0.1.15** native component/source archives. The broker remains at the
-0.1.14 build, the Store catalog mapper at the 0.1.13 build, and the other three
+Flightdeck **0.1.16** includes rebuilt Xodus CLI and broker
+components and matching **0.1.16** native component/source archives. The Store
+catalog mapper remains at the 0.1.13 build, and the other three
 native binaries at the 0.1.9 builds, with identical corresponding sources verified against the staged
 source manifests. Use the component version
 pinned by the selected package's `compat/bootstrap.lock.json`; see

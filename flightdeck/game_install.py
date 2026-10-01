@@ -212,8 +212,8 @@ def validate_download(destination, game_id="msfs2024"):
     return root
 
 
-def _check_login_result(result):
-    """Translate the CLI's fixed exit codes without reading credential output."""
+def login_error_message(result):
+    """Describe a CLI exit code without reading its credential-bearing output."""
     if result == 0:
         return
     failures = {
@@ -225,11 +225,31 @@ def _check_login_result(result):
         75: "Microsoft hat die Anmeldung ohne einen unterstützten Verifizierungsschritt abgelehnt (Anmeldecode 75). Bitte diesen Code beim Fehlerbericht angeben.",
         76: "Bitte mit demselben Microsoft-Konto wie zuvor anmelden (Anmeldecode 76).",
         79: "Microsoft hat keinen unterstützten Verifizierungsschritt zurückgegeben (Anmeldecode 79). Bitte diesen Code beim Fehlerbericht angeben.",
+        80: "Die Microsoft-Tokenanfrage konnte nicht erstellt werden (Anmeldecode 80).",
+        81: "Die Microsoft-Anmeldeantwort überschreitet das Größenlimit (Anmeldecode 81).",
+        82: "Die Textkodierung der Microsoft-Anmeldeantwort ist ungültig (Anmeldecode 82).",
+        83: "Die XML-Struktur der Microsoft-Anmeldeantwort konnte nicht gelesen werden (Anmeldecode 83).",
+        84: "Die Signatur der Microsoft-Anmeldeantwort konnte nicht geprüft werden (Anmeldecode 84).",
+        85: "Der Microsoft-Verifizierungsschritt konnte nicht entschlüsselt werden (Anmeldecode 85).",
+        86: "Der entschlüsselte Microsoft-Verifizierungsschritt konnte nicht gelesen werden (Anmeldecode 86).",
+        87: "Die Microsoft-Tokenantwort konnte nicht entschlüsselt werden (Anmeldecode 87).",
+        88: "Die entschlüsselte Microsoft-Tokenantwort konnte nicht gelesen werden (Anmeldecode 88).",
+        89: "Die Microsoft-Tokenantwort ist unvollständig (Anmeldecode 89).",
+        90: "Der Microsoft-Anmeldedienst hat einen HTTP-Fehler zurückgegeben (Anmeldecode 90).",
+        91: "Microsoft hat kein gültiges Haupt-Anmeldetoken zurückgegeben (Anmeldecode 91).",
+        92: "Die Microsoft-Tokenanfrage hat das Zeitlimit überschritten (Anmeldecode 92).",
+        93: "Microsoft hat zu viele Anmeldeversuche gemeldet. Bitte vor dem nächsten Versuch warten (Anmeldecode 93).",
         101: "Die Microsoft-Anmeldung wurde unerwartet beendet. Grafische Sitzung, GTK/WebKitGTK und Schlüsselbund prüfen und erneut versuchen.",
     }
     if result in failures:
-        raise GameInstallError(failures[result])
-    raise GameInstallError(message("Die Microsoft-Anmeldung wurde nicht abgeschlossen (Code {code}). Bitte erneut versuchen.", code=result))
+        return failures[result]
+    return message("Die Microsoft-Anmeldung wurde nicht abgeschlossen (Code {code}). Bitte erneut versuchen.", code=result)
+
+
+def _check_login_result(result):
+    error = login_error_message(result)
+    if error:
+        raise GameInstallError(error)
 
 
 def download_game(cli, expected_cli_sha256, destination, market, *, cancel=None, notify=None, xdg_root=None,

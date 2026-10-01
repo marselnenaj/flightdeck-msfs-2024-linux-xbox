@@ -2,7 +2,7 @@
 
 [English](known-issues.md)
 
-Stand: Flightdeck 0.1.15, 30. September 2026.
+Stand: Flightdeck 0.1.16, 1. Oktober 2026.
 
 **Komponentenupdates:** 0.1.10 behebt, dass ältere Store-Binaries bei angepassten
 Startskripten erhalten blieben. Aktualisiere Flightdeck und öffne es bei
@@ -16,16 +16,15 @@ Simulator geprüft wird.
 
 ## Aktueller Umfang
 
-- **Microsoft-Anmeldung:** Auf 0.1.14 öffnet sich das Fenster und erlaubt die
-  Eingabe der Zugangsdaten. Nach dem Passwort kann jedoch beim Übergang zur
-  E-Mail-Code-Abfrage eine allgemeine Fehlermeldung erscheinen. Die Korrektur
-  des Token-Austauschs in 0.1.14 reicht für diesen Bericht nicht aus. Version
-  0.1.15 erhält Sitzungscookies zwischen den
-  Anmeldeschritten und ignoriert veraltete Rückmeldungen. Lokale synthetische
-  Tests reproduzieren beide Übergabefehler; die echte Anmeldung mit einem
-  betroffenen Konto ist noch ungeprüft. Ein Zusammenhang mit dem NVIDIA-Problem
-  ist nicht bestätigt.
-  [Korrektur und Prüfumfang (Englisch)](store-session-refresh.md#browser-challenge-handoff-0115).
+- **Microsoft-Anmeldung:** 0.1.16 verarbeitet Verifizierungsschritte innerhalb
+  einer Antwort mit mehreren Tokens, verkürzte SOAP-Fehlerantworten und
+  verschlüsselte Antworten, die bisher mit Code 74 scheiterten. Die Korrekturen
+  für Sitzungscookies und Rückmeldungen aus 0.1.15 bleiben enthalten. Vor einem
+  erneuten Versuch aktualisieren und neu starten. Falls die Anmeldung weiter
+  scheitert, den angezeigten Code und die Version melden; der Erfolg ist noch
+  nicht auf allen betroffenen Systemen bestätigt. Ein Zusammenhang mit dem
+  NVIDIA-Problem ist nicht bestätigt.
+  [Korrektur und Prüfumfang (Englisch)](store-session-refresh.md#soap-response-correction-0116).
 - **NVIDIA:** MSFS 2024 kann funktionierende Menüs und Overlays anzeigen,
   während Weltkarte und 3D-Hauptansicht schwarz bleiben. 0.1.11 korrigiert DXVKs
   wirkungslose Low-Latency-Abschaltung und verwendet automatisch das vollständige

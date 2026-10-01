@@ -38,7 +38,7 @@ export function createStoreCheck({request,getStatus,isOnline,isReserved,refreshS
       const marker=document.createElement('span');marker.className='check-indicator'+(row.state==='passed'?'':row.state==='failed'?' failed':' unknown');marker.textContent=row.state==='passed'?'✓':row.state==='failed'?'!':'·';marker.setAttribute('aria-hidden','true');
       const content=document.createElement('div');content.className='check-text';const label=document.createElement('strong');label.textContent=t(stages[row.stage]);
       const detail=document.createElement('p');
-      detail.textContent=(row.stage==='window'&&row.state==='running'?t('Bestätige im Testfenster, ob Text und Schaltflächen sichtbar sind.'):row.state==='pending'?t('Ausstehend'):t(codes[row.code]||codes.incomplete));
+      detail.textContent=(row.stage==='sign_in'&&row.state==='failed'&&typeof row.message==='string'?row.message:row.stage==='window'&&row.state==='running'?t('Bestätige im Testfenster, ob Text und Schaltflächen sichtbar sind.'):row.state==='pending'?t('Ausstehend'):t(codes[row.code]||codes.incomplete));
       content.append(label,detail);li.append(marker,content);return li;
     }));
   }
