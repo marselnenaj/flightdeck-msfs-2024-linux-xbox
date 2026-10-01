@@ -21,6 +21,12 @@ native and launcher source archives. The rebuilt DXVK and all its pinned
 recursive submodules are supplied as `flightdeck-dxvk-0.1.11-sources.tar.gz`.
 See [renderer provenance](nvidia-renderer.md).
 
+The **0.1.17 prerelease** updates only the VKD3D pair and supplies its complete
+patched sources as `flightdeck-vkd3d-0.1.17-sources.tar.gz`. It retains the
+0.1.16 native component/source archives and the 0.1.11 DXVK source archive with
+their existing hashes and notices. The new renderer's effect on the reported
+NVIDIA black main view remains unverified.
+
 The release pins in `compat/bootstrap.lock.json` bind the component archive,
 every executable/library and the notice file to SHA256 checksums. The installer
 accepts only these eight native files. Bootstrap rechecks executable hashes

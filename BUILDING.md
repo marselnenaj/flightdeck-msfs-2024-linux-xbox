@@ -156,7 +156,7 @@ checks response-error classification. The output directory must be new.
 Flightdeck 0.1.9 also has a separately pinned NVIDIA VKD3D backport and a
 real multiwindow rendering/readback check. See [renderer build and packaging](docs/nvidia-renderer.md).
 
-The unreleased renderer also has a [3D texture layout regression](docs/nvidia-renderer.md#volume-layout-regression).
+The 0.1.17 test renderer also has a [3D texture layout regression](docs/nvidia-renderer.md#volume-layout-regression).
 It requires the Khronos Vulkan validation layer and compares the previous
 bundle, the corrected bundle, and controls with maintenance9 disabled. Passing
 pixel readback alone does not pass this check.

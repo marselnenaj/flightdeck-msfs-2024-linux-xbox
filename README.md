@@ -21,7 +21,7 @@ Flightdeck installs and launches your **purchased Xbox PC / Microsoft Store copy
 of MSFS 2024 or 2020** on your Linux computer through Wine/Proton. Sign in with your
 Microsoft account, download the game and start it from one application.
 
-**Current public release: [Flightdeck 0.1.16](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.16).**
+**Current stable release: [Flightdeck 0.1.16](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.16).**
 Update through **Updates → Flightdeck** or use the full installer.
 **0.1.16** fixes Microsoft sign-in failing with code 74 when a token response
 also contains a required verification step. Flightdeck now opens that step and
@@ -62,9 +62,11 @@ If Microsoft sign-in still fails on 0.1.16, include the displayed error code
 and Flightdeck version in your report.
 [Current status and scope](docs/known-issues.md).
 
-**Unreleased renderer candidate:** a 3D-texture layout correction passes an
-isolated Vulkan regression check. It is not in 0.1.16; its effect on the NVIDIA
-black main view remains unverified. [Details and validation](docs/nvidia-renderer.md#3d-texture-layout-correction-unreleased).
+**NVIDIA test release: [Flightdeck 0.1.17 (prerelease)](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.17).**
+It includes a 3D-texture layout correction verified with an isolated Vulkan
+regression check. Its effect on the NVIDIA black main view remains unverified.
+Download and install the full package from that release to participate; prereleases
+are not offered through **Updates → Flightdeck**. [Details and validation](docs/nvidia-renderer.md#3d-texture-layout-correction-0117-prerelease).
 
 ## Get started
 

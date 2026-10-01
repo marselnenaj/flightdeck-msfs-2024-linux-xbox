@@ -38,8 +38,8 @@ surfaces, rather than the DXGI object's lifetime. The backport contains:
 - [Count swapchains at registration/unregistration](https://github.com/HansKristian-Work/vkd3d-proton/commit/7a3eb926b959ab27ad3cbb6a028381d807b39e0b).
 - [Defer low-latency demotion until another swapchain is actually used](https://github.com/HansKristian-Work/vkd3d-proton/commit/e14020081a14f2d595d03049b091fea748684a4f).
 
-The published `compat/patches/vkd3d-nvidia-low-latency.patch` applies these
-changes to the existing renderer. The development tree now carries them in
+The 0.1.16 `compat/patches/vkd3d-nvidia-low-latency.patch` applies these
+changes to the existing renderer. The 0.1.17 prerelease carries them in
 `compat/patches/vkd3d-renderer.patch` together with the layout correction below.
 It does not replace Wine or the Fenix overlay. All
 NVIDIA modes use the corrections in the full installer package. AMD/Intel-only
@@ -54,9 +54,9 @@ missing scene. Earlier launcher defaults set `VKD3D_DEBUG=info`, which is below
 `warn` in VKD3D and suppressed this warning. 0.1.11 defaults to `warn`; absence
 of the warning in an older info-level log cannot demonstrate a fix.
 
-## 3D texture layout correction (unreleased)
+## 3D texture layout correction (0.1.17 prerelease)
 
-The renderer candidate adds upstream
+The [0.1.17 prerelease](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.17) adds upstream
 [`6831d28e5e71a252e740e474ecbad37d27c3f205`](https://github.com/HansKristian-Work/vkd3d-proton/commit/6831d28e5e71a252e740e474ecbad37d27c3f205)
 to the same pinned VKD3D revision. With `VK_KHR_maintenance9`, image barriers
 for 2D-array-compatible 3D images interpret the layer count as depth slices.
@@ -77,8 +77,14 @@ recursive submodule revisions and binary hashes are recorded in the graphics loc
 The isolated test demonstrates a real layout bug and its correction on AMD.
 It does not establish that this bug causes the reported NVIDIA black main view.
 Confirmation requires the corrected DLL pair to load on an affected NVIDIA
-system and the main globe/map and cockpit to render. The public 0.1.16 package
-does not contain this candidate.
+system and the main globe/map and cockpit to render. Install the full 0.1.17
+package manually from the prerelease page; the stable update channel does not
+offer it. Close MSFS and Flightdeck before installing, reopen Flightdeck, select
+**Automatic** NVIDIA graphics and check the main map and cockpit. The game log
+must identify build `628afa6f9cfece4` to establish that the corrected pair loaded.
+To restore the stable renderer, reinstall the 0.1.16 full package with both
+applications closed, then reopen Flightdeck and start MSFS. Managed renderer
+files are restored on the next start; custom DLLs remain untouched.
 
 ## Installation contract
 

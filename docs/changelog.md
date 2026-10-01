@@ -1,6 +1,8 @@
 # Changes and release status
 
-## Unreleased — renderer candidate
+## 0.1.17 — 2 October 2026 (prerelease)
+
+[Download the Flightdeck 0.1.17 test release](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.17).
 
 - Backport the upstream VKD3D correction for full-depth 3D-texture copy barriers
   with `VK_KHR_maintenance9`. The previous barrier covered only the first depth
@@ -13,8 +15,13 @@
 
 The isolated regression passes on AMD. This establishes the volume-layout
 correction; its connection to the reported black NVIDIA main view is unverified.
-It is not included in the public 0.1.16 installer.
-[Implementation and validation](nvidia-renderer.md#3d-texture-layout-correction-unreleased).
+Install the full package from the prerelease page to test it; **Updates → Flightdeck**
+continues to offer stable releases only. Close Flightdeck and MSFS before installing,
+then reopen Flightdeck, use **Automatic** NVIDIA graphics and check the main map
+and cockpit. The game log should identify renderer build `628afa6f9cfece4`.
+No game reinstall or profile reset is needed. The Microsoft sign-in components
+and their corresponding sources remain at the verified 0.1.16 versions.
+[Implementation and validation](nvidia-renderer.md#3d-texture-layout-correction-0117-prerelease).
 
 ## 0.1.16 — 1 October 2026
 

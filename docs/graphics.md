@@ -50,6 +50,12 @@ A working second render window does not establish that the primary view is fixed
 See [known issues](known-issues.md) and the
 [Steam compatibility reference](nvidia-steam-parity.md).
 
+[Flightdeck 0.1.17](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.17)
+is a prerelease for testing a targeted 3D-texture layout correction. Its effect
+on this issue remains unverified. Install its full package manually to test;
+it is not offered through **Updates → Flightdeck**. Follow the
+[test and restoration instructions](nvidia-renderer.md#3d-texture-layout-correction-0117-prerelease).
+
 The local rendering regression covers mixed DirectX 11/12 devices, primary and
 secondary swapchains, resize and destruction. It passed on AMD hardware and does
 not establish NVIDIA driver behavior or MSFS flight stability.

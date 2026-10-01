@@ -52,6 +52,12 @@ Versionen haben nicht jeden Fall behoben. Ein funktionierendes zweites Fenster
 bestätigt nicht die Behebung der Hauptansicht. Siehe [bekannte Probleme](known-issues.de.md)
 und die [Steam-Kompatibilitätsreferenz](nvidia-steam-parity.md).
 
+[Flightdeck 0.1.17](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.17)
+ist eine Vorabversion zum Testen einer gezielten Korrektur für 3D-Texturen.
+Ihre Wirkung auf dieses Problem ist noch nicht bestätigt. Installiere zum Testen
+das vollständige Paket manuell; es wird unter **Updates → Flightdeck** nicht
+angeboten. Siehe [Test und Wiederherstellung](nvidia-renderer.md#3d-texture-layout-correction-0117-prerelease).
+
 Der lokale Render-Test umfasst gleichzeitig verwendete DirectX-11-/12-Geräte,
 Haupt- und Zweitfenster, Größenänderungen und das Schließen von Fenstern. Er
 besteht auf AMD-Hardware und bestätigt damit weder NVIDIA-Treiberverhalten noch
