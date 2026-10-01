@@ -38,8 +38,10 @@ surfaces, rather than the DXGI object's lifetime. The backport contains:
 - [Count swapchains at registration/unregistration](https://github.com/HansKristian-Work/vkd3d-proton/commit/7a3eb926b959ab27ad3cbb6a028381d807b39e0b).
 - [Defer low-latency demotion until another swapchain is actually used](https://github.com/HansKristian-Work/vkd3d-proton/commit/e14020081a14f2d595d03049b091fea748684a4f).
 
-`compat/patches/vkd3d-nvidia-low-latency.patch` applies exactly these changes to
-the existing renderer. It does not replace Wine or the Fenix overlay. All
+The published `compat/patches/vkd3d-nvidia-low-latency.patch` applies these
+changes to the existing renderer. The development tree now carries them in
+`compat/patches/vkd3d-renderer.patch` together with the layout correction below.
+It does not replace Wine or the Fenix overlay. All
 NVIDIA modes use the corrections in the full installer package. AMD/Intel-only
 starts retain their existing renderer.
 
@@ -51,6 +53,32 @@ The “never been rendered to” warning alone does not establish the cause of a
 missing scene. Earlier launcher defaults set `VKD3D_DEBUG=info`, which is below
 `warn` in VKD3D and suppressed this warning. 0.1.11 defaults to `warn`; absence
 of the warning in an older info-level log cannot demonstrate a fix.
+
+## 3D texture layout correction (unreleased)
+
+The renderer candidate adds upstream
+[`6831d28e5e71a252e740e474ecbad37d27c3f205`](https://github.com/HansKristian-Work/vkd3d-proton/commit/6831d28e5e71a252e740e474ecbad37d27c3f205)
+to the same pinned VKD3D revision. With `VK_KHR_maintenance9`, image barriers
+for 2D-array-compatible 3D images interpret the layer count as depth slices.
+The old copy helper uses `layerCount = 1`, leaving the other slices in their
+previous layouts. The correction uses `VK_REMAINING_ARRAY_LAYERS` for 3D
+resources, including copy source/destination transitions and initialization.
+This follows the [Vulkan barrier rules](https://docs.vulkan.org/refpages/latest/refpages/source/VkImageMemoryBarrier2.html)
+and also works without maintenance9. It does not disable the extension.
+
+The only additional source changes fix the build/version templates so exported
+sources retain an unambiguous identity instead of inheriting a parent Git
+repository's version. The build ID is `628afa6f9cfece4`: the first 15 hex digits
+of SHA-256 over sorted `path + NUL + patched SHA-256 + newline` records for the
+four changed files under `libs/vkd3d/`. The version string is
+`651f17762e439fe-flightdeck-r2`. Both templates, all changed-source hashes,
+recursive submodule revisions and binary hashes are recorded in the graphics lock.
+
+The isolated test demonstrates a real layout bug and its correction on AMD.
+It does not establish that this bug causes the reported NVIDIA black main view.
+Confirmation requires the corrected DLL pair to load on an affected NVIDIA
+system and the main globe/map and cockpit to render. The public 0.1.16 package
+does not contain this candidate.
 
 ## Installation contract
 
@@ -143,3 +171,28 @@ build and effective configuration. This verifies loading and basic mixed-API
 rendering, not the NVIDIA driver's extension path or MSFS rendering.
 The earlier VKD3D-only probe also passed the upstream
 `test_unbound_rtv_rendering` test (32 assertions).
+
+### Volume layout regression
+
+With a Vulkan driver supporting maintenance9, the Khronos validation layer,
+MinGW and a working graphical session:
+
+```sh
+python3 scripts/check-volume-layout.py --runner /path/to/runner \
+  --baseline /path/to/released-graphics --bundle /path/to/candidate-graphics \
+  --output build/volume-layout-check
+```
+
+Use `--validation-layer-path /path/to/layer-json-directory` if the validation
+layer is supplied outside the system loader's search path. The script creates
+an isolated prefix, enables validation only for its child processes, and uses
+no game or account. Its result records the loaded bundle's hashes.
+
+`tests/graphics/volume-copy.c` uploads a pattern varying across all three axes
+to a 32 × 16 × 4 render-target-capable volume, copies the whole texture, and
+reads all 2,048 pixels back. Passing requires active validation in all four
+runs, reproduction of the released renderer's layout error beyond slice zero,
+zero validation errors with the correction, and zero errors with maintenance9
+disabled in both builds. An unsupported extension cannot silently produce a
+passing regression result. Pixel readback alone is insufficient: on AMD the
+old renderer also returns correct pixels despite eight layout validation errors.

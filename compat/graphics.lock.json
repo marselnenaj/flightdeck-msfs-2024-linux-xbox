@@ -8,8 +8,8 @@
     "d3d10core.dll": "97601d07b786963a26a75653844743dd0a13770bacf9b12478e4ef5215c2adbe"
   },
   "files": {
-    "d3d12.dll": "daf216c8f8ed2513f32bcd9604f1b7582d66e4a73c4f49369b2423111ee10d50",
-    "d3d12core.dll": "7d00c9867a0dfbc1de712a545b3f69003436e16752b16cd586a3569522ad3af9",
+    "d3d12.dll": "0278eb9b11fc598d02a19984c53d34a7666e7969a8dec6cf195cec1d5e8c8ffe",
+    "d3d12core.dll": "0c56b040b3b36a5de7242d76ebe7a89a0d01e7b6a64bee025e50940a1f2786e6",
     "dxgi.dll": "fb4f8a88c1ac204e6c36b457191664faed7994c7b134cc62b491e24237dc451d",
     "d3d11.dll": "7caac2fe99373562f2160a658a04b498a215cabc93bbb144357023ad5470af3c",
     "d3d10core.dll": "f488b0df2f0dc575067c2851f37407037ff5d654ca750291b821e502a4d5a08b"
@@ -18,12 +18,74 @@
   "source": {
     "repository": "https://github.com/HansKristian-Work/vkd3d-proton",
     "revision": "651f17762e439feeef22dbb4ee7eff167ee503d4",
-    "patch": "compat/patches/vkd3d-nvidia-low-latency.patch",
-    "patch_sha256": "879ff16c32b3df392be59f242950ece017e94ebb1014f2f3c8c7c39c04dfa08d",
+    "patch": "compat/patches/vkd3d-renderer.patch",
+    "patch_sha256": "c1f7dc7832457cb0e3dd960791b614895f8483819159fc512f0c44c39fa41d5e",
     "backports": [
       "a74426fb3fe92642186a270941a39a997737b3ef",
       "7a3eb926b959ab27ad3cbb6a028381d807b39e0b",
-      "e14020081a14f2d595d03049b091fea748684a4f"
+      "e14020081a14f2d595d03049b091fea748684a4f",
+      "6831d28e5e71a252e740e474ecbad37d27c3f205"
+    ],
+    "build_id": "628afa6f9cfece4",
+    "changed_files": {
+      "libs/vkd3d/command.c": {
+        "upstream_sha256": "8edaa64f48e4b045c0f4221546bec834612e7898f4cd31b618701f81fa1c6ae5",
+        "patched_sha256": "8256d47fc7144e06387117b998b58af923211e61d8bb0e35e0bec7f247686985"
+      },
+      "libs/vkd3d/device_vkd3d_ext.c": {
+        "upstream_sha256": "27d6b2f8787636d264ea6ebd817aa1c15aeeb0592a9fe58835a9480ea9527a4f",
+        "patched_sha256": "736ba3383948844388ebca64fd5ea344079215e3266246ccd0a33f44c757f031"
+      },
+      "libs/vkd3d/swapchain.c": {
+        "upstream_sha256": "2f1b45e544ba58a883e6e3d463c00e1964c45c647b72caca4cd1d1f1dd95ac6b",
+        "patched_sha256": "ec02e1bb23f1b515bac7564d05b42daf218e77c533c5686d88e54b6b8b170078"
+      },
+      "libs/vkd3d/vkd3d_private.h": {
+        "upstream_sha256": "cf14eb64b072bae08b7f9335c392f976371327202f939b681e39a8011187deb7",
+        "patched_sha256": "7a29486a6c57cde64b04c8dcfa5270aa39feb6524c9b5eb03fd09229a39f01bd"
+      },
+      "vkd3d_build.h.in": {
+        "upstream_sha256": "352ef74779b4ebee49429db946ee9f0c577abefef82ecb3ca89f48e9c6becec7",
+        "patched_sha256": "d42c2c87f55b777728362fbe7c8569b3e32cc743b596e836e2b9d290ab4d45d6"
+      },
+      "vkd3d_version.h.in": {
+        "upstream_sha256": "30fa300e50efba2859dc10cfa3831674c74ff0d6cf0dc6a0659c5bfccbeef251",
+        "patched_sha256": "8a0ca47f38dc953faac1d79b4d90d62621c6f030a06dc81b61524ebd7633e283"
+      }
+    },
+    "submodules": [
+      {
+        "path": "khronos/SPIRV-Headers",
+        "revision": "f88a2d766840fc825af1fc065977953ba1fa4a91"
+      },
+      {
+        "path": "khronos/Vulkan-Headers",
+        "revision": "0e9de566b7d4051c5cc1b762e242c46565956bdf"
+      },
+      {
+        "path": "subprojects/dxil-spirv",
+        "revision": "0773da056c9b3619a0a8bf76d3dfddeacf98a612"
+      },
+      {
+        "path": "subprojects/dxil-spirv/subprojects/dxbc-spirv",
+        "revision": "d5b06435fd84843d4c9ee7b3b42d2f3b7b8e3f1a"
+      },
+      {
+        "path": "subprojects/dxil-spirv/subprojects/dxbc-spirv/submodules/spirv_headers",
+        "revision": "c8ad050fcb29e42a2f57d9f59e97488f465c436d"
+      },
+      {
+        "path": "subprojects/dxil-spirv/third_party/SPIRV-Cross",
+        "revision": "4b7bcb7e5cf71015b3299088d22004bfe4e13a5e"
+      },
+      {
+        "path": "subprojects/dxil-spirv/third_party/SPIRV-Tools",
+        "revision": "199cb207b911501ddd76dcddf100a6e21c15ef23"
+      },
+      {
+        "path": "subprojects/dxil-spirv/third_party/spirv-headers",
+        "revision": "c63848ecf2200425511319fd8bf2c17b751e501e"
+      }
     ]
   },
   "dxvk_source": {

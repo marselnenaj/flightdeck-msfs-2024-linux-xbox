@@ -66,6 +66,11 @@ Falls die Microsoft-Anmeldung mit 0.1.16 weiterhin scheitert, gib den angezeigte
 Fehlercode und die Flightdeck-Version im Bericht an.
 [Aktueller Stand und Umfang](known-issues.de.md).
 
+**Noch nicht veröffentlichter Renderer-Kandidat:** Eine Korrektur für die
+Bildzustände von 3D-Texturen besteht den isolierten Vulkan-Regressionstest.
+Sie ist nicht in 0.1.16 enthalten; ihre Wirkung auf die schwarze NVIDIA-Hauptansicht
+ist noch nicht bestätigt. [Details und Prüfungen](nvidia-renderer.md#3d-texture-layout-correction-unreleased).
+
 ## Loslegen
 
 **1. Flightdeck installieren**

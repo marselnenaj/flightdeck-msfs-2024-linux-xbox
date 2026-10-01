@@ -3,7 +3,7 @@ include LICENSE
 include compat/upstreams.lock.json
 include compat/bootstrap.lock.json
 include compat/graphics.lock.json
-include compat/patches/vkd3d-nvidia-low-latency.patch
+include compat/patches/vkd3d-renderer.patch
 include scripts/runtime/*.sh
 include scripts/runtime/xodus-wine-launch
 include ui/flight-panorama.png

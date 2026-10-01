@@ -1,5 +1,21 @@
 # Changes and release status
 
+## Unreleased — renderer candidate
+
+- Backport the upstream VKD3D correction for full-depth 3D-texture copy barriers
+  with `VK_KHR_maintenance9`. The previous barrier covered only the first depth
+  slice of render-target-capable volume textures.
+- Give the rebuilt D3D12 pair a source-derived build ID, pin the changed-source
+  hashes, and retain the existing NVIDIA low-latency corrections and DXVK build.
+- Add a real upload/copy/readback regression that requires active Vulkan
+  validation, reproduces the released renderer's invalid layouts, and checks
+  the corrected renderer plus controls with maintenance9 disabled.
+
+The isolated regression passes on AMD. This establishes the volume-layout
+correction; its connection to the reported black NVIDIA main view is unverified.
+It is not included in the public 0.1.16 installer.
+[Implementation and validation](nvidia-renderer.md#3d-texture-layout-correction-unreleased).
+
 ## 0.1.16 — 1 October 2026
 
 [Download Flightdeck 0.1.16](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.16).
