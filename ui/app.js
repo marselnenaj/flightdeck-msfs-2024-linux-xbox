@@ -15,6 +15,7 @@ const $ = id => document.getElementById(id);
 const state = {status: null, online: false, pending: null, pendingGame: null, view: 'overview', report: null, reportLoading: false};
 let statusRequest = null;
 let graphicsDraft = null;
+let vrDraft = null;
 let storeCheckController = null;
 let problemReportsController = null;
 let storeCheckReserved = false;
@@ -143,6 +144,7 @@ function renderChecks(target, checks, empty = t('Noch keine Prüfergebnisse verf
 
 function renderStatus() {
   renderGraphics();
+  renderVR();
   problemReportsController?.render();
   document.body.classList.toggle('game-switch-pending', state.pending === 'switch');
   storeCheckController?.render();
@@ -222,6 +224,35 @@ function canEditGraphics() {
     updateReserved || cloudReserved || launcherUpdateReserved || maintenanceReserved || storeCheckReserved);
 }
 
+function canEditVR() {
+  const s = state.status;
+  return !!(s?.runtime.configured && s.vr?.available && state.online && s.csrf_token &&
+    s.game.state === 'stopped' && !s.setup.busy && !state.pending && !setupReserved &&
+    !fenixReserved && !updateReserved && !cloudReserved && !launcherUpdateReserved &&
+    !maintenanceReserved && !storeCheckReserved && !automaticBusy(s));
+}
+
+function renderVR() {
+  const s = state.status;
+  $('vr-card').hidden = !s?.runtime.configured || !s.vr?.available;
+  if (vrDraft?.path !== s?.runtime.path) vrDraft = null;
+  const vr = s?.vr, mode = vrDraft?.mode ?? vr?.mode ?? 'off';
+  $('vr-mode').value = mode;
+  $('vr-mode').disabled = !canEditVR();
+  $('vr-save').disabled = !canEditVR() || (mode === vr?.mode && !vr?.error);
+  $('vr-check').disabled = !canEditVR() || mode === 'off' || mode !== vr?.mode;
+  text('vr-game', s?.runtime.game_name || '');
+  text('vr-status', vr?.error || vr?.message || '');
+  $('vr-status').className = vr?.error ? 'notice error' : 'muted';
+  const check = vr?.check;
+  $('vr-result').hidden = !check;
+  text('vr-result', check?.message || '');
+  $('vr-result').className = ['ready','checking'].includes(check?.state) ? 'notice' : 'notice error';
+  $('vr-checked').hidden = !check || check.state === 'checking';
+  text('vr-checked', check ? t('Letzte Prüfung: {time}', {time: formatDate(check.checked_at) || '—'}) : '');
+  $('vr-nvidia').hidden = !s?.graphics?.nvidia_present;
+}
+
 function renderGraphics() {
   const status = state.status;
   $('graphics-card').hidden = !status?.runtime.configured || !status.graphics?.nvidia_present;
@@ -261,12 +292,14 @@ async function mutate(action, path, body = {}) {
   try {
     await request(path, {method: 'POST', body, token: state.status.csrf_token});
     if (action === 'graphics') graphicsDraft = null;
+    if (action === 'vr') vrDraft = null;
     if (action === 'switch') {
       await artworkReady;
       text('version-announcement', t('Simulator gewechselt. Du kannst ihn jetzt starten.'));
     } else {
       const messages = {launch: t('Start angefordert. Der aktuelle Zustand wird geprüft.'), stop: t('Beenden angefordert. Der aktuelle Zustand wird geprüft.'), backup: t('Das lokale Backup wurde erstellt.'), config: t('Runtime-Pfad gespeichert. Die Installation wird geprüft.'), graphics: t('NVIDIA-Modus gespeichert. Er gilt ab dem nächsten Spielstart.')};
-      showNotice(messages[action]);
+      showNotice(action === 'vr' ? t('VR-Modus gespeichert. Er gilt ab dem nächsten Spielstart.') :
+        action === 'vrCheck' ? '' : messages[action]);
     }
   } catch (error) { showNotice(error.message, true); }
   finally {
@@ -308,7 +341,7 @@ async function loadDiagnostics() {
     }
     // Explicit allowlist: never export status, CSRF or unrelated response fields.
     state.report = {summary: raw.summary, checks: raw.checks, generated_at: raw.generated_at ?? null};
-    const summaryLabels = {run_found: t('Spielsitzung gefunden'), auth_http: t('Xbox-Anmeldung · HTTP-Status'), local_save_init: t('Lokaler Spielstandspeicher'), store_calls: t('Store-API-Aufrufe'), store_catalog: t('Marketplace-Abfragen'), store_session:t('Store-Sitzungsverlauf'), store_check:t('Letzte Store-Prüfung'), exit: t('Letztes Sitzungsende'), cloud_sync:t('Xbox-Cloud-Abgleich'), graphics:t('Grafik und Vulkan'), audio:t('Audio und Medien'), user_calls:t('Spielanmeldung'), policy_cache:t('Anmelderichtlinien'), signature_policy:t('Anfragesignaturen'), network_security:t('Netzwerksicherheit'), log_coverage:t('Log-Auswertung'), summary_limited:t('Zusammenfassung gekürzt')};
+    const summaryLabels = {run_found: t('Spielsitzung gefunden'), auth_http: t('Xbox-Anmeldung · HTTP-Status'), local_save_init: t('Lokaler Spielstandspeicher'), store_calls: t('Store-API-Aufrufe'), store_catalog: t('Marketplace-Abfragen'), store_session:t('Store-Sitzungsverlauf'), store_check:t('Letzte Store-Prüfung'), exit: t('Letztes Sitzungsende'), cloud_sync:t('Xbox-Cloud-Abgleich'), graphics:t('Grafik und Vulkan'), vr:t('Virtual Reality'), audio:t('Audio und Medien'), user_calls:t('Spielanmeldung'), policy_cache:t('Anmelderichtlinien'), signature_policy:t('Anfragesignaturen'), network_security:t('Netzwerksicherheit'), log_coverage:t('Log-Auswertung'), summary_limited:t('Zusammenfassung gekürzt')};
     const rows = Object.entries(state.report.summary).slice(0, 100).map(([key, value]) => {
       const row = document.createElement('div');
       const term = document.createElement('dt'); term.textContent = summaryLabels[key] ?? key;
@@ -360,6 +393,20 @@ $('refresh-status').addEventListener('click', () => void refreshStatus());
 $('graphics-mode').addEventListener('change', () => {
   if (canEditGraphics()) graphicsDraft = {path: state.status.runtime.path, mode: $('graphics-mode').value};
   renderGraphics();
+});
+$('vr-mode').addEventListener('change', () => {
+  if (canEditVR()) vrDraft = {path: state.status.runtime.path, mode: $('vr-mode').value};
+  renderVR();
+});
+$('vr-save').addEventListener('click', () => {
+  if (canEditVR()) void mutate('vr', '/api/vr/configure', {
+    runtime_path: state.status.runtime.path, mode: $('vr-mode').value,
+  });
+});
+$('vr-check').addEventListener('click', () => {
+  if (canEditVR() && !$('vr-check').disabled) void mutate('vrCheck', '/api/vr/check', {
+    runtime_path: state.status.runtime.path,
+  });
 });
 $('graphics-save').addEventListener('click', () => {
   if (canEditGraphics()) void mutate('graphics', '/api/graphics', {

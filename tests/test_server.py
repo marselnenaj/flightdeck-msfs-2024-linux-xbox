@@ -13,6 +13,19 @@ from flightdeck.server import Handler, Server
 
 
 class ServerTests(unittest.TestCase):
+    def test_vr_routes_require_session_and_bind_selected_runtime(self):
+        manager = self.server.launcher.vr
+        headers = {"Content-Type": "application/json", "X-Flightdeck-Token": self.server.token}
+        for route, method, body, args in (
+            ("configure", "configure", {"runtime_path": "/chosen", "mode": "auto"}, ("/chosen", "auto")),
+            ("check", "check", {"runtime_path": "/chosen"}, ("/chosen",)),
+        ):
+            with patch.object(manager, method, return_value={"ok": True}) as action:
+                self.assertEqual(self.request("POST", "/api/vr/" + route, json.dumps(body), {"Content-Type": "application/json"})[0], 403)
+                action.assert_not_called()
+                self.assertEqual(self.request("POST", "/api/vr/" + route, json.dumps(body), headers)[0], 200)
+                action.assert_called_once_with(*args)
+
     def test_problem_reports_are_explicit_local_and_require_session_token(self):
         from flightdeck.problem_reports import encoded
         import hashlib

@@ -8,6 +8,7 @@
 <p align="center">
   <a href="#loslegen"><strong>Loslegen</strong></a> &nbsp;·&nbsp;
   <a href="addons.de.md">Mods installieren</a> &nbsp;·&nbsp;
+  <a href="vr.de.md">VR</a> &nbsp;·&nbsp;
   <a href="game-updates.md">Spielupdates</a> &nbsp;·&nbsp;
   <a href="known-issues.de.md">Bekannte Probleme</a> &nbsp;·&nbsp;
   <a href="changelog.md">Änderungen</a> &nbsp;·&nbsp;
@@ -21,8 +22,14 @@ Flightdeck installiert und startet deine **gekaufte Xbox-PC-/Microsoft-Store-
 Version von MSFS 2024 oder 2020** unter Linux mit Wine/Proton. Mit dem Microsoft-Konto
 anmelden, das Spiel herunterladen und im Launcher starten.
 
-**Aktuelle stabile Version: [Flightdeck 0.1.16](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.16).**
+**Aktuelle stabile Version: [Flightdeck 0.1.18](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.18).**
 Aktualisiere über **Updates → Flightdeck** oder verwende den vollständigen Installer.
+**0.1.18** ergänzt die optionale VR-Einrichtung für WiVRn, SteamVR und Monado,
+eine Headset-Prüfung und die Wine-/OpenXR-Anbindung für AMD und NVIDIA.
+Aktiviere sie unter **Einrichtung → Virtual Reality**. Stereo-Frames mit
+DirectX 11 und 12 wurden auf AMD mit simuliertem Headset geprüft; echte Headsets,
+NVIDIA-Hardware und ein MSFS-VR-Flug bleiben unbestätigt. [VR einrichten](vr.de.md).
+
 **0.1.16** behebt den Anmeldeabbruch mit Code 74, wenn eine Microsoft-Tokenantwort
 zugleich einen erforderlichen Verifizierungsschritt enthält. Flightdeck öffnet
 diesen Schritt jetzt und schließt die Verifizierung vor dem Speichern der
@@ -66,12 +73,11 @@ Falls die Microsoft-Anmeldung mit 0.1.16 weiterhin scheitert, gib den angezeigte
 Fehlercode und die Flightdeck-Version im Bericht an.
 [Aktueller Stand und Umfang](known-issues.de.md).
 
-**NVIDIA-Testversion: [Flightdeck 0.1.17 (Vorabversion)](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.17).**
-Sie enthält eine Korrektur für die Bildzustände von 3D-Texturen, die den isolierten
-Vulkan-Regressionstest besteht. Ihre Wirkung auf die schwarze NVIDIA-Hauptansicht
-ist noch nicht bestätigt. Lade zum Testen das vollständige Paket dieses Releases
-herunter und installiere es; Vorabversionen werden unter **Updates → Flightdeck**
-nicht angeboten. [Details und Prüfungen](nvidia-renderer.md#3d-texture-layout-correction-0117-prerelease).
+**NVIDIA-Rendererkorrektur (0.1.17, in 0.1.18 enthalten):** Die Korrektur der
+Bildzustände von 3D-Texturen besteht den isolierten Vulkan-Regressionstest.
+Ihre Wirkung auf die schwarze NVIDIA-Hauptansicht ist noch nicht bestätigt.
+Beide Versionen sind reguläre Releases und über **Updates → Flightdeck** verfügbar.
+[Details und Prüfungen](nvidia-renderer.md#3d-texture-layout-correction-0117).
 
 ## Loslegen
 

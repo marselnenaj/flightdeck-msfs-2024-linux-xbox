@@ -152,6 +152,18 @@ const server = createServer(async (req,res) => {
         status.graphics={...status.graphics,nvidia_mode:data.nvidia_mode};
         res.end(JSON.stringify({ok:true}));return;
       }
+      if (url.pathname === '/api/vr/configure') {
+        const data=JSON.parse(body);
+        assert.equal(data.runtime_path,status.runtime.path);
+        assert.ok(['off','auto','wivrn','steamvr','monado'].includes(data.mode));
+        status.vr={...status.vr,mode:data.mode,check:null,message:'VR runtime found.'};
+        res.end(JSON.stringify({ok:true}));return;
+      }
+      if (url.pathname === '/api/vr/check') {
+        assert.deepEqual(JSON.parse(body),{runtime_path:status.runtime.path});
+        status.vr={...status.vr,check:{state:'checking',message:'Checking the VR runtime and headset …',checked_at:'2026-10-02T10:00:00Z'}};
+        status.setup={busy:true};res.end(JSON.stringify({ok:true}));return;
+      }
       if(url.pathname==='/api/launcher-update/check') {
         assert.deepEqual(JSON.parse(body),{});
         launcherUpdate={...launcherUpdate,latest_version:launcherUpdate.installed_version==='0.1.5'?'0.1.6':'0.1.5',update_available:true,check_id:'launcher-check-fixture',checked_at:'2026-09-24T20:00:00Z',can_install:launcherUpdate.managed,notes:'New update\n<img src=x onerror="window.launcherInjected=1">',job:null};
@@ -353,6 +365,30 @@ try {
   status.graphics={available:false,nvidia_present:false,nvidia_mode:'auto',error:''};status.cloud=autoIdle();
   await refresh(`document.getElementById('graphics-card').hidden`);
   results.push('AMD/Intel-only systems do not offer NVIDIA controls');
+  status.vr={available:true,mode:'off',state:'off',message:'VR is off.',error:'',check:null};
+  await refresh(`!document.getElementById('vr-card').hidden && !document.getElementById('vr-mode').disabled`);
+  await check('VR is available on AMD and disabled by default',`document.getElementById('vr-mode').value==='off' && document.getElementById('vr-check').disabled && document.getElementById('vr-save').disabled && document.getElementById('vr-nvidia').hidden`);
+  await evaluate(`document.getElementById('vr-mode').value='wivrn';document.getElementById('vr-mode').dispatchEvent(new Event('change',{bubbles:true}))`);
+  await refresh(`document.getElementById('vr-mode').value==='wivrn' && !document.getElementById('vr-save').disabled`);
+  await check('Unsaved VR selection survives polling and cannot be checked',`document.getElementById('vr-check').disabled`);
+  await click('vr-save');await until(()=>evaluate(`!document.getElementById('vr-check').disabled && document.getElementById('notice').textContent.includes('VR mode saved')`),'VR preference did not save');
+  assert.equal(status.vr.mode,'wivrn');
+  await call('Page.reload');await until(()=>evaluate(`document.getElementById('vr-mode')?.value==='wivrn' && !document.getElementById('vr-check').disabled`),'VR preference did not survive reload');
+  await click('vr-check');await until(()=>evaluate(`document.getElementById('vr-result').textContent.includes('Checking') && document.getElementById('vr-mode').disabled`),'VR check did not reserve setup');
+  status.setup={busy:false};status.vr.check={state:'headset_missing',message:'No headset is available.',checked_at:'2026-10-02T10:00:03Z'};
+  await refresh(`!document.getElementById('vr-check').disabled && document.getElementById('vr-result').textContent==='No headset is available.'`);
+  await check('VR failure is retryable and fits mobile width',`document.getElementById('vr-result').classList.contains('error') && document.documentElement.scrollWidth<=innerWidth`);
+  await evaluate(`document.getElementById('vr-card').scrollIntoView({block:'start'})`);await screenshot('vr-headset-missing-mobile.png');
+  status.vr.check={state:'ready',message:'OpenXR can access the headset and its Vulkan graphics card.',checked_at:'2026-10-02T10:00:05Z'};
+  await refresh(`document.getElementById('vr-result').textContent.includes('OpenXR')`);
+  await call('Emulation.setDeviceMetricsOverride',{width:1536,height:1024,deviceScaleFactor:1,mobile:false});
+  await evaluate(`document.getElementById('vr-card').scrollIntoView({block:'start'})`);await screenshot('vr-ready-desktop.png');
+  status.game.state='running';await refresh(`document.getElementById('vr-mode').disabled && document.getElementById('vr-check').disabled`);
+  status.game.state='stopped';status.cloud={...autoIdle(),state:'syncing_before'};
+  await refresh(`document.getElementById('vr-mode').disabled`);
+  status.cloud=autoIdle();status.vr={available:false,mode:'off'};
+  await refresh(`document.getElementById('vr-card').hidden`);
+  results.push('VR setup persists, reserves the runtime during checks, reports failures, and blocks changes while playing or syncing');
   await call('Emulation.setDeviceMetricsOverride',{width:1536,height:1024,deviceScaleFactor:1,mobile:false});await language('de');await route('overview');
   // Maintenance uses a reviewed plan; opening or changing options never deletes.
   await route('installation');await until(()=>evaluate(`!document.getElementById('maintenance-reset').disabled`),'Maintenance not available');

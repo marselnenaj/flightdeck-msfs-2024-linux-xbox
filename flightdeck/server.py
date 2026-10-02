@@ -41,6 +41,7 @@ class Server(ThreadingHTTPServer):
         return f"http://127.0.0.1:{self.server_port}"
 
     def server_close(self):
+        self.launcher.vr.close()
         self.launcher.store_check.close()
         self.launcher.maintenance.close()
         self.launcher.startup_updates.close()
@@ -193,6 +194,10 @@ class Handler(BaseHTTPRequestHandler):
                 result = launcher.configure(data.get("runtime_path"))
             elif path == "/api/graphics":
                 result = launcher.configure_graphics(data.get("runtime_path"), data.get("nvidia_mode"))
+            elif path == "/api/vr/configure":
+                result = launcher.vr.configure(data.get("runtime_path"), data.get("mode"))
+            elif path == "/api/vr/check":
+                result = launcher.vr.check(data.get("runtime_path"))
             elif path == "/api/store-check/start":
                 result = launcher.store_check.start(language(self.headers.get("Accept-Language")))
             elif path == "/api/store-check/sign-in":

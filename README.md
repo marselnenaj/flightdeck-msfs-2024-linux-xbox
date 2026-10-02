@@ -8,6 +8,7 @@
 <p align="center">
   <a href="#get-started"><strong>Get started</strong></a> &nbsp;·&nbsp;
   <a href="docs/addons.md">Add-ons</a> &nbsp;·&nbsp;
+  <a href="docs/vr.md">VR</a> &nbsp;·&nbsp;
   <a href="docs/game-updates.md">Game updates</a> &nbsp;·&nbsp;
   <a href="docs/known-issues.md">Known issues</a> &nbsp;·&nbsp;
   <a href="docs/changelog.md">Changes</a> &nbsp;·&nbsp;
@@ -21,8 +22,14 @@ Flightdeck installs and launches your **purchased Xbox PC / Microsoft Store copy
 of MSFS 2024 or 2020** on your Linux computer through Wine/Proton. Sign in with your
 Microsoft account, download the game and start it from one application.
 
-**Current stable release: [Flightdeck 0.1.16](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.16).**
+**Current stable release: [Flightdeck 0.1.18](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.18).**
 Update through **Updates → Flightdeck** or use the full installer.
+**0.1.18** adds optional VR setup for WiVRn, SteamVR and Monado, headset checks,
+and the missing Wine/OpenXR startup integration for AMD and NVIDIA.
+Enable it under **Setup → Virtual Reality**. Stereo D3D11/D3D12 frames have been
+validated on AMD with a simulated headset; physical headsets, NVIDIA hardware
+and an MSFS VR flight remain unverified. [VR setup and scope](docs/vr.md).
+
 **0.1.16** fixes Microsoft sign-in failing with code 74 when a token response
 also contains a required verification step. Flightdeck now opens that step and
 completes verification before saving the login. Additional SOAP response fixes
@@ -62,11 +69,11 @@ If Microsoft sign-in still fails on 0.1.16, include the displayed error code
 and Flightdeck version in your report.
 [Current status and scope](docs/known-issues.md).
 
-**NVIDIA test release: [Flightdeck 0.1.17 (prerelease)](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.17).**
-It includes a 3D-texture layout correction verified with an isolated Vulkan
-regression check. Its effect on the NVIDIA black main view remains unverified.
-Download and install the full package from that release to participate; prereleases
-are not offered through **Updates → Flightdeck**. [Details and validation](docs/nvidia-renderer.md#3d-texture-layout-correction-0117-prerelease).
+**NVIDIA renderer correction (0.1.17, included in 0.1.18):** the 3D-texture
+layout correction passes an isolated Vulkan regression check. Its effect on
+the NVIDIA black main view remains unverified. Both versions are regular
+releases available through **Updates → Flightdeck**.
+[Details and validation](docs/nvidia-renderer.md#3d-texture-layout-correction-0117).
 
 ## Get started
 

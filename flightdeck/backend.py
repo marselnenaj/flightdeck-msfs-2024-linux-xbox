@@ -129,6 +129,8 @@ class Launcher:
         from .launcher_update import LauncherUpdateManager
         self.launcher_updates = LauncherUpdateManager(self)
         self.graphics_report = None
+        from .vr import VRManager
+        self.vr = VRManager(self)
         from .startup_updates import StartupUpdates
         self.startup_updates = StartupUpdates(self)
         from .maintenance import Maintenance
@@ -473,6 +475,7 @@ class Launcher:
                                 "game_id": selected_game.id if selected_game else "", "game_name": selected_game.name if selected_game else ""},
                     "versions": self.version_runtimes(),
                     "graphics": graphics.snapshot(self.runtime),
+                    "vr": self.vr.snapshot(),
                     "game": {"state": state, "managed": self.process is not None,
                              "can_start": ready and state == "stopped" and not self.setup_busy and not self.desktop_closing, "can_stop": self.process is not None and not self.stopping,
                              "started_at": self.started_at, "exit_code": self.exit_code},
@@ -565,6 +568,8 @@ class Launcher:
                 graphics_diagnostics.save_launch(self.runtime, graphics_record)
                 try:
                     environment, report = graphics.prepare(self.runtime)
+                    from . import vr
+                    environment = vr.prepare(self.runtime, environment)
                 except graphics.GraphicsError:
                     graphics_record["state"] = "preparation_failed"
                     graphics_diagnostics.save_launch(self.runtime, graphics_record)
@@ -727,6 +732,10 @@ class Launcher:
         cloud = self.cloud_saves.automation.snapshot()
         summary["cloud_sync"] = {key: cloud[key] for key in ("state", "phase", "error_code", "error_details")}
         summary["graphics"] = graphics.probe()
+        vr_status = self.vr.snapshot()
+        summary["vr"] = {key: vr_status[key] for key in ("mode", "state")}
+        if vr_status.get("check"):
+            summary["vr"]["check"] = {key: vr_status["check"][key] for key in ("state", "checked_at")}
         summary["graphics"]["log"] = graphics_log
         if root:
             summary["graphics"]["prefix"] = graphics_diagnostics.prefix_summary(root)

@@ -1,8 +1,30 @@
 # Changes and release status
 
-## 0.1.17 — 2 October 2026 (prerelease)
+## 0.1.18 — 2 October 2026
 
-[Download the Flightdeck 0.1.17 test release](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.17).
+[Download Flightdeck 0.1.18](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.18).
+
+- Add per-installation VR settings for automatic OpenXR, WiVRn, SteamVR and
+  Monado, off by default, with German and English setup instructions.
+- Add an explicit, bounded headset/GPU check with clear failure states and
+  protection against concurrent game starts, cloud sync and setup.
+- Prepare separate Windows and Linux OpenXR manifests and Wine's required VR
+  registry data for direct game starts, preserving the Xbox Store bridge.
+- Keep DXGI on the compositor's GPU, preserve NVIDIA compatibility settings,
+  and retain SteamVR registration across the game's isolated XDG directories.
+- Include VR mode/check outcomes in diagnostics without raw driver output or
+  identifying runtime paths and device UUIDs.
+- Add real D3D11/D3D12 stereo-frame validation through Wine and retain the
+  renderer correction from 0.1.17. No native renderer or Store binaries change.
+
+Validated with a simulated Monado headset and AMD RX 6900 XT. Physical headsets,
+NVIDIA hardware, WiVRn/SteamVR device operation and an MSFS VR flight remain
+unverified. [Setup](vr.md) · [Test evidence and reproduction](vr-validation.md).
+This is a regular release, available through the stable update channel.
+
+## 0.1.17 — 2 October 2026
+
+[Download Flightdeck 0.1.17](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.17).
 
 - Backport the upstream VKD3D correction for full-depth 3D-texture copy barriers
   with `VK_KHR_maintenance9`. The previous barrier covered only the first depth
@@ -15,13 +37,12 @@
 
 The isolated regression passes on AMD. This establishes the volume-layout
 correction; its connection to the reported black NVIDIA main view is unverified.
-Install the full package from the prerelease page to test it; **Updates → Flightdeck**
-continues to offer stable releases only. Close Flightdeck and MSFS before installing,
+Available as a regular release through **Updates → Flightdeck** or the full installer. Close Flightdeck and MSFS before installing,
 then reopen Flightdeck, use **Automatic** NVIDIA graphics and check the main map
 and cockpit. The game log should identify renderer build `628afa6f9cfece4`.
 No game reinstall or profile reset is needed. The Microsoft sign-in components
 and their corresponding sources remain at the verified 0.1.16 versions.
-[Implementation and validation](nvidia-renderer.md#3d-texture-layout-correction-0117-prerelease).
+[Implementation and validation](nvidia-renderer.md#3d-texture-layout-correction-0117).
 
 ## 0.1.16 — 1 October 2026
 

@@ -97,6 +97,26 @@
           <p id="graphics-busy" class="muted" hidden></p>
           <p id="graphics-error" class="notice error" role="alert" hidden></p>
         </section>
+        <section id="vr-card" class="panel graphics-panel" aria-labelledby="vr-title" hidden>
+          <h2 id="vr-title" data-i18n="Virtual Reality">Virtual Reality</h2>
+          <p id="vr-game" class="eyebrow"></p>
+          <p data-i18n="Verbinde dein Headset mit WiVRn, SteamVR oder Monado. Flightdeck verbindet den Simulator mit deinem VR-System.">Verbinde dein Headset mit WiVRn, SteamVR oder Monado. Flightdeck verbindet den Simulator mit deinem VR-System.</p>
+          <div class="graphics-controls">
+            <div class="field"><label for="vr-mode" data-i18n="VR-System">VR-System</label><select id="vr-mode" aria-describedby="vr-status" disabled>
+              <option value="off" data-i18n="Aus (Monitor)">Aus (Monitor)</option>
+              <option value="auto" data-i18n="Aktives VR-System automatisch verwenden">Aktives VR-System automatisch verwenden</option>
+              <option value="wivrn">WiVRn (Quest / Pico)</option><option value="steamvr">SteamVR</option><option value="monado">Monado</option>
+            </select></div>
+            <button id="vr-save" class="button secondary" disabled data-i18n="VR-Modus speichern">VR-Modus speichern</button>
+            <button id="vr-check" class="button secondary" disabled data-i18n="Headset prüfen">Headset prüfen</button>
+          </div>
+          <p id="vr-status" class="muted"></p>
+          <p id="vr-result" class="notice" role="status" aria-live="polite" hidden></p>
+          <p id="vr-checked" class="muted" hidden></p>
+          <p data-i18n="Starte danach MSFS und wechsle im Simulator in den VR-Modus (standardmäßig Strg+Tab). Verbinde das Headset vor jedem Spielstart.">Starte danach MSFS und wechsle im Simulator in den VR-Modus (standardmäßig Strg+Tab). Verbinde das Headset vor jedem Spielstart.</p>
+          <p id="vr-nvidia" class="muted" hidden data-i18n="NVIDIA: Beginne mit dem automatischen Grafikmodus. Dieser deaktiviert DLSS und weitere NVIDIA-Zusatzfunktionen zugunsten der Kompatibilität.">NVIDIA: Beginne mit dem automatischen Grafikmodus. Dieser deaktiviert DLSS und weitere NVIDIA-Zusatzfunktionen zugunsten der Kompatibilität.</p>
+          <a class="text-link" href="https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/blob/main/docs/vr.md" target="_blank" rel="noopener noreferrer" data-i18n="VR einrichten und Probleme beheben">VR einrichten und Probleme beheben</a>
+        </section>
         <section id="maintenance-card" class="panel maintenance-panel" aria-labelledby="maintenance-title">
           <h2 id="maintenance-title" data-i18n="Installation verwalten">Installation verwalten</h2>
           <p id="maintenance-game" class="eyebrow"></p>

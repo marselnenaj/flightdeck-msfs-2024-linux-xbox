@@ -56,6 +56,18 @@ export function normalizeStatus(raw) {
       nvidia_mode: ['auto', 'compatibility', 'features'].includes(raw.graphics?.nvidia_mode) ? raw.graphics.nvidia_mode : 'auto',
       error: stringValue(raw.graphics?.error, '', 1000),
     },
+    vr: {
+      available: raw.vr?.available === true,
+      mode: ['off','auto','wivrn','steamvr','monado'].includes(raw.vr?.mode) ? raw.vr.mode : 'off',
+      state: stringValue(raw.vr?.state, 'off', 40),
+      message: stringValue(raw.vr?.message, '', 1000),
+      error: stringValue(raw.vr?.error, '', 1000),
+      check: raw.vr?.check && typeof raw.vr.check === 'object' ? {
+        state: stringValue(raw.vr.check.state, 'failed', 40),
+        message: stringValue(raw.vr.check.message, '', 1000),
+        checked_at: stringValue(raw.vr.check.checked_at, '', 100),
+      } : null,
+    },
     game: {
       state, managed: raw.game.managed === true,
       can_start: raw.game.can_start === true && state === 'stopped' && raw.runtime.ready === true,

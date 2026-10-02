@@ -2,7 +2,12 @@
 
 [Deutsch](known-issues.de.md)
 
-Status: Flightdeck 0.1.16, 1 October 2026.
+Status: Flightdeck 0.1.18, 2 October 2026.
+
+**VR:** Optional OpenXR setup is available for WiVRn, SteamVR and Monado.
+D3D11/D3D12 stereo frames pass on AMD with a simulated Monado headset. Physical
+headsets, NVIDIA hardware and actual MSFS VR flights remain unverified.
+[Setup and test scope](vr.md).
 
 **Component updates:** 0.1.10 fixes older Store binaries being left behind when
 launch scripts were customized. Update and reopen Flightdeck with the simulator

@@ -1,6 +1,18 @@
 // Static source-language keys; never use translated text as API fields or HTML.
 export const catalogs = Object.freeze({
   "de": {
+    "Virtual Reality": "Virtual Reality",
+    "Verbinde dein Headset mit WiVRn, SteamVR oder Monado. Flightdeck verbindet den Simulator mit deinem VR-System.": "Verbinde dein Headset mit WiVRn, SteamVR oder Monado. Flightdeck verbindet den Simulator mit deinem VR-System.",
+    "VR-System": "VR-System",
+    "Aus (Monitor)": "Aus (Monitor)",
+    "Aktives VR-System automatisch verwenden": "Aktives VR-System automatisch verwenden",
+    "VR-Modus speichern": "VR-Modus speichern",
+    "Headset prüfen": "Headset prüfen",
+    "Starte danach MSFS und wechsle im Simulator in den VR-Modus (standardmäßig Strg+Tab). Verbinde das Headset vor jedem Spielstart.": "Starte danach MSFS und wechsle im Simulator in den VR-Modus (standardmäßig Strg+Tab). Verbinde das Headset vor jedem Spielstart.",
+    "NVIDIA: Beginne mit dem automatischen Grafikmodus. Dieser deaktiviert DLSS und weitere NVIDIA-Zusatzfunktionen zugunsten der Kompatibilität.": "NVIDIA: Beginne mit dem automatischen Grafikmodus. Dieser deaktiviert DLSS und weitere NVIDIA-Zusatzfunktionen zugunsten der Kompatibilität.",
+    "VR einrichten und Probleme beheben": "VR einrichten und Probleme beheben",
+    "Letzte Prüfung: {time}": "Letzte Prüfung: {time}",
+    "VR-Modus gespeichert. Er gilt ab dem nächsten Spielstart.": "VR-Modus gespeichert. Er gilt ab dem nächsten Spielstart.",
     "Microsoft-Anmeldung": "Microsoft-Anmeldung",
     "Melde dich im Microsoft-Fenster mit demselben Konto an. Danach wird die Sitzung erneut geprüft.": "Melde dich im Microsoft-Fenster mit demselben Konto an. Danach wird die Sitzung erneut geprüft.",
     "Anmeldung wird erneuert und geprüft …": "Anmeldung wird erneuert und geprüft …",
@@ -738,6 +750,18 @@ export const catalogs = Object.freeze({
     "Der Neustart dauert länger als erwartet. Öffne Flightdeck erneut über das Anwendungsmenü.": "Der Neustart dauert länger als erwartet. Öffne Flightdeck erneut über das Anwendungsmenü."
   },
   "en": {
+    "Virtual Reality": "Virtual Reality",
+    "Verbinde dein Headset mit WiVRn, SteamVR oder Monado. Flightdeck verbindet den Simulator mit deinem VR-System.": "Connect your headset using WiVRn, SteamVR or Monado. Flightdeck connects the simulator to your VR runtime.",
+    "VR-System": "VR runtime",
+    "Aus (Monitor)": "Off (monitor)",
+    "Aktives VR-System automatisch verwenden": "Use the active VR runtime automatically",
+    "VR-Modus speichern": "Save VR mode",
+    "Headset prüfen": "Check headset",
+    "Starte danach MSFS und wechsle im Simulator in den VR-Modus (standardmäßig Strg+Tab). Verbinde das Headset vor jedem Spielstart.": "Then start MSFS and switch to VR in the simulator (Ctrl+Tab by default). Connect the headset before each game launch.",
+    "NVIDIA: Beginne mit dem automatischen Grafikmodus. Dieser deaktiviert DLSS und weitere NVIDIA-Zusatzfunktionen zugunsten der Kompatibilität.": "NVIDIA: Start with automatic graphics mode. It disables DLSS and other NVIDIA features for compatibility.",
+    "VR einrichten und Probleme beheben": "Set up VR and troubleshoot",
+    "Letzte Prüfung: {time}": "Last check: {time}",
+    "VR-Modus gespeichert. Er gilt ab dem nächsten Spielstart.": "VR mode saved. It takes effect on the next game launch.",
     "Microsoft-Anmeldung": "Microsoft sign-in",
     "Melde dich im Microsoft-Fenster mit demselben Konto an. Danach wird die Sitzung erneut geprüft.": "Sign in with the same account in the Microsoft window. Flightdeck will then recheck the session.",
     "Anmeldung wird erneuert und geprüft …": "Renewing and checking sign-in …",

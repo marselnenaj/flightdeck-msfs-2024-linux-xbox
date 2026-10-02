@@ -17,7 +17,7 @@ from .backend import LauncherError, atomic_json, utc_now
 SUPPORT_EMAIL = "contact@flightdeck-app.com"
 CATEGORIES = {"graphics", "cloud", "marketplace", "installation", "other"}
 OBSERVATIONS = {"menus_visible", "main_view_black", "second_window_works", "second_window_crashes"}
-SUMMARY_FIELDS = {"context", "run_found", "auth_http", "local_save_init", "store_calls",
+SUMMARY_FIELDS = {"context", "vr", "run_found", "auth_http", "local_save_init", "store_calls",
                   "store_catalog", "store_session", "store_check", "exit", "cloud_sync",
                   "graphics", "audio", "user_calls", "policy_cache", "signature_policy",
                   "network_security", "log_coverage", "summary_limited"}
