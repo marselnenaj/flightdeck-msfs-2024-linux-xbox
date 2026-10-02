@@ -229,7 +229,7 @@ function canEditVR() {
   return !!(s?.runtime.configured && s.vr?.available && state.online && s.csrf_token &&
     s.game.state === 'stopped' && !s.setup.busy && !state.pending && !setupReserved &&
     !fenixReserved && !updateReserved && !cloudReserved && !launcherUpdateReserved &&
-    !maintenanceReserved && !storeCheckReserved && !automaticBusy(s));
+    !maintenanceReserved && !storeCheckReserved && !['syncing', 'playing'].includes(s.cloud?.state));
 }
 
 function renderVR() {

@@ -384,8 +384,13 @@ try {
   await call('Emulation.setDeviceMetricsOverride',{width:1536,height:1024,deviceScaleFactor:1,mobile:false});
   await evaluate(`document.getElementById('vr-card').scrollIntoView({block:'start'})`);await screenshot('vr-ready-desktop.png');
   status.game.state='running';await refresh(`document.getElementById('vr-mode').disabled && document.getElementById('vr-check').disabled`);
-  status.game.state='stopped';status.cloud={...autoIdle(),state:'syncing_before'};
+  status.game.state='stopped';status.cloud=autoIdle();
+  await refresh(`!document.getElementById('vr-mode').disabled`);
+  status.cloud={...autoIdle(),state:'syncing',phase:'before_start',request_id:autoRequest};
   await refresh(`document.getElementById('vr-mode').disabled`);
+  status.cloud={...autoIdle(),state:'attention',error_code:'launch'};
+  await refresh(`!document.getElementById('vr-mode').disabled`);
+  results.push('A completed launch failure permits VR settings changes for recovery');
   status.cloud=autoIdle();status.vr={available:false,mode:'off'};
   await refresh(`document.getElementById('vr-card').hidden`);
   results.push('VR setup persists, reserves the runtime during checks, reports failures, and blocks changes while playing or syncing');
