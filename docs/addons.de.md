@@ -35,7 +35,8 @@ eine begrenzte Prüfung hin.
 Wenn der Entwickler einen eigenen Installer vorsieht, diesen verwenden. Vor dem
 Ersetzen vorhandener Pakete eigene Einstellungen und Bemalungen sichern.
 Die allgemeine Mod-Liste zeigt den Bestand und öffnet den Ordner.
-Für Fenix gibt es zusätzlich den unten beschriebenen Ablauf, derzeit nur für MSFS 2024.
+Für Fenix und die experimentelle GSX-Pro-Integration gibt es eigene Abläufe,
+derzeit nur für MSFS 2024.
 
 ## FlyByWire A32NX
 
@@ -60,6 +61,59 @@ Im getrennten SimBridge-Test starteten der HTTP-Dienst und die Geländekarten-
 Initialisierung. Dafür wurden die drei vorhandenen Runner-Dateien
 `libvkd3d-1.dll`, `libvkd3d-shader-1.dll` und `libvkd3d-utils-1.dll` im Testpräfix
 benötigt. Eine Verbindung zum laufenden Simulator ist damit noch nicht bestätigt.
+
+## GSX Pro einrichten (experimentell, Entwicklungsversion)
+
+Unter **Mods → GSX Pro** gibt es einen Ablauf mit drei Schritten. Diese Integration
+ist noch nicht in Version 0.1.18 enthalten. Der offizielle FSDT-Installer wurde mit
+nativem .NET 4.8 in einem separaten MSFS-2024-Windows-Profil geprüft, einschließlich
+Öffnen, Schließen und Freigeben der Installation. GSX-Installation, Aktivierung,
+Couatl/SimConnect, das Menü im Simulator und die Bodendienste müssen noch mit
+einer lizenzierten Kopie getestet werden.
+
+MSFS 2024 einmal starten, damit die Paketkonfiguration vorhanden ist. Danach den
+Simulator, Fenix und andere Windows-Anwendungen dieses Profils schließen.
+
+1. **FSDT vorbereiten** lädt den offiziellen Installer mit festgelegter SHA-256,
+   kopiert das Windows-Profil und richtet bei Bedarf .NET 4.8 ein. Flightdeck
+   registriert FSDTs Lizenzkomponente und bewahrt das bisherige Profil als
+   Sicherung auf. Der Spiel-Runner bleibt unverändert. Das kann mehrere Minuten
+   dauern.
+2. **FSDT-Installer öffnen**, GSX Pro auswählen und FSDTs Installation und
+   Aktivierung abschließen. Prüfen, ob Simulator und Community-Pfad zur gewählten
+   Flightdeck-Installation passen. Laufende Downloads abschließen und den
+   Installer schließen oder in Flightdeck **FSDT schließen** wählen. FSDT verwaltet
+   seine Paketverknüpfungen selbst; nicht die gesamte Installation manuell nach
+   Community kopieren.
+3. **Automatischen Start einrichten** wird verfügbar, sobald das GSX-Paket im
+   Community-Ordner und FSDTs Couatl-Eintrag in `exe.xml` erkannt werden. Flightdeck
+   aktiviert diesen Eintrag und erhält dessen Argumente sowie andere Add-ons.
+   Fehlt der Eintrag, im FSDT-Installer aktualisieren und den Status neu laden.
+   Anschließend MSFS starten und GSX-Menü sowie Bodendienste prüfen.
+   **GSX eingerichtet · Flugtest ausstehend** bestätigt nur die lokale Einrichtung,
+   weder die Lizenz noch die Linux-Kompatibilität.
+
+GSX ist kostenpflichtig. Laut [offiziellem GSX-Handbuch](https://www.fsdreamteam.com/gsx_manual_msfs.pdf)
+setzt die Installation eine GSX-Lizenz oder einen berechtigten, aktivierten
+FSDT-Flughafen voraus. Mit Letzterem sind die Nutzung an FSDT-Flughäfen und ein
+begrenzter Test an KSFO, LIMC und EDDM möglich. Die Vorbereitung in Flightdeck
+schaltet GSX nicht frei. Kauf und Aktivierung erfolgen bei
+[FSDreamTeam](https://www.fsdreamteam.com/products_gsxpro.html).
+
+**GSX-Autostart ausschalten** ändert nur den Couatl-Eintrag und deinstalliert keine
+Pakete. Bei eingerichtetem GSX-Autostart schließt Flightdeck die benannten
+Couatl-Begleitprozesse dieses Profils auch bei Spielende, Absturz oder Stoppen.
+Andere Profile und der FSDT-Installer gehören nicht zu dieser Sitzungsbereinigung.
+
+Nach unterbrochener Vorbereitung bleibt der Spielstart gesperrt, bis
+**GSX-Vorbereitung wiederherstellen** das bisherige Profil wieder aktiviert.
+Eine abgeschlossene Vorbereitung bewahrt `local/msfs-prefix.before-gsx-*` als
+Sicherung auf. Die Wiederherstellung ist für unterbrochene Vorbereitung gedacht,
+nicht zum Rückgängigmachen einer späteren GSX-Installation. Protokolle liegen in
+`private/gsx-setup-*.log` und `private/gsx-manager.log`. Ersetzt FSDT den
+Installer-Download, stoppt ein Prüfsummenfehler die Vorbereitung, bis Flightdecks
+festgelegte Version geprüft und aktualisiert wurde. FSDT- und Microsoft-Binärdateien
+werden nicht mitgeliefert.
 
 ## Fenix A320 einrichten
 

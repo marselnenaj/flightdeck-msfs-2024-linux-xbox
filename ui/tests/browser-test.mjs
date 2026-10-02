@@ -51,6 +51,7 @@ let discovered=[{name:'Microsoft Flight Simulator 2024',path:'/synthetic/path wi
 let setup = {available:true,install_available:false,prepare_available:true,state:'idle',job:null,defaults:{mode:'existing',runtime_path:status.runtime.path,market:'AT',local_saves:true,destination_path:'/synthetic/new-msfs'}};
 let mods={state:'ready',message:'',folder_path:'/synthetic/Community',can_open:true,mods:[],count:0,scanned_count:0,limited:false};
 let modsUnavailable=false;
+let gsx={state:'available',prepared:false,package_installed:false,startup_found:false,configured:false,idle:true,can_change:true,can_stop:false,manager_running:false,can_recover:false,verified_in_simulator:false,job:null};
 let fenix={state:'available',installed:false,configured:false,settings_ready:false,idle:true,fenix_installed:false,manager_installed:false,can_restore:false,can_change:true,fenix_running:false,can_stop:false,job:null};
 let gameUpdate={integrity:{available:true,can_check:true,result:null},can_repair:true,available:true,installed_version:'1.8.16.0',latest_version:null,update_available:null,can_check:true,can_start:false,can_rollback:false,auth_required:false};
 let updateUnavailable=false,updateDelay=0,updateReplies=0,updateWaiting=false,updateBarrier=null,releaseUpdate=null;
@@ -63,7 +64,7 @@ let cloudReplies=0,cloudUnavailable=false,cloudBarrier=null,releaseCloud=null,cl
 let problemReport={recipient:'contact@flightdeck-app.com',draft:null,unreadable:false},problemFailure=false;
 let storeCheck={job:null};
 let maintenance={job:null,can_restore:false};
-const files = new Set(['problem-reports.js','store-check.js','maintenance.js','launcher-updates.js','notices.js','fenix.js','cloud-saves.js','manrope-variable.woff2','updates.js','mods.js','index.html','styles.css','app.js','setup.js','state.js','i18n.js','mark.svg','flight-panorama.png','flight-panorama-2020.png']);
+const files = new Set(['problem-reports.js','store-check.js','maintenance.js','launcher-updates.js','notices.js','fenix.js','gsx.js','cloud-saves.js','manrope-variable.woff2','updates.js','mods.js','index.html','styles.css','app.js','setup.js','state.js','i18n.js','mark.svg','flight-panorama.png','flight-panorama-2020.png']);
 const server = createServer(async (req,res) => {
   const url = new URL(req.url, 'http://localhost');
   if (url.pathname.startsWith('/api/')) {
@@ -88,6 +89,7 @@ const server = createServer(async (req,res) => {
       }
       if (url.pathname === '/api/game-update') {if(updateDelay)await sleep(updateDelay);if(updateBarrier){updateWaiting=true;await updateBarrier;}updateReplies++;if(updateUnavailable){res.writeHead(503);res.end(JSON.stringify({ok:false,error:'Synthetic update status unavailable'}));return;}res.end(JSON.stringify({...gameUpdate,job:setup.job?.mode==='update'?setup.job:null}));return;}
       if (url.pathname === '/api/cloud-saves') {if(cloudBarrier){cloudWaiting=true;await cloudBarrier;}cloudReplies++;if(cloudUnavailable){res.writeHead(404);res.end(JSON.stringify({ok:false,error:'Synthetic cloud component unavailable'}));return;}res.end(JSON.stringify({...cloudData,automatic:status.cloud}));return;}
+      if (url.pathname === '/api/gsx') {res.end(JSON.stringify({...gsx,runtime_path:status.runtime.path,can_change:gsx.can_change&&status.game.state==='stopped'}));return;}
       if (url.pathname === '/api/fenix') {res.end(JSON.stringify({...fenix,runtime_path:status.runtime.path,busy:status.game.state!=='stopped',can_change:fenix.can_change&&status.game.state==='stopped'}));return;}
       if (url.pathname === '/api/mods') {if(modsUnavailable){res.writeHead(503);res.end(JSON.stringify({ok:false,error:'Synthetic inventory unavailable'}));return;}res.end(JSON.stringify(mods));return;}
       if (url.pathname === '/api/diagnostics') {res.end(JSON.stringify({summary:{Runtime:'Bereit',Speichermodus:'Lokal',Experimentell:true,store_calls:[{method:'XStoreShowPurchaseUIAsync',hresult:'80004001'}],store_catalog:[{stage:'inventory-mapping',hresult:'80004001'}],store_session:{components_at_launch:null,events:[{time_ms:1790540000000,phase:'checkout_ready',outcome:'passed'},{time_ms:1790540001000,phase:'complete',outcome:'cancelled'}],partial:true},store_check:storeCheck.job,cloud_sync:{state:'attention',phase:'after_exit',error_code:'transport',error_details:{http_status:503}},graphics:{status:'ready',session:'wayland',devices:[{name:'NVIDIA GeForce RTX 4060',vendor_id:4318,type:2,api_version:'1.3.280',driver_version:'580.126.9.0'}]}},checks,generated_at:'2026-09-17T17:00:00Z',csrf_token:csrf,private_log:'MUST-NOT-EXPORT'}));return;}
@@ -192,6 +194,15 @@ const server = createServer(async (req,res) => {
         }
         status.app.version='0.1.5';launcherUpdate={...launcherDefault(),installed_version:'0.1.5',latest_version:'0.1.5',update_available:false,can_rollback:true};
         res.end(JSON.stringify({ok:true}));return;
+      }
+      if (url.pathname.startsWith('/api/gsx/')) {
+        assert.deepEqual(JSON.parse(body),{runtime_path:status.runtime.path});
+        const operation=url.pathname.split('/').at(-1);
+        if(operation==='prepare')gsx={...gsx,can_change:false,job:{state:'running',operation,message:'Synthetic GSX preparation'}};
+        else if(operation==='open'){gsx={...gsx,can_change:false,can_stop:true,manager_running:true,job:{state:'running',operation,message:'Synthetic FSDT installer'}};status.game={...status.game,state:'external'};}
+        else if(operation==='stop'){gsx={...gsx,can_change:true,can_stop:false,manager_running:false,job:{state:'complete',operation,message:'FSDT closed'}};status.game={...status.game,state:'stopped'};}
+        else if(operation==='configure')gsx={...gsx,configured:true,job:{state:'complete',operation,message:'Startup configured; flight unverified'}};
+        res.end(JSON.stringify({ok:true,job_id:'gsx-fixture'}));return;
       }
       if (url.pathname === '/api/fenix/install') {assert.deepEqual(JSON.parse(body),{bundle_path:''});fenix={...fenix,can_change:false,job:{state:'running',message:'Synthetic Fenix setup'}};res.end(JSON.stringify({ok:true,job_id:'fenix-fixture'}));return;}
       if (url.pathname === '/api/fenix/configure') {assert.deepEqual(JSON.parse(body),{});fenix={...fenix,configured:true,job:{state:'complete',operation:'configure',message:'Synthetic displays configured'}};res.end(JSON.stringify({ok:true,job_id:'fenix-configure-fixture'}));return;}
@@ -1193,6 +1204,25 @@ try {
   await evaluate(`document.getElementById('fenix-card').scrollIntoView({block:'start'})`);
   await check('Fenix setup is translated and fits mobile width',`document.documentElement.scrollWidth<=innerWidth && document.getElementById('fenix-install').textContent==='Install patch'`);await screenshot('fenix-setup-mobile.png');
   await language('de');
+
+  // GSX installer readiness never becomes a claim of licensed, working ground services.
+  await call('Emulation.setDeviceMetricsOverride',{width:1536,height:1024,deviceScaleFactor:1,mobile:false});
+  await click('gsx-refresh');await until(()=>evaluate(`!document.getElementById('gsx-prepare').disabled`),'GSX preparation is unavailable');
+  await evaluate(`document.getElementById('gsx-card').scrollIntoView({block:'start'})`);await screenshot('gsx-setup-desktop.png');
+  await click('gsx-prepare');await until(()=>evaluate(`document.getElementById('launch-button').disabled`),'GSX preparation did not reserve the runtime');
+  await check('GSX preparation blocks Fenix and game actions',`document.getElementById('fenix-install').disabled && document.getElementById('gsx-open').disabled && document.getElementById('gsx-configure').disabled`);
+  gsx={...gsx,prepared:true,can_change:true,job:{state:'complete',operation:'prepare'}};await click('gsx-refresh');
+  await until(()=>evaluate(`!document.getElementById('gsx-open').disabled`),'Prepared FSDT installer cannot open');
+  await check('Prepared installer still needs the GSX aircraft-side package and official startup entry',`document.getElementById('gsx-configure').disabled && document.getElementById('gsx-next').textContent.includes('Schritt 2 von 3')`);
+  await click('gsx-open');await until(()=>evaluate(`!document.getElementById('gsx-stop').disabled`),'FSDT stop is blocked by its own lease');
+  await click('gsx-stop');await until(()=>evaluate(`!document.getElementById('gsx-open').disabled`),'FSDT close did not release setup');
+  gsx={...gsx,package_installed:true,startup_found:true};await click('gsx-refresh');
+  await until(()=>evaluate(`!document.getElementById('gsx-configure').disabled`),'Detected FSDT startup entry cannot be enabled');await click('gsx-configure');
+  await until(()=>evaluate(`document.getElementById('gsx-state').textContent==='GSX eingerichtet · Flugtest ausstehend'`),'GSX incorrectly claims flight validation');
+  await language('en');await call('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
+  await evaluate(`document.getElementById('gsx-card').scrollIntoView({block:'start'})`);
+  await check('GSX remains explicitly experimental in English and fits mobile width',`document.documentElement.scrollWidth<=innerWidth && document.getElementById('gsx-state').textContent==='GSX configured · Flight test pending' && document.getElementById('gsx-card').textContent.includes('remain untested')`);await screenshot('gsx-setup-mobile.png');
+  await language('de');gsx={...gsx,job:null};
 
   // Launcher updates use a separate GitHub workflow, with explicit user actions.
   await call('Emulation.setDeviceMetricsOverride',{width:1536,height:1024,deviceScaleFactor:1,mobile:false});

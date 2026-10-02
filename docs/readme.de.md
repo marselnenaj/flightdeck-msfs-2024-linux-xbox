@@ -79,6 +79,11 @@ Ihre Wirkung auf die schwarze NVIDIA-Hauptansicht ist noch nicht bestätigt.
 Beide Versionen sind reguläre Releases und über **Updates → Flightdeck** verfügbar.
 [Details und Prüfungen](nvidia-renderer.md#3d-texture-layout-correction-0117).
 
+**In Entwicklung:** experimentelle GSX-Pro-Einrichtung für MSFS 2024 mit dem
+offiziellen FSDT-Installer unter Mods. Die Installer-Vorbereitung wurde unter
+Wine geprüft; GSX im Simulator ist noch unbestätigt. Nicht in 0.1.18 enthalten.
+[GSX einrichten und Testumfang](addons.de.md#gsx-pro-einrichten-experimentell-entwicklungsversion).
+
 ## Loslegen
 
 **1. Flightdeck installieren**

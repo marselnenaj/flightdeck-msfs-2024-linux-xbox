@@ -49,6 +49,7 @@ class Server(ThreadingHTTPServer):
         self.launcher.cloud_saves.close()
         self.launcher.setup.close()
         self.launcher.fenix.close()
+        self.launcher.gsx.close()
         super().server_close()
 
     def desktop_refresh(self):
@@ -132,6 +133,8 @@ class Handler(BaseHTTPRequestHandler):
                 self.reply(200, self.server.launcher.cloud_saves.snapshot())
             elif path == "/api/fenix":
                 self.reply(200, self.server.launcher.fenix.snapshot())
+            elif path == "/api/gsx":
+                self.reply(200, self.server.launcher.gsx.snapshot())
             elif path == "/api/mods":
                 from .mods import snapshot
                 self.reply(200, snapshot(self.server.launcher))
@@ -139,7 +142,7 @@ class Handler(BaseHTTPRequestHandler):
                 self.reply(200, self.server.launcher.setup.snapshot())
             elif path == "/api/setup/discover":
                 self.reply(200, self.server.launcher.setup.discover())
-            elif path in {"/", "/index.html", "/app.js", "/problem-reports.js", "/setup.js", "/mods.js", "/fenix.js", "/updates.js", "/maintenance.js", "/store-check.js", "/launcher-updates.js", "/notices.js", "/cloud-saves.js", "/i18n.js", "/state.js", "/styles.css", "/mark.svg", "/flight-panorama.png", "/flight-panorama-2020.png", "/manrope-variable.woff2"}:
+            elif path in {"/", "/index.html", "/app.js", "/problem-reports.js", "/setup.js", "/mods.js", "/fenix.js", "/gsx.js", "/updates.js", "/maintenance.js", "/store-check.js", "/launcher-updates.js", "/notices.js", "/cloud-saves.js", "/i18n.js", "/state.js", "/styles.css", "/mark.svg", "/flight-panorama.png", "/flight-panorama-2020.png", "/manrope-variable.woff2"}:
                 name = "index.html" if path == "/" else path[1:]
                 types = {".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".svg": "image/svg+xml", ".png": "image/png", ".woff2": "font/woff2"}
                 file = self.server.ui_root / name
@@ -251,6 +254,8 @@ class Handler(BaseHTTPRequestHandler):
                 result = launcher.fenix.pick(data.get("kind"))
             elif path.startswith("/api/fenix/"):
                 result = launcher.fenix.start(path.rsplit("/", 1)[-1], data)
+            elif path.startswith("/api/gsx/"):
+                result = launcher.gsx.start(path.rsplit("/", 1)[-1], data)
             elif path == "/api/mods/open-folder":
                 from .mods import open_folder
                 result = open_folder(launcher)

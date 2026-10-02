@@ -739,6 +739,39 @@ while True:time.sleep(.01)
             self.assertTrue(all(process.poll() is None for process in survivors))
             self.assert_competitor_blocked()
 
+    def test_game_exit_closes_configured_gsx_and_keeps_fsdts_installer_and_other_profiles(self):
+        environment = self.managed_fixture()
+        (self.runtime / 'private/gsx-startup.json').write_text('{"format":1,"enabled":true}')
+        companion, stopped = self.fenix_companion('Couatl64_MSFS2024.exe', 'gsx')
+        survivors = [self.fenix_companion('Couatl64_MSFS2024.exe', 'other-gsx', other_prefix=True)[0],
+                     self.fenix_companion('Couatl_Updater2.exe', 'fsdt-manager')[0],
+                     self.fenix_companion('OtherAircraft.exe', 'other-aircraft')[0]]
+        self.launcher.reserve_setup(); self.launcher.managed_session = 'synthetic-session'
+        with self.launcher.runtime_lock(operation='cloud_session') as fd, patch.dict(os.environ, environment):
+            child = self.launcher._spawn_reserved(fd); self.children.append(child)
+            self.wait_for(lambda: (self.runtime / 'private/game-ready').exists())
+            (self.runtime / 'private/game-done').touch()
+            self.assertEqual(child.wait(timeout=10), 0)
+            self.assertEqual(companion.wait(timeout=1), 0)
+            self.assertEqual(int(stopped.read_text()), signal.SIGTERM)
+            self.assertTrue(all(process.poll() is None for process in survivors))
+            self.assert_competitor_blocked()
+
+    def test_incomplete_gsx_setup_prevents_direct_runtime_script_start(self):
+        from flightdeck.setup import resource_paths
+        environment = self.managed_fixture()
+        (self.runtime / 'private/gsx-setup.json').write_text('{"format":1,"id":"' + 'a' * 32 + '","state":"committing"}')
+        command = self.runtime / 'tools/play-msfs.sh'
+        command.write_bytes((resource_paths()[0] / 'play-msfs.sh').read_bytes())
+        result = subprocess.run([str(command)], env={**os.environ, **environment},
+                                capture_output=True, text=True, timeout=5)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('GSX setup is incomplete', result.stderr)
+        self.assertFalse((self.runtime / 'private/game-ready').exists())
+        self.assertFalse((self.runtime / 'private/service-ready').exists())
+        check = next(item for item in self.launcher.checks() if item['id'] == 'gsx_setup')
+        self.assertFalse(check['ok'])
+
     def test_launcher_stop_cleans_stuck_detached_fenix_before_releasing_runtime(self):
         environment = self.managed_fixture()
         companion, stopped = self.fenix_companion("FenixDisplay.exe", "display", stubborn=True)

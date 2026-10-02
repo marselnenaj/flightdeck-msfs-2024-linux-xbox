@@ -179,6 +179,26 @@ and leaves existing installations untouched. These checks establish adapter
 selection and device creation; they do not validate simulator rendering or
 flight stability. Raw device UUIDs are omitted from the result summary.
 
+## Experimental GSX setup
+
+The GSX integration reuses the vendored engine's .NET prerequisites, profile
+copying and runtime lock without applying a Fenix patch. It downloads the official
+FSDT installer from the URL and SHA-256 in `flightdeck/gsx_core.py`; no proprietary
+programs or activated profiles belong in the source or installer archives.
+
+```sh
+python3 -m unittest discover -s tests -p 'test_gsx*.py' -v
+node --test ui/tests/gsx.test.mjs
+node ui/tests/browser-test.mjs
+```
+
+Runtime cleanup and direct-launch interruption checks also live in
+`tests/test_backend.py`. Synthetic package/startup fixtures establish local setup
+behavior, not GSX activation or a working simulator connection. Review a changed
+official installer in a separate profile before updating the pin, including its
+licensing registration and automatic updater behavior. See the
+[setup scope](docs/addons.md#gsx-pro-experimental-development-build).
+
 ## Optional Fenix patch
 
 The Fenix Wine overlay has a separate source/build pipeline in

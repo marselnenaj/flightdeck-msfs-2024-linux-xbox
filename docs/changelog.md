@@ -1,5 +1,21 @@
 # Changes and release status
 
+## Unreleased — experimental GSX Pro setup
+
+- Add a three-step GSX Pro workflow under Mods for MSFS 2024: prepare .NET and
+  the pinned official FSDT installer, open FSDT for licensed installation, then
+  enable its existing Couatl startup entry without changing other add-ons.
+- Prepare in a profile copy, retain a backup and provide recovery after an
+  interruption. Block game starts until an interrupted preparation is recovered.
+- Reserve the selected runtime while FSDT is open and offer scoped shutdown.
+  Include configured Couatl companions in game-session cleanup.
+
+The official installer and .NET preparation were tested under Wine. Local API,
+UI, recovery and process-boundary checks pass. GSX package installation,
+activation, Couatl/SimConnect and ground services remain untested with a licensed
+copy. This development feature is not included in 0.1.18.
+[Setup and limitations](addons.md#gsx-pro-experimental-development-build).
+
 ## 0.1.18 — 2 October 2026
 
 [Download Flightdeck 0.1.18](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.18).
