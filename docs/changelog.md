@@ -1,5 +1,23 @@
 # Changes and release status
 
+## 0.1.20 — 3 October 2026
+
+- Carry the current Windows profile across Proton changes and back to Flightdeck,
+  retaining aircraft, mods, sign-ins and settings instead of restarting each trial
+  from the original profile. Retain earlier profiles as backups.
+- Add exact-build Fenix overlays for Experimental 11.0 (20260924) and CachyOS 10.0
+  sunset. Show compatible versions in the selector and migrate known legacy
+  Fenix installations while preserving their current profile.
+- Allow GSX/FSDT preparation and launch on the selected Proton. Handle Wine64
+  consistently for classic runners and keep recovery journals coordinated.
+- Keep Fenix geometry, helper-window and MCDU refresh features in the portable
+  launcher. Reject unsupported Fenix runner combinations before changing files.
+
+Native Fenix probes, fresh .NET/Fenix setup, official FSDT preparation and isolated
+switch/loader/graphics checks pass for both builds. The launcher suite passes
+832 tests, compatibility packaging 39 tests and Chromium 309 UI checks. Full Fenix/GSX flights on alternate Proton versions and the reported NVIDIA
+black main view remain unverified.
+
 ## 0.1.19 — 3 October 2026
 
 [Download Flightdeck 0.1.19](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.19).

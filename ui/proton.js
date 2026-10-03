@@ -4,7 +4,7 @@ export function protonActions(data,status,{online=true,pending=false,reserved=fa
   const busy=data?.job?.state==='preparing';
   const bound=!!status?.runtime.configured&&data?.runtime_path===status.runtime.path;
   const idle=bound&&online&&!pending&&!reserved&&!busy&&!status.setup?.busy&&status.game.state==='stopped';
-  return {select:idle&&!data.error&&!data.fenix&&!['syncing','playing','attention'].includes(status.cloud?.state),
+  return {select:idle&&!data.error&&!['syncing','playing','attention'].includes(status.cloud?.state),
     restore:idle&&data.can_restore===true&&!['syncing','playing'].includes(status.cloud?.state),
     cancel:online&&!pending&&busy&&data.job.runtime_path===status?.runtime.path,busy};
 }
@@ -25,10 +25,14 @@ export function createProton({request,getStatus,isOnline,isReserved,isSetupActiv
     for(const option of $('proton-select').options){
       if(option.value==='')option.text=t('Proton-Version auswählen …');
       if(option.value==='custom')option.text=t('Anderen Proton-Ordner wählen');
+      if(option.dataset.label){
+        option.disabled=!!data?.fenix&&option.dataset.fenix!=='true';
+        option.text=option.dataset.label+(data?.fenix?' · '+t(option.disabled?'Fenix-Patch fehlt':'Fenix verfügbar'):'');
+      }
     }
     $('proton-path').disabled=!allowed.select;
     $('proton-path-field').hidden=$('proton-select').value!=='custom';
-    $('proton-apply').disabled=!allowed.select||!choice();
+    $('proton-apply').disabled=!allowed.select||!choice()||$('proton-select').selectedOptions[0]?.disabled===true;
     $('proton-discover').disabled=!allowed.select;
     $('proton-restore').hidden=!data?.can_restore;
     $('proton-restore').disabled=!allowed.restore;
@@ -58,7 +62,10 @@ export function createProton({request,getStatus,isOnline,isReserved,isSetupActiv
     try{
       const result=await request('/api/proton/discover'),previous=$('proton-select').value;
       const options=[new Option(t('Proton-Version auswählen …'),'')];
-      for(const item of result.choices||[])options.push(new Option(`${item.label} · ${item.version}`,item.path));
+      for(const item of result.choices||[]){
+        const option=new Option(`${item.label} · ${item.version}`,item.path);
+        option.dataset.label=option.text;option.dataset.fenix=String(item.fenix===true);options.push(option);
+      }
       options.push(new Option(t('Anderen Proton-Ordner wählen'),'custom'));
       $('proton-select').replaceChildren(...options);
       if(options.some(item=>item.value===previous))$('proton-select').value=previous;

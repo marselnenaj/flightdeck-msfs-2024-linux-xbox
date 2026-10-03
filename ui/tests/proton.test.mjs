@@ -8,7 +8,7 @@ test('Proton selection requires the current idle installation',()=>{
   for(const flags of [{online:false},{reserved:true},{pending:true}])assert.equal(protonActions(data,status,flags).select,false);
   for(const state of ['starting','running','stopping','external'])assert.equal(protonActions(data,{...status,game:{state}}).select,false);
   assert.equal(protonActions({...data,runtime_path:'/two'},status).select,false);
-  assert.equal(protonActions({...data,fenix:true},status).select,false);
+  assert.equal(protonActions({...data,fenix:true},status).select,true);
   assert.equal(protonActions(data,{...status,setup:{busy:true}}).select,false);
   assert.equal(protonActions(null,null).select,false);
 });

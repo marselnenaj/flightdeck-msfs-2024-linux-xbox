@@ -25,27 +25,34 @@ the user's actual entitlement; the compatibility code does not grant licenses.
 
 ## Experimental Proton selection
 
-In Flightdeck 0.1.19, open **Setup → Proton version (experimental)**.
-Flightdeck discovers Proton installations in Steam's registered libraries,
-including Flatpak Steam and `compatibilitytools.d`. You can also enter the
-folder of an installed Proton Experimental, GE-Proton or another Proton build.
-The selected folder must contain a complete Wine, DXVK and VKD3D distribution.
-Downloads remain managed by Steam or your existing Proton installer.
+Open **Setup → Proton version (experimental)**. Flightdeck discovers installed
+Proton builds in Steam libraries, including Flatpak Steam and
+`compatibilitytools.d`. You can also enter a complete Wine/DXVK/VKD3D runner
+folder. Steam or your existing Proton installer manages its downloads.
 
-**Prepare and use Proton** copies the runner and a copy of the original Windows
-profile into `local/proton-tests/`, checks the required files, runs Wine setup
-and installs that runner's graphics libraries for both architectures. Failed or
-cancelled preparation leaves the active environment intact. Steam updates do
-not change the copied test runner. Select the installed version again to test
-an update. Every new trial starts from the retained original Flightdeck profile.
+Starting with 0.1.20, switching copies the **current** Windows profile and the
+chosen runner into `local/proton-tests/`. Aircraft, installed add-ons, sign-ins
+and settings carry forward, including changes made under another Proton build.
+Returning to Flightdeck also carries the current profile forward. Earlier
+profiles remain in their `previous-prefix` backup directories; they are not
+silently restored over newer add-on installations. The game files and
+Flightdeck-managed saves remain in place. Store/account helpers retain the
+original Flightdeck runner.
 
-**Return to Flightdeck environment** restores the original runner and Windows
-profile. Trial profiles are retained in their `previous-prefix` backup folders;
-their settings and installed add-ons are not merged into the restored profile.
-The existing game files, account store and Flightdeck-managed local/cloud saves
-remain in the same runtime. Account and save helpers keep the original runner.
-A journal blocks game launch after an interrupted switch; the return action
-recovers it. Close MSFS and all prefix applications before switching.
+Preparation verifies the selected files, updates Wine and installs that runner's
+graphics libraries for both architectures. Steam updates cannot modify the
+private runner copy; select the updated build again to adopt it. Failure or
+cancellation during preparation leaves the active profile untouched. A journal
+blocks launch after an interrupted commit; **Return to Flightdeck environment**
+recovers it. Close MSFS and all profile applications before switching.
+
+Fenix uses a separate overlay compiled for each exact supported Wine build.
+The first additional builds are Experimental `experimental-11.0-20260924-x86_64`
+and CachyOS `cachyos-10.0-sunset-slr`. The menu marks compatible versions and
+Flightdeck applies their patch automatically. An unknown or modified Wine build
+is rejected before switching a Fenix installation. Known legacy Fenix profiles
+can migrate without reinstalling aircraft. GSX setup and its official installer
+can run on the selected Proton; an interrupted GSX setup must be recovered first.
 
 The alternative launch bridge exposes Xodus' already-open, licensed image
 descriptors through temporary `/proc` symlinks. Executables and DLLs remain in
@@ -55,15 +62,13 @@ normal licensing, and Flightdeck retains its Store/GDK libraries. Flightdeck
 starts the chosen Wine directly; Steam's Proton launcher and its game-specific
 launch options are not invoked. Unsupported host dependencies fail preparation.
 
-This is experimental compatibility support, not a verified NVIDIA fix. The
-Fenix patch still requires its matched Flightdeck runner; restore that patch
-before trying another runner. GSX/FSDT setup changes also require returning to
-Flightdeck first; recover an interrupted GSX preparation before switching Proton.
-Return to Flightdeck before environment resets or
-uninstallation. Diagnostics record the chosen version and loader with each
-start. Maintainers can run `scripts/check-proton.py` for synthetic executable/DLL
-loading, Store interface loading, rendering and restoration without a game or
-account login.
+This is experimental compatibility support. Native overlay, loader, graphics and
+profile-switch checks do not establish a complete Fenix/GSX flight or fix the
+reported NVIDIA black view. Return to Flightdeck before resetting or removing an
+environment. Diagnostics record the chosen version and loader. Maintainers can
+run `scripts/check-proton.py --fenix-bundle /path/to/patch` to verify the matching
+overlay, synthetic Store loading, rendering and add-on-preserving return without
+starting a game or signing in.
 
 ## Advanced: prepare a runtime from existing files
 

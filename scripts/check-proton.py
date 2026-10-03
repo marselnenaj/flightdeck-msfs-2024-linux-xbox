@@ -20,6 +20,7 @@ def main():
     parser.add_argument('--runtime', type=Path, required=True, help='Read only: source of the installed Store DLLs and base runner')
     parser.add_argument('--runner', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--fenix-bundle', type=Path, help='Test matching Fenix modules with synthetic apps; no licensed Fenix application')
     args = parser.parse_args()
     original = args.runtime.resolve(strict=True)
     runner = proton.base_runner(original).resolve(strict=True)
@@ -64,12 +65,33 @@ def main():
         (game / name).write_bytes(b'Synthetic encrypted placeholder; must remain unchanged.\n')
     expected = {name: setup.digest(game / name) for name in names}
     launcher = Launcher(output / 'state', str(runtime))
+    if args.fenix_bundle:
+        from flightdeck.fenix import core
+        bundle = core.verify_bundle(args.fenix_bundle)
+        work = runtime / 'local/fenix-patch-20261003T000000-00000000'
+        work.mkdir()
+        core.copy_tree(runner, work / 'runner')
+        with (output / 'geometry-setup.log').open('w') as log:
+            wine = core.Wine(prefix, work / 'runner', log)
+            try:
+                core.prepare_geometry(wine, bundle / 'build/downloads', bundle, print)
+            finally:
+                wine.stop()
+        core.apply_overlay(prefix, work / 'runner', bundle)
+        core.replace_link(runtime / 'runner', work / 'runner')
+        core.write_json(runtime / core.MARKER, {'format': 1, 'state': 'installed', 'version': core.manifest()['version'],
+            'work': str(work.relative_to(runtime)), 'backup': 'private/fenix-fixture', 'configured': False})
+        cache = launcher.state_dir / 'fenix-bundles'
+        cache.mkdir(parents=True)
+        (cache / core.manifest()['version']).symlink_to(bundle, target_is_directory=True)
     launcher.proton.start({'runtime_path': str(runtime), 'mode': 'proton', 'path': str(args.runner.resolve())})
     launcher.proton.thread.join(600)
     if launcher.proton.job['state'] != 'complete':
         raise RuntimeError(launcher.proton.job)
     selected = proton.selection(runtime)
     env = proton._prefix_env(prefix, output)
+    if args.fenix_bundle:
+        env.update(core.ENV)
     env.update(FLIGHTDECK_PROTON_LOADER='portable', WINEDLLPATH=str(runtime / 'local/store-runtime'),
                XODUS_WINE_RUNNER=str(setup.runner_wine(runtime / 'runner')),
                WINELOADER=str(setup.runner_wine(runtime / 'runner')), WINESERVER=str(runtime / 'runner/files/bin/wineserver'),
@@ -98,13 +120,20 @@ def main():
     assert rendering.returncode == 0, (output / 'render.log').read_text()
     assert all(setup.digest(game / name) == expected[name] for name in names)
     assert not list(game.glob('.xodus-launch-*'))
+    (prefix / 'installed-on-proton').write_text('retain add-ons and settings')
     launcher.proton.start({'runtime_path': str(runtime), 'mode': 'default'})
-    launcher.proton.thread.join(30)
+    launcher.proton.thread.join(180)
     assert launcher.proton.job['state'] == 'complete', launcher.proton.job
-    assert proton._id(prefix) == before and (prefix / 'original-marker').read_text() == 'preserve this profile'
-    assert (runtime / 'runner').resolve() == runner
+    assert proton._id(runtime / selected['base_prefix']) == before
+    assert (prefix / 'original-marker').read_text() == 'preserve this profile'
+    assert (prefix / 'installed-on-proton').read_text() == 'retain add-ons and settings'
+    assert proton.selection(runtime) is None
+    assert proton._version(runtime / 'runner') == proton._version(runner)
+    if args.fenix_bundle:
+        core.verify_installed(runtime, core.read_json(runtime / core.MARKER))
     report = {'version': selected['version'], 'loader_passed': True, 'rendering_passed': True,
-              'original_files_unchanged': True, 'return_to_default_passed': True,
+              'original_files_unchanged': True, 'return_to_default_passed': True, 'addons_retained': True,
+              'fenix_overlay': bool(args.fenix_bundle),
               'scope': 'Synthetic memfd EXE/DLL, Store library loading, D3D11/D3D12 rendering and profile round trip; no game/account'}
     (output / 'result.json').write_text(json.dumps(report, indent=2) + '\n')
     print(json.dumps(report, indent=2))

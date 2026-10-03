@@ -73,9 +73,9 @@ with native .NET 4.8 in a separate MSFS 2024 Wine profile, including opening,
 closing and releasing the runtime. GSX installation, activation, Couatl/SimConnect,
 the in-game menu and ground services still need testing with a licensed copy.
 
-Before changing FSDT setup, return to the original Flightdeck environment under
-**Setup → Proton version**. Recover interrupted GSX preparation before switching
-Proton versions.
+Starting with 0.1.20, FSDT setup uses the active Proton version and its installed
+files carry forward when switching runners. Recover interrupted GSX preparation
+before switching Proton versions.
 
 Start MSFS 2024 once to create its package configuration, then close the simulator,
 Fenix and other Windows applications in that profile.
@@ -198,16 +198,19 @@ Tested cockpit: Fenix 2.4.0.4720, MSFS 2024 1.8.16.0 and Hyprland. PFD/ND/ECAM,
 MCDU, clock, FCU and radio rendering were verified. Full-flight testing remains
 outstanding. Weather radar is unavailable in the CPU renderer. The binary preview
 requires x86_64 Linux and glibc 2.38+; Flightdeck's full native package still requires
-glibc 2.39+. Other Wine/Proton builds, Steam prefixes and MSFS 2020 are outside this
-first patch's scope. The optional window guard runs with the simulator and hides
+glibc 2.39+. Starting with 0.1.20, matched Fenix overlays are available for Proton
+Experimental 11.0 (20260924) and CachyOS Proton 10.0 sunset. Their native probes
+pass; a full flight on these runners remains unverified. Other builds need a
+matching overlay. Steam prefixes and MSFS 2020 remain unsupported. The optional window guard runs with the simulator and hides
 matching service/display windows. The X11 driver now keeps them off the desktop
 while preserving internal visibility; the main Fenix application remains accessible.
 Opening Fenix manually does not start that guard.
 
 **Existing local Fenix patch** means a previous development setup is detected.
-That setup stays active and the new install button is disabled. There is no
-automatic migration; test a fresh install with a separate compatible runtime if
-needed. Disabled steps can also mean MSFS, Fenix or another setup job is still
+That setup stays active until a supported Proton version is selected in
+Flightdeck. The switch migrates recognized launch scripts and applies the matching
+Fenix overlay while preserving the current profile. Modified scripts are retained
+and block automatic replacement. Disabled steps can also mean MSFS, Fenix or another setup job is still
 running, or the previous step has not finished. Close those applications and use
 **Reload status**. The official installer step also needs a selected EXE.
 

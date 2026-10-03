@@ -68,12 +68,10 @@ def setup_complete(root):
 
 
 def proton_error(root, *, recovery=False):
-    from .proton import selection, check
-    # A copied Proton profile has its own restore point. Keep FSDT changes in
-    # the original profile so its setup journal cannot outlive a Proton trial.
-    if check(root) or (not recovery and selection(root)):
-        return "Kehre unter Proton-Version zur Flightdeck-Umgebung zurück, bevor du GSX einrichtest."
-    return ""
+    from .proton import check
+    # Proton carries the active add-on installation forward and prevents a
+    # switch while the GSX preparation journal is incomplete.
+    return check(root)
 
 
 def identity(path):

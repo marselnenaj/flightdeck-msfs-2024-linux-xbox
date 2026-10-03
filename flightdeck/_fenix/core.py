@@ -81,8 +81,33 @@ def read_json(path):
     return json.loads(regular(path, 1024 * 1024).read_text())
 
 
-def manifest():
-    return read_json(ROOT / "bundle.json")
+def manifest(variant=None):
+    lock = read_json(ROOT / "bundle.json")
+    if variant:
+        if variant not in lock.get("variants", {}):
+            raise PatchError("No Fenix compatibility build is available for this Proton version.")
+        lock = {**lock, **lock["variants"][variant], "variant": variant}
+    return lock
+
+
+def runner_variant(runner, *, patched=False):
+    """Match complete Wine identities; a family/version label is not an ABI."""
+    lock = manifest()
+    for variant in (None, *lock.get("variants", {})):
+        candidate = manifest(variant)
+        try:
+            if patched:
+                candidate = {**candidate, "runner_files": {**candidate["runner_files"], **candidate["files"]}}
+            verify_runner(runner, candidate)
+            return variant
+        except (OSError, PatchError):
+            pass
+    raise PatchError("Für diese Proton-Version fehlt ein passender Fenix-Patch. Wähle eine Version mit Fenix-Unterstützung.")
+
+
+def wine_binary(runner):
+    wine64 = runner / "files/bin/wine64"
+    return wine64 if wine64.is_file() else runner / "files/bin/wine"
 
 
 def atomic(path, content, mode=0o600):
@@ -159,6 +184,8 @@ def ensure_idle(prefix):
 @contextmanager
 def locked(root, *, idle=True, recovery=False):
     root = runtime_path(root, recovery=recovery)
+    if (root / "private/proton-switch.json").exists():
+        raise PatchError("Recover the interrupted Proton switch before changing Fenix.")
     path = root / "private/play.lock"
     fd = os.open(path, os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
     try:
@@ -190,8 +217,9 @@ def host_check():
 
 
 def verify_runner(runner, lock):
-    if regular(runner / "version", 4096).read_text().strip() != lock["runner_version"]:
-        raise PatchError("Unsupported Wine runner. Use the pinned Flightdeck Xodus runner.")
+    version = regular(runner / "version", 4096).read_text().strip()
+    if re.sub(r"^\d+\s+", "", version) != re.sub(r"^\d+\s+", "", lock["runner_version"]):
+        raise PatchError("The Wine runner version does not match this Fenix build.")
     for name, expected in lock["runner_files"].items():
         if digest(regular(runner / name)) != expected:
             raise PatchError("The Wine runner differs from the supported build: " + name)
@@ -202,7 +230,10 @@ def verify_bundle(bundle):
     lock = manifest()
     if read_json(bundle / "bundle.json") != lock:
         raise PatchError("The patch bundle does not match this installer version.")
-    for relative, expected in lock["files"].items():
+    files = dict(lock["files"])
+    for variant, entry in lock.get("variants", {}).items():
+        files.update({"variants/" + variant + "/" + name: sha for name, sha in entry["files"].items()})
+    for relative, expected in files.items():
         path = contained(bundle / "payload", relative)
         if digest(regular(path)) != expected:
             raise PatchError("Patch checksum mismatch: " + relative)
@@ -212,7 +243,7 @@ def verify_bundle(bundle):
     return bundle
 
 
-def download(url, destination, expected, progress=lambda _: None, max_size=180 * 1024 * 1024):
+def download(url, destination, expected, progress=lambda _: None, max_size=256 * 1024 * 1024):
     destination = Path(destination)
     if destination.is_file() and not destination.is_symlink() and digest(destination) == expected:
         return destination
@@ -241,7 +272,8 @@ def download(url, destination, expected, progress=lambda _: None, max_size=180 *
 
 def wine_env(prefix, runner):
     env = dict(os.environ, **ENV, WINEPREFIX=str(prefix), WINEDEBUG="-all",
-               WINE=str(runner / "files/bin/wine"), WINESERVER=str(runner / "files/bin/wineserver"))
+               WINE=str(wine_binary(runner)), WINESERVER=str(runner / "files/bin/wineserver"),
+               WINE_DISABLE_FAST_SYNC="1")
     for name in ("WINE_DLL_FILE_MAP", "WINELOADER", "WINEDLLPATH", "WINESERVERSOCKET", "WINEPRELOADRESERVE", "WINELOADERNOEXEC"):
         env.pop(name, None)
     env["WINEDLLOVERRIDES"] = "winemenubuilder.exe=d"
@@ -250,13 +282,37 @@ def wine_env(prefix, runner):
     return env
 
 
+def apply_overlay(prefix, runner, bundle, variant=None):
+    """Only call after every process in the staged prefix has stopped."""
+    lock = manifest(variant)
+    payload = bundle / "payload"
+    if variant:
+        payload /= "variants/" + variant
+    for name, sha in lock["files"].items():
+        data = regular(contained(payload, name)).read_bytes()
+        if hashlib.sha256(data).hexdigest() != sha:
+            raise PatchError("Fenix patch checksum mismatch: " + name)
+        atomic(contained(runner, name), data, 0o755 if "/bin/" in name else 0o644)
+        if name.startswith("files/lib/wine/x86_64-windows/"):
+            atomic(contained(prefix, "drive_c/windows/system32/" + Path(name).name), data, 0o644)
+    for name in ("FenixWindowGuard.exe", "FenixMCDURefresh.exe", "fenix-display-refresh.py"):
+        if name in lock["integration"]:
+            data = regular(bundle / "integration" / name).read_bytes()
+            if hashlib.sha256(data).hexdigest() != lock["integration"][name]:
+                raise PatchError("Fenix helper checksum mismatch: " + name)
+            atomic(contained(prefix, "drive_c/windows/system32/" + name), data, 0o644)
+    # Include untouched ABI partners and the loader in the final verification.
+    # A concurrently updated source runner must not produce a mixed build.
+    verify_runner(runner, {**lock, "runner_files": {**lock["runner_files"], **lock["files"]}})
+
+
 class Wine:
     def __init__(self, prefix, runner, log):
         self.prefix, self.runner, self.log = prefix, runner, log
         self.env = wine_env(prefix, runner)
 
     def run(self, *args, env=None, accepted=(0,), timeout=1800):
-        result = subprocess.run([str(self.runner / "files/bin/wine"), *map(str, args)],
+        result = subprocess.run([str(wine_binary(self.runner)), *map(str, args)],
             env={**self.env, **(env or {})}, cwd=self.prefix, stdin=subprocess.DEVNULL,
             stdout=self.log, stderr=subprocess.STDOUT, timeout=timeout)
         if result.returncode not in accepted:
@@ -267,8 +323,12 @@ class Wine:
 
     def stop(self):
         # Used only for the private staging profile we created, never a user's running game.
-        subprocess.run([str(self.runner / "files/bin/wineserver"), "-k"], env=self.env,
-                       stdout=self.log, stderr=subprocess.STDOUT, timeout=30, check=True)
+        result = subprocess.run([str(self.runner / "files/bin/wineserver"), "-k"], env=self.env,
+                                stdout=self.log, stderr=subprocess.STDOUT, timeout=30)
+        # Proton returns 1 when no server exists, e.g. when an already installed
+        # geometry dependency needs no Wine commands. Still wait for shutdown.
+        if result.returncode not in (0, 1):
+            result.check_returncode()
         subprocess.run([str(self.runner / "files/bin/wineserver"), "-w"], env=self.env,
                        stdout=self.log, stderr=subprocess.STDOUT, timeout=30, check=True)
 
@@ -293,7 +353,7 @@ def prepare_framework(wine, cache, progress):
         progress("Downloading Microsoft " + name)
         packages[name] = download(url, cache / name, expected)
     progress("Installing Microsoft .NET Framework. This can take several minutes …")
-    listing = subprocess.run([str(wine.runner / "files/bin/wine"), "uninstaller", "--list"],
+    listing = subprocess.run([str(wine_binary(wine.runner)), "uninstaller", "--list"],
                              env=wine.env, capture_output=True, timeout=120, check=True).stdout.decode(errors="replace")
     for line in listing.splitlines():
         guid, _, title = line.partition("|")
@@ -482,8 +542,8 @@ def install(runtime, bundle, progress=lambda _: None):
             else:
                 raise PatchError("A previous patch transaction exists. Restore it before reinstalling.")
         original_runner = (root / "runner").resolve(strict=True)
-        if upgrade is None:
-            verify_runner(original_runner, lock)
+        variant = upgrade.get("variant") if upgrade else runner_variant(original_runner)
+        lock = manifest(variant)
         for name, accepted in lock["accepted_scripts"].items():
             if upgrade is not None:
                 accepted = [*accepted, lock["previous_releases"][upgrade["version"]]["integration"][name]]
@@ -502,7 +562,9 @@ def install(runtime, bundle, progress=lambda _: None):
         state = {"format": 1, "version": lock["version"], "state": "preparing", "work": str(work.relative_to(root)),
                  "backup": str(backup.relative_to(root)), "previous_runner": os.readlink(root / "runner"),
                  "previous_prefix": "local/msfs-prefix.before-fenix-" + stamp, "configured": False,
-                 "original_prefix_id": [prefix.stat().st_dev, prefix.stat().st_ino]}
+                 "original_prefix_id": [prefix.stat().st_dev, prefix.stat().st_ino], "variant": variant,
+                 "proton_before": read_json(root / "private/proton-selection.json")
+                 if (root / "private/proton-selection.json").exists() else None}
         if upgrade is not None:
             # Keep the original pre-patch restore point. The profile being
             # updated is retained separately, including later aircraft/account
@@ -510,6 +572,7 @@ def install(runtime, bundle, progress=lambda _: None):
             write_json(backup / "previous-patch.json", upgrade)
             state.update({key: upgrade[key] for key in
                           ("backup", "previous_runner", "previous_prefix", "original_prefix_id", "configured")})
+            state["proton_before"] = upgrade.get("proton_before")
             state["upgrade_backup"] = str(backup.relative_to(root))
             state["upgrade_previous_prefix"] = "local/msfs-prefix.before-fenix-update-" + stamp
         for name in ("launch-msfs.sh", "xodus-wine-launch"):
@@ -546,17 +609,7 @@ def install(runtime, bundle, progress=lambda _: None):
                     wine.stop()
             # Bootstrap native Framework with the unchanged runner first.
             # Publish the overlay only after every staging Wine process exited.
-            for name in lock["files"]:
-                data = (bundle / "payload" / name).read_bytes()
-                atomic(contained(runner, name), data, 0o755 if "/bin/" in name else 0o644)
-                if name.startswith("files/lib/wine/x86_64-windows/"):
-                    atomic(contained(staged, "drive_c/windows/system32/" + Path(name).name), data, 0o644)
-            atomic(contained(staged, "drive_c/windows/system32/FenixWindowGuard.exe"),
-                   (bundle / "integration/FenixWindowGuard.exe").read_bytes(), 0o644)
-            for name in ("FenixMCDURefresh.exe", "fenix-display-refresh.py"):
-                if name in lock["integration"]:
-                    atomic(contained(staged, "drive_c/windows/system32/" + name),
-                           (bundle / "integration" / name).read_bytes(), 0o644)
+            apply_overlay(staged, runner, bundle, variant)
             ensure_idle(prefix)
             state["state"] = "committing"
             write_json(marker, state)
@@ -569,8 +622,13 @@ def install(runtime, bundle, progress=lambda _: None):
             if imported.exists():
                 info = read_json(imported)
                 for name in ("launch-msfs.sh", "xodus-wine-launch"):
-                    info.setdefault("runtime_files", {})[name] = digest(root / "tools" / name)
+                    if "runtime_files" in info:
+                        info["runtime_files"][name] = digest(root / "tools" / name)
                 write_json(imported, info)
+            selected = read_json(root / "private/proton-selection.json") if (root / "private/proton-selection.json").exists() else None
+            if selected:
+                selected = {**selected, "schema": 2, "runner": str(runner.relative_to(root))}
+                write_json(root / "private/proton-selection.json", selected)
             state["state"] = "installed"
             write_json(marker, state)
             progress("Fenix compatibility patch updated." if upgrade else
@@ -583,7 +641,7 @@ def install(runtime, bundle, progress=lambda _: None):
 
 
 def verify_installed(root, state):
-    current = manifest()
+    current = manifest(state.get("variant"))
     lock = current
     if state.get("version") != current["version"]:
         lock = current.get("previous_releases", {}).get(state.get("version"))
@@ -606,6 +664,8 @@ def restore(runtime, progress=lambda _: None):
     with locked(runtime, recovery=True) as root:
         marker = root / MARKER
         state = read_json(marker)
+        if state.get("migrated"):
+            raise PatchError("This migrated profile has no managed pre-patch restore point.")
         backup = contained(root, state["backup"])
         previous = contained(root, state["previous_prefix"])
         work = contained(root, state["work"])
@@ -630,6 +690,11 @@ def restore(runtime, progress=lambda _: None):
             atomic(root / "tools" / name, regular(backup / name).read_bytes(), 0o700)
         if (backup / "import-manifest.json").exists():
             atomic(root / "private/import-manifest.json", (backup / "import-manifest.json").read_bytes())
+        selected = state.get("proton_before")
+        if selected:
+            write_json(root / "private/proton-selection.json", selected)
+        else:
+            (root / "private/proton-selection.json").unlink(missing_ok=True)
         state["state"] = "restored"
         write_json(backup / "restored.json", state)
         marker.unlink()
@@ -696,7 +761,7 @@ def windows_app(runtime, executable=None, progress=lambda _: None, *, manager=Fa
             # runtime; the main Fenix UI remains available through Flightdeck.
             wine.reg(r"HKCU\Software\Wine\Explorer", "ShowSystray", "0", "REG_DWORD")
             progress("Fenix is open. Complete its setup or sign-in, then close the application to continue.")
-            args = [str(runner / "files/bin/wine"), str(app)]
+            args = [str(wine_binary(runner)), str(app)]
             options = dict(cwd=app.parent, env=wine_env(prefix, runner), stdin=subprocess.DEVNULL,
                            stdout=fd, stderr=subprocess.STDOUT)
             if wait is None:
@@ -738,7 +803,7 @@ def snapshot(runtime):
         if marker.exists():
             state = read_json(marker)
             result.update(state=state.get("state", "interrupted"), installed=state.get("state") == "installed",
-                          configured=state.get("configured") is True, can_restore=True,
+                          configured=state.get("configured") is True, can_restore=not state.get("migrated"),
                           installed_version=state.get("version"),
                           update_available=state.get("state") == "installed" and
                           state.get("version") in manifest().get("previous_releases", {}))
@@ -746,7 +811,7 @@ def snapshot(runtime):
             result.update(state="legacy", message="An earlier local Fenix patch is active. Keep using it; automatic replacement is disabled.")
         else:
             host_check()
-            verify_runner((root / "runner").resolve(strict=True), manifest())
+            runner_variant((root / "runner").resolve(strict=True))
             result["state"] = "available"
         try:
             ensure_idle(root / "local/msfs-prefix")

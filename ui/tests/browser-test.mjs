@@ -79,7 +79,7 @@ const server = createServer(async (req,res) => {
         res.end(JSON.stringify({job:job?{...job,steps:job.steps.map(row=>row.exit_code===83&&language==='en'?{...row,message:'The Microsoft sign-in response XML could not be read (sign-in code 83).'}:row)}:null}));return;
       }
       if (url.pathname === '/api/proton') {res.end(JSON.stringify({...proton,runtime_path:status.runtime.path}));return;}
-      if (url.pathname === '/api/proton/discover') {res.end(JSON.stringify({choices:[{path:'/fixture/Proton Experimental',label:'Proton Experimental',version:'experimental-11'}]}));return;}
+      if (url.pathname === '/api/proton/discover') {res.end(JSON.stringify({choices:[{path:'/fixture/Proton Experimental',label:'Proton Experimental',version:'experimental-11',fenix:true},{path:'/fixture/Other Proton',label:'Other Proton',version:'unknown',fenix:false}]}));return;}
       if (url.pathname === '/api/maintenance') {res.end(JSON.stringify(maintenance));return;}
       if (url.pathname === '/api/status') {if(statusBarrier){statusWaiting=true;await statusBarrier;}res.end(JSON.stringify({...status,runtime:{...status.runtime,checks:localizeChecks(status.runtime.checks,language)}}));return;}
       if (url.pathname === '/api/setup/discover') {res.end(JSON.stringify({ok:true,runtimes:discovered,checked_count:discovered.length,limited:false}));return;}
@@ -423,6 +423,9 @@ try {
   await call('Emulation.setDeviceMetricsOverride',{width:1536,height:1024,deviceScaleFactor:1,mobile:false});await language('de');await route('overview');
   await route('installation');await until(()=>evaluate(`!document.getElementById('proton-select').disabled`),'Proton selection unavailable');
   await click('proton-toggle');
+  proton={...proton,fenix:true};
+  await refresh(`!document.getElementById('proton-fenix').hidden`);
+  await check('Fenix keeps supported Proton choices available',`!document.getElementById('proton-select').disabled && !document.querySelector('#proton-select option[value="/fixture/Proton Experimental"]').disabled && document.querySelector('#proton-select option[value="/fixture/Other Proton"]').disabled`);
   await evaluate(`document.getElementById('proton-select').value='/fixture/Proton Experimental';document.getElementById('proton-select').dispatchEvent(new Event('change'))`);
   await click('proton-apply');await until(()=>evaluate(`!document.getElementById('proton-progress').hidden && document.getElementById('launch-button').disabled`),'Proton preparation did not reserve runtime');
   assert.equal(posts.at(-1).path,'/api/proton/select');
@@ -433,6 +436,7 @@ try {
   await evaluate(`document.getElementById('proton-card').scrollIntoView({block:'start'})`);
   await check('Proton trials are translated and fit mobile width',`document.documentElement.scrollWidth<=innerWidth && document.getElementById('proton-title').textContent==='Proton version (experimental)'`);await screenshot('proton-mobile-en.png');
   await click('proton-restore');await refresh(`document.getElementById('proton-current').textContent==='Flightdeck (Xodus)'`);
+  proton={...proton,fenix:false};
   await call('Emulation.setDeviceMetricsOverride',{width:1536,height:1024,deviceScaleFactor:1,mobile:false});await language('de');
   results.push('Proton selection reserves the installation and can return to the original environment');
   // Maintenance uses a reviewed plan; opening or changing options never deletes.

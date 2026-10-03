@@ -204,12 +204,12 @@
   },
   "runtime_scripts": {
     "files": {
-      "launch-msfs.sh": "37a49ee7be5f3673e10e4914e350e67c53555e5b8db48545a7876c6425c5c85e",
+      "launch-msfs.sh": "36620b2221b5e76adb4b158da665f6f60f8b5e29b8c89e484cb053e272e0d8c0",
       "play-msfs.sh": "d2ee9b764adb4965a395ff39cbdbf7aa106e5fa604fca06e0ec521e8e33c3d80",
       "runtime-env.sh": "e8ad933de8a6da4308a8a3c5541bcdfe559bbfc1d97bdfaf33610a94d6ba4d39",
       "xodus.sh": "95b1fb7ddc254d5571eb84a41a13e90d9d48f6cefac38ab346b538fbda8b0d45",
       "xodus-service.sh": "77c31c30873e14ce7a0805ad3220d99b724b01ec5e63bf372e5bc919ca73424a",
-      "xodus-wine-launch": "6be47ea41bd5d05c992e51fca7e521082314aac08e7f198072200e5a1e7028f5"
+      "xodus-wine-launch": "b79a4d5d8122a2094be8c809ce01b559487f22736ddb8f7a94a1e06c0972b512"
     },
     "upgrade_from": [
       {
@@ -267,6 +267,14 @@
         "xodus.sh": "95b1fb7ddc254d5571eb84a41a13e90d9d48f6cefac38ab346b538fbda8b0d45",
         "xodus-service.sh": "77c31c30873e14ce7a0805ad3220d99b724b01ec5e63bf372e5bc919ca73424a",
         "xodus-wine-launch": "b004808236bd0482b0190d8eaf7a302e9f22b1d850b8fc6d79d732c728804cf1"
+      },
+      {
+        "launch-msfs.sh": "37a49ee7be5f3673e10e4914e350e67c53555e5b8db48545a7876c6425c5c85e",
+        "play-msfs.sh": "d2ee9b764adb4965a395ff39cbdbf7aa106e5fa604fca06e0ec521e8e33c3d80",
+        "runtime-env.sh": "e8ad933de8a6da4308a8a3c5541bcdfe559bbfc1d97bdfaf33610a94d6ba4d39",
+        "xodus.sh": "95b1fb7ddc254d5571eb84a41a13e90d9d48f6cefac38ab346b538fbda8b0d45",
+        "xodus-service.sh": "77c31c30873e14ce7a0805ad3220d99b724b01ec5e63bf372e5bc919ca73424a",
+        "xodus-wine-launch": "6be47ea41bd5d05c992e51fca7e521082314aac08e7f198072200e5a1e7028f5"
       }
     ]
   }

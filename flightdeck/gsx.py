@@ -80,7 +80,7 @@ class GSXManager:
         runner = (root / "runner").resolve()
         fd = os.open(root / "private/gsx-manager.log", os.O_WRONLY | os.O_APPEND | os.O_CREAT | os.O_NOFOLLOW, 0o600)
         try:
-            child = subprocess.Popen([str(runner / "files/bin/wine"), str(directory / "Couatl_Updater.exe"),
+            child = subprocess.Popen([str(core.wine_binary(runner)), str(directory / "Couatl_Updater.exe"),
                                       "/SILENT", "/INSTALLMODE=TRUE"], cwd=directory,
                                      env=gsx_core.wine_environment(root / "local/msfs-prefix", runner),
                                      stdin=subprocess.DEVNULL, stdout=fd, stderr=subprocess.STDOUT)

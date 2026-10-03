@@ -8,6 +8,7 @@ import shutil
 import tempfile
 import unittest
 from unittest.mock import patch
+from contextlib import ExitStack
 
 from flightdeck import bootstrap, graphics, proton, renderer
 from flightdeck.backend import Launcher, LauncherError
@@ -72,7 +73,7 @@ class ProtonTests(unittest.TestCase):
         self.assertFalse(self.manager.thread.is_alive())
         return self.manager.snapshot()['job']
 
-    def test_complete_runner_changes_and_return_preserve_original_and_every_trial(self):
+    def test_switches_and_return_carry_settings_forward_and_retain_backups(self):
         original_id = proton._id(self.prefix)
         self.assertEqual(self.select(self.experimental)['state'], 'complete')
         first = proton.selection(self.runtime)
@@ -84,17 +85,17 @@ class ProtonTests(unittest.TestCase):
         self.assertEqual(self.select(self.ge)['state'], 'complete')
         second = proton.selection(self.runtime)
         self.assertEqual(second['base_prefix'], first['base_prefix'])
-        self.assertEqual((self.prefix / 'important-setting').read_text(), 'original')
+        self.assertEqual((self.prefix / 'important-setting').read_text(), 'experimental setting')
         (self.prefix / 'important-setting').write_text('GE setting')
         # Native cloud-save helpers continue to use the original Wine runner.
         self.assertEqual(proton.base_runner(self.runtime), self.original)
         self.assertEqual(self.select()['state'], 'complete')
         self.assertIsNone(proton.selection(self.runtime))
-        self.assertEqual(proton._id(self.prefix), original_id)
-        self.assertEqual((self.runtime / 'runner').resolve(), self.original)
-        self.assertEqual((self.prefix / 'important-setting').read_text(), 'original')
+        self.assertEqual(proton._id(self.runtime / first['base_prefix']), original_id)
+        self.assertEqual(proton._version(self.runtime / 'runner'), 'Flightdeck-Xodus')
+        self.assertEqual((self.prefix / 'important-setting').read_text(), 'GE setting')
         saved = {p.read_text() for p in (self.runtime / 'local/proton-tests').glob('*/previous-prefix/important-setting')}
-        self.assertEqual(saved, {'experimental setting', 'GE setting'})
+        self.assertEqual(saved, {'original', 'experimental setting', 'GE setting'})
         self.assertEqual((self.private / 'local-saves/keep').read_text(), 'saved flight')
         self.assertFalse((self.private / proton.JOURNAL).exists())
 
@@ -138,8 +139,8 @@ class ProtonTests(unittest.TestCase):
         self.assertTrue(proton.check(self.runtime))
         self.assertEqual(proton._id(fresh), before)
         self.assertEqual(self.select()['state'], 'complete')
-        self.assertEqual(proton._id(self.prefix), before)
-        self.assertEqual((self.runtime / 'runner').resolve(), self.original)
+        self.assertEqual(proton._id(fresh), before)
+        self.assertEqual(proton._version(self.runtime / 'runner'), 'Flightdeck-Xodus')
 
     def test_recovery_refuses_a_substituted_prefix(self):
         with patch.object(bootstrap, '_command'):
@@ -222,15 +223,23 @@ class ProtonTests(unittest.TestCase):
                 self.assertEqual(args[0].name, 'wine64')
                 self.assertEqual(call.kwargs['env']['WINE_DISABLE_FAST_SYNC'], '1')
 
-    def test_gsx_setup_requires_returning_to_the_original_environment(self):
+    def test_gsx_can_be_prepared_on_proton_and_survives_later_switches(self):
+        from flightdeck import gsx_core
         self.assertEqual(self.select(self.experimental)['state'], 'complete')
-        for operation in ('prepare', 'open', 'configure', 'disable'):
-            with self.subTest(operation=operation), self.assertRaisesRegex(LauncherError, 'Flightdeck-Umgebung'):
-                self.launcher.gsx.start(operation, {'runtime_path': str(self.runtime)})
-            self.assertFalse(self.launcher.setup_busy)
-        self.assertEqual(self.launcher.gsx.snapshot()['state'], 'unavailable')
+        self.assertEqual(gsx_core.proton_error(self.runtime), '')
+        def prepare(root, *args):
+            self.assertEqual(proton._version(root / 'runner'), 'experimental-11')
+            (self.prefix / 'gsx-installed-later').write_text('GSX package and settings')
+            (root / gsx_core.MARKER).write_text(json.dumps({'format': 1, 'id': 'a' * 32, 'state': 'ready'}))
+        with patch.object(gsx_core, 'prepare', side_effect=prepare) as setup:
+            self.launcher.gsx.start('prepare', {'runtime_path': str(self.runtime)})
+            self.launcher.gsx.worker.join(10)
+        setup.assert_called_once()
+        self.assertFalse(self.launcher.setup_busy)
+        self.assertEqual(self.select(self.ge)['state'], 'complete')
         self.assertEqual(self.select()['state'], 'complete')
-        self.assertEqual(self.launcher.gsx.snapshot()['state'], 'available')
+        self.assertEqual((self.prefix / 'gsx-installed-later').read_text(), 'GSX package and settings')
+        self.assertTrue(gsx_core.setup_complete(self.runtime))
 
     def test_interrupted_gsx_setup_must_be_recovered_before_switching(self):
         from flightdeck import gsx_core
@@ -259,7 +268,108 @@ class ProtonTests(unittest.TestCase):
         proton._switch(self.runtime, fresh, selected)
         self.assertEqual((link / 'marker').read_text(), 'trial add-on')
         self.assertEqual(self.select()['state'], 'complete')
-        self.assertEqual((link / 'marker').read_text(), 'original add-on')
+        self.assertEqual((link / 'marker').read_text(), 'trial add-on')
+
+    def fenix_fixture(self, *, legacy=False):
+        """Real manifest matching/overlay/journal code, synthetic Wine files."""
+        from flightdeck import fenix
+        core = fenix.core
+        bundle = self.base / 'fenix-bundle'
+        integration = bundle / 'integration'
+        integration.mkdir(parents=True)
+        for name in ('launch-msfs.sh', 'xodus-wine-launch'):
+            shutil.copy2(self.runtime / 'tools' / name, integration / name)
+        (integration / 'FenixWindowGuard.exe').write_bytes(b'synthetic helper')
+        def entry(source, variant=None):
+            relative = 'files/lib/wine/x86_64-windows/ntdll.dll'
+            target = bundle / 'payload'
+            if variant:
+                target /= 'variants/' + variant
+            target /= relative
+            target.parent.mkdir(parents=True)
+            target.write_bytes(('patched ' + source.name).encode())
+            return {'runner_version': (source / 'version').read_text(),
+                    'runner_files': {'files/bin/wine': proton.digest(source / 'files/bin/wine')},
+                    'files': {relative: proton.digest(target)}}
+        lock = {'format': 1, 'version': 'synthetic-proton', **entry(self.original),
+                'variants': {'experimental': entry(self.experimental, 'experimental'),
+                             'ge': entry(self.ge, 'ge')},
+                'integration': {p.name: proton.digest(p) for p in integration.iterdir()},
+                'accepted_scripts': {n: [proton.digest(integration / n)] for n in ('launch-msfs.sh', 'xodus-wine-launch')},
+                'prefix_files': {'drive_c/windows/system32/FenixWindowGuard.exe': proton.digest(integration / 'FenixWindowGuard.exe')}}
+        (bundle / 'bundle.json').write_text(json.dumps(lock))
+        context = ExitStack()
+        self.addCleanup(context.close)
+        context.enter_context(patch.object(core, 'ROOT', bundle))
+        context.enter_context(patch.object(fenix, 'obtain_bundle', return_value=bundle))
+        context.enter_context(patch.object(core, 'Wine'))
+        context.enter_context(patch.object(core, 'prepare_geometry'))
+        context.enter_context(patch.object(core, 'has_framework', return_value=True))
+        work = self.runtime / 'local/fenix-patch-20261003T120000-12345678'
+        shutil.copytree(self.original, work / 'runner')
+        core.apply_overlay(self.prefix, work / 'runner', bundle)
+        (self.runtime / 'runner').unlink()
+        (self.runtime / 'runner').symlink_to(work / 'runner')
+        marker = self.private / ('fenix-compat.json' if legacy else 'fenix-linux-patch.json')
+        marker.write_text(json.dumps({'state': 'installed', 'version': lock['version'],
+                         'work': str(work.relative_to(self.runtime)), 'configured': True,
+                         'backup': 'private/original-fenix-backup', 'proton_before': None}))
+        return core, bundle
+
+    def test_fenix_uses_matching_modules_and_preserves_addons_on_every_switch(self):
+        core, bundle = self.fenix_fixture()
+        for candidate, variant in ((self.experimental, 'experimental'), (self.ge, 'ge'), (None, None)):
+            with self.subTest(variant=variant):
+                (self.prefix / 'addon-state').write_text('new aircraft, login and GSX settings')
+                result = self.select(candidate)
+                self.assertEqual(result['state'], 'complete', result)
+                state = core.read_json(self.runtime / core.MARKER)
+                self.assertEqual(state['variant'], variant)
+                core.verify_installed(self.runtime, state)
+                self.assertEqual((self.prefix / 'addon-state').read_text(), 'new aircraft, login and GSX settings')
+                self.assertEqual((self.prefix / 'drive_c/windows/system32/ntdll.dll').read_bytes(),
+                                 (self.runtime / 'runner/files/lib/wine/x86_64-windows/ntdll.dll').read_bytes())
+        self.assertFalse((self.experimental / 'files/lib/wine/x86_64-windows/ntdll.dll').exists())
+
+    def test_legacy_fenix_migrates_without_reinstalling_or_losing_its_profile(self):
+        core, _ = self.fenix_fixture(legacy=True)
+        (self.prefix / 'fenix-account-fixture').write_text('retain existing account state')
+        result = self.select(self.experimental)
+        self.assertEqual(result['state'], 'complete', result)
+        state = core.read_json(self.runtime / core.MARKER)
+        self.assertTrue(state['migrated'])
+        core.verify_installed(self.runtime, state)
+        self.assertEqual((self.prefix / 'fenix-account-fixture').read_text(), 'retain existing account state')
+
+    def test_unknown_or_modified_fenix_runner_is_rejected_before_download(self):
+        from flightdeck import fenix
+        self.fenix_fixture()
+        before = proton._id(self.prefix)
+        (self.experimental / 'files/bin/wine').write_text('#!/bin/sh\nexit 1\n')
+        with patch.object(fenix, 'obtain_bundle') as download:
+            result = self.select(self.experimental)
+        self.assertEqual(result['state'], 'failed')
+        self.assertIn('Fenix', result['error'])
+        self.assertEqual(proton._id(self.prefix), before)
+        download.assert_not_called()
+
+    def test_recovery_finishes_fenix_metadata_and_scripts_after_runner_switch(self):
+        core, bundle = self.fenix_fixture()
+        with patch.object(bootstrap, '_command'):
+            fresh, selected = proton._prepare(self.runtime, proton.inspect(str(self.experimental)), None, lambda _: None, bundle=bundle)
+        writer = proton.atomic_json
+        def fail_marker(path, value):
+            if path == self.runtime / core.MARKER:
+                raise OSError('interrupted before Fenix metadata')
+            return writer(path, value)
+        with patch.object(proton, 'atomic_json', side_effect=fail_marker), self.assertRaises(OSError):
+            proton._switch(self.runtime, fresh, selected)
+        self.assertTrue(proton.check(self.runtime))
+        with self.assertRaises(core.PatchError), core.locked(self.runtime):
+            pass
+        proton.recover(self.runtime)
+        core.verify_installed(self.runtime, core.read_json(self.runtime / core.MARKER))
+        self.assertFalse(proton.check(self.runtime))
 
 
 class PortableLoaderTests(unittest.TestCase):

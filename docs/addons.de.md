@@ -71,8 +71,8 @@ nativem .NET 4.8 in einem separaten MSFS-2024-Windows-Profil geprüft, einschlie
 Couatl/SimConnect, das Menü im Simulator und die Bodendienste müssen noch mit
 einer lizenzierten Kopie getestet werden.
 
-Vor Änderungen an der FSDT-Einrichtung unter **Einrichtung → Proton-Version**
-zur ursprünglichen Flightdeck-Umgebung zurückkehren. Eine unterbrochene
+Ab 0.1.20 verwendet die FSDT-Einrichtung die aktive Proton-Version. Installierte
+Dateien und Einstellungen werden beim Wechsel übernommen. Eine unterbrochene
 GSX-Vorbereitung muss vor einem Proton-Wechsel wiederhergestellt werden.
 
 MSFS 2024 einmal starten, damit die Paketkonfiguration vorhanden ist. Danach den
@@ -211,16 +211,20 @@ Getestet wurden Fenix 2.4.0.4720 und MSFS 2024 1.8.16.0 auf Hyprland. Die
 Cockpitanzeigen inklusive MCDU, FCU, Funk und Uhr sind geprüft; ein vollständiger
 Testflug steht noch aus. Wetterradar ist im verwendeten CPU-Modus nicht verfügbar.
 Das Fenix-Binärpaket benötigt x86_64 Linux und glibc 2.38+; für Flightdecks
-vollständiges natives Paket gilt weiterhin glibc 2.39+. Andere Wine-/Proton-Builds,
-Steam-Prefixe und MSFS 2020 werden von diesem ersten Patch nicht unterstützt.
+vollständiges natives Paket gilt weiterhin glibc 2.39+. Ab 0.1.20 gibt es passende
+Fenix-Patches für Proton Experimental 11.0 (20260924) und CachyOS Proton 10.0
+sunset. Die nativen Prüfungen bestehen; ein vollständiger Flug mit diesen
+Versionen ist noch nicht bestätigt. Weitere Builds brauchen einen passenden
+Patch. Steam-Prefixe und MSFS 2020 bleiben außerhalb des unterstützten Umfangs.
 Der Fensterhelfer läuft mit dem Simulator und blendet passende Fenix-Dienst-/
 Anzeigefenster aus. Die Fenix-Hauptanwendung bleibt für die Anmeldung zugänglich.
 Manuelles Öffnen von Fenix startet den Helfer nicht.
 
 **Vorhandener lokaler Fenix-Patch** bezeichnet eine frühere Entwickler-Einrichtung.
-Sie bleibt aktiv; der neue Installationsknopf ist dann gesperrt. Eine automatische
-Migration ist nicht vorgesehen. Eine frische Installation lässt sich bei Bedarf
-in einer separaten kompatiblen Runtime testen. Gesperrte Schritte können außerdem
+Sie bleibt aktiv, bis in Flightdeck eine unterstützte Proton-Version ausgewählt
+wird. Beim Wechsel werden bekannte Startskripte übernommen und der passende
+Fenix-Patch eingerichtet. Flugzeuge und Einstellungen bleiben erhalten. Eigene
+Skriptänderungen werden nicht überschrieben. Gesperrte Schritte können außerdem
 auf laufende MSFS-/Fenix-Prozesse, einen anderen Einrichtungsvorgang oder einen
 noch offenen vorherigen Schritt hinweisen. Die Anwendungen schließen und
 **Status neu laden** wählen. Für den offiziellen Installer muss auch eine EXE

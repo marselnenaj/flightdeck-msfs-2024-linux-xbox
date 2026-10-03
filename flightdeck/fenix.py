@@ -39,6 +39,8 @@ def obtain_bundle(cache, supplied, progress):
     archive = core.download(release["url"], cache / (lock["version"] + ".zip"), release["sha256"], progress)
     wanted = {"bundle.json": None}
     wanted.update({"payload/" + key: value for key, value in lock["files"].items()})
+    for variant, entry in lock.get("variants", {}).items():
+        wanted.update({"payload/variants/" + variant + "/" + key: value for key, value in entry["files"].items()})
     wanted.update({"integration/" + key: value for key, value in lock["integration"].items()})
     with tempfile.TemporaryDirectory(prefix=".fenix-extract-", dir=cache) as temporary:
         stage = Path(temporary)

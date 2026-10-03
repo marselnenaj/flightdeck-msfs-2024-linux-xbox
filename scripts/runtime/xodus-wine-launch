@@ -138,6 +138,7 @@ def main():
     launch_dir = Path(temporary.name)
     stub = launch_dir / source.name
     guard = None
+    display_refresh = None
     try:
         portable = os.environ.get("FLIGHTDECK_PROTON_LOADER") == "portable"
         if portable:
@@ -177,6 +178,12 @@ def main():
             guard = subprocess.Popen([str(wine), str(guard_path)], env=guard_env,
                                      stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
                                      stderr=subprocess.DEVNULL, close_fds=True)
+        refresh_path = prefix / "drive_c/windows/system32/fenix-display-refresh.py"
+        if child_env.get("WINE_FENIX_DISPLAY_REFRESH") == "1" and refresh_path.is_file():
+            refresh_env = dict(child_env)
+            refresh_env.pop("WINE_DLL_FILE_MAP", None)
+            display_refresh = subprocess.Popen([sys.executable, str(refresh_path), str(BASE.parent)],
+                env=refresh_env, stdin=subprocess.DEVNULL, close_fds=True)
         started = time.monotonic()
         process = subprocess.Popen([str(wine), str(stub), *sys.argv[2:]],
                                    cwd=source.parent, env=child_env,
@@ -197,6 +204,13 @@ def main():
             for number, handler in previous.items():
                 signal.signal(number, handler)
     finally:
+        if display_refresh is not None and display_refresh.poll() is None:
+            display_refresh.terminate()
+            try:
+                display_refresh.wait(timeout=20)
+            except subprocess.TimeoutExpired:
+                display_refresh.kill()
+                display_refresh.wait()
         if guard is not None and guard.poll() is None:
             guard.terminate()
             try:

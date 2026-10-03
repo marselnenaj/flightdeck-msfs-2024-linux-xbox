@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""Opt-in Proton trials with private runner copies and a recoverable prefix swap."""
+"""Proton selection with persistent add-ons and recoverable, private runner copies."""
 from __future__ import annotations
 
 import copy
@@ -16,11 +16,12 @@ from .backend import LauncherError, atomic_json
 from .graphics_diagnostics import _read
 from .maintenance import _directory, _id, _idle
 from .setup import SetupError, SetupCancelled, _copy_file, _copy_prefix, digest, interrupted, prefix_system32, runner_wine, relocate_prefix_links
+from ._fenix.core import PatchError
 
 SETTINGS = "proton-selection.json"
 JOURNAL = "proton-switch.json"
 BACKUP = r"local/proton-tests/[0-9a-f]{32}/previous-prefix"
-RUNNER = r"local/proton-tests/[0-9a-f]{32}/runner"
+RUNNER = r"local/(?:proton-tests/[0-9a-f]{32}|fenix-patch-[0-9T]+-[0-9a-f]{8})/runner"
 BRIDGE = ("xgameruntime.dll", "xgameruntime_original.dll", "xodus_store_test.dll")
 
 
@@ -46,7 +47,7 @@ def _flush(*directories):
 
 
 def _selection(value):
-    if (not isinstance(value, dict) or value.get("schema") != 1
+    if (not isinstance(value, dict) or value.get("schema") not in (1, 2)
             or not isinstance(value.get("runner"), str) or not re.fullmatch(RUNNER, value["runner"])
             or not isinstance(value.get("base_prefix"), str) or not re.fullmatch(BACKUP, value["base_prefix"])
             or not isinstance(value.get("base_runner"), str) or not Path(value["base_runner"]).is_absolute()
@@ -160,7 +161,13 @@ def discover(home=None):
                     files = resolved / "dist"
                 if ((files / "bin/wine").is_file() and (files / "bin/wineserver").is_file()
                         and (files / "lib/wine/vkd3d-proton/x86_64-windows/d3d12.dll").is_file()):
-                    choices[str(resolved)] = {"path": str(resolved), "label": root.name, "version": _version(resolved)}
+                    from .fenix import core
+                    try:
+                        core.runner_variant(resolved)
+                        fenix = True
+                    except (OSError, ValueError, core.PatchError):
+                        fenix = False
+                    choices[str(resolved)] = {"path": str(resolved), "label": root.name, "version": _version(resolved), "fenix": fenix}
         except OSError:
             continue
     return sorted(choices.values(), key=lambda item: item["label"].casefold())
@@ -193,14 +200,48 @@ def _bridge(runtime):
     return system, expected
 
 
-def _prepare(runtime, candidate, cancel, notify):
+def _prepare(runtime, candidate, cancel, notify, *, bundle=None, restoring=False):
     from . import bootstrap
     previous = selection(runtime)
     prefix = runtime / "local/msfs-prefix"
-    original_prefix = runtime / previous["base_prefix"] if previous else prefix
+    # Every switch carries the current installation forward, including add-ons
+    # installed after the first switch. Older profiles are retained as backups.
+    original_prefix = prefix
     _managed_directory(runtime, original_prefix)
     original_runner = previous["base_runner"] if previous else str((runtime / "runner").resolve(strict=True))
-    source, bridge_hashes = _bridge(runtime)
+    try:
+        source, bridge_hashes = _bridge(runtime)
+    except LauncherError:
+        if not restoring or not previous:
+            raise
+        source = prefix_system32(_managed_directory(runtime, runtime / previous["base_prefix"]))
+        bridge_hashes = _bridge_hashes(runtime)
+        if any(digest(source / name) != expected for name, expected in bridge_hashes.items()):
+            raise
+    from .fenix import core
+    fenix = None
+    variant = None
+    marker = runtime / core.MARKER
+    legacy = runtime / "private/fenix-compat.json"
+    if marker.exists() or legacy.exists():
+        if bundle is None:
+            raise LauncherError("Das passende Fenix-Paket muss vor dem Proton-Wechsel verfügbar sein.")
+        if marker.exists():
+            fenix = core.read_json(marker)
+            if fenix.get("state") != "installed":
+                raise LauncherError("Beende oder repariere zuerst die Fenix-Einrichtung.")
+            core.verify_installed(runtime, fenix)
+        else:
+            fenix = {"format": 1, "state": "installed", "migrated": True, "configured": True,
+                     "proton_before": None}
+            if not core.has_framework(prefix):
+                raise LauncherError("Die bestehende Fenix-Umgebung enthält kein vollständiges .NET Framework.")
+        try:
+            variant = core.runner_variant(Path(candidate["path"]))
+        except core.PatchError:
+            if not restoring:
+                raise
+            variant = core.runner_variant(Path(candidate["path"]), patched=True)
     tests = runtime / "local/proton-tests"
     tests.mkdir(mode=0o700, exist_ok=True)
     _directory(tests)
@@ -211,6 +252,22 @@ def _prepare(runtime, candidate, cancel, notify):
     fresh = work / "previous-prefix"
     env = None
     try:
+        scripts = {}
+        if fenix is not None:
+            lock = core.manifest()
+            legacy_state = core.read_json(legacy) if legacy.exists() else {}
+            for name in ("launch-msfs.sh", "xodus-wine-launch"):
+                before = digest(core.regular(runtime / "tools" / name))
+                accepted = {*lock["accepted_scripts"][name], lock["integration"][name]}
+                for release in lock.get("previous_releases", {}).values():
+                    accepted.add(release["integration"][name])
+                accepted.add(legacy_state.get("deployed_scripts", {}).get(name))
+                if before not in accepted:
+                    raise LauncherError("Ein Fenix-Startskript wurde angepasst. Die bestehende Installation wurde nicht verändert.")
+                _copy_file(runtime / "tools" / name, work / ("before-" + name))
+                _copy_file(bundle / "integration" / name, work / name)
+                scripts[name] = {"before": before, "after": lock["integration"][name],
+                                 "source": str((work / name).relative_to(runtime))}
         notify("Proton und Windows-Umgebung werden unabhängig kopiert …")
         _copy_prefix(candidate["files"], runner / "files", cancel)
         (runner / "version").write_text(candidate["version"] + "\n")
@@ -230,10 +287,24 @@ def _prepare(runtime, candidate, cancel, notify):
             if digest(prefix_system32(fresh) / name) != expected:
                 raise ValueError("Store component changed")
         bootstrap._command([runner / "files/bin/wineserver", "-w"], env=env, cancel=cancel)
-        selected = {"schema": 1, "version": candidate["version"], "source": candidate["path"],
+        if fenix is not None:
+            notify("Fenix wird an die gewählte Proton-Version angepasst …")
+            with (work / "fenix-setup.log").open("xb") as log:
+                wine = core.Wine(fresh, runner, log)
+                try:
+                    core.prepare_geometry(wine, runtime / "private/fenix-downloads", bundle, notify)
+                finally:
+                    wine.stop()
+            core.apply_overlay(fresh, runner, bundle, variant)
+            fenix = {**fenix, "variant": variant, "version": core.manifest()["version"],
+                     "work": str(work.relative_to(runtime))}
+            if fenix.get("migrated"):
+                fenix["backup"] = str(work.relative_to(runtime))
+        selected = {"schema": 2 if fenix is not None else 1, "version": candidate["version"], "source": candidate["path"],
                     "runner": str(runner.relative_to(runtime)), "base_runner": original_runner,
                     "base_prefix": previous["base_prefix"] if previous else str(fresh.relative_to(runtime)),
-                    "base_hashes": previous["base_hashes"] if previous else bridge_hashes}
+                    "base_hashes": previous["base_hashes"] if previous else bridge_hashes,
+                    "fenix_state": fenix, "scripts": scripts}
         atomic_json(work / "provenance.json", {"source": candidate["path"], "version": candidate["version"],
                                                "files": candidate["hashes"], "previous_runner": str((runtime / "runner").resolve())})
         interrupted(cancel)
@@ -253,6 +324,7 @@ def _prepare(runtime, candidate, cancel, notify):
 
 def recover(runtime):
     from .game_update import exchange
+    from .fenix import core
     journal = runtime / "private" / JOURNAL
     if not journal.exists() and not journal.is_symlink():
         return
@@ -264,6 +336,26 @@ def recover(runtime):
         _selection(data["selection"])
         if data["runner"] != str(runtime / data["selection"]["runner"]):
             raise ValueError("Inconsistent Proton recovery runner")
+    fenix = data.get("fenix_state")
+    if fenix is not None:
+        from .fenix import core
+        if (not isinstance(fenix, dict) or fenix.get("state") != "installed"
+                or not re.fullmatch(RUNNER, str(fenix.get("work")) + "/runner")
+                or str(runtime / fenix["work"] / "runner") != data["runner"]):
+            raise ValueError("Invalid Fenix recovery record")
+        core.manifest(fenix.get("variant"))
+    scripts = data.get("scripts", {})
+    if not isinstance(scripts, dict) or set(scripts) - {"launch-msfs.sh", "xodus-wine-launch"}:
+        raise ValueError("Invalid Proton scripts")
+    for name, item in scripts.items():
+        if (not isinstance(item, dict) or not isinstance(item.get("source"), str)
+                or not re.fullmatch(r"local/proton-tests/[0-9a-f]{32}/" + re.escape(name), item["source"])):
+            raise ValueError("Invalid Proton script path")
+        _managed_directory(runtime, (runtime / item["source"]).parent)
+        if digest(core.regular(runtime / item["source"])) != item.get("after"):
+            raise ValueError("Prepared Proton script changed")
+        if digest(core.regular(runtime / "tools" / name)) not in (item.get("before"), item["after"]):
+            raise ValueError("Active Proton script changed")
     for key in ("before", "after"):
         if (not isinstance(data.get(key), list) or len(data[key]) != 2
                 or any(type(item) is not int or item < 0 for item in data[key])):
@@ -291,17 +383,28 @@ def recover(runtime):
         target.unlink(missing_ok=True)
     else:
         atomic_json(target, data["selection"])
+    if fenix is not None:
+        atomic_json(runtime / core.MARKER, fenix)
+    if scripts:
+        imported = _json(runtime / "private/import-manifest.json")
+        for name, item in scripts.items():
+            core.atomic(runtime / "tools" / name, core.regular(runtime / item["source"]).read_bytes(), 0o700)
+            if "runtime_files" in imported:
+                imported["runtime_files"][name] = item["after"]
+        atomic_json(runtime / "private/import-manifest.json", imported)
     _flush(target.parent)
     journal.unlink()
     _flush(target.parent)
 
 
-def _switch(runtime, backup, selected):
-    runner = str(runtime / selected["runner"]) if selected else selection(runtime)["base_runner"]
+def _switch(runtime, backup, selected, *, runner=None, fenix_state=None, scripts=None):
+    runner = runner or (str(runtime / selected["runner"]) if selected else selection(runtime)["base_runner"])
     atomic_json(runtime / "private" / JOURNAL,
                 {"schema": 1, "backup": str(backup.relative_to(runtime)), "runner": runner,
                  "previous_runner": str((runtime / "runner").resolve()),
-                 "before": _id(runtime / "local/msfs-prefix"), "after": _id(backup), "selection": selected})
+                 "before": _id(runtime / "local/msfs-prefix"), "after": _id(backup), "selection": selected,
+                 "fenix_state": selected.get("fenix_state") if selected else fenix_state,
+                 "scripts": selected.get("scripts", {}) if selected else (scripts or {})})
     _flush(runtime / "private")
     recover(runtime)
 
@@ -335,8 +438,13 @@ class ProtonManager:
             mode = data.get("mode")
             if mode not in {"default", "proton"}:
                 raise LauncherError("Ungültige Proton-Auswahl.")
-            if mode == "proton" and self.snapshot()["fenix"]:
-                raise LauncherError("Der Fenix-Patch benötigt den Flightdeck-Runner. Stelle Fenix zuerst über dessen Menü wieder her.")
+            marker = root / "private/fenix-linux-patch.json"
+            if mode == "proton" and marker.exists():
+                try:
+                    if _json(marker).get("state") != "installed":
+                        raise ValueError()
+                except (OSError, ValueError, AttributeError):
+                    raise LauncherError("Beende oder repariere zuerst die Fenix-Einrichtung.") from None
             if mode == "proton" and (not isinstance(data.get("path"), str) or not data["path"].strip()):
                 raise LauncherError("Wähle einen installierten Proton-Ordner.")
             self.launcher._require_cloud_idle(allow_attention=mode == "default")
@@ -360,6 +468,13 @@ class ProtonManager:
             with self.launcher.runtime_lock(operation="proton") as descriptor:
                 _idle(self.launcher, descriptor)
                 recover(root)
+                candidate = inspect(path) if mode == "proton" else None
+                bundle = None
+                if self.snapshot()["fenix"]:
+                    from .fenix import obtain_bundle, core
+                    if candidate:
+                        core.runner_variant(Path(candidate["path"]))
+                    bundle = obtain_bundle(self.launcher.state_dir / "fenix-bundles", None, self._notify)
                 if mode == "default":
                     selected = selection(root)
                     if selected:
@@ -373,23 +488,25 @@ class ProtonManager:
                             source, _ = _bridge(root)
                             for name in BRIDGE:
                                 _copy_file(source / name, system / name)
-                        _switch(root, backup, None)
+                        candidate = inspect(selected["base_runner"])
+                        fresh, prepared = _prepare(root, candidate, self.cancel_event, self._notify, bundle=bundle, restoring=True)
+                        _switch(root, fresh, None, runner=str(root / prepared["runner"]),
+                                fenix_state=prepared["fenix_state"], scripts=prepared["scripts"])
                 else:
                     if not (root / "runner").is_symlink():
                         raise LauncherError("Diese Installation unterstützt keinen Proton-Wechsel.")
-                    if b"FLIGHTDECK_PROTON_LOADER" not in _read(root / "tools/launch-msfs.sh", 65536):
+                    if bundle is None and b"FLIGHTDECK_PROTON_LOADER" not in _read(root / "tools/launch-msfs.sh", 65536):
                         raise LauncherError("Aktualisiere zuerst die Flightdeck-Runtime-Komponenten und öffne Flightdeck erneut.")
-                    candidate = inspect(path)
-                    fresh, selected = _prepare(root, candidate, self.cancel_event, self._notify)
+                    fresh, selected = _prepare(root, candidate, self.cancel_event, self._notify, bundle=bundle)
                     self._notify("Proton-Umgebung wird aktiviert …")
                     _switch(root, fresh, selected)
                 self.launcher.graphics_report = None
             with self.lock:
                 self.job.update(state="complete", message="Proton-Auswahl bereit. Du kannst den Simulator starten.")
-        except (OSError, ValueError, KeyError, TypeError, LauncherError, SetupError, subprocess.SubprocessError) as error:
+        except (OSError, ValueError, KeyError, TypeError, LauncherError, SetupError, PatchError, subprocess.SubprocessError) as error:
             with self.lock:
                 self.job.update(state="cancelled" if isinstance(error, SetupCancelled) else "failed",
-                                message="", error=str(error) if isinstance(error, (LauncherError, SetupError)) else
+                                message="", error=str(error) if isinstance(error, (LauncherError, SetupError, PatchError)) else
                                 "Die Proton-Vorbereitung ist fehlgeschlagen. Prüfe den Proton-Ordner, freien Speicherplatz und die Wine-Abhängigkeiten.")
         finally:
             with self.launcher.lock:
