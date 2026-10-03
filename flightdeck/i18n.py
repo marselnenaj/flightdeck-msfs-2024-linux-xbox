@@ -282,6 +282,7 @@ CATALOG = {
     'Die Cloud-Sperre ist nicht verfügbar. Beende eine laufende Sitzung auf anderen Geräten und versuche es erneut oder spiele lokal weiter.': 'The cloud save lock is unavailable. Close any session on other devices and retry, or keep playing locally.',
     'Der Cloud-Speicher reicht für diese Spielstände nicht aus. Deine lokalen Spielstände bleiben erhalten.': 'These saves exceed the available cloud storage. Your local saves are preserved.',
     'Die NVIDIA-Laufzeitdateien sind ungültig. Bitte Flightdeck erneut installieren.': 'The NVIDIA runtime files are invalid. Please reinstall Flightdeck.',
+    'Die NVIDIA-Spieleinstellungen konnten nicht vorbereitet werden. Die gesicherten Werte bleiben erhalten.': 'Could not prepare the NVIDIA game settings. Backed-up values are preserved.',
     'Die Grafik-Laufzeit konnte nicht vorbereitet werden. Bitte Flightdeck erneut installieren.': 'Could not prepare the graphics runtime. Please reinstall Flightdeck.',
     'Die NVIDIA-Laufzeit konnte nicht vorbereitet werden. Bitte Runner und Schreibrechte der Wine-Umgebung prüfen.': 'Could not prepare the NVIDIA runtime. Check the runner and Wine prefix write permissions.',
     'NVIDIA wurde erkannt, aber Vulkan ist nicht verfügbar. Bitte den empfohlenen NVIDIA-Treiber der Distribution installieren und Linux neu starten.': 'NVIDIA was detected, but Vulkan is unavailable. Install your distribution’s recommended NVIDIA driver and restart Linux.',

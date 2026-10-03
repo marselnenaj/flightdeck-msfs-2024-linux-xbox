@@ -203,6 +203,16 @@ loading even when an earlier start installed these libraries.
 Generic Steam launch options do not configure Flightdeck's existing background
 service. Changing the mode in Flightdeck requires no service restart.
 
+The unreleased launcher also reconciles MSFS 2024 `UserCfg.opt` Video options
+before starting Wine, under the runtime lease. NVAPI-disabled starts replace
+DLSS with TAA, Reflex with OFF and DLSSG with NONE, including the VR variants.
+Only known values in one unambiguous Video block are eligible. The per-field
+undo record, `.flightdeck-nvidia-settings.json` next to the configuration,
+contains only the original option values and travels with Proton profile
+copies. Enabling features restores only values still matching the managed
+replacement. The write is atomic and follows the durable undo record; retry
+recovers an interrupted apply or restore. Unknown or linked files are retained.
+
 The Vulkan check, DXGI/D3D12 adapter selection and GLVND setup also run with
 NVAPI disabled. A single GPU name filter that uniquely matches a Vulkan adapter
 is completed for the other graphics API. Explicit filters for both APIs, UUIDs,

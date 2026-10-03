@@ -24,6 +24,15 @@ test build; this release installs the Python transition launcher.
 
 ## Unreleased — 0.2.0 native development build
 
+- Keep MSFS 2024's saved NVIDIA options consistent with the effective launch
+  profile. Automatic/Compatibility replace saved DLSS with TAA, disable saved
+  Reflex and NVIDIA frame generation, and retain a per-field undo record in the
+  Wine profile. Features mode restores values still matching Flightdeck's
+  changes. Other upscalers, resolution, quality, content and subsequent user
+  edits are retained. The Python reference uses the same format and behavior.
+  This prevents incompatible saved options; the affected RTX 4080's black
+  primary view remains unverified on hardware.
+
 Port the launcher backend, desktop service, installer, updater and runtime
 helpers to Rust. The native package needs no Python interpreter. It preserves
 the browser interface, runtime/save formats and Wine/Store ABI components.

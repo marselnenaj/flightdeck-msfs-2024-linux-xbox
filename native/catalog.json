@@ -233,6 +233,7 @@
   "Die Mod-Konfiguration konnte nicht sicher gelesen werden. Dateirechte und den Paketordner im Spiel prüfen.": "The mod configuration could not be read safely. Check file permissions and the packages folder in the game.",
   "Die NVIDIA-Laufzeit konnte nicht vorbereitet werden. Bitte Runner und Schreibrechte der Wine-Umgebung prüfen.": "Could not prepare the NVIDIA runtime. Check the runner and Wine prefix write permissions.",
   "Die NVIDIA-Laufzeitdateien sind ungültig. Bitte Flightdeck erneut installieren.": "The NVIDIA runtime files are invalid. Please reinstall Flightdeck.",
+  "Die NVIDIA-Spieleinstellungen konnten nicht vorbereitet werden. Die gesicherten Werte bleiben erhalten.": "Could not prepare the NVIDIA game settings. Backed-up values are preserved.",
   "Die OpenXR-Anbindung konnte nicht eingerichtet werden. Beende Programme dieser Spielumgebung und versuche es erneut.": "The OpenXR bridge could not be configured. Close applications using this game environment and try again.",
   "Die OpenXR-Konfiguration ist nicht nutzbar. Wähle die aktive Runtime in deinem VR-Programm erneut aus.": "The OpenXR configuration is unusable. Select the active runtime again in your VR application.",
   "Die Paketantwort enthält keine gültige, eindeutige Updateversion.": "The package response does not contain a valid, unambiguous update version.",

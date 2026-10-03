@@ -37,6 +37,7 @@ pub mod game_update;
 pub mod games;
 pub mod graphics;
 pub mod graphics_diagnostics;
+pub mod graphics_settings;
 pub mod gsx;
 pub mod i18n;
 pub mod inherited_fd;

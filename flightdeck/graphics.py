@@ -425,6 +425,7 @@ def prepare(runtime, environment=None):
                    "nvapi,nvapi64,nvofapi64,*nvapi,*nvapi64,*nvofapi64="]
         environment["WINEDLLOVERRIDES"] = ";".join(entry for entry in entries if entry)
         report["nvidia"] = "disabled"
+        report["game_settings"] = _prepare_game_settings(runtime, True)
         return environment, report
     directory = nvidia_directory(environment)
     custom = _install(runtime, directory)
@@ -433,7 +434,16 @@ def prepare(runtime, environment=None):
     if directory is not None:
         environment["NVIDIA_WINE_DLL_DIR"] = str(directory)
     report.update(nvidia="ready", ngx_available=directory is not None, custom_dlls=custom)
+    report["game_settings"] = _prepare_game_settings(runtime, False)
     return environment, report
+
+
+def _prepare_game_settings(runtime, compatibility):
+    from . import graphics_settings
+    try:
+        return graphics_settings.prepare(runtime, compatibility)
+    except (OSError, ValueError) as error:
+        raise GraphicsError("Die NVIDIA-Spieleinstellungen konnten nicht vorbereitet werden. Die gesicherten Werte bleiben erhalten.") from error
 
 
 if __name__ == "__main__":

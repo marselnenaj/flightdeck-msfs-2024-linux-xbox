@@ -274,8 +274,8 @@ function renderGraphics() {
   $('graphics-save').disabled = !canEditGraphics() || (mode === status?.graphics?.nvidia_mode && !status?.graphics?.error);
   text('graphics-game', status?.runtime.game_name || '');
   text('graphics-description', t(mode !== 'features'
-    ? 'Nutzt den NVIDIA-Kompatibilitätsmodus für DirectX 11 und 12. DLSS, Reflex und NVIDIA Frame Generation sind deaktiviert.'
-    : 'Nutzt NVIDIA-Funktionen mit den Komponenten des Runners und des installierten Treibers. DLSS benötigt passende Treiberkomponenten.'));
+    ? 'Nutzt den NVIDIA-Kompatibilitätsmodus für DirectX 11 und 12. Gespeicherte DLSS-, Reflex- und NVIDIA-Frame-Generation-Einstellungen in MSFS 2024 werden beim Start gesichert und deaktiviert.'
+    : 'Nutzt NVIDIA-Funktionen mit den Komponenten des Runners und des installierten Treibers. Gesicherte Spielwerte werden wiederhergestellt, sofern du sie nicht geändert hast. DLSS benötigt passende Treiberkomponenten.'));
   text('graphics-error', status?.graphics?.error || '');
   $('graphics-error').hidden = !status?.graphics?.error;
   text('graphics-busy', t(status?.graphics?.available

@@ -40,6 +40,16 @@ Der Kompatibilitätsmodus entfernt keine DLLs, ändert keine Treiber und wählt 
 integrierte Grafik. AMD-/Intel-Systeme behalten ihre bisherige Grafikeinrichtung
 und zeigen diese Auswahl nicht an.
 
+Der noch unveröffentlichte native Build gleicht vor dem Start auch die
+gespeicherten Grafikoptionen von MSFS 2024 ab. Bei abgeschalteten NVIDIA-Funktionen
+ersetzt er gespeichertes DLSS durch TAA und deaktiviert Reflex sowie NVIDIA
+Frame Generation, einschließlich ihrer VR-Einstellungen. Die ursprünglichen
+Werte bleiben in der Wine-Umgebung gesichert. Beim Wechsel zu NVIDIA-Funktionen
+werden nur Werte wiederhergestellt, die noch Flightdecks Änderung entsprechen.
+FSR, andere Frame-Generatoren, Auflösung, Grafikqualität und spätere manuelle
+Änderungen bleiben erhalten. Uneindeutige oder extern verknüpfte Dateien bleiben
+unverändert. Diese Anpassung ist noch nicht im veröffentlichten Paket 0.1.22.
+
 Der vollständige Installer ersetzt nur erkannte Grafik-DLLs durch das abgestimmte
 Paket. Eigene Grafikbibliotheken bleiben erhalten. Das reine Quellpaket enthält
 die neu gebauten Bibliotheken nicht; verwende für die Korrektur den vollständigen Installer.

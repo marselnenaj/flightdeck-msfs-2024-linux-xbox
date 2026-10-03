@@ -38,6 +38,15 @@ restores feature availability on the next start. Compatibility does not remove
 DLLs, change drivers or select integrated graphics. AMD/Intel-only systems do
 not display these controls and keep their existing graphics setup.
 
+The unreleased native build also reconciles MSFS 2024's saved graphics options
+before launch. Saved DLSS selects TAA while NVIDIA features are disabled;
+saved Reflex and NVIDIA frame generation are switched off, including their VR
+settings. Their original values are retained in the Wine profile. Switching
+back to Features restores each value only if it still matches Flightdeck's
+change. FSR, other frame generators, display/quality settings and later manual
+changes are retained. Unsupported, ambiguous or externally linked configuration
+files are left intact. This change is not in the published 0.1.22 package.
+
 The full installer replaces only recognized graphics DLLs with the matched
 bundle. Custom renderer files remain untouched. The source-only package does
 not contain the rebuilt libraries; use the full installer for this correction.

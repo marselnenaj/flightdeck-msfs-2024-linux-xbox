@@ -55,6 +55,47 @@ result for that system: the layout correction below did not fix its black main
 view. It remains a separately demonstrated bug fix, not an established cause of
 the NVIDIA issue. The warning alone still cannot identify the cause.
 
+### Experimental follow-up and saved NVIDIA options
+
+The [3 October 2026 follow-up](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/issues/1#issuecomment-5973980230)
+uses Flightdeck 0.1.21, Steam Proton Experimental, Automatic graphics, RTX 4080
+and NVIDIA 615.71.09. DXVK `v3.1.1-47-g685301564ea3486` and VKD3D build
+`44cf7c2042168f3` load; the entire window is black and the blank-present warning
+remains. This is another negative result, not evidence that switching Proton
+resolved the issue.
+
+In that [exact DXVK revision](https://github.com/doitsujin/dxvk/blob/685301564ea3486/src/dxvk/dxvk_device_filter.cpp),
+`Found device` is logged before the UUID/name/CPU filters. Listing NVIDIA,
+the AMD iGPU and llvmpipe does not establish that all are offered to the game or
+that the wrong GPU was selected. The same revision supports UUID filtering.
+Its [vendor override](https://github.com/doitsujin/dxvk/blob/685301564ea3486/src/dxgi/dxgi_adapter.cpp)
+uses RX 6700 XT IDs when hiding NVIDIA; an AMD label is not evidence of an AMD
+driver. In [VKD3D](https://github.com/HansKristian-Work/vkd3d-proton/blob/44cf7c2042168f3/libs/vkd3d/swapchain.c),
+`user index` refers to a swapchain backbuffer, not a GPU index.
+
+The unreleased launcher reconciles saved MSFS 2024 Video options with the
+effective NVIDIA mode. Previously it disabled the runtime APIs while retaining
+saved DLSS, Reflex and DLSS frame-generation requests. It now backs up and
+adjusts only these known values, and restores unchanged managed values when
+features are enabled again. Both implementations share the undo format;
+malformed/linked settings are preserved. This addresses a configuration
+inconsistency, not a confirmed diagnosis of the tester's black viewport.
+
+A synthetic comparison using the published 0.1.22 Python implementation
+reproduces the inconsistent saved values; the candidate replaces them and
+restores the original bytes on a mode change. The
+[Python](../tests/test_graphics_settings.py) and
+[native](../tests/native_graphics_settings.rs) regressions also cover migration,
+user changes, interrupted writes, optional package-metadata failures and
+UTF-8/UTF-16 configuration files. The GPU/driver are mocked in this comparison;
+it does not exercise NVIDIA rendering or demonstrate a black-screen fix.
+
+The 0.1.22 portable-loader working-directory correction is separate and was not
+present in the 0.1.21 report. The exact newer DXVK also still ignores
+`disableNvLowLatency2` when deriving device extensions; `latencySleep = False`
+disables its tracker but does not establish extension exclusion. The bundled
+DXVK patch applies to the default stack, not arbitrary selected Proton DLLs.
+
 The experimental Proton selection now enables a complete alternative Wine,
 DXVK and VKD3D trial with a separate prefix and a return to the original profile.
 See [Proton trials](runtime.md#experimental-proton-selection). Neither a

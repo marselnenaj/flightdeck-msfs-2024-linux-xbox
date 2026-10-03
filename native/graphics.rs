@@ -468,6 +468,7 @@ pub fn prepare(root: &Path, mut env: Environment) -> Result<(Environment, Value)
             ";",
         );
         report["nvidia"] = json!("disabled");
+        report["game_settings"] = crate::graphics_settings::prepare(root, true)?;
         return Ok((env, report));
     }
     let directory = env
@@ -508,5 +509,6 @@ pub fn prepare(root: &Path, mut env: Environment) -> Result<(Environment, Value)
     report["nvidia"] = json!("ready");
     report["ngx_available"] = json!(directory.is_some());
     report["custom_dlls"] = json!(custom);
+    report["game_settings"] = crate::graphics_settings::prepare(root, false)?;
     Ok((env, report))
 }
