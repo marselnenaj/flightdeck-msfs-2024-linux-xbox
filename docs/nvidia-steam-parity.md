@@ -1,6 +1,6 @@
 # NVIDIA: Steam evidence and completion criteria
 
-Research checked on 29 September 2026. This records the implementation decision
+Research checked on 4 October 2026. This records the implementation decision
 for maintainers; it is not a request for users to collect more diagnostics.
 
 ## What the Steam reports establish
@@ -41,6 +41,7 @@ stack as either successful April report.
 | Concern | Checked implementation | Consequence |
 | --- | --- | --- |
 | Proton launch options | `flightdeck/graphics.py` translates NVAPI disabling and NVIDIA hiding into Wine/DXVK settings and DLL overrides. | Passing additional `PROTON_*` strings to direct Wine is not an implementation of a Proton feature. The reported Steam NVAPI/hiding workaround is already represented. |
+| MSFS intro argument | The successful April RTX 4080 VR command also contains `-FastLaunch`; the earlier comparison omitted it. Matching Windows Store black-main-view reports independently describe success with this argument. | The unreleased Python and Rust bridges now pass it to the actual game process. See the [source reports and limits](nvidia-renderer.md#intro-startup-workaround-unreleased). |
 | NVIDIA files | NVAPI comes from the selected runner; NGX comes from the installed host driver. | Keep driver and runner libraries matched instead of downloading arbitrary NVIDIA DLLs. |
 | Physical adapter | DXGI is selected by a Vulkan device UUID, retained when the vendor name is hidden. D3D12 receives the DXGI adapter. | Do not reintroduce the host-name filter that broke hidden-vendor mode. |
 | Environment propagation | Backend → play script → launch script → Xodus → Wine bridge preserves these settings. | No evidence that the relevant NVIDIA options disappear before the game starts. |

@@ -25,8 +25,8 @@ def fail(message):
 def nt_path(path):
     return "\\??\\Z:" + str(path).replace("/", "\\")
 
-def portable_tree(source_dir, launch_dir, mappings):
-    """Expose licensed, already-open Xodus images to unmodified Wine.
+def image_tree(source_dir, launch_dir, mappings):
+    """Expose licensed, already-open Xodus images to Wine's DLL loader.
 
     Only symlinks are written. The parent retains the memfds for the entire
     game lifetime, including Wine processes which close inherited descriptors.
@@ -35,7 +35,7 @@ def portable_tree(source_dir, launch_dir, mappings):
     mapped = {}
     for fd, name in mappings:
         if not name.startswith("\\??\\Z:\\"):
-            fail("Portable Proton requires Z: image mappings")
+            fail("The game view requires Z: image mappings")
         path = Path(name[6:].replace("\\", "/"))
         if ".." in path.parts or not path.is_relative_to(source_dir):
             fail("An image mapping is outside the game directory")
@@ -141,13 +141,11 @@ def main():
     display_refresh = None
     try:
         portable = os.environ.get("FLIGHTDECK_PROTON_LOADER") == "portable"
-        if portable:
-            portable_tree(source.parent, launch_dir, mappings)
-        else:
-            for resource in source.parent.iterdir():
-                if resource == source or resource == launch_dir or resource.name.startswith((".xodus-fenix-", ".xodus-launch-")):
-                    continue
-                (launch_dir / resource.name).symlink_to(resource)
+        # Xodus Wine's fd map redirects its main image, not delayed DLL loads.
+        # Both modes need a memory-backed view for those DLLs and their cwd.
+        image_tree(source.parent, launch_dir, mappings)
+        if not portable:
+            stub.unlink()
             with stub.open("xb") as stream:
                 stream.write(headers)
                 stream.truncate(file_size)
@@ -186,10 +184,17 @@ def main():
                 env=refresh_env, stdin=subprocess.DEVNULL, close_fds=True)
         # Delayed DLL loads and UI subprocesses resolve paths from the working
         # directory too. The source directory contains encrypted images; use
-        # the same licensed view as the executable in portable mode.
+        # the same licensed view as the executable in both modes.
+        # The MSFS intro path can leave the main view black while UI/secondary
+        # views render. Forward the game's supported workaround at the final
+        # Wine boundary; direct Wine starts do not run Proton's game fixes.
+        arguments = sys.argv[2:]
+        if child_env.get("FLIGHTDECK_FAST_LAUNCH", "1") != "0" and not any(
+                value.casefold() == "-fastlaunch" for value in arguments):
+            arguments.insert(0, "-FastLaunch")
         started = time.monotonic()
-        process = subprocess.Popen([str(wine), str(stub), *sys.argv[2:]],
-                                   cwd=launch_dir if portable else source.parent, env=child_env,
+        process = subprocess.Popen([str(wine), str(stub), *arguments],
+                                   cwd=launch_dir, env=child_env,
                                    pass_fds=tuple(sorted({fd for fd, _ in mappings})))
         def forward_signal(number, _frame):
             if process.poll() is None:

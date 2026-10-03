@@ -47,6 +47,11 @@ change. FSR, other frame generators, display/quality settings and later manual
 changes are retained. Unsupported, ambiguous or externally linked configuration
 files are left intact. This change is not in the published 0.1.22 package.
 
+The unreleased launcher also starts both simulator editions with `-FastLaunch`.
+This applies a [reported intro-path workaround](nvidia-renderer.md#intro-startup-workaround-unreleased)
+for black main views to the default runner and selected Proton versions. It
+does not yet establish that the reported Linux/NVIDIA case is resolved.
+
 The full installer replaces only recognized graphics DLLs with the matched
 bundle. Custom renderer files remain untouched. The source-only package does
 not contain the rebuilt libraries; use the full installer for this correction.

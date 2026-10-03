@@ -55,6 +55,107 @@ result for that system: the layout correction below did not fix its black main
 view. It remains a separately demonstrated bug fix, not an established cause of
 the NVIDIA issue. The warning alone still cannot identify the cause.
 
+### Intro startup workaround (unreleased)
+
+The [black-world-map report](https://forums.flightsimulator.com/t/black-world-map-after-su3/734967)
+describes a black main map/cockpit with a rendered second view on an RTX 4090.
+Follow-ups [5](https://forums.flightsimulator.com/t/black-world-map-after-su3/734967/5)
+and [17](https://forums.flightsimulator.com/t/black-world-map-after-su3/734967/17)
+report that starting with `-FastLaunch` avoids the problem. A separate
+[May 2026 report](https://forums.flightsimulator.com/t/blank-map-screen-after-starting-msfs/761359/14)
+also confirms this workaround after black loading and game views. These are
+Windows Store-edition reports with a closely matching symptom, not a confirmed
+diagnosis of Flightdeck's Linux/NVIDIA failure.
+
+[Microsoft's black-loading-screen guide](https://flightsimulator.zendesk.com/hc/en-us/articles/4406047066770-How-to-fix-a-black-loading-screen)
+also documents this argument for Store and Steam. That guide names the MSFS
+2020 package; the 2024 evidence above comes from firsthand reports. The flag
+skips the opening logos: [2024 reports distinguish it from the later loading
+video](https://forums.flightsimulator.com/t/any-quick-launch-trick-for-2024-can-we-turn-off-that-video-and-the-logos/667368/12),
+which can still play. It is not a general codec repair.
+
+Flightdeck previously omitted this argument. Both launch bridges now add
+`-FastLaunch` to the actual MSFS process for 2020 and 2024, including the default
+runner, selected Proton versions and Fenix-managed launches. The change avoids
+the game's initial intro path without replacing the renderer or removing game
+files. Explicit arguments retain their exact boundaries and order, and an
+existing case-insensitive `-FastLaunch` is not duplicated. Set
+`FLIGHTDECK_FAST_LAUNCH=0` in the launch environment to disable automatic
+insertion for an intro comparison. It does not remove an explicitly supplied
+argument. This change is not included in published 0.1.22.
+
+The loader regression exercises both editions, both loader modes, inherited
+image descriptors, argument preservation and the opt-out. The real Proton probe
+also requires the Windows PE to receive `-FastLaunch`; a launcher-side string
+alone cannot make that check pass. Its synthetic rendering test still cannot
+qualify the reported RTX hardware or actual MSFS rendering.
+
+### Further evidence checked on 4 October 2026
+
+- [November 2024 reports](https://forums.flightsimulator.com/t/black-screen-but-with-ui-elements-visible/666278/6)
+  describe a black world that remains visible through blurred menu panels.
+  This suggests a problem after at least some scene rendering in those cases;
+  it does not prove a particular shader, overlay or Linux driver fault.
+- [September 2025 follow-up](https://forums.flightsimulator.com/t/black-world-map-after-su3/734967/6):
+  changing NVIDIA's Windows VSync override from Fast to application-controlled
+  fixed the black map/loading screen for that reporter.
+  [February 2025 report](https://forums.flightsimulator.com/t/black-screen-but-with-ui-elements-visible/666278/19)
+  independently reports avoiding Fast VSync. These Windows driver controls are
+  not equivalent evidence for forcing a Vulkan presentation mode on Linux.
+- [August 2026 / SU6 beta](https://forums.flightsimulator.com/t/blank-map-screen-after-starting-msfs/761359/15):
+  VSync on, Reflex off and a restart restored rendering. Settings could then be
+  enabled again. The report changes several variables together, so it does not
+  isolate VSync as the cause. Flightdeck's saved-Reflex reconciliation covers
+  the disabled-Reflex part; it does not force VSync for every NVIDIA user.
+- [Proton video issue #8267](https://github.com/ValveSoftware/Proton/issues/8267)
+  reports H.264 decoding failure and color bars on AMD in 2024. Another
+  [firsthand reply](https://github.com/ValveSoftware/Proton/issues/8255#issuecomment-2499121024)
+  reports broken startup videos with working world textures afterwards.
+  Video errors alone therefore do not establish the cause of a black world.
+- [Proton issue #9385](https://github.com/ValveSoftware/Proton/issues/9385)
+  records a January 2026 black launch on RTX 3060 / driver 590.48.01 with
+  Experimental. It supplies no confirmed remedy and insufficient detail to
+  identify it with Flightdeck's primary-view failure.
+- [NVIDIA 615.71.09 report](https://forums.developer.nvidia.com/t/615-71-09-rtx-5070-ti-linux-black-flag-resynced-freezes-in-gameplay-with-vk-error-device-lost-works-on-610-57-04/384169):
+  another DX12 game freezes with `VK_ERROR_DEVICE_LOST` on an RTX 5070 Ti.
+  Its comparison also changes the kernel. This matches the tester's driver
+  version, but neither the application nor the reported error, and does not
+  establish a driver downgrade as a fix for Flightdeck.
+
+These findings strengthen the intro/presentation investigation, but do not
+establish one universal NVIDIA fix. Full-display hangs, VR-only crashes,
+black login dialogs and missing aircraft instruments are separate symptoms.
+
+### Default-runner DLL mapping correction (unreleased)
+
+Extending `scripts/check-proton.py` with `--default-runner` exposed a separate
+reproducible failure: the synthetic main EXE receives `-FastLaunch`, but
+`LoadLibraryW` of a mapped working-directory DLL fails with Windows error 193.
+The exact pinned Wine source at `b1dd32734a34472a28eb5be9922df06e07ac0834`
+consults `WINE_DLL_FILE_MAP` in `open_main_image` in
+`dlls/ntdll/unix/loader.c`; its ordinary DLL loader does not consult that map.
+Thus supplying aliases alone does not redirect delayed DLL loads.
+
+Both bridges now expose the already-open image descriptors through the game
+view in default mode too, including its working directory. The default EXE
+still uses the header stub and Wine's native image mapping. Normal resources
+remain links to their originals; encrypted files are untouched. Selected
+Proton continues to use the portable EXE path. The probe verifies both
+working-directory and module-directory loads against deliberately invalid
+on-disk DLL placeholders. This is a loader correction, not evidence that the
+affected MSFS installation has an encrypted DLL at the point of failure.
+
+Final local checks pass the default path through Python and Rust, and the
+Experimental path including profile return. All use synthetic PEs on AMD/RADV.
+CachyOS `cachyos-10.0-sunset-slr` passes the loader/argument checks, but two later
+multiwindow-renderer runs time out after 90 seconds in the host compositor.
+The same PE and prefix pass all 148 D3D12 and 48 D3D11 frame checks inside a
+1280x800 Wine desktop; they also pass after that setting is removed and Wine is
+restarted. An earlier complete CachyOS run, including profile return, passed.
+This is an intermittent rendering-test result, not a demonstrated requirement
+for virtual desktops or a reproduction of the NVIDIA MSFS problem. No automatic
+desktop-mode change follows from it.
+
 ### Experimental follow-up and saved NVIDIA options
 
 The [3 October 2026 follow-up](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/issues/1#issuecomment-5973980230)

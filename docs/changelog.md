@@ -24,6 +24,19 @@ test build; this release installs the Python transition launcher.
 
 ## Unreleased — 0.2.0 native development build
 
+- Fix delayed mapped-DLL loading with the default Flightdeck runner. The
+  native Wine mapping redirects the main EXE only; both bridges now expose
+  mapped DLLs and the working directory through the same temporary memory-backed
+  game view used by selected Proton. The default EXE retains its native mapping.
+  Encrypted game files and ordinary resources are preserved. A real Windows
+  probe reproduces error 193 before this correction.
+- Start MSFS 2020/2024 with `-FastLaunch` at the final Wine boundary. This
+  applies the reported intro-path workaround for a black main view with visible
+  menus/secondary views to the default runner and selected Proton versions.
+  Python and Rust preserve explicit arguments without duplication; managed
+  older Python runtime scripts receive the change through component updates.
+  Set `FLIGHTDECK_FAST_LAUNCH=0` in the launch environment to compare the full
+  intro path. The affected Linux/NVIDIA game rendering still needs confirmation.
 - Keep MSFS 2024's saved NVIDIA options consistent with the effective launch
   profile. Automatic/Compatibility replace saved DLSS with TAA, disable saved
   Reflex and NVIDIA frame generation, and retain a per-field undo record in the

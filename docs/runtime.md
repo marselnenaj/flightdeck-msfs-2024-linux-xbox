@@ -67,6 +67,16 @@ normal licensing, and Flightdeck retains its Store/GDK libraries. Flightdeck
 starts the chosen Wine directly; Steam's Proton launcher and its game-specific
 launch options are not invoked. Unsupported host dependencies fail preparation.
 
+The unreleased default loader also exposes mapped DLLs through this view and
+uses it as the working directory. Its executable still uses the native Wine
+mapping and a header-only stub. The pinned native mapping handles the main
+image, so ordinary delayed DLL loads cannot rely on map aliases alone.
+Maintainers can exercise that exact path with `scripts/check-proton.py
+--runtime /path/to/runtime --default-runner --native-launcher
+target/debug/flightdeck-rust --output /path/to/new-results`; use `--runner
+/path/to/proton` instead for selection and return tests. Both use own synthetic
+programs in fresh prefixes and leave the source runtime unchanged.
+
 This is experimental compatibility support. Native overlay, loader, graphics and
 profile-switch checks do not establish a complete Fenix/GSX flight or fix the
 reported NVIDIA black view. Return to Flightdeck before resetting or removing an
@@ -150,6 +160,15 @@ reset. These operations hold the same runtime lease used by game starts and
 reject active Wine/Fenix processes.
 
 ### NVIDIA graphics in launcher-managed starts
+
+The unreleased Python/Rust Wine bridges add `-FastLaunch` when starting MSFS
+2020/2024, independently of the graphics mode or selected runner. This uses the
+[reported intro-path workaround](nvidia-renderer.md#intro-startup-workaround-unreleased).
+An explicitly supplied spelling is retained once; other arguments are preserved.
+`FLIGHTDECK_FAST_LAUNCH=0` in the launch environment disables automatic insertion
+for troubleshooting. With the desktop launcher this variable must be set in the
+service's environment; unrelated terminal/Steam launch options do not change a
+running service. Normal users receive the default automatically after updating.
 
 Flightdeck starts Wine directly, so the launcher prepares the NVIDIA pieces
 normally installed by [the pinned Proton launcher](https://github.com/xodus-gaming/Proton/blob/7c0b435495814349735c913fde78da906aecea52/proton)

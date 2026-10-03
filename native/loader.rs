@@ -134,12 +134,12 @@ fn skip(path: &Path, view: &Path) -> bool {
             name.starts_with(".xodus-fenix-") || name.starts_with(".xodus-launch-")
         })
 }
-fn portable_tree(original: &Path, view: &Path, mapped: &[Mapping]) -> Result<()> {
+fn image_tree(original: &Path, view: &Path, mapped: &[Mapping]) -> Result<()> {
     let mut images = BTreeMap::new();
     for mapping in mapped {
         require(
             mapping.name.starts_with(r"\??\Z:\"),
-            "Portable Proton requires Z: image mappings.",
+            "The game view requires Z: image mappings.",
         )?;
         let path = source(&mapping.name);
         let relative = path
@@ -243,15 +243,11 @@ pub fn run(root: &Path, arguments: &[OsString]) -> Result<u8> {
             .ok_or(Error::Invalid("Invalid entry point filename."))?,
     );
     let portable = std::env::var("FLIGHTDECK_PROTON_LOADER").is_ok_and(|v| v == "portable");
-    if portable {
-        portable_tree(parent, &view.path, &mapped)?;
-    } else {
-        for entry in fs::read_dir(parent)? {
-            let entry = entry?;
-            if entry.path() != source && !skip(&entry.path(), &view.path) {
-                symlink(entry.path(), view.path.join(entry.file_name()))?;
-            }
-        }
+    // The pinned Xodus Wine redirects only the main image through its fd map.
+    // Delayed DLL loads need the same memory-backed view as portable runners.
+    image_tree(parent, &view.path, &mapped)?;
+    if !portable {
+        fs::remove_file(&stub)?;
         let mut file = File::create(&stub)?;
         file.write_all(&headers)?;
         file.set_len(payload.file.metadata()?.len())?;
@@ -302,13 +298,23 @@ pub fn run(root: &Path, arguments: &[OsString]) -> Result<u8> {
         }
         env.insert("WINE_DLL_FILE_MAP".into(), aliases.join("|").into());
     }
+    // Direct Wine starts bypass Proton's game fixes. MSFS's intro path can
+    // leave the primary view black even when UI and secondary views render.
+    let mut game_arguments = arguments[1..].to_vec();
+    if std::env::var_os("FLIGHTDECK_FAST_LAUNCH").as_deref() != Some(std::ffi::OsStr::new("0"))
+        && !game_arguments
+            .iter()
+            .any(|value| value.eq_ignore_ascii_case("-FastLaunch"))
+    {
+        game_arguments.insert(0, "-FastLaunch".into());
+    }
     // Install signal handlers before the game starts. Helpers never inherit any
     // licensed image descriptors; only the game process gets that explicit set.
     tokio::runtime::Builder::new_current_thread().enable_all().build()?.block_on(async{
         let mut term=tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())?;let mut interrupt=tokio::signal::unix::signal(tokio::signal::unix::SignalKind::interrupt())?;
         let mut guard=None;let guard_path=prefix.join("drive_c/windows/system32/FenixWindowGuard.exe");if std::env::var("WINE_FENIX_WINDOW_GUARD").is_ok_and(|v|v=="1")&&guard_path.is_file(){let mut c=Command::new(&wine);c.arg(&guard_path).env_clear().envs(&env).env_remove("WINE_DLL_FILE_MAP").stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null());guard=Some(OwnedChild(process::spawn(&mut c,None)?));}
         let mut refresh=None;if std::env::var("WINE_FENIX_DISPLAY_REFRESH").is_ok_and(|v|v=="1")&&prefix.join("drive_c/windows/system32/FenixMCDURefresh.exe").is_file(){let mut c=Command::new(std::env::current_exe()?);c.args(["display-refresh","--runtime"]).arg(&root).env_clear().envs(&env).env_remove("WINE_DLL_FILE_MAP").stdin(Stdio::null());refresh=Some(OwnedRefresh(process::spawn(&mut c,None)?));}
-        let mut command=Command::new(&wine);command.arg(&stub).args(&arguments[1..]).env_clear().envs(&env).current_dir(if portable{&view.path}else{parent});let descriptors:Vec<_>=mapped.iter().map(|m|&m.file).collect();let mut game=OwnedChild(process::spawn_files(&mut command,&descriptors)?);let started=Instant::now();
+        let mut command=Command::new(&wine);command.arg(&stub).args(&game_arguments).env_clear().envs(&env).current_dir(&view.path);let descriptors:Vec<_>=mapped.iter().map(|m|&m.file).collect();let mut game=OwnedChild(process::spawn_files(&mut command,&descriptors)?);let started=Instant::now();
         let status=loop{if let Some(code)=game.0.try_wait()?{break code;}let signal=tokio::select!{_ = term.recv()=>Some(rustix::process::Signal::TERM),_ = interrupt.recv()=>Some(rustix::process::Signal::INT),_ = tokio::time::sleep(std::time::Duration::from_millis(25))=>None};if let Some(signal)=signal&&let Some(pid)=rustix::process::Pid::from_raw(game.0.id() as i32){let _=rustix::process::kill_process(pid,signal);}};
         let code=status.code().unwrap_or_else(||128+status.signal().unwrap_or(1));eprintln!("xodus-wine-launch: wine_pid={} exit_code={code} elapsed_seconds={:.3}",game.0.id(),started.elapsed().as_secs_f64());drop(refresh);drop(guard);Ok(code.clamp(0,255) as u8)
     })

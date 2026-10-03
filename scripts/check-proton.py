@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
-"""Test Proton switching using own PEs and fresh prefixes, without starting a game."""
+"""Test the Flightdeck runner or Proton switching with own PEs and fresh prefixes."""
 import argparse
 import atexit
 import http.client
@@ -75,7 +75,9 @@ class NativeLauncher:
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--runtime', type=Path, required=True, help='Read only: source of the installed Store DLLs and base runner')
-    parser.add_argument('--runner', type=Path, required=True)
+    mode = parser.add_mutually_exclusive_group(required=True)
+    mode.add_argument('--runner', type=Path, help='Exercise selection and return from this installed Proton')
+    mode.add_argument('--default-runner', action='store_true', help='Exercise the default Flightdeck runner and native memfd mapping')
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--fenix-bundle', type=Path, help='Test matching Fenix modules with synthetic apps; no licensed Fenix application')
     parser.add_argument('--native-launcher', type=Path, help='Exercise Rust HTTP Proton jobs and the Rust memfd loader')
@@ -143,18 +145,21 @@ def main():
         cache.mkdir(parents=True)
         (cache / core.manifest()['version']).symlink_to(bundle, target_is_directory=True)
     native = NativeLauncher(args.native_launcher, output, runtime) if args.native_launcher else None
-    if native:
-        native.switch(runtime, 'proton', args.runner.resolve())
-    else:
-        launcher.proton.start({'runtime_path': str(runtime), 'mode': 'proton', 'path': str(args.runner.resolve())})
-        launcher.proton.thread.join(600)
-        if launcher.proton.job['state'] != 'complete':
-            raise RuntimeError(launcher.proton.job)
+    if args.runner:
+        if native:
+            native.switch(runtime, 'proton', args.runner.resolve())
+        else:
+            launcher.proton.start({'runtime_path': str(runtime), 'mode': 'proton', 'path': str(args.runner.resolve())})
+            launcher.proton.thread.join(600)
+            if launcher.proton.job['state'] != 'complete':
+                raise RuntimeError(launcher.proton.job)
     selected = proton.selection(runtime)
+    assert bool(selected) == bool(args.runner)
     env = proton._prefix_env(prefix, output)
     if args.fenix_bundle:
         env.update(core.ENV)
-    env.update(FLIGHTDECK_PROTON_LOADER='portable', WINEDLLPATH=str(runtime / 'local/store-runtime'),
+    env.update(FLIGHTDECK_PROTON_LOADER='portable' if selected else 'native', WINEDLLPATH=str(runtime / 'local/store-runtime'),
+               FLIGHTDECK_FAST_LAUNCH='1',
                XODUS_WINE_RUNNER=str(setup.runner_wine(runtime / 'runner')),
                WINELOADER=str(setup.runner_wine(runtime / 'runner')), WINESERVER=str(runtime / 'runner/files/bin/wineserver'),
                WINEDLLOVERRIDES='xgameruntime=n;xgameruntime_original=n,b;xodus_store_test=b;winemenubuilder.exe=d',
@@ -185,24 +190,30 @@ def main():
     assert all(setup.digest(game / name) == expected[name] for name in names)
     assert not list(game.glob('.xodus-launch-*'))
     (prefix / 'installed-on-proton').write_text('retain add-ons and settings')
+    if selected:
+        if native:
+            native.switch(runtime, 'default')
+        else:
+            launcher.proton.start({'runtime_path': str(runtime), 'mode': 'default'})
+            launcher.proton.thread.join(180)
+            assert launcher.proton.job['state'] == 'complete', launcher.proton.job
     if native:
-        native.switch(runtime, 'default')
         native.close()
-    else:
-        launcher.proton.start({'runtime_path': str(runtime), 'mode': 'default'})
-        launcher.proton.thread.join(180)
-        assert launcher.proton.job['state'] == 'complete', launcher.proton.job
-    assert proton._id(runtime / selected['base_prefix']) == before
+    assert proton._id(runtime / selected['base_prefix'] if selected else prefix) == before
     assert (prefix / 'original-marker').read_text() == 'preserve this profile'
     assert (prefix / 'installed-on-proton').read_text() == 'retain add-ons and settings'
     assert proton.selection(runtime) is None
     assert proton._version(runtime / 'runner') == proton._version(runner)
     if args.fenix_bundle:
         core.verify_installed(runtime, core.read_json(runtime / core.MARKER))
-    report = {'implementation': 'rust' if native else 'python', 'version': selected['version'], 'loader_passed': True, 'working_directory_dll_passed': True, 'rendering_passed': True,
-              'original_files_unchanged': True, 'return_to_default_passed': True, 'addons_retained': True,
+    report = {'implementation': 'rust' if native else 'python', 'mode': 'proton' if selected else 'flightdeck',
+              'version': selected['version'] if selected else proton._version(runner),
+              'loader': 'portable' if selected else 'native',
+              'loader_passed': True, 'fastlaunch_argument_passed': True, 'working_directory_dll_passed': True, 'rendering_passed': True,
+              'original_files_unchanged': True, 'return_to_default_passed': True if selected else None,
+              'profile_identity_preserved': True, 'addons_retained': True,
               'fenix_overlay': bool(args.fenix_bundle),
-              'scope': 'Synthetic memfd EXE/DLL, working-directory and module-directory loading, Store library loading, D3D11/D3D12 rendering and profile round trip; no game/account'}
+              'scope': 'Synthetic memfd EXE/DLL, working-directory and module-directory loading, Store library loading and D3D11/D3D12 rendering; profile round trip only with --runner; no game/account'}
     (output / 'result.json').write_text(json.dumps(report, indent=2) + '\n')
     print(json.dumps(report, indent=2))
 

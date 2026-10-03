@@ -101,6 +101,23 @@ fn command(root: &Path, base: &Path) -> Command {
     c
 }
 #[test]
+fn native_loader_preserves_image_descriptors_and_applies_msfs_startup_arguments() {
+    let result = Command::new("python3")
+        .args(["tests/compat/test_loader_wrapper.py", "-q"])
+        .env(
+            "FLIGHTDECK_TEST_BINARY",
+            env!("CARGO_BIN_EXE_flightdeck-rust"),
+        )
+        .current_dir(env!("CARGO_MANIFEST_DIR"))
+        .output()
+        .unwrap();
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+}
+#[test]
 fn native_supervisor_owns_service_and_game_but_never_lends_them_the_lease() {
     let temp = tempfile::tempdir().unwrap();
     let root = fixture(temp.path());

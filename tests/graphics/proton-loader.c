@@ -4,11 +4,12 @@
 #include <windows.h>
 #include <unknwn.h>
 #include <stdio.h>
+#include <string.h>
 
 typedef HRESULT (WINAPI *Query)(const GUID *, const GUID *, void **);
 static const GUID threading_iid = {0x073b7dcb,0x1fcf,0x4030,{0x94,0xbe,0xe3,0xc9,0xeb,0x62,0x34,0x28}};
 
-int main(void)
+int main(int argc, char **argv)
 {
     WCHAR path[32768], *name;
     HMODULE proxy, original, builtin, helper;
@@ -16,6 +17,9 @@ int main(void)
     Query query;
     int (*marker)(void);
     HRESULT hr;
+    if (argc != 2 || strcmp(argv[1], "-FastLaunch")) {
+        puts("MSFS FastLaunch argument did not reach the Windows process"); return 8;
+    }
     /* UI engines and delayed imports also resolve from the working directory.
      * The previous probe covered only the executable's temporary directory. */
     if (!GetCurrentDirectoryW(32768, path) || wcslen(path) > 32000) return 6;
@@ -40,6 +44,6 @@ int main(void)
     hr = query(&threading_iid, &threading_iid, (void **)&threading);
     if (FAILED(hr) || !threading) { printf("Threading interface failed: %#lx\n", (unsigned long)hr); return 5; }
     IUnknown_Release(threading);
-    puts("PASS: memfd executable, working-directory and module-directory DLLs, Store libraries and threading interface");
+    puts("PASS: FastLaunch argument, memfd executable, working-directory and module-directory DLLs, Store libraries and threading interface");
     return 0;
 }

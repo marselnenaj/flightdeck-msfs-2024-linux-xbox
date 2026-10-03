@@ -50,6 +50,12 @@ FSR, andere Frame-Generatoren, Auflösung, Grafikqualität und spätere manuelle
 Änderungen bleiben erhalten. Uneindeutige oder extern verknüpfte Dateien bleiben
 unverändert. Diese Anpassung ist noch nicht im veröffentlichten Paket 0.1.22.
 
+Der unveröffentlichte Launcher startet beide Simulator-Versionen außerdem mit
+`-FastLaunch`. Das übernimmt einen [berichteten Workaround für die schwarze
+Hauptansicht](nvidia-renderer.md#intro-startup-workaround-unreleased) auch beim
+Standard-Runner und den ausgewählten Proton-Versionen. Die Wirkung beim
+gemeldeten Linux-/NVIDIA-Fall ist damit noch nicht bestätigt.
+
 Der vollständige Installer ersetzt nur erkannte Grafik-DLLs durch das abgestimmte
 Paket. Eigene Grafikbibliotheken bleiben erhalten. Das reine Quellpaket enthält
 die neu gebauten Bibliotheken nicht; verwende für die Korrektur den vollständigen Installer.

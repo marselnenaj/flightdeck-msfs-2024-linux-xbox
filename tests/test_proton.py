@@ -408,7 +408,7 @@ class PortableLoaderTests(unittest.TestCase):
                 for fd, data in zip(fds, (b'own executable', b'own library')):
                     os.write(fd, data)
                 mappings = [(fd, self.loader['nt_path'](game / name)) for fd, name in zip(fds, ('FlightSimulator2024.exe', 'nested/library.dll'))]
-                self.loader['portable_tree'](game, target, mappings)
+                self.loader['image_tree'](game, target, mappings)
                 self.assertEqual((target / 'FlightSimulator2024.exe').read_bytes(), b'own executable')
                 self.assertEqual((target / 'nested/library.dll').read_bytes(), b'own library')
                 self.assertTrue((target / 'FlightSimulator2024.exe').is_symlink())
@@ -429,4 +429,4 @@ class PortableLoaderTests(unittest.TestCase):
                     target = root / ('.xodus-launch-' + name)
                     target.mkdir()
                     with self.assertRaises(RuntimeError):
-                        self.loader['portable_tree'](root, target, [(1, self.loader['nt_path'](path)) for path in paths])
+                        self.loader['image_tree'](root, target, [(1, self.loader['nt_path'](path)) for path in paths])
