@@ -56,10 +56,9 @@ Ein betroffener Tester hat **0.1.18**, **Automatisch** und den korrigierten
 Renderer-Build `628afa6f9cfece4` bestätigt. Globus/Karte und Cockpit bleiben
 auf seinem System schwarz. Die 3D-Texturkorrektur behebt diesen Fall somit nicht.
 
-Der Release-Kandidat 0.1.19 bietet unter **Einrichtung → Proton-Version
+Flightdeck 0.1.19 bietet unter **Einrichtung → Proton-Version
 (experimentell)** eine Auswahl installierter Proton-Versionen mit eigener
-Windows-Umgebung und Rückkehr zum bisherigen Flightdeck-Runner. Diese Funktion
-ist noch nicht Teil des veröffentlichten Pakets 0.1.18. Sie ermöglicht den
+Windows-Umgebung und Rückkehr zum bisherigen Flightdeck-Runner. Sie ermöglicht den
 Vergleich ganzer Wine-/DXVK-/VKD3D-Versionen; eine Behebung des NVIDIA-Problems
 ist damit noch nicht bestätigt. [Ablauf und Grenzen](runtime.md#experimental-proton-selection).
 

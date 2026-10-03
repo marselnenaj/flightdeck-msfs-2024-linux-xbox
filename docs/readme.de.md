@@ -22,9 +22,9 @@ Flightdeck installiert und startet deine **gekaufte Xbox-PC-/Microsoft-Store-
 Version von MSFS 2024 oder 2020** unter Linux mit Wine/Proton. Mit dem Microsoft-Konto
 anmelden, das Spiel herunterladen und im Launcher starten.
 
-**Aktuelle stabile Version: [Flightdeck 0.1.18](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.18).**
+**Aktuelle stabile Version: [Flightdeck 0.1.19](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.19).**
 Aktualisiere über **Updates → Flightdeck** oder verwende den vollständigen Installer.
-**Für 0.1.19 vorbereitet:** auswählbare Proton-Versionen, experimentelle GSX-Pro-Einrichtung und kompakte Einstellungs- und Add-on-Karten. Der Kandidat ist noch nicht veröffentlicht. [Änderungen](changelog.md#0119--release-candidate).
+**Neu in 0.1.19:** experimentelle Proton-Auswahl, GSX-Pro-Einrichtung und kompakte Einstellungs- und Add-on-Karten. [Änderungen](changelog.md#0119--3-october-2026).
 
 **0.1.18** ergänzt die optionale VR-Einrichtung für WiVRn, SteamVR und Monado,
 eine Headset-Prüfung und die Wine-/OpenXR-Anbindung für AMD und NVIDIA.
@@ -75,16 +75,16 @@ Falls die Microsoft-Anmeldung mit 0.1.16 weiterhin scheitert, gib den angezeigte
 Fehlercode und die Flightdeck-Version im Bericht an.
 [Aktueller Stand und Umfang](known-issues.de.md).
 
-**NVIDIA-Rendererkorrektur (0.1.17, in 0.1.18 enthalten):** Die Korrektur der
+**NVIDIA-Rendererkorrektur (0.1.17, in 0.1.19 enthalten):** Die Korrektur der
 Bildzustände von 3D-Texturen besteht den isolierten Vulkan-Regressionstest.
 Ein Tester bestätigt den geladenen korrigierten Build unter 0.1.18;
 die schwarze NVIDIA-Hauptansicht bleibt auf seinem System unverändert.
-Beide Versionen sind reguläre Releases und über **Updates → Flightdeck** verfügbar.
+Die aktuelle Version ist über **Updates → Flightdeck** verfügbar.
 [Details und Prüfungen](nvidia-renderer.md#3d-texture-layout-correction-0117).
 
-**Im Release-Kandidaten 0.1.19:** experimentelle GSX-Pro-Einrichtung für MSFS 2024 mit dem
+**In 0.1.19 enthalten:** experimentelle GSX-Pro-Einrichtung für MSFS 2024 mit dem
 offiziellen FSDT-Installer unter Mods. Die Installer-Vorbereitung wurde unter
-Wine geprüft; GSX im Simulator ist noch unbestätigt. In der stabilen Version 0.1.18 noch nicht enthalten.
+Wine geprüft; GSX im Simulator ist noch unbestätigt.
 [GSX einrichten und Testumfang](addons.de.md#gsx-pro-einrichten-experimentell).
 
 ## Loslegen

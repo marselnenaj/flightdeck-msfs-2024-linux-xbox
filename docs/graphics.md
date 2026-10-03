@@ -53,11 +53,10 @@ The 3D-texture correction is therefore not a fix for that reporting system.
 See [known issues](known-issues.md) and the
 [Steam compatibility reference](nvidia-steam-parity.md).
 
-The 0.1.19 release candidate offers an experimental
+Flightdeck 0.1.19 offers an experimental
 [Proton selection](runtime.md#experimental-proton-selection) for comparing whole
 Wine/DXVK/VKD3D versions with a separate profile and a return to Flightdeck.
-This feature is not part of the published 0.1.18 package and does not establish
-that the black main view is fixed.
+This comparison does not establish that the black main view is fixed.
 
 The local rendering regression covers mixed DirectX 11/12 devices, primary and
 secondary swapchains, resize and destruction. It passed on AMD hardware and does

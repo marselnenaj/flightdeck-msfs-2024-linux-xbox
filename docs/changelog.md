@@ -1,9 +1,12 @@
 # Changes and release status
 
-## 0.1.19 — release candidate
+## 0.1.19 — 3 October 2026
 
-This candidate combines experimental Proton selection and GSX Pro setup with a
-more compact launcher interface. It is prepared locally and not published yet.
+[Download Flightdeck 0.1.19](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.19).
+
+This release combines experimental Proton selection and GSX Pro setup with a
+more compact launcher interface. Update through **Updates → Flightdeck** or
+the full installer. This is a regular release on the stable update channel.
 
 - Select an installed Proton version under Setup, discovered in Steam libraries
   or chosen by folder. Each trial has its own Wine/DXVK/VKD3D copy and Windows
