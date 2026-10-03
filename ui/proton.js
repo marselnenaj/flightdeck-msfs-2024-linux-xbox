@@ -21,18 +21,21 @@ export function createProton({request,getStatus,isOnline,isReserved,isSetupActiv
     $('proton-current').textContent=bound?data.selected:'—';
     $('proton-compact-state').removeAttribute('data-i18n');
     $('proton-compact-state').textContent=bound?(data.error||(allowed.busy?data.job.message:data.selected)):t('Andere Proton-Version testen');
-    $('proton-select').disabled=!allowed.select;
+    $('proton-select').disabled=!allowed.select&&!allowed.restore;
     for(const option of $('proton-select').options){
       if(option.value==='')option.text=t('Proton-Version auswählen …');
-      if(option.value==='custom')option.text=t('Anderen Proton-Ordner wählen');
+      if(option.value==='default')option.text=t('Flightdeck (Xodus, Standard)');
+      if(option.value==='custom'){option.text=t('Anderen Proton-Ordner wählen');option.disabled=!allowed.select;}
       if(option.dataset.label){
-        option.disabled=!!data?.fenix&&option.dataset.fenix!=='true';
-        option.text=option.dataset.label+(data?.fenix?' · '+t(option.disabled?'Fenix-Patch fehlt':'Fenix verfügbar'):'');
+        const unsupported=!!data?.fenix&&option.dataset.fenix!=='true';
+        option.disabled=!allowed.select||unsupported;
+        option.text=option.dataset.label+(data?.fenix?' · '+t(unsupported?'Fenix-Patch fehlt':'Fenix verfügbar'):'');
       }
     }
     $('proton-path').disabled=!allowed.select;
     $('proton-path-field').hidden=$('proton-select').value!=='custom';
-    $('proton-apply').disabled=!allowed.select||!choice()||$('proton-select').selectedOptions[0]?.disabled===true;
+    $('proton-apply').disabled=$('proton-select').value==='default'?!allowed.restore:
+      !allowed.select||!choice()||$('proton-select').selectedOptions[0]?.disabled===true;
     $('proton-discover').disabled=!allowed.select;
     $('proton-restore').hidden=!data?.can_restore;
     $('proton-restore').disabled=!allowed.restore;
@@ -53,22 +56,25 @@ export function createProton({request,getStatus,isOnline,isReserved,isSetupActiv
         const result=await request('/api/proton');
         if(path!==getStatus()?.runtime.path)return;
         data=result;error='';
-        if(boundPath!==path){boundPath=path;await discover();}
+        if(boundPath!==path){boundPath=path;await discover(true);}
       }catch(problem){error=problem.message;}
       finally{loading=null;render();}
     })();return loading;
   }
-  async function discover() {
+  async function discover(initial=false) {
     try{
       const result=await request('/api/proton/discover'),previous=$('proton-select').value;
-      const options=[new Option(t('Proton-Version auswählen …'),'')];
+      const options=[new Option(t('Proton-Version auswählen …'),''),new Option(t('Flightdeck (Xodus, Standard)'),'default')];
       for(const item of result.choices||[]){
         const option=new Option(`${item.label} · ${item.version}`,item.path);
         option.dataset.label=option.text;option.dataset.fenix=String(item.fenix===true);options.push(option);
       }
       options.push(new Option(t('Anderen Proton-Ordner wählen'),'custom'));
       $('proton-select').replaceChildren(...options);
-      if(options.some(item=>item.value===previous))$('proton-select').value=previous;
+      const selected=initial||!options.some(item=>item.value===previous)
+        ? (data?.experimental?(result.choices||[]).find(item=>item.version===data.selected)?.path||'':'default')
+        : previous;
+      $('proton-select').value=selected;
     }catch(problem){error=problem.message;}
     render();
   }
@@ -76,14 +82,18 @@ export function createProton({request,getStatus,isOnline,isReserved,isSetupActiv
     const allowed=protonActions(data,getStatus(),{online:isOnline(),pending,reserved:isReserved()});
     if(!(mode==='default'?allowed.restore:allowed.select))return;
     pending=true;error='';render();
-    try{await request('/api/proton/select',{method:'POST',token:getStatus().csrf_token,body:{runtime_path:getStatus().runtime.path,mode,path:choice()}});await load();}
+    try{
+      await request('/api/proton/select',{method:'POST',token:getStatus().csrf_token,body:{runtime_path:getStatus().runtime.path,mode,path:mode==='default'?'':choice()}});
+      if(mode==='default')$('proton-select').value='default';
+      await load();
+    }
     catch(problem){error=problem.message;}
     finally{pending=false;await refreshStatus();render();}
   }
   $('proton-select').addEventListener('change',render);
   $('proton-path').addEventListener('input',render);
   $('proton-discover').addEventListener('click',()=>void discover());
-  $('proton-apply').addEventListener('click',()=>void action('proton'));
+  $('proton-apply').addEventListener('click',()=>void action($('proton-select').value==='default'?'default':'proton'));
   $('proton-restore').addEventListener('click',()=>void action('default'));
   $('proton-cancel').addEventListener('click',async()=>{
     if(!protonActions(data,getStatus(),{online:isOnline(),pending}).cancel)return;

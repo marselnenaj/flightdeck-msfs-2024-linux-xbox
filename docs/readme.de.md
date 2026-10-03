@@ -22,7 +22,7 @@ Flightdeck installiert und startet deine **gekaufte Xbox-PC-/Microsoft-Store-
 Version von MSFS 2024 oder 2020** unter Linux mit Wine/Proton. Mit dem Microsoft-Konto
 anmelden, das Spiel herunterladen und im Launcher starten.
 
-**Aktuelle stabile Version: [Flightdeck 0.1.20](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.20).**
+**Aktuelle stabile Version: [Flightdeck 0.1.21](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.21).**
 Aktualisiere über **Updates → Flightdeck** oder verwende den vollständigen Installer.
 **Neu in 0.1.20:** Proton-Wechsel mit erhaltenen Add-ons und passenden Fenix-Patches für Experimental und CachyOS. [Änderungen](changelog.md#0120--3-october-2026).
 

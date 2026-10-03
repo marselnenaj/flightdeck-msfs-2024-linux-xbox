@@ -110,7 +110,7 @@ const server = createServer(async (req,res) => {
       posts.push({path:url.pathname,token:req.headers['x-flightdeck-token'],body:JSON.parse(body)});
       if(url.pathname==='/api/proton/select') {
         const data=JSON.parse(body);assert.equal(data.runtime_path,status.runtime.path);
-        if(data.mode==='default'){proton={...proton,selected:'Flightdeck (Xodus)',experimental:false,can_restore:false,job:null};status.setup.busy=false;}
+        if(data.mode==='default'){assert.equal(data.path,'');proton={...proton,selected:'Flightdeck (Xodus)',experimental:false,can_restore:false,error:'',job:null};status.setup.busy=false;}
         else{assert.equal(data.path,'/fixture/Proton Experimental');proton={...proton,job:{id:'proton-test',state:'preparing',runtime_path:status.runtime.path,message:'Preparing Proton'}};status.setup.busy=true;}
         res.end(JSON.stringify({ok:true}));return;
       }
@@ -423,6 +423,7 @@ try {
   await call('Emulation.setDeviceMetricsOverride',{width:1536,height:1024,deviceScaleFactor:1,mobile:false});await language('de');await route('overview');
   await route('installation');await until(()=>evaluate(`!document.getElementById('proton-select').disabled`),'Proton selection unavailable');
   await click('proton-toggle');
+  await check('Flightdeck is listed and preselected when its environment is active',`document.getElementById('proton-select').value==='default' && document.querySelector('#proton-select option[value="default"]').textContent==='Flightdeck (Xodus, Standard)' && document.getElementById('proton-apply').disabled`);
   proton={...proton,fenix:true};
   await refresh(`!document.getElementById('proton-fenix').hidden`);
   await check('Fenix keeps supported Proton choices available',`!document.getElementById('proton-select').disabled && !document.querySelector('#proton-select option[value="/fixture/Proton Experimental"]').disabled && document.querySelector('#proton-select option[value="/fixture/Other Proton"]').disabled`);
@@ -435,7 +436,15 @@ try {
   await call('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});await language('en');
   await evaluate(`document.getElementById('proton-card').scrollIntoView({block:'start'})`);
   await check('Proton trials are translated and fit mobile width',`document.documentElement.scrollWidth<=innerWidth && document.getElementById('proton-title').textContent==='Proton version (experimental)'`);await screenshot('proton-mobile-en.png');
-  await click('proton-restore');await refresh(`document.getElementById('proton-current').textContent==='Flightdeck (Xodus)'`);
+  await evaluate(`document.getElementById('proton-select').value='default';document.getElementById('proton-select').dispatchEvent(new Event('change'))`);
+  await check('The standard environment can be selected alongside installed Proton builds',`!document.getElementById('proton-apply').disabled && document.querySelector('#proton-select option[value="default"]').textContent==='Flightdeck (Xodus, default)'`);
+  await click('proton-apply');await refresh(`document.getElementById('proton-current').textContent==='Flightdeck (Xodus)'`);
+  assert.deepEqual(posts.at(-1).body,{runtime_path:status.runtime.path,mode:'default',path:''});
+  proton={...proton,error:'Interrupted switch',can_restore:true};status.cloud={...autoIdle(),state:'attention'};
+  await refresh(`!document.getElementById('proton-error').hidden && !document.getElementById('proton-restore').disabled`);
+  await check('Flightdeck selection remains available for recovery while other runners are blocked',`!document.getElementById('proton-select').disabled && !document.getElementById('proton-apply').disabled && !document.querySelector('#proton-select option[value="default"]').disabled && document.querySelector('#proton-select option[value="/fixture/Proton Experimental"]').disabled && document.querySelector('#proton-select option[value="custom"]').disabled`);
+  await click('proton-restore');await refresh(`document.getElementById('proton-error').hidden`);
+  status.cloud=autoIdle();
   proton={...proton,fenix:false};
   await call('Emulation.setDeviceMetricsOverride',{width:1536,height:1024,deviceScaleFactor:1,mobile:false});await language('de');
   results.push('Proton selection reserves the installation and can return to the original environment');

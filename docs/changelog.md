@@ -1,5 +1,13 @@
 # Changes and release status
 
+## 0.1.21 — 3 October 2026
+
+- Include **Flightdeck (Xodus, default)** directly in the Proton selector and
+  preselect the active environment when available.
+- Use the existing return-to-Flightdeck operation when applying that choice,
+  preserving the current add-ons and settings. Keep recovery available when
+  an interrupted switch or cloud-sync issue blocks other runner choices.
+
 ## 0.1.20 — 3 October 2026
 
 - Carry the current Windows profile across Proton changes and back to Flightdeck,

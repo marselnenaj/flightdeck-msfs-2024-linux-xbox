@@ -29,6 +29,9 @@ Open **Setup → Proton version (experimental)**. Flightdeck discovers installed
 Proton builds in Steam libraries, including Flatpak Steam and
 `compatibilitytools.d`. You can also enter a complete Wine/DXVK/VKD3D runner
 folder. Steam or your existing Proton installer manages its downloads.
+The selector includes **Flightdeck (Xodus, default)** and preselects the active
+environment when available. Choose the default entry to return from another
+Proton build; the separate recovery button remains available as well.
 
 Starting with 0.1.20, switching copies the **current** Windows profile and the
 chosen runner into `local/proton-tests/`. Aircraft, installed add-ons, sign-ins
