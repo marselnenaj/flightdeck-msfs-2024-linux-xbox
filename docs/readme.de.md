@@ -22,8 +22,16 @@ Flightdeck installiert und startet deine **gekaufte Xbox-PC-/Microsoft-Store-
 Version von MSFS 2024 oder 2020** unter Linux mit Wine/Proton. Mit dem Microsoft-Konto
 anmelden, das Spiel herunterladen und im Launcher starten.
 
-**Aktuelle stabile Version: [Flightdeck 0.1.21](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.21).**
+**Aktuelle stabile Version: [Flightdeck 0.1.22](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.22).**
 Aktualisiere über **Updates → Flightdeck** oder verwende den vollständigen Installer.
+Der **Entwicklungsstand 0.2.0-dev.1** verwendet jetzt Rust für Backend, Installer
+und Runtime-Helfer. Dieses Paket benötigt kein Python und ist noch nicht
+veröffentlicht. [Status](rust-migration.md) · [Build-Anleitung](../BUILDING.md).
+Das **Zwischenupdate 0.1.22** bereitet den Wechsel zu Rust über den vorhandenen
+Updater vor und erhält die bestehende Installation. Ältere Versionen erhalten
+zuerst 0.1.22, auch wenn bereits eine stabile Rust-Version verfügbar ist. Nach
+dem Neustart erkennt 0.1.22 dann dieses nächste Update.
+[Gestaffelte Veröffentlichung](rust-transition.md).
 **Neu in 0.1.20:** Proton-Wechsel mit erhaltenen Add-ons und passenden Fenix-Patches für Experimental und CachyOS. [Änderungen](changelog.md#0120--3-october-2026).
 
 **0.1.18** ergänzt die optionale VR-Einrichtung für WiVRn, SteamVR und Monado,
@@ -121,12 +129,15 @@ weiterhin erforderlich.
 <details>
 <summary><strong>Systemanforderungen und weitere Installationswege</strong></summary>
 
-Das aktuelle Paket benötigt Linux x86-64 mit **glibc 2.39+**, Python 3.10.12+,
+Die Pakete benötigen Linux x86-64 mit **glibc 2.39+**,
 Vulkan-Grafiktreiber und eine grafische Sitzung mit Linux-Secret-Service-
 Schlüsselbund. GTK 3, WebKitGTK 4.1, OpenSSL 3 sowie GStreamer Good/Bad/Libav
 müssen vorhanden sein. Für die Erstinstallation mindestens **100 GiB freien
 Speicher** vorsehen; Updates und Reparaturen behalten zusätzlich das bisherige
 Spielpaket.
+Die veröffentlichte Version 0.1.22 benötigt zusätzlich Python 3.10.12+;
+das native Entwicklungspaket 0.2.0 benötigt keinen Python-Interpreter.
+Sein optionaler grafischer Installer verwendet Zenity oder KDialog.
 
 Getestet wurde Arch Linux. Andere Distributionen benötigen kompatible
 Bibliotheken und sind noch nicht bestätigt. Die Einrichtung zeigt fehlende
@@ -234,8 +245,8 @@ Dateien, aber keine Aktivierung oder funktionierenden Cockpit-Systeme.
 
 ## Lokale Daten
 
-Der Launcher verwendet die Python-Standardbibliothek und lokale HTML-, CSS- und
-JavaScript-Dateien. Sein Dienst lauscht nur auf Loopback. Herkunftsprüfungen und
+Die stabile Version verwendet Python, der native Entwicklungsstand Rust. Beide
+verwenden lokale HTML-, CSS- und JavaScript-Dateien und lauschen nur auf Loopback. Herkunftsprüfungen und
 ein Sitzungstoken schützen Aktionen. Der Launcher enthält keine Telemetrie und
 braucht kein CDN. Microsoft-Anmeldung, Downloads und Online-Inhalte des Spiels
 verwenden weiterhin ihre jeweiligen Netzwerkdienste.

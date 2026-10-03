@@ -65,7 +65,7 @@ def command_dialog(kind, text, language, *, remove=False):
 def launch(command, explicit_language):
     if command is None:
         return
-    arguments = [sys.executable, command]
+    arguments = [command]
     if explicit_language:
         arguments += ["--language", explicit_language]
     # The installed wrapper selects the CLI's detached desktop mode. Do not

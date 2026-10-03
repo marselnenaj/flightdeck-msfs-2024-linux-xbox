@@ -90,7 +90,7 @@ class UpdateTests(unittest.TestCase):
         for value in (b"not-json", b"null", b"x" * (2 * 1024 * 1024 + 1)):
             with patch.object(updates, "open_url", return_value=io.BytesIO(value)), self.assertRaises(updates.UpdateError):
                 updates.latest_release()
-        with patch.object(updates, "open_url", return_value=io.BytesIO(json.dumps(metadata()).encode())) as remote:
+        with patch.object(updates, "open_url", return_value=io.BytesIO(json.dumps([metadata()]).encode())) as remote:
             self.assertEqual(updates.latest_release()["version"], "0.1.5")
             remote.assert_called_once_with(updates.API)
 
@@ -125,6 +125,56 @@ class UpdateTests(unittest.TestCase):
         source = updates.extract(self.archive(), self.root / "good", "0.1.5", self.cancel)
         self.assertTrue((source / "scripts/install-launcher.py").is_file())
         self.assertFalse((self.root / "escaped").exists())
+
+    def test_release_feed_selects_newest_stable_full_package_without_skipping_checks(self):
+        bridge, native = metadata(tag="v0.1.22"), metadata(tag="v0.2.0")
+        preview = {**metadata(tag="v0.3.0"), "prerelease": True}
+        draft = {**metadata(tag="v0.4.0"), "draft": True}
+        unrelated = {**metadata(tag="v0.5.0"), "assets": []}
+        for values in ([native, bridge, preview, draft, unrelated], [bridge, native]):
+            self.assertEqual(updates.stable_release(values)["version"], "0.2.0")
+        broken = metadata(tag="v0.2.0")
+        broken["assets"][0]["digest"] = "sha256:bad"
+        for values in (None, {}, [], [preview, draft], [native, native], [native] * 51, [bridge, broken]):
+            with self.subTest(values=values), self.assertRaises(updates.UpdateError):
+                updates.stable_release(values)
+
+    def native_archive(self, *, version="0.2.0", raw=None, extra=()):
+        binary = bytearray(64)
+        binary[:6] = b"\x7fELF\x02\x01"
+        binary[16:20] = b"\x03\0\x3e\0"
+        package = {"schema": 1, "kind": "rust-launcher", "version": version,
+                   "files": {"bin/flightdeck": hashlib.sha256(binary).hexdigest()}}
+        path = self.root / "native.tar.gz"
+        with tarfile.open(path, "w:gz") as out:
+            for name, data in [("bin/flightdeck", bytes(binary)),
+                               ("FLIGHTDECK-PACKAGE.json", raw if raw is not None else json.dumps(package).encode()), *extra]:
+                item = tarfile.TarInfo("flightdeck-linux/" + name)
+                item.size = len(data)
+                item.mode = 0o644  # The old extractor deliberately drops execute bits.
+                out.addfile(item, io.BytesIO(data))
+        return path
+
+    def test_native_archive_checks_identity_binary_and_permissions_before_execution(self):
+        from flightdeck import native_update
+        source = updates.extract(self.native_archive(), self.root / "native", "0.2.0", self.cancel)
+        self.assertEqual(native_update.executable(source), source / "bin/flightdeck")
+        self.assertTrue(os.access(source / "bin/flightdeck", os.X_OK))
+        self.assertFalse((source / "scripts/install-launcher.py").exists())
+        with self.assertRaises(updates.UpdateError):
+            updates.extract(self.native_archive(), self.root / "wrong-native-version", "0.2.1", self.cancel)
+        for index, raw in enumerate((b'null', b'{"schema":1,"schema":1}', b'NaN', b'{}')):
+            with self.assertRaises(updates.UpdateError):
+                updates.extract(self.native_archive(raw=raw, extra=(("flightdeck/__init__.py", b'__version__ = "0.2.0"\n'),)),
+                                self.root / f"invalid-native-{index}", "0.2.0", self.cancel)
+        binary = source / "bin/flightdeck"
+        binary.write_bytes(b"#!/bin/sh\nexit 0\n")
+        with self.assertRaises(native_update.PackageError):
+            native_update.executable(source)
+        binary.unlink()
+        binary.symlink_to(sys.executable)
+        with self.assertRaises(native_update.PackageError):
+            native_update.executable(source)
 
     def make_manager(self):
         launcher = Launcher(self.root / "state")

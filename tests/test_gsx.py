@@ -35,10 +35,8 @@ class GSXTests(unittest.TestCase):
         self.directory.mkdir(parents=True)
         (self.directory / "Couatl_Updater.exe").write_bytes(b"MZ")
         (self.directory / "QlmLicenseLib.dll").write_bytes(b"MZ")
-        (self.prefix / "system.reg").write_text(r'[Software\\Microsoft\\NET Framework Setup\\NDP\\v4\\Full]' + '\n"Release"=dword:00080eb0\n')
-        clr = self.prefix / "drive_c/windows/Microsoft.NET/Framework64/v4.0.30319/clr.dll"
-        clr.parent.mkdir(parents=True)
-        clr.write_bytes(b"MZ")
+        from test_framework import framework
+        framework(self.prefix)
 
     def package(self):
         package = self.directory / "MSFS/fsdreamteam-gsx-pro"

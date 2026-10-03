@@ -8,11 +8,11 @@ mocked request is not evidence that a feature works in the simulator.
 
 | Location | Responsibility |
 | --- | --- |
-| `flightdeck/` | Local HTTP API, runtime checks, process ownership and save backups |
-| `flightdeck/games.py` | Fixed simulator identities and edition-bound runtime paths |
-| `flightdeck/runtime_components.py` | Checked native/script updates for idle managed runtimes |
-| `flightdeck/fenix.py`, `flightdeck/_fenix/` | Fenix setup jobs and the vendored patch installer engine |
-| `flightdeck/gsx.py`, `flightdeck/gsx_core.py`, `flightdeck/gsx_processes.py` | Experimental FSDT preparation, official GSX startup settings and installer lifecycle |
+| `native/` | Rust backend, CLI, desktop service, installer and runtime helpers |
+| `native/games.rs`, `native/components.rs` | Simulator identities and checked runtime updates |
+| `native/fenix.rs`, `native/framework_maintenance.rs`, `native/gsx.rs` | Add-on setup, automatic .NET repair and recovery |
+| `native/cloud_*.rs` | Cloud protocol, comparison, transactions and automatic sync |
+| `flightdeck/` | Python compatibility reference and test oracle |
 | `ui/` | Browser interface, using the local API |
 | `compat/runtime/` | Native Wine/GDK bridge, asynchronous results and local saves |
 | `compat/patches/` | Changes against the pinned WineGDK and Xodus sources |
@@ -34,7 +34,8 @@ an unavailable response must not be converted into an empty successful query.
    notices and use public documentation or freely licensed interface sources.
 3. Run the affected checks from [BUILDING.md](../BUILDING.md). For browser
    changes, run `node --test ui/tests/*.test.mjs` and
-   `node ui/tests/browser-test.mjs` (Chromium required), then inspect both
+   `FLIGHTDECK_TEST_BINARY=target/debug/flightdeck-rust node ui/tests/browser-test.mjs`
+   (Chromium required), then inspect both
    languages and narrow layouts using synthetic data.
 4. When changing a compatibility patch, stage it from the pinned upstream commit
    into a new directory. Update the patch checksum and source-delta hashes, and
@@ -75,18 +76,10 @@ use the same explicit allowlist and record every included file's hash:
 python3 scripts/source-release.py --output build/flightdeck-source.tar.gz
 ```
 
-To assemble an installer, combine that archive with the native component package
-matching `compat/bootstrap.lock.json`:
-
-```sh
-python3 scripts/full-installer-release.py \
-  --source build/flightdeck-source.tar.gz \
-  --native build/flightdeck-compat-0.1.9-linux-x86_64.tar.gz \
-  --graphics build/graphics \
-  --output build/Flightdeck-Linux-x86_64.tar.gz
-```
-
-The graphics directory must contain the [pinned renderer bundle](nvidia-renderer.md).
+Build and package the Rust launcher with `scripts/build-native.py` and
+`scripts/native-release.py` as described in [BUILDING.md](../BUILDING.md#native-packages).
+The full package combines the native launcher with the component archive
+matching `compat/bootstrap.lock.json` and the [pinned renderer bundle](nvidia-renderer.md).
 These commands create local archives. Binary distributions also require the
 matching corresponding sources and original notices described in
 [binary package provenance](binary-release.md). Preserve the component licenses
@@ -112,7 +105,9 @@ Flightdeck; do not let the two engine copies drift.
    integration in the next Flightdeck source/full package. Publishing the patch
    alone does not update an already installed Flightdeck launcher.
 
-Flightdeck executes its reviewed, vendored Python engine. It extracts only the
-fixed Wine/window-helper/launch-script payload named in the manifest; downloaded
-Python code is not imported. Fenix aircraft, Microsoft prerequisites, fonts,
+The native launcher implements the installer contract in Rust. The vendored
+Python engine remains the compatibility reference. The native installer
+extracts only fixed Wine/window-helper payloads named in the manifest and
+deploys current launcher-owned scripts; downloaded Python code is not imported.
+Fenix aircraft, Microsoft prerequisites, fonts,
 accounts and Wine profiles must not enter either project's release archives.

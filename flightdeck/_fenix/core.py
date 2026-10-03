@@ -317,6 +317,7 @@ class Wine:
             stdout=self.log, stderr=subprocess.STDOUT, timeout=timeout)
         if result.returncode not in accepted:
             raise PatchError("Windows setup failed (exit %d). See the private Fenix setup log." % result.returncode)
+        return result.returncode
 
     def reg(self, key, name, value, kind="REG_SZ"):
         self.run("reg", "add", key, "/v", name, "/t", kind, "/d", value, "/f")
@@ -333,50 +334,193 @@ class Wine:
                        stdout=self.log, stderr=subprocess.STDOUT, timeout=30, check=True)
 
 
-def has_framework(prefix):
+def _framework_path(prefix, architecture, name):
+    """Wine paths are case-insensitive, even on a case-sensitive Linux host."""
+    root = Path(prefix).resolve(strict=True)
+    path = root
+    for part in ("drive_c", "windows", "Microsoft.NET", architecture, "v4.0.30319", name):
+        matches = []
+        with os.scandir(path) as entries:
+            for count, entry in enumerate(entries):
+                if count >= 4096:
+                    raise PatchError("Too many entries in the .NET installation directory.")
+                if entry.name.casefold() == part.casefold():
+                    matches.append(entry.name)
+        if len(matches) != 1:
+            raise PatchError("A .NET Framework file is missing or ambiguous.")
+        path /= matches[0]
+        # The staged copy must not read or repair another profile through links.
+        if path.is_symlink() or not path.resolve().is_relative_to(root):
+            raise PatchError("A .NET Framework path points outside the copied profile.")
+    return regular(path, 128 * 1024 * 1024)
+
+
+def framework_status(prefix):
+    """Inspect both CLR architectures without executing Wine or exposing paths."""
+    result = {view: {"release": 0, "clr": False} for view in ("x86", "x64")}
     try:
         content = regular(prefix / "system.reg", 64 * 1024 * 1024).read_text(errors="replace")
-        section = re.search(r"\[Software\\\\Microsoft\\\\NET Framework Setup\\\\NDP\\\\v4\\\\Full\][^\[]*", content)
-        release = re.search(r'"Release"=dword:([0-9a-fA-F]+)', section.group(0)) if section else None
-        return bool(release and int(release.group(1), 16) >= 528040 and
-                    (prefix / "drive_c/windows/Microsoft.NET/Framework64/v4.0.30319/clr.dll").is_file())
-    except OSError:
+        keys = {view: (r"Software\\" + middle + r"Microsoft\\NET Framework Setup\\NDP\\v4\\Full").casefold()
+                for view, middle in (("x64", ""), ("x86", r"Wow6432Node\\"))}
+        sections = {}
+        current = None
+        for line in content.splitlines():
+            if line.startswith("["):
+                header = re.match(r"^\[([^\]\r\n]+)\]", line)
+                current = header[1].casefold() if header else None
+                if current not in keys.values():
+                    current = None
+                if current is not None:
+                    sections.setdefault(current, []).append([])
+            elif current is not None and line.lower().startswith('"release"='):
+                sections[current][-1].append(line)
+        for view, key in keys.items():
+            found = sections.get(key, [])
+            if len(found) == 1 and len(found[0]) == 1:
+                values = re.findall(r'(?im)^"Release"=dword:([0-9a-f]{1,8})\s*$', "\n".join(found[0]))
+                if len(values) == 1:
+                    result[view]["release"] = int(values[0], 16)
+    except (OSError, PatchError, UnicodeError):
+        pass
+    for view, architecture in (("x64", "Framework64"), ("x86", "Framework")):
+        try:
+            with _framework_path(prefix, architecture, "clr.dll").open("rb") as stream:
+                result[view]["clr"] = stream.read(2) == b"MZ"
+        except (OSError, PatchError):
+            pass
+    result["ready"] = all(value["release"] >= 528040 and value["clr"] for value in result.values())
+    return result
+
+
+def has_framework(prefix):
+    return framework_status(prefix)["ready"]
+
+
+def _framework_settings(wine):
+    wine.reg(r"HKCU\Software\Wine\DllOverrides", "mscoree", "native")
+    for key in (r"HKLM\Software\Microsoft\.NETFramework", r"HKLM\Software\Wow6432Node\Microsoft\.NETFramework"):
+        wine.reg(key, "OnlyUseLatestCLR", "1", "REG_DWORD")
+
+
+def _framework_probe(wine):
+    if not has_framework(wine.prefix):
         return False
+    try:
+        # Microsoft's managed compiler exercises real CLR startup in both views.
+        # A registry marker alone cannot establish a functioning installation.
+        for architecture in ("Framework", "Framework64"):
+            compiler = _framework_path(wine.prefix, architecture, "csc.exe")
+            wine.run(compiler, "/nologo", "/help", timeout=120)
+        return True
+    except (OSError, PatchError, subprocess.TimeoutExpired):
+        return False
+
+
+def _framework_restart(wine):
+    # Complete pending file replacements and RunOnce inside this staging prefix.
+    # -u updates Wine's files; -r performs the pending Windows restart work.
+    wine.run("wineboot", "-r", timeout=180)
+    wine.stop()  # Also flush the registry before inspecting system.reg.
+
+
+def _framework_reinstall(wine, packages, progress):
+    """Last resort, exclusively inside the uncommitted copy owned by the caller."""
+    status = framework_status(wine.prefix)
+    if any(status[view]["release"] >= 533320 and status[view]["clr"] for view in ("x86", "x64")):
+        raise PatchError("A newer .NET Framework is installed; the pinned 4.8 package cannot repair it safely.")
+    progress("Reinstalling Microsoft .NET in the copied profile to complete the repair …")
+    options = {"env": {"WINEDLLOVERRIDES": "fusion=b;winemenubuilder.exe=d"}, "accepted": (0, 194)}
+    if any(status[view]["release"] >= 528040 for view in ("x86", "x64")):
+        wine.run(packages["NDP48-x86-x64-AllOS-ENU.exe"], "/uninstall", "/q", "/norestart", **options)
+        _framework_restart(wine)
+    wine.reg(r"HKCU\Software\Wine", "Version", "winxp")
+    wine.run(packages["dotNetFx40_Full_x86_x64.exe"], "/q", "/c:install.exe /q /norestart", **options)
+    _framework_settings(wine)
+    _framework_restart(wine)
+    wine.reg(r"HKCU\Software\Wine", "Version", "win7")
 
 
 def prepare_framework(wine, cache, progress):
     if has_framework(wine.prefix):
+        _framework_settings(wine)
+    if _framework_probe(wine):
         progress("Microsoft .NET Framework 4.8 is already installed.")
         return
+    progress("Checking and completing pending Microsoft .NET setup …")
+    _framework_restart(wine)
+    if has_framework(wine.prefix):
+        _framework_settings(wine)
+    if _framework_probe(wine):
+        progress("Microsoft .NET Framework 4.8 is ready.")
+        return
+    listing = subprocess.run([str(wine_binary(wine.runner)), "uninstaller", "--list"],
+                             env=wine.env, capture_output=True, timeout=120, check=True).stdout.decode(errors="replace")
+    removed_mono = False
+    for line in listing.splitlines():
+        guid, _, title = line.partition("|")
+        if title.startswith("Wine Mono") and re.fullmatch(r"\{[a-fA-F0-9-]{36}\}", guid):
+            wine.run("uninstaller", "--silent", "--remove", guid)
+            removed_mono = True
+    if removed_mono:
+        # Wine Mono advertises .NET 4.8.1 registry values, without a native CLR.
+        # Flush its removal before deciding whether a newer Microsoft CLR exists.
+        wine.stop()
+    initial = framework_status(wine.prefix)
+    if any(initial[view]["release"] >= 533320 and initial[view]["clr"] for view in ("x86", "x64")):
+        raise PatchError("A newer .NET Framework is installed; the pinned 4.8 package cannot repair it safely.")
     packages = {}
     for name, (url, expected) in DOWNLOADS.items():
         progress("Downloading Microsoft " + name)
         packages[name] = download(url, cache / name, expected)
     progress("Installing Microsoft .NET Framework. This can take several minutes …")
-    listing = subprocess.run([str(wine_binary(wine.runner)), "uninstaller", "--list"],
-                             env=wine.env, capture_output=True, timeout=120, check=True).stdout.decode(errors="replace")
-    for line in listing.splitlines():
-        guid, _, title = line.partition("|")
-        if title.startswith("Wine Mono") and re.fullmatch(r"\{[a-fA-F0-9-]{36}\}", guid):
-            wine.run("uninstaller", "--silent", "--remove", guid)
-    wine.reg(r"HKCU\Software\Wine", "Version", "winxp")
     try:
-        wine.run(packages["dotNetFx40_Full_x86_x64.exe"], "/q", "/c:install.exe /q /norestart",
-                 env={"WINEDLLOVERRIDES": "fusion=b;winemenubuilder.exe=d"}, accepted=(0, 194))
-        wine.reg(r"HKCU\Software\Wine\DllOverrides", "mscoree", "native")
-        for key in (r"HKLM\Software\Microsoft\.NETFramework", r"HKLM\Software\Wow6432Node\Microsoft\.NETFramework"):
-            wine.reg(key, "OnlyUseLatestCLR", "1", "REG_DWORD")
+        initial = framework_status(wine.prefix)
+        # Wine/Mono may retain advertised release values after removal. Only
+        # native CLR files establish an existing prerequisite chain; metadata
+        # without either CLR must not suppress the .NET 4.0 bootstrap.
+        if not any(initial[view]["clr"] for view in ("x86", "x64")):
+            wine.reg(r"HKCU\Software\Wine", "Version", "winxp")
+            wine.run(packages["dotNetFx40_Full_x86_x64.exe"], "/q", "/c:install.exe /q /norestart",
+                     env={"WINEDLLOVERRIDES": "fusion=b;winemenubuilder.exe=d"}, accepted=(0, 194))
+            _framework_restart(wine)
+        _framework_settings(wine)
         wine.reg(r"HKCU\Software\Wine", "Version", "win7")
-        wine.run(packages["NDP48-x86-x64-AllOS-ENU.exe"], "/q", "/norestart",
-                 env={"WINEDLLOVERRIDES": "fusion=b;winemenubuilder.exe=d"}, accepted=(0, 194))
+        failure = None
+        for attempt in range(2):
+            status = framework_status(wine.prefix)
+            repair = any(status[view]["release"] >= 528040 for view in ("x86", "x64"))
+            if attempt or repair:
+                progress("Repairing Microsoft .NET Framework 4.8 automatically …")
+            try:
+                # Wine can report successful MSI repair while leaving missing
+                # files absent. A final reinstall restores the prerequisite
+                # chain; it never replaces the user's active Windows profile.
+                if attempt:
+                    _framework_reinstall(wine, packages, progress)
+                args = ("/repair",) if repair and not attempt else ()
+                wine.run(packages["NDP48-x86-x64-AllOS-ENU.exe"], *args, "/q", "/norestart",
+                         env={"WINEDLLOVERRIDES": "fusion=b;winemenubuilder.exe=d"}, accepted=(0, 194))
+                failure = None
+            except PatchError as error:
+                failure = error
+            except subprocess.TimeoutExpired:
+                failure = PatchError("The Microsoft .NET installer exceeded its time limit.")
+                wine.stop()
+            _framework_settings(wine)
+            _framework_restart(wine)
+            if _framework_probe(wine):
+                progress("Microsoft .NET Framework 4.8 was verified for 32-bit and 64-bit applications.")
+                return
+        state = framework_status(wine.prefix)
+        # Fixed numeric/boolean diagnostics only; no registry/account contents.
+        detail = "; ".join("%s release=%d CLR=%s" % (view, state[view]["release"], "yes" if state[view]["clr"] else "no")
+                           for view in ("x86", "x64"))
+        raise PatchError("Microsoft .NET Framework 4.8 could not be repaired automatically (%s). "
+                         "The original profile is unchanged. See the private Fenix setup log.%s" %
+                         (detail, " " + str(failure) if failure else ""))
     finally:
         wine.reg(r"HKCU\Software\Wine", "Version", "win10")
-    if not has_framework(wine.prefix):
-        # Wine may not have flushed the registry yet.
-        wine.run("wineboot", "-u")
         wine.stop()
-    if not has_framework(wine.prefix):
-        raise PatchError("Microsoft .NET Framework 4.8 was not detected after setup.")
 
 
 def prepare_geometry(wine, cache, bundle, progress):
@@ -523,6 +667,59 @@ def replace_link(path, target):
         temp.unlink(missing_ok=True)
 
 
+def retryable_preparation(root, state):
+    """Only abandon a staging attempt when nothing was published to the runtime."""
+    try:
+        if (state.get("state") != "preparing" or state.get("upgrade_backup") or state.get("migrated")
+                or not re.fullmatch(r"local/fenix-patch-[0-9]{8}T[0-9]{6}-[0-9a-f]{8}", state.get("work", ""))
+                or not re.fullmatch(r"private/fenix-patch-backup-[0-9]{8}T[0-9]{6}-[0-9a-f]{8}", state.get("backup", ""))
+                or not re.fullmatch(r"local/msfs-prefix.before-fenix-[0-9]{8}T[0-9]{6}-[0-9a-f]{8}", state.get("previous_prefix", ""))):
+            return False
+        prefix = root / "local/msfs-prefix"
+        if ([prefix.stat().st_dev, prefix.stat().st_ino] != state.get("original_prefix_id")
+                or os.readlink(root / "runner") != state.get("previous_runner")
+                or (root / state["previous_prefix"]).exists() or (root / state["previous_prefix"]).is_symlink()):
+            return False
+        for relative in (state["work"], state["backup"]):
+            path = contained(root, relative)
+            if path.is_symlink() or not path.is_dir() or path.stat().st_uid != os.getuid():
+                return False
+        backup = root / state["backup"]
+        for name in ("launch-msfs.sh", "xodus-wine-launch"):
+            if digest(regular(root / "tools" / name)) != digest(regular(backup / name)):
+                return False
+        staged = root / state["work"] / "prefix"
+        if staged.is_symlink() or (staged.exists() and (not staged.is_dir() or staged.stat().st_uid != os.getuid())):
+            return False
+        # A same-inode alias must never let staging cleanup stop the live profile.
+        if staged.exists() and staged.samefile(prefix):
+            return False
+        return True
+    except (OSError, ValueError, TypeError, PatchError):
+        return False
+
+
+def _retry_preparation(root, state, progress):
+    if not retryable_preparation(root, state):
+        raise PatchError("A previous patch transaction exists. Restore it before reinstalling.")
+    progress("Retrying interrupted Fenix preparation automatically; the original profile is retained …")
+    staged = root / state["work"] / "prefix"
+    backup = root / state["backup"]
+    if staged.exists():
+        fd = os.open(backup / "retry.log", os.O_WRONLY | os.O_CREAT | os.O_APPEND | os.O_NOFOLLOW, 0o600)
+        try:
+            Wine(staged, (root / "runner").resolve(strict=True), fd).stop()
+        finally:
+            os.close(fd)
+        ensure_idle(staged)
+    if not retryable_preparation(root, state):
+        raise PatchError("The original profile changed; automatic retry was stopped.")
+    write_json(backup / "interrupted.json", state)
+    (root / MARKER).unlink()
+    # Keep the failed copy and logs. The next attempt always starts from the
+    # unchanged active profile, so partial .NET changes never become live.
+
+
 def install(runtime, bundle, progress=lambda _: None):
     host_check()
     bundle = verify_bundle(bundle)
@@ -532,11 +729,13 @@ def install(runtime, bundle, progress=lambda _: None):
         upgrade = None
         if marker.exists():
             state = read_json(marker)
-            if state.get("state") == "installed" and state.get("version") == lock["version"]:
+            if retryable_preparation(root, state):
+                _retry_preparation(root, state, progress)
+            elif state.get("state") == "installed" and state.get("version") == lock["version"]:
                 verify_installed(root, state)
                 progress("This patch version is already installed.")
                 return
-            if state.get("state") == "installed" and state.get("version") in lock.get("previous_releases", {}):
+            elif state.get("state") == "installed" and state.get("version") in lock.get("previous_releases", {}):
                 verify_installed(root, state)
                 upgrade = state
             else:
@@ -544,7 +743,9 @@ def install(runtime, bundle, progress=lambda _: None):
         original_runner = (root / "runner").resolve(strict=True)
         variant = upgrade.get("variant") if upgrade else runner_variant(original_runner)
         lock = manifest(variant)
+        from .. import runtime_scripts
         for name, accepted in lock["accepted_scripts"].items():
+            accepted = [*accepted, *runtime_scripts.accepted(name)]
             if upgrade is not None:
                 accepted = [*accepted, lock["previous_releases"][upgrade["version"]]["integration"][name]]
             if digest(regular(root / "tools" / name)) not in accepted:
@@ -617,7 +818,7 @@ def install(runtime, bundle, progress=lambda _: None):
             os.rename(staged, prefix)
             replace_link(root / "runner", runner)
             for name in ("launch-msfs.sh", "xodus-wine-launch"):
-                atomic(root / "tools" / name, (bundle / "integration" / name).read_bytes(), 0o700)
+                atomic(root / "tools" / name, runtime_scripts.current(name).read_bytes(), 0o700)
             imported = root / "private/import-manifest.json"
             if imported.exists():
                 info = read_json(imported)
@@ -636,7 +837,9 @@ def install(runtime, bundle, progress=lambda _: None):
         except BaseException:
             # Preserve a journal and all profiles; restore is explicitly available
             # after process failure or power loss, without guessing what finished.
-            progress("Setup did not finish. The original profile or its backup is retained. Use Restore.")
+            progress("Setup did not finish. The original profile is unchanged. Use Repair setup to retry."
+                     if retryable_preparation(root, state) else
+                     "Setup did not finish. The original profile or its backup is retained. Use Restore.")
             raise
 
 
@@ -804,6 +1007,7 @@ def snapshot(runtime):
             state = read_json(marker)
             result.update(state=state.get("state", "interrupted"), installed=state.get("state") == "installed",
                           configured=state.get("configured") is True, can_restore=not state.get("migrated"),
+                          can_retry=retryable_preparation(root, state),
                           installed_version=state.get("version"),
                           update_available=state.get("state") == "installed" and
                           state.get("version") in manifest().get("previous_releases", {}))

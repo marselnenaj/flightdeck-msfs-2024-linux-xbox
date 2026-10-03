@@ -27,12 +27,12 @@ for ((flightdeck_index=0; flightdeck_index < ${#flightdeck_arguments[@]}; flight
   flightdeck_language=$flightdeck_selected
 done
 flightdeck_source=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
-if ! command -v python3 >/dev/null 2>&1 || ! python3 -c 'import sys; sys.exit(sys.version_info < (3, 10))'; then
+if [[ ! -x "$flightdeck_source/bin/flightdeck" ]]; then
   if [[ "$flightdeck_language" == de ]]; then
-    printf '%s\n' 'Flightdeck benötigt Python 3.10 oder neuer. Bitte installiere Python über deine Linux-Paketverwaltung.' >&2
+    printf '%s\n' 'Das native Flightdeck-Programm fehlt. Bitte das vollständige Linux-Paket entpacken; aus dem Quellcode zuerst mit cargo build --release bauen und paketieren.' >&2
   else
-    printf '%s\n' 'Flightdeck requires Python 3.10 or newer. Install Python using your Linux package manager.' >&2
+    printf '%s\n' 'The native Flightdeck program is missing. Extract the complete Linux package; for a source build, first run cargo build --release and package it.' >&2
   fi
   exit 1
 fi
-exec python3 "$flightdeck_source/scripts/install-launcher.py" "$@"
+exec "$flightdeck_source/bin/flightdeck" install --source "$flightdeck_source" "$@"

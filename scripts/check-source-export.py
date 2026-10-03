@@ -8,12 +8,12 @@ from pathlib import Path
 import re
 
 ROOT = Path(__file__).resolve().parents[1]
-DIRECTORIES = ("compat", "scripts", "docs", "tests", "flightdeck", "ui", ".github")
+DIRECTORIES = ("compat", "scripts", "docs", "tests", "flightdeck", "native", "ui", ".github")
 TOP_LEVEL = ("README.md", "BUILDING.md", "LICENSE", "pyproject.toml", ".gitignore",
-             "install.sh", "Install Flightdeck.desktop", "build_support.py", "MANIFEST.in")
-SKIP = {"__pycache__", "node_modules", "build", "dist", "artifacts", "coverage", ".git", ".venv", ".pytest_cache"}
+             "install.sh", "Install Flightdeck.desktop", "build_support.py", "MANIFEST.in", "Cargo.toml", "Cargo.lock")
+SKIP = {"__pycache__", "node_modules", "build", "dist", "target", "artifacts", "coverage", ".git", ".venv", ".pytest_cache"}
 EXTENSIONS = {".py", ".sh", ".md", ".txt", ".json", ".toml", ".lock", ".patch",
-              ".c", ".h", ".cpp", ".hpp", ".inc", ".idl", ".spec", ".def",
+              ".c", ".h", ".cpp", ".hpp", ".inc", ".idl", ".spec", ".def", ".rs",
               ".css", ".js", ".mjs", ".html", ".svg", ".example", ".yml", ".yaml"}
 NAMES = {"LICENSE", "COPYING", "COPYING.LIB", ".gitignore", "Makefile", "xodus-wine-launch"}
 # Permit only individually reviewed binary assets, never arbitrary local files.

@@ -39,6 +39,17 @@ test('Fenix completion follows setup evidence, not a completed installer job',()
   assert.equal(fenixProgress({...ready,state:'legacy'},status).ready,false);
 });
 
+test('an uncommitted Fenix setup can retry without a manual profile restore',()=>{
+  const status={runtime:{path:'/fixture'},game:{state:'stopped'}};
+  const value={state:'preparing',runtime_path:'/fixture',can_change:true,can_retry:true,can_restore:true,idle:true};
+  assert.equal(fenixPermissions(value,status,true).install,true);
+  assert.equal(fenixProgress(value,status).supported,true);
+  assert.match(fenixProgress(value,status).detail,/reparieren/);
+  assert.equal(fenixProgress(value,status).ready,false);
+  assert.equal(fenixPermissions({...value,can_retry:false},status,true).install,false);
+  assert.equal(fenixPermissions({...value,can_change:false},status,true).install,false);
+});
+
 test('open Wine applications explain a disabled step after the installer exits',()=>{
   const status={runtime:{path:'/fixture'},game:{state:'stopped'}};
   const value={state:'installed',installed:true,fenix_installed:true,settings_ready:false,runtime_path:'/fixture',

@@ -44,6 +44,18 @@ class SourceExport(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Binary"):
             source_check.inspect()
 
+    def test_rust_sources_and_lockfile_are_exported_without_build_outputs(self):
+        for name in ("Cargo.toml", "Cargo.lock", "native/main.rs", "tests/native_files.rs"):
+            path = self.root / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("// synthetic source\n")
+        for name in ("target/debug/flightdeck-rust", "native/target/debug/fixture"):
+            path = self.root / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(b"\x7fELFsynthetic binary")
+        self.assertEqual(set(source_check.inspect()["files"]),
+                         {"scripts/example.py", "Cargo.toml", "Cargo.lock", "native/main.rs", "tests/native_files.rs"})
+
     def test_only_exact_reviewed_artwork_is_allowed(self):
         asset = self.root / "ui/flight-panorama.png"
         asset.parent.mkdir()

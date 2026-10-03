@@ -6,6 +6,7 @@ import copy
 import hashlib
 import importlib.util
 import json
+import os
 from pathlib import Path
 import re
 import subprocess
@@ -20,11 +21,14 @@ from urllib.request import Request, build_opener, HTTPRedirectHandler
 import uuid
 
 from . import __version__
+from . import native_update
 from .backend import LauncherError, utc_now
 
 REPOSITORY = "marselnenaj/flightdeck-msfs-2024-linux-xbox"
 PROJECT = "https://github.com/" + REPOSITORY
-API = "https://api.github.com/repos/" + REPOSITORY + "/releases/latest"
+# The legacy /latest endpoint can remain on the Python bridge release, so old
+# clients never skip it. Prepared clients select the newest stable full package.
+API = "https://api.github.com/repos/" + REPOSITORY + "/releases?per_page=50"
 ASSET = "Flightdeck-Linux-x86_64.tar.gz"
 MAX_ARCHIVE = 256 * 1024 * 1024
 MAX_EXPANDED = 384 * 1024 * 1024
@@ -53,7 +57,7 @@ def safe_url(url):
         parsed = urlsplit(url)
         return (parsed.scheme == "https" and parsed.hostname in
                 {"api.github.com", "github.com", "release-assets.githubusercontent.com", "objects.githubusercontent.com"}
-                and parsed.port in {None, 443} and not parsed.username and not parsed.password)
+                and parsed.port in {None, 443} and not parsed.username and not parsed.password and not parsed.fragment)
     except (TypeError, ValueError):
         return False
 
@@ -95,13 +99,34 @@ def release_metadata(raw):
             "notes": str(raw.get("body") or "")[:12000]}
 
 
+def stable_release(raw):
+    if not isinstance(raw, list) or len(raw) > 50:
+        raise UpdateError("Die GitHub-Antwort konnte nicht gelesen werden.")
+    candidates = []
+    for release in raw:
+        if (isinstance(release, dict) and release.get("draft") is False and release.get("prerelease") is False
+                and isinstance(release.get("tag_name"), str) and VERSION.fullmatch(release["tag_name"])
+                and isinstance(release.get("assets"), list)
+                and any(isinstance(a, dict) and a.get("name") == ASSET for a in release["assets"])):
+            candidates.append((version(release["tag_name"]), release))
+    if not candidates:
+        raise UpdateError("GitHub meldet keine veröffentlichte Flightdeck-Version.")
+    newest = max(item[0] for item in candidates)
+    matches = [release for number, release in candidates if number == newest]
+    if len(matches) != 1:
+        raise UpdateError("Das GitHub-Updatepaket hat keine gültigen Prüfdaten.")
+    # Invalid checksums on the newest candidate must fail, not silently fall
+    # back to an older release or execute an unverified installer.
+    return release_metadata(matches[0])
+
+
 def latest_release():
     with open_url(API) as response:
         data = response.read(2 * 1024 * 1024 + 1)
     if len(data) > 2 * 1024 * 1024:
         raise UpdateError("Die GitHub-Antwort ist zu groß.")
     try:
-        return release_metadata(json.loads(data))
+        return stable_release(json.loads(data))
     except (ValueError, TypeError) as error:
         raise UpdateError("Die GitHub-Antwort konnte nicht gelesen werden.") from error
 
@@ -164,6 +189,11 @@ def extract(archive, destination, expected_version, cancel):
                     output.write(data)
                     remaining -= len(data)
     root = destination / "flightdeck-linux"
+    try:
+        if native_update.executable(root, expected_version, extracted=True) is not None:
+            return root
+    except native_update.PackageError as error:
+        raise UpdateError(str(error)) from error
     init = root / "flightdeck/__init__.py"
     if not init.is_file() or init.stat().st_size > 65536:
         raise UpdateError("Die Versionsangabe im Updatepaket fehlt.")
@@ -304,7 +334,10 @@ class LauncherUpdateManager:
                             self.job.update(phase="installing", can_cancel=False, message="Flightdeck wird aktualisiert …")
                         # Execute only the checksum-verified release's installer, which
                         # understands its own new package format. No shell or caller URL.
-                        completed = subprocess.run([sys.executable, "-B", str(source / "scripts/install-launcher.py"),
+                        binary = native_update.executable(source, release["version"])
+                        command = ([str(binary), "install"] if binary is not None else
+                                   [sys.executable, "-B", str(source / "scripts/install-launcher.py")])
+                        completed = subprocess.run([*command,
                             "--source", str(source), "--data-dir", str(root), "--no-desktop", "--no-launch",
                             "--language", previous.get("language", "en"), "--expected-current", running],
                             stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=180)
@@ -359,8 +392,12 @@ class LauncherUpdateManager:
                        "from flightdeck.desktop import ensure_service; "
                        "_, record = ensure_service(Path(sys.argv[1]), port=int(sys.argv[2])); "
                        "sys.exit(1 if record.get('update_pending') else 0)")
-            self.restart_process = subprocess.Popen([sys.executable, "-B", "-c", service,
-                                                     str(self.launcher.state_dir), str(port)], cwd=source,
+            binary = source / "bin/flightdeck"
+            command = ([str(binary), "desktop-handoff", "--state-dir", str(self.launcher.state_dir), "--port", str(port)]
+                       if binary.is_file() else
+                       [sys.executable, "-B", "-c", service, str(self.launcher.state_dir), str(port)])
+            environment = {k: v for k, v in os.environ.items() if k not in {"PYTHONHOME", "PYTHONPATH"}}
+            self.restart_process = subprocess.Popen(command, cwd=source, env=environment,
                                                      stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
                                                      stderr=subprocess.DEVNULL, start_new_session=True)
             self.job = {"id": uuid.uuid4().hex, "operation": "restart", "state": "running", "phase": "restart",

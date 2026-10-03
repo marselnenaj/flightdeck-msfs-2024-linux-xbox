@@ -108,7 +108,8 @@ def _scripts(root, record, lock):
         raise CustomScripts("Ein Runtime-Skript wurde verändert. Es wird nichts überschrieben.")
     # Older import manifests did not record scripts. Migrate only an exact set
     # of scripts shipped in a pinned release, never arbitrary existing files.
-    if actual != current and actual not in previous:
+    from .runtime_scripts import overlay_set
+    if actual != current and actual not in previous and not overlay_set(actual, [current, *previous]):
         raise CustomScripts("Diese Runtime verwendet eigene oder unbekannte Startskripte. Es wird nichts überschrieben.")
     return actual, current
 

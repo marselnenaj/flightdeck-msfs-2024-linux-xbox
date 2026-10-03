@@ -1217,7 +1217,17 @@ try {
   fenix={...fenix,can_change:true,job:{state:'failed',message:'<img src=x onerror="window.fenixInjected=1"> fixture error'}};
   await click('fenix-refresh');await until(()=>evaluate(`document.getElementById('fenix-message').textContent.includes('fixture error')`),'Fenix error missing');
   await check('Fenix errors render as text without markup execution',`!window.fenixInjected && !document.querySelector('#fenix-message img')`);
-  fenix={...fenix,state:'installed',installed:true,fenix_installed:true,manager_installed:true,idle:false,can_change:false,job:{state:'complete',operation:'installer',message:'Synthetic installer exited'}};
+  fenix={...fenix,state:'preparing',can_retry:true,can_restore:true,idle:true,can_change:true,job:{state:'failed',operation:'install',message:'Microsoft .NET Framework 4.8 was not detected after setup.'}};
+  await click('fenix-refresh');await until(()=>evaluate(`document.getElementById('fenix-install').textContent==='Einrichtung reparieren'`),'Interrupted Fenix setup has no repair action');
+  await check('An unchanged interrupted setup offers repair without restoring the profile',`!document.getElementById('fenix-install').disabled && document.getElementById('fenix-state').textContent==='Einrichtung kann automatisch repariert werden' && document.getElementById('fenix-next').textContent.includes('PC-Neustart') && document.getElementById('fenix-step-1').getAttribute('aria-current')==='step'`);
+  await evaluate(`document.getElementById('fenix-card').scrollIntoView({block:'start'})`);await screenshot('fenix-repair-desktop.png');
+  await language('en');await call('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
+  await evaluate(`document.getElementById('fenix-card').scrollIntoView({block:'start'})`);
+  await check('Fenix repair instructions are translated and fit mobile width',`document.documentElement.scrollWidth<=innerWidth && document.getElementById('fenix-install').textContent==='Repair setup' && document.getElementById('fenix-next').textContent.includes('restart your PC')`);await screenshot('fenix-repair-mobile.png');
+  await click('fenix-install');await until(()=>evaluate(`document.getElementById('fenix-install').disabled`),'Repair did not reserve the setup');
+  assert.equal(posts.at(-1).path,'/api/fenix/install');results.push('Repair uses the existing Fenix transaction and reserves competing operations');
+  await language('de');await call('Emulation.setDeviceMetricsOverride',{width:1536,height:1024,deviceScaleFactor:1,mobile:false});
+  fenix={...fenix,state:'installed',can_retry:false,installed:true,fenix_installed:true,manager_installed:true,idle:false,can_change:false,job:{state:'complete',operation:'installer',message:'Synthetic installer exited'}};
   await click('fenix-refresh');await until(()=>evaluate(`!document.getElementById('fenix-busy').hidden`),'Open Fenix window explanation missing');
   await check('An exited installer with an open app is not complete and explains disabled controls',`document.getElementById('fenix-state').textContent==='Einrichtung noch nicht abgeschlossen' && document.getElementById('fenix-next').textContent.includes('Schritt 3 von 4') && document.getElementById('fenix-configure').disabled && document.getElementById('fenix-busy').textContent.includes('Windows-Anwendung')`);
   await evaluate(`document.getElementById('fenix-card').scrollIntoView({block:'start'})`);await screenshot('fenix-waiting-desktop.png');
@@ -1351,16 +1361,19 @@ try {
 
   // Real backend and empty state; only the public release lookup is stubbed.
   const offlineBackend=`from flightdeck import launcher_update\nfrom urllib.error import URLError\ndef offline(): raise URLError('synthetic offline startup')\nlauncher_update.latest_release=offline\nfrom flightdeck.__main__ import main\nmain()`;
-  realBackend=spawn('python',['-c',offlineBackend,'--state-dir',join(temp,'empty-backend-state'),'--no-browser'],{cwd:resolve(base,'..'),env:{...process.env,XDG_DATA_HOME:join(temp,'empty-data')},stdio:['ignore','pipe','pipe']});
+  const nativeBackend=process.env.FLIGHTDECK_TEST_BINARY;
+  const backendArguments=['--state-dir',join(temp,'empty-backend-state'),'--no-browser'];
+  const backendEnvironment={...process.env,...Object.fromEntries(['CONFIG','DATA','CACHE','STATE'].map(name=>[`XDG_${name}_HOME`,join(temp,`empty-${name.toLowerCase()}`)])),HTTPS_PROXY:'http://127.0.0.1:1',https_proxy:'http://127.0.0.1:1',NO_PROXY:'127.0.0.1,localhost',no_proxy:'127.0.0.1,localhost'};
+  realBackend=spawn(nativeBackend?resolve(nativeBackend):'python',nativeBackend?backendArguments:['-c',offlineBackend,...backendArguments],{cwd:resolve(base,'..'),env:backendEnvironment,stdio:['ignore','pipe','pipe']});
   let backendOutput='';realBackend.stdout.on('data',chunk=>{backendOutput+=chunk;});
-  await until(()=>/Flightdeck: (http:\/\/127\.0\.0\.1:\d+)/.test(backendOutput),'Real Python backend did not start');
+  await until(()=>/Flightdeck: (http:\/\/127\.0\.0\.1:\d+)/.test(backendOutput),'Real backend did not start');
   const backendOrigin=backendOutput.match(/Flightdeck: (http:\/\/127\.0\.0\.1:\d+)/)[1];allowedOrigins.add(backendOrigin);
   await call('Emulation.setDeviceMetricsOverride',{width:1536,height:1024,deviceScaleFactor:1,mobile:false});
   await call('Page.navigate',{url:backendOrigin+'/?lang=de'});
   await until(()=>evaluate(`document.getElementById('game-state')?.textContent === 'Installation noch nicht verbunden'`),'Real service status/CSP did not render');
   await until(()=>evaluate(`document.fonts.check('16px Manrope')`),'Local font did not load');
   await check('Local Manrope font loads without a third-party request',`document.fonts.check('16px Manrope')`);
-  await check('Real Python backend loads every local module under CSP',`document.getElementById('connection').classList.contains('online') && document.getElementById('launch-label').textContent==='Installation einrichten'`);
+  await check(`Real ${nativeBackend?'Rust':'Python'} backend loads every local module under CSP`,`document.getElementById('connection').classList.contains('online') && document.getElementById('launch-label').textContent==='Installation einrichten'`);
   await click('launch-button');await until(()=>evaluate(`!document.querySelector('input[name=setup_mode][value=existing]').disabled`),'Real setup mode unavailable');await evaluate(`document.querySelector('input[name=setup_mode][value=existing]').click()`);await until(()=>evaluate(`!document.getElementById('runtime-path').disabled`),'Real setup form unavailable');await check('Real unconfigured backend offers setup only',`location.hash === '#installation' && !document.getElementById('runtime-path').disabled`);
   await screenshot('installation-real-backend.png');
   await route('mods');await until(()=>evaluate(`!document.getElementById('mods-setup').hidden`),'Real unconfigured Community state missing');

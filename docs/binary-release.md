@@ -6,6 +6,21 @@ not contain Microsoft game files, a Wine prefix, account data, Linux system
 libraries or the upstream Proton runner. The Git repository and source-only
 archive still exclude compiled runtime binaries.
 
+The **0.2.0-dev.1 native launcher package** additionally contains the Rust
+Flightdeck executable, its locked dependency notices and inventory, and the
+Rust standard-library notices. The UI and fixed launcher scripts are embedded
+in the executable. No Python application code is installed. Its component and
+graphics payloads retain the 0.1.16/0.1.11/0.1.17 pins below. This development
+package has not yet been published.
+
+The **0.1.22 transition package** retains the Python launcher and the
+same pinned component/graphics bundles. Its builder replaces only the full
+package's root `install.sh` with the reviewed `scripts/install-python.sh`
+template and regenerates the source manifest for that package. The separate
+source archive preserves the original checkout and records the inputs needed
+to reproduce this transformation. It does not contain a compiled Rust launcher.
+See [transition build and rollout](rust-transition.md).
+
 Flightdeck **0.1.16** includes rebuilt Xodus CLI and broker
 components and matching **0.1.16** native component/source archives. The Store
 catalog mapper remains at the 0.1.13 build, and the other three
@@ -41,10 +56,19 @@ are downloaded separately on request and are not bundled.
 The release pins in `compat/bootstrap.lock.json` bind the component archive,
 every executable/library and the notice file to SHA256 checksums. The installer
 accepts only these eight native files. Bootstrap rechecks executable hashes
-before use. Extracted archives use Python's data filter and are bounded by member
-count and expanded size; downloads are HTTPS with checksums checked before use.
+before use. Native archive readers reject links, traversal, duplicate names and
+oversized payloads, with bounded member counts and expanded sizes. Downloads
+use HTTPS with checksums checked before use. Python's data filter remains in
+the build/reference tools.
 
 ## Build and sources
+
+The launcher source archive contains `native/`, `Cargo.toml`, `Cargo.lock`,
+embedded UI/scripts and the build/test tools. `scripts/build-native.py` remaps
+local checkout/cache/toolchain paths. `scripts/native-release.py` assembles
+deterministic tar/ZIP packages, validates the Linux x86-64 executable and records
+the locked Cargo graph and each included license file. The launcher build and
+full-package commands are in [BUILDING.md](../BUILDING.md#native-packages).
 
 Native code is built from the exact WineGDK/Xodus revisions and reviewed patches
 in `compat/upstreams.lock.json`. The Xodus patch includes file-level download
@@ -95,7 +119,9 @@ These upstream attribution omissions are recorded in
 
 ## Separate Fenix payload
 
-Flightdeck's Fenix panel includes the MIT installer engine and fixed manifests.
+Flightdeck's Fenix panel uses a Rust implementation of the MIT installer
+contract and fixed manifests. The Python engine remains in the source archive
+as the compatibility reference.
 The optional Wine overlay is downloaded from
 [Fenix patch releases](https://github.com/marselnenaj/fenix-a320-linux-patch/releases)
 only when requested, with its ZIP hash checked against `compat/fenix/release.json`

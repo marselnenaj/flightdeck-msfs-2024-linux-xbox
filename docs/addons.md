@@ -133,7 +133,10 @@ settings and the original restore point are retained; Fenix need not be reinstal
 
 1. Choose **Install patch**. Flightdeck downloads the Linux ZIP from the public
    Fenix patch GitHub release and verifies its SHA-256. Native Microsoft .NET
-   Framework 4.8 is installed when needed.
+   Framework 4.8 is installed when needed. Flightdeck checks both 32-bit and
+   64-bit CLR startup, completes pending Wine restart work and automatically
+   repairs an incomplete installation. If MSI repair leaves missing files,
+   Flightdeck makes one final reinstall attempt inside the copied profile.
 2. Download the official installer from your [Fenix account](https://fenixsim.com/dashboard/),
    select its EXE and choose **Run installer**. Complete its normal prerequisite and
    aircraft installation in the selected simulator profile, then close the installer.
@@ -219,7 +222,13 @@ profile. Settings and packages added inside the profile after patch installation
 stay in the retained newer profile; they are not merged into the restored one.
 External Community packages and
 Flightdeck's separate Xbox save storage are not removed. Interrupted patch setup
-blocks game launch and offers restore. The separate patch project contains full
+blocks game launch. If setup stopped before changing the active profile, choose
+**Repair setup** to retry directly; a host reboot or manual restore is unnecessary.
+Flightdeck verifies that the original profile, runner and launch scripts are
+unchanged, retains the failed copy and logs, and prepares a fresh copy. If the
+transaction already started publishing files, or those originals changed, use
+the existing restore action. A failed repair never reports the setup as ready.
+The separate patch project contains full
 source/build instructions and a standalone installer:
 [fenix-a320-linux-patch](https://github.com/marselnenaj/fenix-a320-linux-patch).
 

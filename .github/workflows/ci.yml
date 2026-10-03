@@ -14,6 +14,49 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  rust-launcher:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install pinned Rust toolchain
+        run: rustup toolchain install 1.98.0 --profile minimal --component rustfmt --component clippy --component rust-docs
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+      - name: Format and lint
+        run: |
+          cargo +1.98.0 fmt --all -- --check
+          cargo +1.98.0 clippy --locked --all-targets -- -D warnings
+      - name: Native format, filesystem and concurrency tests
+        run: cargo +1.98.0 test --locked
+      - name: Compare with existing format implementations
+        run: |
+          cargo +1.98.0 build --locked
+          python3 scripts/check-rust-parity.py --binary target/debug/flightdeck-rust
+          python3 scripts/check-rust-http.py --binary target/debug/flightdeck-rust
+      - name: Browser contract against the native service
+        run: |
+          export CHROME_BIN="$(command -v google-chrome || command -v chromium)"
+          FLIGHTDECK_TEST_BINARY=target/debug/flightdeck-rust node ui/tests/browser-test.mjs
+      - name: Build native launcher and source artifacts
+        run: |
+          python3 scripts/build-native.py --toolchain 1.98.0
+          mkdir -p build
+          cargo +1.98.0 metadata --locked --filter-platform x86_64-unknown-linux-gnu --format-version 1 > build/cargo-metadata.json
+          python3 scripts/native-release.py --binary target/release/flightdeck-rust --cargo-metadata build/cargo-metadata.json --rust-notices "$(rustc +1.98.0 --print sysroot)/share/doc/rust/COPYRIGHT-library.html" --launcher-only --output build/native-launcher-package
+          python3 scripts/source-release.py --output build/flightdeck-source.tar.gz
+      - name: Retain native development packages
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: flightdeck-native-development
+          path: |
+            build/native-launcher-package/*
+            build/flightdeck-source.tar.gz
+          if-no-files-found: error
+          retention-days: 14
   launcher:
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -45,19 +88,3 @@ jobs:
         run: |
           export CHROME_BIN="$(command -v google-chrome || command -v chromium)"
           node ui/tests/browser-test.mjs
-      - name: Build launcher wheel and source package
-        if: matrix.python == '3.14'
-        run: |
-          python -m pip install 'build>=1.2,<2' 'setuptools>=77,<85'
-          python -m build --wheel --no-isolation
-          python scripts/source-release.py --output build/flightdeck-source.tar.gz
-      - name: Retain reviewed packages
-        if: matrix.python == '3.14'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: flightdeck-packages
-          path: |
-            dist/*.whl
-            build/flightdeck-source.tar.gz
-          if-no-files-found: error
-          retention-days: 14

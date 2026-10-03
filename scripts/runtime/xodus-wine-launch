@@ -184,9 +184,12 @@ def main():
             refresh_env.pop("WINE_DLL_FILE_MAP", None)
             display_refresh = subprocess.Popen([sys.executable, str(refresh_path), str(BASE.parent)],
                 env=refresh_env, stdin=subprocess.DEVNULL, close_fds=True)
+        # Delayed DLL loads and UI subprocesses resolve paths from the working
+        # directory too. The source directory contains encrypted images; use
+        # the same licensed view as the executable in portable mode.
         started = time.monotonic()
         process = subprocess.Popen([str(wine), str(stub), *sys.argv[2:]],
-                                   cwd=source.parent, env=child_env,
+                                   cwd=launch_dir if portable else source.parent, env=child_env,
                                    pass_fds=tuple(sorted({fd for fd, _ in mappings})))
         def forward_signal(number, _frame):
             if process.poll() is None:

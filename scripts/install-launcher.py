@@ -12,6 +12,7 @@ import json
 import os
 from pathlib import Path
 import re
+import shlex
 import stat
 import sys
 import tempfile
@@ -406,6 +407,12 @@ def remove_bytecode_caches(folder: Path, expected: set[str]) -> None:
         cache.rmdir()
 
 
+def read_release_regular(path: Path) -> bytes:
+    # Source admission and installed-release verification have different jobs.
+    # Future native releases can introduce binaries outside flightdeck/resources.
+    return read_regular(path, limit=NATIVE_FILE_MAX)
+
+
 def verify_release(root: Path, identity: str) -> Path:
     folder, record = release_manifest(root, identity)
     expected = set(record["files"]) | {"release.json"}
@@ -414,13 +421,17 @@ def verify_release(root: Path, identity: str) -> Path:
         no_links(path)
         if not path.is_dir() and str(path.relative_to(folder)) not in expected:
             raise InstallError(tr('Fremde Datei in der installierten Version: {path}', path=path))
+    if len(record["files"]) > 4096:
+        raise InstallError(tr('Release-Metadaten stimmen nicht mit der Release-ID überein.'))
+    total = 0
     for name, checksum in record["files"].items():
         # Installation already admitted the selected package's exact payload.
         # An older running launcher must be able to verify newer resources
         # without knowing each new DLL basename. Keep source-import limits
         # separate, retain the binary bound and verify every recorded hash.
-        limit = NATIVE_FILE_MAX if Path(name).parts[:2] == ("flightdeck", "resources") else None
-        if digest(read_regular(folder / name, limit=limit)) != checksum:
+        contents = read_release_regular(folder / name)
+        total += len(contents)
+        if total > 384 * 1024 * 1024 or digest(contents) != checksum:
             raise InstallError(tr('Installierte Quelldatei wurde geändert: {name}', name=name))
     return folder
 
@@ -469,12 +480,26 @@ def installation_lock(root: Path):
         os.close(fd)
 
 
+def rollback_launcher(root: Path, state: dict, language: str) -> bytes:
+    # After crossing the Rust boundary, retain a native installation manager
+    # even while the selected release is the Python bridge. Returning to Rust
+    # must not leave a Python-shebang wrapper behind.
+    for identity in dict.fromkeys((state["current"], state.get("manager", state["current"]))):
+        folder = verify_release(root, identity)
+        binary = folder / "bin/flightdeck"
+        if binary.is_file():
+            state["manager"] = identity
+            return ("#!/bin/sh\nexec " + shlex.quote(str(binary)) + " --managed-root "
+                    + shlex.quote(str(root)) + ' "$@"\n').encode()
+    return launcher_bytes(root, language)
+
+
 def launcher_bytes(root: Path, language: str = "en") -> bytes:
     # The release is resolved once per launch. Language is carried as an argument,
     # never by modifying LC_*/LANG or another process-wide setting.
     return ('''#!/usr/bin/env python3
 # Managed by Flightdeck source launcher; SPDX-License-Identifier: MIT
-import json, os, pathlib, re, subprocess, sys
+import importlib.util, json, os, pathlib, re, subprocess, sys
 sys.dont_write_bytecode = True
 root = pathlib.Path(ROOT_LITERAL)
 language = LANGUAGE_LITERAL
@@ -538,13 +563,26 @@ try:
         # An update must be installed by the selected *new* package. The old
         # manager cannot know future native features or package formats.
         # Rollback/uninstall still use the trusted installed manager.
-        selected_manager = pathlib.Path(arguments[1]) / "scripts" / "install-launcher.py" if action == "--update" else manager
+        source = pathlib.Path(os.path.abspath(arguments[1])) if action == "--update" else None
+        native = source is not None and ((source / "FLIGHTDECK-PACKAGE.json").exists() or (source / "FLIGHTDECK-PACKAGE.json").is_symlink())
+        selected_manager = source / "scripts/install-launcher.py" if source is not None and not native else manager
         selected_manager = pathlib.Path(os.path.abspath(selected_manager))
         if (not selected_manager.is_file() or
                 any(part.is_symlink() for part in (selected_manager, *selected_manager.parents))):
             raise ValueError(text("update" if action == "--update" else "invalid"))
         invocation = [sys.executable, str(selected_manager), "--data-dir", str(root),
                       "--language", language, *managed]
+        if native:
+            # Import only this installed release's small format detector. Do
+            # not import code from the incoming native package.
+            spec = importlib.util.spec_from_file_location("flightdeck_native_update", release / "flightdeck/native_update.py")
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            binary = module.executable(source)
+            if binary is None:
+                raise ValueError(text("update"))
+            invocation = [str(binary), "install", "--data-dir", str(root),
+                          "--language", language, *managed, "--expected-current", identity]
         if action == "--uninstall":
             os.execv(sys.executable, invocation)
         # Keep management messages in the saved language without making that
@@ -553,7 +591,7 @@ try:
         if completed.returncode:
             sys.exit(completed.returncode)
         forwarded = ["--language", language] if explicit else []
-        os.execv(sys.executable, [sys.executable, sys.argv[0], *forwarded])
+        os.execv(sys.argv[0], [sys.argv[0], *forwarded])
     os.chdir(release)
     sys.path.insert(0, str(release))
     from flightdeck import __main__ as application
@@ -712,7 +750,7 @@ def rollback(root: Path, *, language: str | None = None, expected_current: str |
         target = verify_release(root, old["previous"])
         state = {**old, "current": old["previous"], "previous": old["current"], "language": language, "entries": dict(old["entries"])}
         launcher = Path(old["entries"]["launcher"]["path"])
-        entries = {"launcher": (launcher, launcher_bytes(root, language), 0o700)}
+        entries = {"launcher": (launcher, rollback_launcher(root, state, language), 0o700)}
         if "desktop" in old["entries"]:
             entries["desktop"] = (Path(old["entries"]["desktop"]["path"]),
                                   desktop_bytes(launcher, target / "ui/mark.svg", language), 0o644)
@@ -724,7 +762,7 @@ def unlink_owned(path: Path, checksum: str, retained: list[str]) -> None:
     if not path.exists() and not path.is_symlink():
         return
     try:
-        if digest(read_regular(path)) != checksum:
+        if digest(read_release_regular(path)) != checksum:
             raise InstallError("changed")
         path.unlink()
     except (OSError, InstallError):
@@ -844,7 +882,7 @@ def main(argv=None) -> int:
         print(tr("Update: Installer aus einem neuen Quellpaket erneut ausführen.\nRollback: flightdeck --rollback · Entfernen: flightdeck --uninstall"), flush=True)
         if not args.no_launch:
             forwarded = ["--language", args.language] if args.language else []
-            os.execv(sys.executable, [sys.executable, launcher, *forwarded])
+            os.execv(launcher, [launcher, *forwarded])
         return 0
     except (InstallError, OSError) as error:
         LANGUAGE = getattr(error, "language", None) or LANGUAGE

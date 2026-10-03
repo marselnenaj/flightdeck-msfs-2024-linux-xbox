@@ -1,30 +1,35 @@
 # Install the Flightdeck launcher
 
-This guide covers **Flightdeck 0.1.12**, including Store diagnostics, launcher
-updates, selectable NVIDIA graphics modes, installation maintenance and
-cloud-upload recovery. See [changes](changelog.md) and [NVIDIA graphics](graphics.md).
+The current stable package is **0.1.22**, the Python transition release. It
+prepares the updater for the upcoming native launcher. This guide also notes
+differences in the **0.2.0-dev.1 native development package**, which is not yet
+published. See [BUILDING.md](../BUILDING.md), [changes](changelog.md) and
+[native status](rust-migration.md) for development and validation scope.
 
 Download **Flightdeck-Linux-x86_64.tar.gz** from the
 [releases page](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases)
 and extract it on your Linux computer. This full installer includes the six
-pinned compatibility components and their license notices. It needs Python
-3.10.12 or newer and the Linux libraries listed below. Open
+pinned compatibility components and their license notices. Version 0.1.22
+needs Python 3.10.12+ and the Linux libraries listed below. The native package
+removes the Python requirement. Open
 **Install Flightdeck.desktop** in the extracted folder to use the graphical
 installer. Depending on the file manager, first choose **Allow Launching** or
 confirm that this is a trusted local launcher. Flightdeck does not change that
 desktop security setting for you.
 
-The optional dialog uses an existing Zenity, kdialog or Python Tk installation.
-There is no added mandatory Python dependency. If none is available, install
+The optional dialog uses an existing Zenity or KDialog installation.
+If neither is available, install
 from that directory with one command:
 
 ```sh
 ./install.sh
 ```
 
-The equivalent command is `python3 scripts/install-launcher.py`. The installer
-uses only Python's standard library. It does not use sudo, pip, a virtual
-environment or a remotely executed shell script.
+For 0.1.22, the equivalent command is
+`python3 scripts/install-launcher.py --source .`. Native packages instead use
+`./bin/flightdeck install --source .` and run their supplied Rust binary.
+Neither installer uses sudo, pip, a virtual environment or a remotely executed
+shell script.
 
 The installer creates a **Flightdeck** application-menu entry and opens the
 launcher as an application window when a compatible browser is available,
@@ -34,7 +39,7 @@ menu or `~/.local/bin/flightdeck`. Closing the interface leaves a running
 simulator alone.
 
 `./install.sh --gui` explicitly selects the optional install dialog. It confirms
-the action, shows progress with Zenity or Tk and reports failures locally. It
+the action with Zenity or KDialog and reports failures locally. It
 does not silently install if no graphical toolkit or desktop session is available.
 
 This installs the launcher and its setup resources. In setup, choose **New
@@ -104,21 +109,22 @@ simulator may need more for its downloaded and streamed content.
 
 ## Linux prerequisites
 
-The native package requires Linux x86-64, glibc 2.39+, GTK3, WebKitGTK 4.1, OpenSSL 3 and a
+The full package requires Linux x86-64, glibc 2.39+, GTK3, WebKitGTK 4.1, OpenSSL 3 and a
 working Vulkan driver. GStreamer with its Good, Bad and Libav plugin sets must
 provide `qtdemux`, `h264parse` and `avdec_h264` for the simulator's video playback.
 Setup checks these plugins before starting the new installation. Install missing
 components through your distribution's software manager; package names vary.
 Flightdeck checks these requirements but does not install Linux system packages.
 Your software manager may request administrator rights for that step.
-These are host prerequisites, not Python dependencies.
+Version 0.1.22 additionally requires Python 3.10.12+; the native package does not.
 [Runtime documentation](runtime.md) and [build instructions](../BUILDING.md)
 describe the platform components and advanced paths. For automatic Xbox cloud
 saves and local backups, see [cloud saves](cloud-saves.md).
 
 ## Language
 
-The installer, its help and follow-up commands support German and English:
+Installer messages and follow-up actions support German and English. The native
+CLI's generated option reference is currently in English:
 
 ```sh
 ./install.sh --language en
@@ -182,6 +188,20 @@ it; users do not need to manage the HTTP service themselves.
 
 ## Update and rollback
 
+The **0.1.22 transition update** prepares the move from Python to Rust
+through **Updates → Flightdeck**. Install 0.1.22 and restart Flightdeck, then
+check again when a stable native release is available.
+Version 0.1.22 still uses Python; it learns to verify, install and restart the
+native package. Versions 0.1.21 and earlier cannot install that package directly.
+The [release procedure](rust-transition.md) prevents those versions from skipping
+the transition update, even after a newer native release exists. The native
+release is not published yet.
+
+Alternatively, run the **new native package's `./install.sh`** directly. The
+installer retains the old launcher for rollback. Subsequent native releases use
+the Rust in-app updater. An explicit rollback to the old Python launcher still
+requires its Python interpreter.
+
 Choose the update that matches what you want to change:
 
 | What to update | Where | What it changes |
@@ -200,8 +220,10 @@ An offline or failed check can be retried manually. Microsoft sign-in opens only
 after selecting the sign-in action. Other add-ons retain their own update flows.
 
 For a manual launcher check, open **Updates → Flightdeck → Check for updates**.
-The launcher shows the latest stable GitHub release, its version and release
-notes. Choose **Download & install**, then **Restart Flightdeck now** when the
+The launcher shows the newest eligible stable GitHub release, its version and
+release notes. Starting with 0.1.22 it reads the release list, so native releases
+remain discoverable while older launchers receive the transition update.
+Choose **Download & install**, then **Restart Flightdeck now** when the
 installation finishes. Downloads show progress and can be cancelled before
 installation begins. The full package's size and SHA256 digest are checked
 before installation. Your settings and game installations remain in place.
@@ -378,7 +400,7 @@ The commands below remove **only the launcher**:
 If the command has been moved or removed, run the source installer instead:
 
 ```sh
-python3 scripts/install-launcher.py --uninstall
+./install.sh --uninstall
 ```
 
 Use the original `--data-dir` when uninstalling a custom installation. Only
@@ -413,8 +435,16 @@ Installer regression tests use temporary directories and synthetic path values,
 with no real account, game or desktop changes:
 
 ```sh
+cargo test --locked --test native_installer --test native_launcher_updates
 python3 -m unittest discover -s tests -p 'test_installer.py' -v
 ```
+
+For full packages, `scripts/check-native-package.py --package NEW_PACKAGE
+--previous-native OLD_NATIVE_PACKAGE --python-package OLD_PYTHON_PACKAGE
+--output build/package-check` exercises real installation without Python in
+PATH, service handoff on the same port and rollback to both native and Python
+releases. All package arguments refer to extracted package directories. It
+uses fake browser launchers and isolated settings; it never opens a game.
 
 The suite covers source/resource hashes, updates, rollback after write failures,
 foreign files, symlinks, concurrent installers, preserved settings/saves and the

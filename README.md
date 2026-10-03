@@ -22,8 +22,15 @@ Flightdeck installs and launches your **purchased Xbox PC / Microsoft Store copy
 of MSFS 2024 or 2020** on your Linux computer through Wine/Proton. Sign in with your
 Microsoft account, download the game and start it from one application.
 
-**Current stable release: [Flightdeck 0.1.21](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.21).**
+**Current stable release: [Flightdeck 0.1.22](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.22).**
 Update through **Updates → Flightdeck** or use the full installer.
+The **0.2.0-dev.1 development branch** now uses a Rust backend, installer and
+runtime helpers. Its native package runs without Python. This change is not yet
+published; see [native status](docs/rust-migration.md) and [build instructions](BUILDING.md).
+The **0.1.22 transition update** prepares the move to Rust through the existing
+updater, preserving the current installation. Older versions receive 0.1.22
+first, even after a stable native release becomes available; after restarting,
+0.1.22 can discover that next update. See the [staged release procedure](docs/rust-transition.md).
 **New in 0.1.20:** Proton switching with retained add-ons and matched Fenix patches for Experimental and CachyOS. [Changes](docs/changelog.md#0120--3-october-2026).
 
 **0.1.18** adds optional VR setup for WiVRn, SteamVR and Monado, headset checks,
@@ -112,11 +119,14 @@ not required. Your purchased PC license and an Internet connection are required.
 <details>
 <summary><strong>System requirements and other installation options</strong></summary>
 
-The current binary package targets Linux x86-64 with **glibc 2.39+**, Python
-3.10.12+, Vulkan graphics drivers and a graphical desktop with a Linux Secret
+The binary packages target Linux x86-64 with **glibc 2.39+**, Vulkan graphics
+drivers and a graphical desktop with a Linux Secret
 Service keyring. GTK 3, WebKitGTK 4.1, OpenSSL 3 and the GStreamer Good/Bad/Libav
 media plugins are required. Allow at least **100 GiB free** for a first install;
 an update or repair also keeps the previous game package.
+The published 0.1.22 launcher also requires Python 3.10.12+; the native
+0.2.0 development package does not. Its optional graphical installer uses
+Zenity or KDialog.
 
 Arch Linux has been tested. Other distributions need compatible libraries and
 remain unverified. Setup reports missing prerequisites before installation.
@@ -215,8 +225,8 @@ confirm activation or working aircraft systems.
 
 ## Local by design
 
-The launcher uses Python's standard library and local HTML, CSS and JavaScript.
-Its service listens only on loopback. Local-origin checks and a per-session token
+The stable launcher uses Python; the native development build uses Rust. Both
+serve local HTML, CSS and JavaScript and listen only on loopback. Local-origin checks and a per-session token
 protect actions. There is no telemetry or CDN dependency in the launcher.
 Microsoft sign-in, downloads and the simulator's online content still use their
 respective network services.
@@ -245,17 +255,25 @@ alone.
 <summary><strong>Run the checks locally</strong></summary>
 
 ```sh
+cargo build --locked
+cargo test --locked
+cargo fmt --all -- --check
+cargo clippy --locked --all-targets -- -D warnings
+python3 scripts/check-rust-parity.py --binary target/debug/flightdeck-rust
+python3 scripts/check-rust-http.py --binary target/debug/flightdeck-rust
 python3 -m unittest discover -s tests -p 'test_*.py' -v
 python3 -m unittest discover -s tests/compat -p 'test_*.py' -v
 node --test ui/tests/*.test.mjs
-node ui/tests/browser-test.mjs
+FLIGHTDECK_TEST_BINARY=target/debug/flightdeck-rust node ui/tests/browser-test.mjs
 python3 scripts/check-source-export.py
 ```
 
 The browser suite needs Chromium. HTTP and browser tests bind temporary local
 sockets and use isolated fixtures, not your account or live game. Native
 compatibility checks require the toolchain described in [BUILDING.md](BUILDING.md).
-For a foreground development service, use `python3 -m flightdeck --no-browser`.
+For a foreground development service, use `target/debug/flightdeck-rust --no-browser`.
+The Python implementation remains a test reference; native packages contain no
+Python application code.
 
 </details>
 

@@ -60,7 +60,9 @@ can run on the selected Proton; an interrupted GSX setup must be recovered first
 The alternative launch bridge exposes Xodus' already-open, licensed image
 descriptors through temporary `/proc` symlinks. Executables and DLLs remain in
 memory; encrypted game files are not rewritten. This removes the need for the
-custom `WINE_DLL_FILE_MAP` Wine extension for these trials. Xodus still performs
+custom `WINE_DLL_FILE_MAP` Wine extension for these trials. The executable and
+working directory both use that view so working-directory DLL loads can access
+the licensed images too. Xodus still performs
 normal licensing, and Flightdeck retains its Store/GDK libraries. Flightdeck
 starts the chosen Wine directly; Steam's Proton launcher and its game-specific
 launch options are not invoked. Unsupported host dependencies fail preparation.

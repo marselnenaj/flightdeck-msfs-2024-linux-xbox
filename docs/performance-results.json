@@ -1,0 +1,293 @@
+{
+  "schema": 1,
+  "method": "alternating fresh processes after one discarded warm-up; warm filesystem cache; no game, account, cloud network or Wine",
+  "scope": "launcher only; no simulator FPS measurement",
+  "python": "3.14.7",
+  "python_source_commit": "005194e2d071447637f48e74c406f410c4fe5284",
+  "rust_binary_sha256": "3530e461b0041574c3874203e2154cc3338854047f4dcbefe0608fef42efef40",
+  "machine": {
+    "cpu": "13th Gen Intel(R) Core(TM) i9-13900K",
+    "kernel": "7.2.5-3-omarchy",
+    "logical_cpus": 32
+  },
+  "services": {
+    "direct": {
+      "rust": {
+        "startup_ms": {
+          "samples": 7,
+          "median": 11.904054,
+          "min": 11.686959,
+          "p95": 12.321395,
+          "max": 12.321395
+        },
+        "rss_kib": {
+          "samples": 7,
+          "median": 8924,
+          "min": 8856,
+          "p95": 9312,
+          "max": 9312
+        },
+        "peak_rss_kib": {
+          "samples": 7,
+          "median": 8924,
+          "min": 8856,
+          "p95": 9312,
+          "max": 9312
+        },
+        "api_ms": {
+          "/api/status": {
+            "samples": 350,
+            "median": 0.274644,
+            "min": 0.188625,
+            "p95": 0.459892,
+            "max": 2.647798
+          },
+          "/api/setup": {
+            "samples": 350,
+            "median": 0.213703,
+            "min": 0.126702,
+            "p95": 0.254179,
+            "max": 0.432852
+          },
+          "/api/cloud-saves": {
+            "samples": 350,
+            "median": 0.171765,
+            "min": 0.081988,
+            "p95": 0.212834,
+            "max": 0.285629
+          },
+          "/api/launcher-update": {
+            "samples": 350,
+            "median": 0.09785150000000001,
+            "min": 0.078925,
+            "p95": 0.28792,
+            "max": 0.631861
+          }
+        }
+      },
+      "python": {
+        "startup_ms": {
+          "samples": 7,
+          "median": 69.34353,
+          "min": 66.660243,
+          "p95": 73.016956,
+          "max": 73.016956
+        },
+        "rss_kib": {
+          "samples": 7,
+          "median": 31436,
+          "min": 31348,
+          "p95": 31588,
+          "max": 31588
+        },
+        "peak_rss_kib": {
+          "samples": 7,
+          "median": 33524,
+          "min": 32956,
+          "p95": 33656,
+          "max": 33656
+        },
+        "api_ms": {
+          "/api/status": {
+            "samples": 350,
+            "median": 1.5621035,
+            "min": 0.812651,
+            "p95": 1.743286,
+            "max": 2.098763
+          },
+          "/api/setup": {
+            "samples": 350,
+            "median": 1.0876100000000002,
+            "min": 0.7443,
+            "p95": 1.185829,
+            "max": 1.462621
+          },
+          "/api/cloud-saves": {
+            "samples": 350,
+            "median": 0.441969,
+            "min": 0.344424,
+            "p95": 0.513388,
+            "max": 0.913959
+          },
+          "/api/launcher-update": {
+            "samples": 350,
+            "median": 0.43196199999999996,
+            "min": 0.376435,
+            "p95": 0.491994,
+            "max": 0.809405
+          }
+        }
+      }
+    },
+    "installed": {
+      "rust": {
+        "startup_ms": {
+          "samples": 7,
+          "median": 72.278428,
+          "min": 67.316337,
+          "p95": 80.514407,
+          "max": 80.514407
+        },
+        "rss_kib": {
+          "samples": 7,
+          "median": 10728,
+          "min": 10668,
+          "p95": 10960,
+          "max": 10960
+        },
+        "peak_rss_kib": {
+          "samples": 7,
+          "median": 10728,
+          "min": 10668,
+          "p95": 10960,
+          "max": 10960
+        },
+        "api_ms": {
+          "/api/status": {
+            "samples": 350,
+            "median": 0.31001100000000004,
+            "min": 0.189171,
+            "p95": 0.488453,
+            "max": 0.720188
+          },
+          "/api/setup": {
+            "samples": 350,
+            "median": 0.21930349999999998,
+            "min": 0.125172,
+            "p95": 0.297815,
+            "max": 0.439043
+          },
+          "/api/cloud-saves": {
+            "samples": 350,
+            "median": 0.1022775,
+            "min": 0.076934,
+            "p95": 0.254304,
+            "max": 0.89972
+          },
+          "/api/launcher-update": {
+            "samples": 350,
+            "median": 0.0979665,
+            "min": 0.081319,
+            "p95": 0.229054,
+            "max": 0.403487
+          }
+        }
+      },
+      "python": {
+        "startup_ms": {
+          "samples": 7,
+          "median": 134.088813,
+          "min": 131.6768,
+          "p95": 140.801582,
+          "max": 140.801582
+        },
+        "rss_kib": {
+          "samples": 7,
+          "median": 36060,
+          "min": 36000,
+          "p95": 36160,
+          "max": 36160
+        },
+        "peak_rss_kib": {
+          "samples": 7,
+          "median": 36452,
+          "min": 36060,
+          "p95": 36668,
+          "max": 36668
+        },
+        "api_ms": {
+          "/api/status": {
+            "samples": 350,
+            "median": 1.5799370000000001,
+            "min": 0.89043,
+            "p95": 1.781263,
+            "max": 6.723561
+          },
+          "/api/setup": {
+            "samples": 350,
+            "median": 26.814355,
+            "min": 25.7489,
+            "p95": 28.283513,
+            "max": 30.110131
+          },
+          "/api/cloud-saves": {
+            "samples": 350,
+            "median": 0.466666,
+            "min": 0.366848,
+            "p95": 0.624609,
+            "max": 0.822797
+          },
+          "/api/launcher-update": {
+            "samples": 350,
+            "median": 0.584789,
+            "min": 0.459578,
+            "p95": 0.644468,
+            "max": 0.77366
+          }
+        }
+      }
+    }
+  },
+  "saves": {
+    "small_128_kib": {
+      "bytes": 131720,
+      "identical_results": true,
+      "process_wall_ms": {
+        "rust": {
+          "samples": 7,
+          "median": 1.818305,
+          "min": 1.769719,
+          "p95": 2.007584,
+          "max": 2.007584
+        },
+        "python": {
+          "samples": 7,
+          "median": 21.797873,
+          "min": 20.039038,
+          "p95": 23.964146,
+          "max": 23.964146
+        }
+      }
+    },
+    "many_4096_blobs": {
+      "bytes": 1118312,
+      "identical_results": true,
+      "process_wall_ms": {
+        "rust": {
+          "samples": 7,
+          "median": 7.951477,
+          "min": 6.841941,
+          "p95": 8.367809,
+          "max": 8.367809
+        },
+        "python": {
+          "samples": 7,
+          "median": 35.878093,
+          "min": 33.373394,
+          "p95": 39.977385,
+          "max": 39.977385
+        }
+      }
+    },
+    "large_32_mib": {
+      "bytes": 33555080,
+      "identical_results": true,
+      "process_wall_ms": {
+        "rust": {
+          "samples": 7,
+          "median": 122.345317,
+          "min": 116.795249,
+          "p95": 126.151341,
+          "max": 126.151341
+        },
+        "python": {
+          "samples": 7,
+          "median": 160.676443,
+          "min": 158.432238,
+          "p95": 172.927197,
+          "max": 172.927197
+        }
+      }
+    }
+  }
+}

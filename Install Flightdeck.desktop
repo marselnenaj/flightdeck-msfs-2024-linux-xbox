@@ -4,7 +4,7 @@ Name=Install Flightdeck
 Name[de]=Flightdeck installieren
 Comment=Install the launcher for your user
 Comment[de]=Launcher für deinen Benutzer installieren
-Exec=python3 -c "import pathlib,runpy,sys;from urllib.parse import urlsplit,unquote;raw=sys.argv[1];u=urlsplit(raw);local=not raw.startswith('file:') or (u.scheme=='file' and u.netloc in ('','localhost') and not u.query and not u.fragment);p=pathlib.Path(unquote(u.path) if raw.startswith('file:') else raw);(local and p.is_absolute()) or sys.exit('Installer location must be a local file');script=p.resolve(strict=True).parent/'scripts'/'install-launcher.py';sys.argv=[str(script),'--gui'];runpy.run_path(str(script),run_name='__main__')" %k
+Exec=/bin/bash -c "set -eu; p=\\$1; case \\"\\$p\\" in file://localhost/*) p=\\${p#file://localhost};; file:///*) p=\\${p#file://};; /*) exec \\"\\${p%%/*}/install.sh\\" --gui;; *) exit 1;; esac; [[ \\"\\$p\\" != *'?'* && \\"\\$p\\" != *'#'* ]] || exit 1; out=; while [[ \\"\\$p\\" == *%%* ]]; do before=\\${p%%%%\\\\%%*}; tail=\\${p#*%%}; hex=\\${tail:0:2}; [[ \\"\\$hex\\" =~ ^[0-9A-Fa-f]{2}\\$ && \\"\\$hex\\" != 00 ]] || exit 1; printf -v c '%%b' \\"\\\\\\\\x\\$hex\\"; out=\\$out\\$before\\$c; p=\\${tail:2}; done; p=\\$out\\$p; exec \\"\\${p%%/*}/install.sh\\" --gui" flightdeck-installer %k
 Icon=applications-games
 Terminal=false
 Categories=Game;Simulation;

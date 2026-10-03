@@ -1,5 +1,74 @@
 # Changes and release status
 
+## 0.1.22 — 3 October 2026
+
+Prepare existing Python installations for the native launcher. This release
+still runs on Python 3.10+ and can be installed by the 0.1.21 in-app updater.
+
+- Recognize native packages, verify their manifest, x86-64 executable and
+  SHA256 checksum, and run the incoming native installer with the expected
+  current release bound to the update.
+- Restart the native service at the existing browser address. Preserve the
+  installation manager through rollback to Python and a subsequent return
+  to Rust. Terminal updates and installer launches accept the new shell wrapper.
+- Discover stable full packages from the release list. Keep GitHub's Latest
+  entry on 0.1.22 so older clients receive this prerequisite first; later
+  stable native releases remain discoverable by updated clients. Follow the
+  [staged release procedure](rust-transition.md).
+- Include the Python-side automatic .NET repair and Experimental/CachyOS
+  loader corrections described below, with the same live-validation limits.
+
+The real 0.1.21 package, transition package and a local native candidate pass
+the isolated in-app update and rollback chain. The native candidate is a local
+test build; this release installs the Python transition launcher.
+
+## Unreleased — 0.2.0 native development build
+
+Port the launcher backend, desktop service, installer, updater and runtime
+helpers to Rust. The native package needs no Python interpreter. It preserves
+the browser interface, runtime/save formats and Wine/Store ABI components.
+Setup, cloud saves, add-ons, graphics/VR, diagnostics and recoverable maintenance
+jobs use native implementations. The previous Python release remains available
+for explicit launcher rollback and as the test reference.
+
+The alternative Proton loader now uses the licensed temporary game view as its
+working directory. Previously, delayed DLL loads relative to the working
+directory could reach encrypted originals and fail with Windows error 193. The
+expanded synthetic test reproduces that failure before the fix and passes with
+Experimental 11.0 (20260924) and CachyOS Proton 10 sunset after it, including
+D3D11/D3D12 rendering and return to the default runner. This fixes a loader defect;
+confirmation of the reported MSFS menu failure on the affected system is still
+outstanding. Known Fenix launch scripts receive the correction through the
+component updater, and selecting a Fenix overlay retains the current launcher
+scripts instead of reinstalling older archive copies.
+
+- Automatically repair incomplete Microsoft .NET Framework 4.8 setup for
+  Fenix/GSX in the staged Windows profile. Verify both CLR architectures by
+  starting the managed compiler; registry markers alone are insufficient.
+  Complete pending Wine restart operations, handle Wine Mono's advertised
+  release values and make a bounded reinstall attempt when MSI repair fails.
+- Offer **Repair setup** for interrupted Fenix preparation whose original
+  profile, runner and launch scripts remain unchanged. Retain failed copies
+  and logs; committing transactions still require recovery.
+- Check managed .NET evidence again before Fenix/MSFS startup. Repair an
+  incomplete profile in a separate copy, verify it, and retain the previous
+  profile when activating the repair. Interrupted repairs remain recoverable.
+- Package a verified native runtime helper with the current launch scripts,
+  preserving custom component sets and supporting idle launcher handoff.
+- Add native transaction, HTTP and browser checks and an isolated
+  [Python/Rust performance comparison](performance.md).
+
+In the isolated full-package comparison, native startup takes 72 ms versus
+134 ms and service RSS falls from 35.21 MiB to 10.48 MiB. The native package is
+3.27 MiB larger. These results do not establish an MSFS frame-rate improvement.
+
+Fresh .NET setup, repair of a deliberately removed x86 CLR (including matching
+restored file hash), and an idempotent follow-up passed with the pinned Flightdeck
+Wine runner in an isolated, account-free profile. The remote report's exact
+failure still requires its setup log; this test does not establish every Proton
+build or distribution. The native build remains unreleased; the Python-side
+repair and Proton corrections ship in 0.1.22.
+
 ## 0.1.21 — 3 October 2026
 
 - Include **Flightdeck (Xodus, default)** directly in the Proton selector and

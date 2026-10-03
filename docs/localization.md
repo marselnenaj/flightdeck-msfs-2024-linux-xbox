@@ -1,7 +1,8 @@
 # Localization
 
 Flightdeck supports German (`de`) and English (`en`) across the interface,
-setup status/errors, launcher CLI and source installer. The language selector
+setup status/errors, launcher messages and native installer. The generated Rust
+CLI option reference is currently in English. The language selector
 does not change the simulator's language, account or Store country.
 
 ## Selection
@@ -28,7 +29,7 @@ overrides it.
 - `ui/i18n.js` owns the UI catalog and selection. Interpolated values are inserted
   as text, never as translated HTML. Language changes preserve the current view,
   form values and any ongoing setup job.
-- Requests carry `Accept-Language`. `flightdeck/i18n.py` translates only known
+- Requests carry `Accept-Language`. `native/i18n.rs` and `native/catalog.json` translate known
   display fields at the response boundary. API keys, enums, IDs, paths, hashes,
   saved settings and authorization tokens retain their values.
 - Asynchronous setup messages retain their source template and explicit

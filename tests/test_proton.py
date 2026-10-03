@@ -331,6 +331,23 @@ class ProtonTests(unittest.TestCase):
                                  (self.runtime / 'runner/files/lib/wine/x86_64-windows/ntdll.dll').read_bytes())
         self.assertFalse((self.experimental / 'files/lib/wine/x86_64-windows/ntdll.dll').exists())
 
+    def test_fenix_overlay_cannot_downgrade_the_current_launcher_loader(self):
+        from flightdeck import runtime_scripts
+        core, bundle = self.fenix_fixture()
+        # The overlay is an independently released archive with an older loader.
+        old = b"#!/usr/bin/env python3\n# older verified loader\n"
+        loader = bundle / "integration/xodus-wine-launch"
+        loader.write_bytes(old)
+        manifest = core.manifest()
+        manifest["integration"][loader.name] = hashlib.sha256(old).hexdigest()
+        (bundle / "bundle.json").write_text(json.dumps(manifest))
+        self.assertEqual(self.select(self.experimental)["state"], "complete")
+        current = runtime_scripts.current("xodus-wine-launch").read_bytes()
+        self.assertEqual((self.runtime / "tools/xodus-wine-launch").read_bytes(), current)
+        self.assertNotEqual(current, old)
+        self.assertEqual(self.select()["state"], "complete")
+        self.assertEqual((self.runtime / "tools/xodus-wine-launch").read_bytes(), current)
+
     def test_legacy_fenix_migrates_without_reinstalling_or_losing_its_profile(self):
         core, _ = self.fenix_fixture(legacy=True)
         (self.prefix / 'fenix-account-fixture').write_text('retain existing account state')

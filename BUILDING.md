@@ -1,4 +1,98 @@
-# Build the compatibility components
+# Build Flightdeck and the compatibility components
+
+## Rust launcher
+
+The development launcher, installer, updater and runtime helpers use Rust.
+The web interface and Wine/Store ABI components remain in their existing
+languages. The native package needs no Python interpreter; Python 3.11+ is
+used for building packages and running reference checks. Build with Rust/Cargo
+1.98 or newer:
+
+```sh
+cargo build --locked
+cargo test --locked
+cargo fmt --all -- --check
+cargo clippy --locked --all-targets -- -D warnings
+python3 scripts/check-rust-parity.py --binary target/debug/flightdeck-rust
+python3 scripts/check-rust-http.py --binary target/debug/flightdeck-rust
+node --test ui/tests/*.test.mjs
+FLIGHTDECK_TEST_BINARY=target/debug/flightdeck-rust node ui/tests/browser-test.mjs
+target/debug/flightdeck-rust --no-browser
+```
+
+The parity/HTTP/browser checks use isolated synthetic data. The browser suite
+needs Chromium. See [native status](docs/rust-migration.md) for scope and live
+validation limits. Python reference checks remain available with
+`python3 -m unittest discover -s tests -p 'test_*.py'`.
+
+### Native packages
+
+Build the release with local checkout, Cargo-cache and toolchain paths remapped:
+
+```sh
+python3 scripts/build-native.py
+mkdir -p build
+cargo metadata --locked --filter-platform x86_64-unknown-linux-gnu --format-version 1 > build/cargo-metadata.json
+python3 scripts/native-release.py \
+  --binary target/release/flightdeck-rust \
+  --cargo-metadata build/cargo-metadata.json \
+  --rust-notices "$(rustc --print sysroot)/share/doc/rust/COPYRIGHT-library.html" \
+  --native build/flightdeck-compat-0.1.16-linux-x86_64.tar.gz \
+  --graphics build/graphics \
+  --output build/native-package
+python3 scripts/source-release.py --output build/native-package/flightdeck-source-0.2.0-dev.1.tar.gz
+```
+
+Install the toolchain's `rust-docs` component if its standard-library notices
+are missing. `--offline` on `build-native.py` uses the existing Cargo cache.
+The full package requires the exact component archive in
+`compat/bootstrap.lock.json` and the seven files from the pinned graphics
+bundle. Hashes, binary architecture/version, dependency licenses and payload
+limits are checked before packaging. The result contains deterministic tar/ZIP
+archives, a dependency inventory and notices. Update `SHA256SUMS` when adding
+companion files after packaging.
+
+Distribute the complete corresponding-source archives alongside a full package:
+`flightdeck-native-sources-0.1.16.tar.gz`,
+`flightdeck-dxvk-0.1.11-sources.tar.gz` and
+`flightdeck-vkd3d-0.1.17-sources.tar.gz`. Preserve their published hashes and
+licenses. [Provenance](docs/binary-release.md) describes their build inputs.
+For an isolated launcher/API development package, replace `--native` and
+`--graphics` with `--launcher-only`; it cannot supply a complete offline setup.
+
+Extract the full archive and run `./install.sh --no-launch`, or invoke
+`./bin/flightdeck install --source . --no-launch` directly. Custom `--data-dir`,
+`--bin-dir` and `--applications-dir` allow a separate test installation.
+The package built here targets Linux x86-64; check its host-library requirements
+with `ldd`/`readelf` on the intended build image. The validated build requires
+glibc 2.39 or later. [Performance checks](docs/performance.md) describe the
+isolated comparison with the Python release.
+The Rust executable also links to the host's `liblzma.so.5` and `libgcc_s.so.1`.
+
+### Python transition package (0.1.22)
+
+Build the intermediate update with the same pinned component and graphics
+inputs. Existing 0.1.21 installations can install this Python package before
+moving to Rust through the in-app updater:
+
+```sh
+python3 scripts/transition-release.py \
+  --native build/flightdeck-compat-0.1.16-linux-x86_64.tar.gz \
+  --graphics build/graphics \
+  --output build/releases/flightdeck-0.1.22
+```
+
+The output contains the full tar/ZIP installers, a checked source archive,
+package validation and checksums. The full package uses the Python bootstrap
+template and needs Python 3.10+ at runtime. Publish the same corresponding-source
+archives listed above alongside it, and regenerate `SHA256SUMS` after adding
+release notes and validation results. No build command publishes a release.
+The [transition guide](docs/rust-transition.md) covers integration checks and
+the release settings required to keep older clients on the supported path.
+
+The commands below build the Wine/Store compatibility components independently.
+
+## Compatibility components
 
 The source export contains a native runtime proxy, local GameSave provider,
 patches for a WineGDK builtin module and patches for the Xodus broker/CLI. It
@@ -61,6 +155,22 @@ service are built together with the default Linux Secret Service backend. Do
 not mix a file-keyring build with a Secret Service build.
 
 ## Synthetic native checks
+
+To reproduce the automatic .NET repair with real Microsoft installers and a
+supported, unmodified runner:
+
+```sh
+python3 tests/compat/framework-repair-test.py --runner "$RUNNER" \
+  --cache "$RUNTIME/private/fenix-downloads" --output build/framework-repair-check
+```
+
+The output directory must be new. Both pinned installers must already be in the
+cache. The test verifies their hashes, copies them, creates an account-free Wine
+profile and checks fresh installation, repair after removing its x86 CLR, and an
+idempotent follow-up. Existing profiles and the supplied cache are untouched.
+Results and private setup logs stay under `build/`. No Fenix license or game is
+needed. This check takes several minutes and is separate from the synthetic CI
+suite.
 
 With a separately supplied compatible Wine runner:
 

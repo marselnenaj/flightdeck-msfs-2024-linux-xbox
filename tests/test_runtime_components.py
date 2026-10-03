@@ -109,6 +109,26 @@ class RuntimeComponentTests(unittest.TestCase):
         self.assertEqual(components.update_state(self.root), "current")
         self.assertFalse(components.refresh(self.launcher))
 
+    def test_known_fenix_scripts_receive_the_launcher_loader_fix(self):
+        from flightdeck.fenix import core
+        self.scripts(recorded=True)
+        hashes = self.old_scripts.copy()
+        overlay = {"integration": {}, "accepted_scripts": {}, "previous_releases": {}}
+        for name in ("launch-msfs.sh", "xodus-wine-launch"):
+            data = ("#!/bin/sh\n# old Fenix " + name).encode()
+            (self.root / "tools" / name).write_bytes(data)
+            hashes[name] = sha(data)
+            overlay["integration"][name] = hashes[name]
+            overlay["accepted_scripts"][name] = []
+        record = json.loads(self.manifest.read_text())
+        record["runtime_files"] = hashes
+        self.manifest.write_text(json.dumps(record))
+        with patch.object(core, "manifest", return_value=overlay):
+            self.assertEqual(components.update_state(self.root), "pending")
+            self.assertTrue(components.refresh(self.launcher))
+        self.assert_scripts(self.new_scripts)
+        self.assertEqual(json.loads(self.manifest.read_text())["runtime_files"], self.new_scripts)
+
     def test_script_only_update_is_detected_after_native_only_upgrade(self):
         components.refresh(self.launcher)
         self.scripts()

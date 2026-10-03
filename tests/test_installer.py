@@ -437,7 +437,7 @@ class InstallerTests(unittest.TestCase):
                                      "--bin-dir", str(self.bin), "--applications-dir", str(self.applications),
                                      "--language", "en"])
         self.assertEqual(result, 0)
-        execute.assert_called_once_with(sys.executable, [sys.executable, str(self.bin / "flightdeck"), "--language", "en"])
+        execute.assert_called_once_with(str(self.bin / "flightdeck"), [str(self.bin / "flightdeck"), "--language", "en"])
 
     @unittest.skipUnless(shutil.which("desktop-file-validate"), "Desktop entry validator unavailable")
     def test_desktop_entry_is_valid(self):
@@ -610,7 +610,7 @@ class InstallerTests(unittest.TestCase):
                                      "--bin-dir", str(self.bin), "--applications-dir", str(self.applications)])
         self.assertEqual(result, 0)
         self.assertEqual(installer.load_installation(self.data)["language"], "de")
-        execute.assert_called_once_with(sys.executable, [sys.executable, str(self.bin / "flightdeck")])
+        execute.assert_called_once_with(str(self.bin / "flightdeck"), [str(self.bin / "flightdeck")])
 
     def test_old_installation_metadata_and_invalid_language(self):
         original = self.install()
@@ -624,16 +624,16 @@ class InstallerTests(unittest.TestCase):
         with self.assertRaises(installer.InstallError):
             installer.load_installation(self.data)
 
-    def test_shell_bootstrap_localizes_missing_python(self):
+    def test_shell_bootstrap_localizes_missing_native_program(self):
         fake_bin = self.base / "fake-python"
         fake_bin.mkdir()
         executable = fake_bin / "python3"
         executable.write_text("#!/bin/sh\nexit 1\n")
         executable.chmod(0o700)
-        for arguments, locale, expected in (([], "de_DE.UTF-8", "benötigt Python"),
-                                           (["--language", "en"], "de_DE.UTF-8", "requires Python"),
-                                           (["--language=de"], "en_US.UTF-8", "benötigt Python"),
-                                           ([], "fr_FR.UTF-8", "requires Python")):
+        for arguments, locale, expected in (([], "de_DE.UTF-8", "native Flightdeck-Programm fehlt"),
+                                           (["--language", "en"], "de_DE.UTF-8", "native Flightdeck program is missing"),
+                                           (["--language=de"], "en_US.UTF-8", "native Flightdeck-Programm fehlt"),
+                                           ([], "fr_FR.UTF-8", "native Flightdeck program is missing")):
             with self.subTest(arguments=arguments, locale=locale):
                 environment = {**os.environ, "PATH": str(fake_bin) + os.pathsep + os.environ["PATH"],
                                "LC_ALL": "", "LC_MESSAGES": "", "LANG": locale}
@@ -657,25 +657,36 @@ class InstallerTests(unittest.TestCase):
                 self.assertEqual(completed.returncode, 0, completed.stderr)
                 self.assertEqual(json.loads(completed.stdout), expected)
 
-    def test_source_desktop_entry_resolves_local_file_and_uri_without_shell(self):
+    def test_source_desktop_entry_resolves_local_file_and_uri_without_python(self):
         desktop = ROOT / "Install Flightdeck.desktop"
         command = next(line[5:] for line in desktop.read_text().splitlines() if line.startswith("Exec="))
-        arguments = shlex.split(command)
-        self.assertEqual(arguments[0:2], ["python3", "-c"])
+        import ctypes
+        import ctypes.util
+        glib = ctypes.CDLL(ctypes.util.find_library("glib-2.0"))
+        glib.g_shell_parse_argv.argtypes = [ctypes.c_char_p, ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.POINTER(ctypes.c_char_p)), ctypes.c_void_p]
+        count, argv = ctypes.c_int(), ctypes.POINTER(ctypes.c_char_p)()
+        self.assertTrue(glib.g_shell_parse_argv(command.replace("\\\\", "\\").encode(), ctypes.byref(count), ctypes.byref(argv), None))
+        arguments = [argv[i].decode().replace("%%", "%") for i in range(count.value)]
+        glib.g_strfreev.argtypes = [ctypes.POINTER(ctypes.c_char_p)]
+        glib.g_strfreev(argv)
+        self.assertEqual(arguments[0:2], ["/bin/bash", "-c"])
+        self.assertNotIn("python", command)
         self.assertEqual(arguments[-1], "%k")
         self.assertNotIn("shell=True", command)
         source = self.base / "source with ü & $ characters"
-        (source / "scripts").mkdir(parents=True)
-        (source / "scripts/install-launcher.py").write_text('import json,sys\nprint(json.dumps(sys.argv[1:]))\n')
+        source.mkdir(parents=True)
+        stub = source / "install.sh"
+        stub.write_text("#!/bin/sh\nprintf '[\"%s\"]\\n' \"$1\"\n")
+        stub.chmod(0o700)
         copied = source / desktop.name
         copied.write_bytes(desktop.read_bytes())
-        for location in (str(copied), copied.as_uri()):
-            result = subprocess.run([sys.executable, *arguments[1:-1], location],
+        for location in (str(copied), copied.as_uri(), copied.as_uri().replace("file:///", "file://localhost/")):
+            result = subprocess.run([*arguments[:-1], location],
                                     cwd=self.base, capture_output=True, text=True, timeout=10)
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual(json.loads(result.stdout), ["--gui"])
-        for location in ("https://example.invalid/install.desktop", "file://remote.invalid/tmp/install.desktop"):
-            result = subprocess.run([sys.executable, *arguments[1:-1], location],
+        for location in ("https://example.invalid/install.desktop", "file://remote.invalid/tmp/install.desktop", "file:///tmp/bad%00.desktop", "file:///tmp/bad%xx.desktop"):
+            result = subprocess.run([*arguments[:-1], location],
                                     capture_output=True, text=True, timeout=10)
             self.assertNotEqual(result.returncode, 0)
         if shutil.which("desktop-file-validate"):

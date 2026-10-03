@@ -254,19 +254,24 @@ def _prepare(runtime, candidate, cancel, notify, *, bundle=None, restoring=False
     try:
         scripts = {}
         if fenix is not None:
+            from . import runtime_scripts
             lock = core.manifest()
             legacy_state = core.read_json(legacy) if legacy.exists() else {}
             for name in ("launch-msfs.sh", "xodus-wine-launch"):
                 before = digest(core.regular(runtime / "tools" / name))
-                accepted = {*lock["accepted_scripts"][name], lock["integration"][name]}
+                accepted = {*lock["accepted_scripts"][name], lock["integration"][name], *runtime_scripts.accepted(name)}
                 for release in lock.get("previous_releases", {}).values():
                     accepted.add(release["integration"][name])
                 accepted.add(legacy_state.get("deployed_scripts", {}).get(name))
                 if before not in accepted:
                     raise LauncherError("Ein Fenix-Startskript wurde angepasst. Die bestehende Installation wurde nicht verändert.")
                 _copy_file(runtime / "tools" / name, work / ("before-" + name))
-                _copy_file(bundle / "integration" / name, work / name)
-                scripts[name] = {"before": before, "after": lock["integration"][name],
+                script = runtime_scripts.current(name)
+                expected = digest(script)
+                _copy_file(script, work / name)
+                if digest(work / name) != expected:
+                    raise LauncherError("Ein Startskript wurde während der Vorbereitung verändert.")
+                scripts[name] = {"before": before, "after": expected,
                                  "source": str((work / name).relative_to(runtime))}
         notify("Proton und Windows-Umgebung werden unabhängig kopiert …")
         _copy_prefix(candidate["files"], runner / "files", cancel)

@@ -4,7 +4,7 @@ import {stringValue} from './state.js';
 export function fenixPermissions(data, status, enabled) {
   const idle=enabled&&data?.can_change===true&&data.runtime_path===status?.runtime.path&&status?.game.state==='stopped';
   return {
-    install:idle&&(data.state==='available'||(data.installed===true&&data.update_available===true)),
+    install:idle&&(data.state==='available'||data.can_retry===true||(data.installed===true&&data.update_available===true)),
     installer:idle&&data.installed===true,
     open:idle&&data.fenix_installed===true&&(data.installed===true||data.state==='legacy'),
     manager:idle&&data.manager_installed===true&&(data.installed===true||data.state==='legacy'),
@@ -23,7 +23,7 @@ export function fenixProgress(data, status) {
   const ready=settings&&data.configured===true;
   const step=ready?0:aircraft?(settings?4:3):patched?2:1;
   const active=data?.job?.state==='running';
-  const supported=['available','installed'].includes(data?.state);
+  const supported=['available','installed'].includes(data?.state)||data?.can_retry===true;
   const steps=[patched,aircraft,settings,ready].map((done,index)=>done?'done':supported&&step===index+1?'next':'pending');
   let title='Status wird geladen …',detail='';
   if(supported) {
@@ -34,6 +34,10 @@ export function fenixProgress(data, status) {
       'Schritt 3 von 4: Öffne Fenix, melde dich an und schließe das Programm danach vollständig.',
       'Schritt 4 von 4: Schließe Fenix und klicke auf „Einrichtung abschließen“. Damit werden Anzeigen und automatischer Start eingerichtet.',
     ][step-1];
+    if(data?.can_retry===true) {
+      title='Einrichtung kann automatisch repariert werden';
+      detail='Klicke auf „Einrichtung reparieren“. Flightdeck prüft und repariert .NET im kopierten Profil. Ein PC-Neustart oder manuelles Wiederherstellen ist dafür nicht nötig.';
+    }
   } else if(data?.state==='legacy') {
     title='Vorhandene Fenix-Einrichtung';detail='Dein lokaler Fenix-Patch bleibt aktiv. Eine erneute Installation über diesen Assistenten ist nicht erforderlich.';
   } else if(data?.can_restore) {
@@ -62,7 +66,7 @@ export function createFenix({request,getStatus,isOnline,isReserved,changed,refre
     $('fenix-pick-bundle').disabled=pending||active||!isOnline();
     $('fenix-refresh').disabled=loading;
     const progress=fenixProgress(fresh?data:null,getStatus());
-    $('fenix-install').dataset.i18n=data?.update_available?'Patch aktualisieren':'Patch einrichten';
+    $('fenix-install').dataset.i18n=data?.can_retry?'Einrichtung reparieren':data?.update_available?'Patch aktualisieren':'Patch einrichten';
     $('fenix-install').textContent=t($('fenix-install').dataset.i18n);
     const openParent=data?.state==='legacy'||(data?.configured&&data?.settings_ready)?$('fenix-app-controls'):$('fenix-step-3');
     if($('fenix-open').parentElement!==openParent)
