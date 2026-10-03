@@ -422,6 +422,17 @@ def _copy_prefix(source, destination, cancel):
                 process.wait()
 
 
+def relocate_prefix_links(source, destination):
+    """Keep links within a copied Windows profile local through later renames."""
+    for link in destination.rglob("*"):
+        if link.is_symlink():
+            target = link.readlink()
+            if target.is_absolute() and target.is_relative_to(source):
+                target = destination / target.relative_to(source)
+                link.unlink()
+                link.symlink_to(os.path.relpath(target, link.parent))
+
+
 def _copy_file(source, target):
     """Replace the directory entry, never write through a prefix file symlink."""
     target.parent.mkdir(parents=True, exist_ok=True, mode=0o700)

@@ -34,7 +34,8 @@ add-on programs or change package contents when reading this list.
 
 Follow the developer's own installer when one is supplied. Keep existing
 settings and liveries before replacing a package. The general Community inventory lists packages and opens their folder.
-Fenix has a separate setup workflow below, currently for MSFS 2024 only.
+Fenix and the experimental GSX Pro integration have separate setup workflows
+below, currently for MSFS 2024 only.
 
 ## Aircraft with companion applications
 
@@ -63,6 +64,56 @@ initialization. It required the runner's `libvkd3d-1.dll`,
 `libvkd3d-shader-1.dll` and `libvkd3d-utils-1.dll` in that test prefix. These are
 already runner components, not modified FlyByWire files. A connection to a
 running simulator has not yet been established by this test.
+
+### GSX Pro (experimental)
+
+In **0.1.19**, **Mods → GSX Pro** opens preparation and setup in three steps.
+Other add-on cards remain collapsed. The official FSDT installer has been tested
+with native .NET 4.8 in a separate MSFS 2024 Wine profile, including opening,
+closing and releasing the runtime. GSX installation, activation, Couatl/SimConnect,
+the in-game menu and ground services still need testing with a licensed copy.
+
+Before changing FSDT setup, return to the original Flightdeck environment under
+**Setup → Proton version**. Recover interrupted GSX preparation before switching
+Proton versions.
+
+Start MSFS 2024 once to create its package configuration, then close the simulator,
+Fenix and other Windows applications in that profile.
+
+1. **Prepare FSDT** downloads the SHA-256-pinned official installer, copies the
+   Windows profile and installs .NET 4.8 if needed. Flightdeck registers FSDT's
+   licensing component and retains the original profile as a backup. The game
+   runner is unchanged. Preparation can take several minutes.
+2. **Open FSDT installer**, select GSX Pro and follow FSDT's installation and
+   activation. Check that the simulator and Community path match the selected
+   Flightdeck installation. Let downloads finish, then close the installer or
+   select **Close FSDT** in Flightdeck. FSDT manages its package links; do not copy
+   its entire installation into Community manually.
+3. **Set up automatic startup** becomes available after Flightdeck detects the
+   GSX Community package and FSDT's Couatl entry in `exe.xml`. It enables that
+   existing entry, preserving FSDT's arguments and other add-ons. If the entry is
+   missing, update through FSDT and reload the status. Start MSFS and test the GSX
+   menu and ground services. **GSX configured · Flight test pending** confirms
+   local setup only, not license validity or Linux compatibility.
+
+GSX is paid software. According to the [official GSX manual](https://www.fsdreamteam.com/gsx_manual_msfs.pdf),
+installation requires a GSX license or an eligible activated FSDT airport. The
+latter enables use at FSDT airports and a limited trial at KSFO, LIMC and EDDM.
+Preparing FSDT in Flightdeck does not unlock GSX. Purchases and activation stay
+with [FSDreamTeam](https://www.fsdreamteam.com/products_gsxpro.html).
+
+**Disable GSX autostart** changes only the Couatl entry; it does not uninstall
+packages. With GSX startup configured, Flightdeck also closes the named Couatl
+companions in that profile at game exit, crash or stop. Other profiles and FSDT's
+installer remain outside that session cleanup.
+
+If preparation is interrupted, game launch remains blocked until **Recover GSX
+preparation** restores the previous profile. Completed preparation keeps a
+`local/msfs-prefix.before-gsx-*` backup. Recovery is for an interrupted
+preparation, not for undoing a later GSX installation. Diagnostic logs are in
+`private/gsx-setup-*.log` and `private/gsx-manager.log`. If FSDT replaces its
+installer download, a checksum mismatch stops preparation until Flightdeck's
+pin has been reviewed and updated. No FSDT or Microsoft binaries are bundled.
 
 ### Fenix A320
 

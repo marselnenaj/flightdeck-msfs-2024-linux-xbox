@@ -68,6 +68,8 @@ export function createFenix({request,getStatus,isOnline,isReserved,changed,refre
     if($('fenix-open').parentElement!==openParent)
       openParent.insertBefore($('fenix-open'),openParent===$('fenix-app-controls')?$('fenix-stop'):null);
     $('fenix-state').textContent=t(progress.title);
+    $('fenix-compact-state').removeAttribute('data-i18n');
+    $('fenix-compact-state').textContent=t(progress.title);
     $('fenix-next').textContent=t(progress.detail);
     $('fenix-summary').classList.toggle('ready',progress.ready);
     $('fenix-overview').hidden=!progress.ready;

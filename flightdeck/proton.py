@@ -15,7 +15,7 @@ import uuid
 from .backend import LauncherError, atomic_json
 from .graphics_diagnostics import _read
 from .maintenance import _directory, _id, _idle
-from .setup import SetupError, SetupCancelled, _copy_file, _copy_prefix, digest, interrupted, prefix_system32, runner_wine
+from .setup import SetupError, SetupCancelled, _copy_file, _copy_prefix, digest, interrupted, prefix_system32, runner_wine, relocate_prefix_links
 
 SETTINGS = "proton-selection.json"
 JOURNAL = "proton-switch.json"
@@ -218,6 +218,7 @@ def _prepare(runtime, candidate, cancel, notify):
                 or inspect(candidate["path"])["hashes"] != candidate["hashes"]):
             raise LauncherError("Proton wurde während der Vorbereitung aktualisiert. Bitte erneut auswählen.")
         _copy_prefix(original_prefix, fresh, cancel)
+        relocate_prefix_links(original_prefix, fresh)
         env = _prefix_env(fresh, work)
         env.update(WINELOADER=str(runner_wine(runner)), WINESERVER=str(runner / "files/bin/wineserver"))
         notify("Die neue Proton-Umgebung wird eingerichtet …")
@@ -339,6 +340,9 @@ class ProtonManager:
             if mode == "proton" and (not isinstance(data.get("path"), str) or not data["path"].strip()):
                 raise LauncherError("Wähle einen installierten Proton-Ordner.")
             self.launcher._require_cloud_idle(allow_attention=mode == "default")
+            from .gsx_core import setup_complete
+            if not setup_complete(root):
+                raise LauncherError("Die GSX-Einrichtung ist unvollständig. Unter Mods wiederherstellen.")
             self.launcher.reserve_setup()
             self.cancel_event.clear()
             self.job = {"id": uuid.uuid4().hex, "state": "preparing", "runtime_path": str(root),

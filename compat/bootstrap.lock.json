@@ -205,7 +205,7 @@
   "runtime_scripts": {
     "files": {
       "launch-msfs.sh": "37a49ee7be5f3673e10e4914e350e67c53555e5b8db48545a7876c6425c5c85e",
-      "play-msfs.sh": "d7fc893ad457aefc95039eaef22d6e394b13236372d93230948c7e007267a7c7",
+      "play-msfs.sh": "d2ee9b764adb4965a395ff39cbdbf7aa106e5fa604fca06e0ec521e8e33c3d80",
       "runtime-env.sh": "e8ad933de8a6da4308a8a3c5541bcdfe559bbfc1d97bdfaf33610a94d6ba4d39",
       "xodus.sh": "95b1fb7ddc254d5571eb84a41a13e90d9d48f6cefac38ab346b538fbda8b0d45",
       "xodus-service.sh": "77c31c30873e14ce7a0805ad3220d99b724b01ec5e63bf372e5bc919ca73424a",

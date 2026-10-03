@@ -54,6 +54,19 @@ class ServerTests(unittest.TestCase):
             self.assertEqual(code, 409)
             self.assertEqual(json.loads(raw)["error"], "Select a problem category.")
 
+    def test_gsx_actions_require_csrf_and_preserve_runtime_binding(self):
+        manager = self.server.launcher.gsx
+        headers = {"Content-Type":"application/json", "X-Flightdeck-Token":self.server.token, "Accept-Language":"en"}
+        self.assertEqual(self.request("GET", "/gsx.js")[0], 200)
+        code, _, raw = self.request("GET", "/api/gsx", headers={"Accept-Language":"en"})
+        self.assertEqual(code, 200)
+        self.assertFalse(json.loads(raw)["verified_in_simulator"])
+        with patch.object(manager, "start", return_value={"ok":True}) as start:
+            self.assertEqual(self.request("POST", "/api/gsx/prepare", "{}", {"Content-Type":"application/json"})[0],403)
+            start.assert_not_called()
+            self.assertEqual(self.request("POST", "/api/gsx/prepare", '{"runtime_path":"/fixture"}', headers)[0],200)
+            start.assert_called_once_with("prepare", {"runtime_path":"/fixture"})
+
     def test_store_check_is_explicit_and_session_protected(self):
         manager = self.server.launcher.store_check
         headers = {"Content-Type":"application/json", "X-Flightdeck-Token":self.server.token, "Accept-Language":"de"}

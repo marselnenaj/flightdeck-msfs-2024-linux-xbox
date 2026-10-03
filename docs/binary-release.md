@@ -24,13 +24,19 @@ See [renderer provenance](nvidia-renderer.md).
 The **0.1.17 release** updates only the VKD3D pair and supplies its complete
 patched sources as `flightdeck-vkd3d-0.1.17-sources.tar.gz`. It retains the
 0.1.16 native component/source archives and the 0.1.11 DXVK source archive with
-their existing hashes and notices. The new renderer's effect on the reported
-NVIDIA black main view remains unverified.
+their existing hashes and notices. The 0.1.18 follow-up confirms that the corrected renderer loaded but did not
+resolve the affected tester's NVIDIA black main view.
 
 **0.1.18** adds optional OpenXR setup in the launcher and retains all 0.1.17
 native and graphics binaries and corresponding source archives unchanged.
 The Monado runtime used for VR validation is a separate test dependency and
 is not bundled in Flightdeck. Users install their chosen native VR runtime.
+
+**0.1.19** adds experimental Proton selection, GSX Pro setup and a compact
+interface. It retains the 0.1.16 native, 0.1.17 VKD3D and 0.1.11 DXVK binaries
+and corresponding source archives. Alternate Proton versions come from the
+user's existing installations. The FSDT installer and Microsoft prerequisites
+are downloaded separately on request and are not bundled.
 
 The release pins in `compat/bootstrap.lock.json` bind the component archive,
 every executable/library and the notice file to SHA256 checksums. The installer

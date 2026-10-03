@@ -24,6 +24,8 @@ Microsoft account, download the game and start it from one application.
 
 **Current stable release: [Flightdeck 0.1.18](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.18).**
 Update through **Updates → Flightdeck** or use the full installer.
+**Prepared for 0.1.19:** selectable Proton versions, experimental GSX Pro setup and compact settings/add-on cards. The candidate is not published yet. [Changes](docs/changelog.md#0119--release-candidate).
+
 **0.1.18** adds optional VR setup for WiVRn, SteamVR and Monado, headset checks,
 and the missing Wine/OpenXR startup integration for AMD and NVIDIA.
 Enable it under **Setup → Virtual Reality**. Stereo D3D11/D3D12 frames have been
@@ -75,6 +77,11 @@ the corrected build loads in 0.1.18, but their NVIDIA main view remains black.
 Both versions are regular
 releases available through **Updates → Flightdeck**.
 [Details and validation](docs/nvidia-renderer.md#3d-texture-layout-correction-0117).
+
+**In the 0.1.19 release candidate:** experimental GSX Pro setup for MSFS 2024, with an official
+FSDT installer workflow under Mods. Installer preparation has been tested under
+Wine; GSX operation in the simulator is unverified. Not included in the stable 0.1.18 package.
+[GSX setup and scope](docs/addons.md#gsx-pro-experimental).
 
 ## Get started
 

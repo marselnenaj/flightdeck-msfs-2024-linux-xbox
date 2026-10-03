@@ -126,6 +126,8 @@ class Launcher:
         self.cloud_saves = CloudSaveManager(self)
         from .fenix import FenixManager
         self.fenix = FenixManager(self)
+        from .gsx import GSXManager
+        self.gsx = GSXManager(self)
         from .launcher_update import LauncherUpdateManager
         self.launcher_updates = LauncherUpdateManager(self)
         self.graphics_report = None
@@ -428,6 +430,12 @@ class Launcher:
                 complete = False
             result.append({"id": "fenix_setup", "label": "Fenix-Einrichtung", "ok": complete,
                            "detail": "Geprüft" if complete else "Fenix-Einrichtung unvollständig. Unter Add-ons wiederherstellen."})
+        marker = root / "private/gsx-setup.json" if root else None
+        if marker and (marker.exists() or marker.is_symlink()):
+            from .gsx_core import setup_complete
+            complete = setup_complete(root)
+            result.append({"id": "gsx_setup", "label": "GSX-Einrichtung", "ok": complete,
+                           "detail": "Geprüft" if complete else "Die GSX-Einrichtung ist unvollständig. Unter Mods wiederherstellen."})
         return result
 
     def saves(self, idle):

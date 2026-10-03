@@ -222,6 +222,45 @@ class ProtonTests(unittest.TestCase):
                 self.assertEqual(args[0].name, 'wine64')
                 self.assertEqual(call.kwargs['env']['WINE_DISABLE_FAST_SYNC'], '1')
 
+    def test_gsx_setup_requires_returning_to_the_original_environment(self):
+        self.assertEqual(self.select(self.experimental)['state'], 'complete')
+        for operation in ('prepare', 'open', 'configure', 'disable'):
+            with self.subTest(operation=operation), self.assertRaisesRegex(LauncherError, 'Flightdeck-Umgebung'):
+                self.launcher.gsx.start(operation, {'runtime_path': str(self.runtime)})
+            self.assertFalse(self.launcher.setup_busy)
+        self.assertEqual(self.launcher.gsx.snapshot()['state'], 'unavailable')
+        self.assertEqual(self.select()['state'], 'complete')
+        self.assertEqual(self.launcher.gsx.snapshot()['state'], 'available')
+
+    def test_interrupted_gsx_setup_must_be_recovered_before_switching(self):
+        from flightdeck import gsx_core
+        marker = self.runtime / gsx_core.MARKER
+        marker.write_text(json.dumps({'format': 1, 'id': 'a' * 32, 'state': 'preparing',
+                                      'original_prefix_id': proton._id(self.prefix), 'prior': None}))
+        with self.assertRaisesRegex(LauncherError, 'GSX-Einrichtung'):
+            self.select(self.experimental)
+        self.assertFalse(self.launcher.setup_busy)
+        gsx_core.recover(self.runtime)
+        self.assertEqual(self.select(self.experimental)['state'], 'complete')
+
+    def test_internal_addon_links_stay_in_the_trial_during_preparation_and_after_switch(self):
+        package = self.prefix / 'drive_c/Addon Manager/GSX'
+        package.mkdir(parents=True)
+        (package / 'marker').write_text('original add-on')
+        link = self.prefix / 'drive_c/Community/GSX'
+        link.parent.mkdir()
+        link.symlink_to(package, target_is_directory=True)
+        with patch.object(bootstrap, '_command'):
+            fresh, selected = proton._prepare(self.runtime, proton.inspect(str(self.experimental)), None, lambda _: None)
+        relative = link.relative_to(self.prefix)
+        self.assertEqual((fresh / relative).resolve(), fresh / package.relative_to(self.prefix))
+        (fresh / relative / 'marker').write_text('trial add-on')
+        self.assertEqual((package / 'marker').read_text(), 'original add-on')
+        proton._switch(self.runtime, fresh, selected)
+        self.assertEqual((link / 'marker').read_text(), 'trial add-on')
+        self.assertEqual(self.select()['state'], 'complete')
+        self.assertEqual((link / 'marker').read_text(), 'original add-on')
+
 
 class PortableLoaderTests(unittest.TestCase):
     @classmethod

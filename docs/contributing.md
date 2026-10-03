@@ -12,6 +12,7 @@ mocked request is not evidence that a feature works in the simulator.
 | `flightdeck/games.py` | Fixed simulator identities and edition-bound runtime paths |
 | `flightdeck/runtime_components.py` | Checked native/script updates for idle managed runtimes |
 | `flightdeck/fenix.py`, `flightdeck/_fenix/` | Fenix setup jobs and the vendored patch installer engine |
+| `flightdeck/gsx.py`, `flightdeck/gsx_core.py`, `flightdeck/gsx_processes.py` | Experimental FSDT preparation, official GSX startup settings and installer lifecycle |
 | `ui/` | Browser interface, using the local API |
 | `compat/runtime/` | Native Wine/GDK bridge, asynchronous results and local saves |
 | `compat/patches/` | Changes against the pinned WineGDK and Xodus sources |

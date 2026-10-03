@@ -9,7 +9,7 @@ export function protonActions(data,status,{online=true,pending=false,reserved=fa
     cancel:online&&!pending&&busy&&data.job.runtime_path===status?.runtime.path,busy};
 }
 
-export function createProton({request,getStatus,isOnline,isReserved,refreshStatus,changed}) {
+export function createProton({request,getStatus,isOnline,isReserved,isSetupActive=()=>false,refreshStatus,changed}) {
   const $=id=>document.getElementById(id);
   let data=null,pending=false,loading=null,error='',reserved=false,boundPath=null;
   function render() {
@@ -17,8 +17,10 @@ export function createProton({request,getStatus,isOnline,isReserved,refreshStatu
     const bound=!!data&&!!status?.runtime.configured&&data.runtime_path===status.runtime.path;
     const next=pending||allowed.busy;
     if(next!==reserved){reserved=next;changed(next);}
-    $('proton-card').hidden=!status?.runtime.configured;
+    $('proton-card').hidden=!status?.runtime.configured||isSetupActive();
     $('proton-current').textContent=bound?data.selected:'—';
+    $('proton-compact-state').removeAttribute('data-i18n');
+    $('proton-compact-state').textContent=bound?(data.error||(allowed.busy?data.job.message:data.selected)):t('Andere Proton-Version testen');
     $('proton-select').disabled=!allowed.select;
     for(const option of $('proton-select').options){
       if(option.value==='')option.text=t('Proton-Version auswählen …');

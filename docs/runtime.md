@@ -25,7 +25,7 @@ the user's actual entitlement; the compatibility code does not grant licenses.
 
 ## Experimental Proton selection
 
-In a build containing this feature, open **Setup → Proton version (experimental)**.
+In Flightdeck 0.1.19, open **Setup → Proton version (experimental)**.
 Flightdeck discovers Proton installations in Steam's registered libraries,
 including Flatpak Steam and `compatibilitytools.d`. You can also enter the
 folder of an installed Proton Experimental, GE-Proton or another Proton build.
@@ -57,7 +57,9 @@ launch options are not invoked. Unsupported host dependencies fail preparation.
 
 This is experimental compatibility support, not a verified NVIDIA fix. The
 Fenix patch still requires its matched Flightdeck runner; restore that patch
-before trying another runner. Return to Flightdeck before environment resets or
+before trying another runner. GSX/FSDT setup changes also require returning to
+Flightdeck first; recover an interrupted GSX preparation before switching Proton.
+Return to Flightdeck before environment resets or
 uninstallation. Diagnostics record the chosen version and loader with each
 start. Maintainers can run `scripts/check-proton.py` for synthetic executable/DLL
 loading, Store interface loading, rendering and restoration without a game or

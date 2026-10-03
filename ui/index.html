@@ -85,8 +85,9 @@
       </section>
       <section id="view-installation" class="view" aria-labelledby="page-title" hidden>
         <p class="setup-subtitle"><span data-i18n="Installieren oder verbinden. Danach startet dein Simulator direkt aus Flightdeck.">Installieren oder verbinden. Danach startet dein Simulator direkt aus Flightdeck.</span></p>
-        <section id="graphics-card" class="panel graphics-panel" aria-labelledby="graphics-title" hidden>
-          <h2 id="graphics-title" data-i18n="NVIDIA-Grafik">NVIDIA-Grafik</h2>
+        <details id="graphics-card" class="feature-disclosure panel graphics-panel" aria-labelledby="graphics-title" hidden name="runtime-settings">
+          <summary id="graphics-toggle" class="feature-toggle"><span class="feature-heading"><span class="feature-title" id="graphics-title" data-i18n="NVIDIA-Grafik">NVIDIA-Grafik</span><span id="graphics-compact-state" class="feature-summary" data-i18n="Grafikmodus anpassen">Grafikmodus anpassen</span></span></summary>
+          <div class="feature-body">
           <p id="graphics-game" class="eyebrow"></p>
           <div class="graphics-controls">
             <div class="field"><label for="graphics-mode" data-i18n="NVIDIA-Modus">NVIDIA-Modus</label><select id="graphics-mode" aria-describedby="graphics-description" disabled><option value="auto" data-i18n="Automatisch (Kompatibilität bevorzugen)">Automatisch (Kompatibilität bevorzugen)</option><option value="compatibility" data-i18n="Kompatibilität (ohne NVIDIA-Zusatzfunktionen)">Kompatibilität (ohne NVIDIA-Zusatzfunktionen)</option><option value="features" data-i18n="NVIDIA-Funktionen (experimentell)">NVIDIA-Funktionen (experimentell)</option></select></div>
@@ -96,9 +97,11 @@
           <p class="muted" data-i18n="Gilt für den ausgewählten Simulator ab dem nächsten Spielstart. Jederzeit umstellbar.">Gilt für den ausgewählten Simulator ab dem nächsten Spielstart. Jederzeit umstellbar.</p>
           <p id="graphics-busy" class="muted" hidden></p>
           <p id="graphics-error" class="notice error" role="alert" hidden></p>
-        </section>
-        <section id="vr-card" class="panel graphics-panel" aria-labelledby="vr-title" hidden>
-          <h2 id="vr-title" data-i18n="Virtual Reality">Virtual Reality</h2>
+                  </div>
+        </details>
+        <details id="vr-card" class="feature-disclosure panel graphics-panel" aria-labelledby="vr-title" hidden name="runtime-settings">
+          <summary id="vr-toggle" class="feature-toggle"><span class="feature-heading"><span class="feature-title" id="vr-title" data-i18n="Virtual Reality">Virtual Reality</span><span id="vr-compact-state" class="feature-summary" data-i18n="Headset verbinden und prüfen">Headset verbinden und prüfen</span></span></summary>
+          <div class="feature-body">
           <p id="vr-game" class="eyebrow"></p>
           <p data-i18n="Verbinde dein Headset mit WiVRn, SteamVR oder Monado. Flightdeck verbindet den Simulator mit deinem VR-System.">Verbinde dein Headset mit WiVRn, SteamVR oder Monado. Flightdeck verbindet den Simulator mit deinem VR-System.</p>
           <div class="graphics-controls">
@@ -116,9 +119,11 @@
           <p data-i18n="Starte danach MSFS und wechsle im Simulator in den VR-Modus (standardmäßig Strg+Tab). Verbinde das Headset vor jedem Spielstart.">Starte danach MSFS und wechsle im Simulator in den VR-Modus (standardmäßig Strg+Tab). Verbinde das Headset vor jedem Spielstart.</p>
           <p id="vr-nvidia" class="muted" hidden data-i18n="NVIDIA: Beginne mit dem automatischen Grafikmodus. Dieser deaktiviert DLSS und weitere NVIDIA-Zusatzfunktionen zugunsten der Kompatibilität.">NVIDIA: Beginne mit dem automatischen Grafikmodus. Dieser deaktiviert DLSS und weitere NVIDIA-Zusatzfunktionen zugunsten der Kompatibilität.</p>
           <a class="text-link" href="https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/blob/main/docs/vr.md" target="_blank" rel="noopener noreferrer" data-i18n="VR einrichten und Probleme beheben">VR einrichten und Probleme beheben</a>
-        </section>
-        <section id="proton-card" class="panel graphics-panel" aria-labelledby="proton-title" hidden>
-          <h3 id="proton-title" data-i18n="Proton-Version (experimentell)">Proton-Version (experimentell)</h3>
+                  </div>
+        </details>
+        <details id="proton-card" class="feature-disclosure panel graphics-panel" aria-labelledby="proton-title" hidden name="runtime-settings">
+          <summary id="proton-toggle" class="feature-toggle"><span class="feature-heading"><span class="feature-title" id="proton-title" data-i18n="Proton-Version (experimentell)">Proton-Version (experimentell)</span><span id="proton-compact-state" class="feature-summary" data-i18n="Andere Proton-Version testen">Andere Proton-Version testen</span></span></summary>
+          <div class="feature-body">
           <p class="muted" data-i18n="Teste eine installierte Proton-Version mit einer eigenen Windows-Umgebung. Du kannst jederzeit zur bisherigen Flightdeck-Umgebung zurückkehren. Die NVIDIA-Kompatibilität muss auf deinem System geprüft werden.">Teste eine installierte Proton-Version mit einer eigenen Windows-Umgebung. Du kannst jederzeit zur bisherigen Flightdeck-Umgebung zurückkehren. Die NVIDIA-Kompatibilität muss auf deinem System geprüft werden.</p>
           <p><span data-i18n="Aktive Proton-Version:">Aktive Proton-Version:</span> <strong id="proton-current">—</strong></p>
           <div class="graphics-controls">
@@ -131,9 +136,11 @@
           <div class="update-actions"><button id="proton-apply" class="button dark" disabled data-i18n="Proton vorbereiten & verwenden">Proton vorbereiten &amp; verwenden</button><button id="proton-restore" class="button secondary" disabled hidden data-i18n="Zur Flightdeck-Umgebung zurückkehren">Zur Flightdeck-Umgebung zurückkehren</button><button id="proton-cancel" class="button secondary" hidden disabled data-i18n="Abbrechen">Abbrechen</button></div>
           <progress id="proton-progress" aria-label="Proton-Vorbereitung" data-i18n-aria-label="Proton-Vorbereitung" hidden></progress>
           <p id="proton-message" role="status" aria-live="polite"></p><p id="proton-error" class="notice error" role="status" hidden></p>
-        </section>
-        <section id="maintenance-card" class="panel maintenance-panel" aria-labelledby="maintenance-title">
-          <h2 id="maintenance-title" data-i18n="Installation verwalten">Installation verwalten</h2>
+                  </div>
+        </details>
+        <details id="maintenance-card" class="feature-disclosure panel maintenance-panel" aria-labelledby="maintenance-title" name="runtime-settings">
+          <summary id="maintenance-toggle" class="feature-toggle"><span class="feature-heading"><span class="feature-title" id="maintenance-title" data-i18n="Installation verwalten">Installation verwalten</span><span id="maintenance-compact-state" class="feature-summary" data-i18n="Wiederherstellen, zurücksetzen oder entfernen">Wiederherstellen, zurücksetzen oder entfernen</span></span></summary>
+          <div class="feature-body">
           <p id="maintenance-game" class="eyebrow"></p>
           <p data-i18n="Bei Startproblemen kannst du die Spielumgebung zurücksetzen. Vor jeder Änderung zeigt Flightdeck eine Vorschau.">Bei Startproblemen kannst du die Spielumgebung zurücksetzen. Vor jeder Änderung zeigt Flightdeck eine Vorschau.</p>
           <div class="update-actions"><button id="maintenance-reset" class="button secondary" disabled data-i18n="Spielumgebung zurücksetzen">Spielumgebung zurücksetzen</button><button id="maintenance-restore" class="button secondary" hidden disabled data-i18n="Letztes Zurücksetzen rückgängig machen">Letztes Zurücksetzen rückgängig machen</button></div>
@@ -153,7 +160,8 @@
             <div class="update-actions"><button id="maintenance-confirm" class="button dark" disabled></button><button id="maintenance-discard" class="button secondary" data-i18n="Abbrechen">Abbrechen</button></div>
           </section>
           <div id="maintenance-backup" hidden><strong data-i18n="Erhaltener Sicherungsordner">Erhaltener Sicherungsordner</strong><p id="maintenance-backup-path"></p></div>
-        </section>
+                  </div>
+        </details>
         <ol id="setup-steps" class="setup-steps" aria-label="Einrichtungsschritte" data-i18n-aria-label="Einrichtungsschritte"><li id="setup-step-1" class="active"><span data-i18n="Installation wählen">Installation wählen</span></li><li id="setup-step-2"><span data-i18n="Prüfen">Prüfen</span></li><li id="setup-step-3"><span data-i18n="Verbinden">Verbinden</span></li></ol>
         <p id="setup-unavailable" class="notice error setup-unavailable" hidden></p>
 
@@ -304,9 +312,11 @@
         </details>
       </section>
       <section id="view-mods" class="view" aria-labelledby="page-title" hidden>
-        <div class="view-intro"><h2 data-i18n="Deine Community-Add-ons">Deine Community-Add-ons</h2><p data-i18n="Sieh nach, welche Add-on-Ordner vorhanden sind, und öffne den Community-Ordner im Dateimanager.">Sieh nach, welche Add-on-Ordner vorhanden sind, und öffne den Community-Ordner im Dateimanager.</p></div>
-        <section id="fenix-card" class="fenix-card" aria-labelledby="fenix-title">
-          <div class="fenix-heading"><div><p class="eyebrow">FENIX · LINUX</p><h2 id="fenix-title">Fenix A320</h2></div><span class="fenix-preview" data-i18n="Community-Vorschau">Community-Vorschau</span></div>
+        <div class="view-intro"><h2 data-i18n="Deine Add-ons">Deine Add-ons</h2><p data-i18n="Öffne die Einrichtung eines Add-ons oder verwalte unten deinen Community-Ordner.">Öffne die Einrichtung eines Add-ons oder verwalte unten deinen Community-Ordner.</p></div>
+        <details id="fenix-card" class="feature-disclosure fenix-card" aria-labelledby="fenix-title" name="addon-setup">
+          <summary id="fenix-toggle" class="feature-toggle"><span class="feature-heading"><span id="fenix-title" class="feature-title">Fenix A320</span><span id="fenix-compact-state" class="feature-summary" data-i18n="Flugzeug einrichten und verwalten">Flugzeug einrichten und verwalten</span></span><span class="fenix-preview" data-i18n="Community-Vorschau">Community-Vorschau</span></summary>
+          <div class="feature-body">
+
           <p data-i18n="Richte die getesteten Fenix-Korrekturen ein und installiere dein Flugzeug mit dem offiziellen Installer.">Richte die getesteten Fenix-Korrekturen ein und installiere dein Flugzeug mit dem offiziellen Installer.</p>
           <p class="muted" data-i18n="MSFS 2024 · CPU-Anzeigen · Legacy-Readouts · Eigene Fenix-Lizenz erforderlich. Wetterradar ist im CPU-Modus nicht verfügbar.">MSFS 2024 · CPU-Anzeigen · Legacy-Readouts · Eigene Fenix-Lizenz erforderlich. Wetterradar ist im CPU-Modus nicht verfügbar.</p>
           <div id="fenix-summary" class="fenix-summary" role="status" aria-live="polite"><p id="fenix-state" class="fenix-state"></p><p id="fenix-next"></p><a id="fenix-overview" class="text-link" href="#overview" hidden data-i18n="Zur Übersicht und MSFS starten">Zur Übersicht und MSFS starten</a></div>
@@ -323,7 +333,26 @@
           <div class="update-actions"><button id="fenix-manager" class="button secondary" disabled aria-describedby="fenix-manager-hint" data-i18n="Installer & Liveries">Installer &amp; Liveries</button><button id="fenix-refresh" class="text-link" data-i18n="Status neu laden">Status neu laden</button><a class="text-link" href="https://github.com/marselnenaj/fenix-a320-linux-patch" target="_blank" rel="noreferrer" data-i18n="Projekt und Anleitung">Projekt und Anleitung</a></div>
           <p id="fenix-manager-hint" class="muted" data-i18n="Öffnet den separaten Fenix-Manager zum Installieren, Aktualisieren und Verwalten von Liveries.">Öffnet den separaten Fenix-Manager zum Installieren, Aktualisieren und Verwalten von Liveries.</p>
           <details class="fenix-advanced"><summary data-i18n="Lokales Patch-Paket und Wiederherstellung">Lokales Patch-Paket und Wiederherstellung</summary><label for="fenix-bundle-path" data-i18n="Entpacktes Release (leer = geprüfter Download)">Entpacktes Release (leer = geprüfter Download)</label><div class="fenix-file"><input id="fenix-bundle-path" placeholder="/home/…/fenix-a320-linux-patch"><button id="fenix-pick-bundle" class="button secondary" data-i18n="Ordner wählen …">Ordner wählen …</button></div><p class="muted" data-i18n="Die Wiederherstellung verwendet das Profil von vor dem Patch. Das neuere Profil bleibt als Sicherung erhalten.">Die Wiederherstellung verwendet das Profil von vor dem Patch. Das neuere Profil bleibt als Sicherung erhalten.</p><button id="fenix-restore" class="button secondary" disabled data-i18n="Patch rückgängig machen">Patch rückgängig machen</button></details>
-        </section>
+                  </div>
+        </details>
+        <details id="gsx-card" class="feature-disclosure fenix-card" aria-labelledby="gsx-title" name="addon-setup">
+          <summary id="gsx-toggle" class="feature-toggle"><span class="feature-heading"><span id="gsx-title" class="feature-title">GSX Pro</span><span id="gsx-compact-state" class="feature-summary" data-i18n="Bodendienste einrichten · experimentell">Bodendienste einrichten · experimentell</span></span><span class="fenix-preview" data-i18n="Experimentell">Experimentell</span></summary>
+          <div class="feature-body">
+
+          <p data-i18n="Installiere GSX mit dem offiziellen FSDT-Installer und richte den automatischen Start ein.">Installiere GSX mit dem offiziellen FSDT-Installer und richte den automatischen Start ein.</p>
+          <p class="notice warning" data-i18n="MSFS 2024 · Installer unter Wine geprüft. GSX im Simulator und die Verbindung über Couatl sind noch ungetestet.">MSFS 2024 · Installer unter Wine geprüft. GSX im Simulator und die Verbindung über Couatl sind noch ungetestet.</p>
+          <p class="muted" data-i18n="Du brauchst eine GSX-Lizenz oder einen aktivierten FSDT-Flughafen für den offiziellen eingeschränkten Testzugang. Anmeldung und Aktivierung erfolgen bei FSDT.">Du brauchst eine GSX-Lizenz oder einen aktivierten FSDT-Flughafen für den offiziellen eingeschränkten Testzugang. Anmeldung und Aktivierung erfolgen bei FSDT.</p>
+          <div class="fenix-summary" role="status" aria-live="polite"><p id="gsx-state" class="fenix-state"></p><p id="gsx-next"></p></div>
+          <p id="gsx-busy" class="notice warning" hidden data-i18n="Beende MSFS, Fenix und andere Windows-Anwendungen in dieser Installation, bevor du GSX einrichtest.">Beende MSFS, Fenix und andere Windows-Anwendungen in dieser Installation, bevor du GSX einrichtest.</p>
+          <ol id="gsx-steps" class="fenix-steps">
+            <li id="gsx-step-1"><div><span id="gsx-step-status-1" class="fenix-step-status"></span><h3 data-i18n="FSDT-Installer vorbereiten">FSDT-Installer vorbereiten</h3><p data-i18n="Flightdeck lädt den geprüften Installer und richtet .NET ein. Das bisherige Windows-Profil bleibt als Sicherung erhalten.">Flightdeck lädt den geprüften Installer und richtet .NET ein. Das bisherige Windows-Profil bleibt als Sicherung erhalten.</p></div><button id="gsx-prepare" class="button dark" disabled data-i18n="FSDT vorbereiten">FSDT vorbereiten</button></li>
+            <li id="gsx-step-2"><div><span id="gsx-step-status-2" class="fenix-step-status"></span><h3 data-i18n="GSX installieren und aktivieren">GSX installieren und aktivieren</h3><p data-i18n="Wähle GSX Pro im FSDT-Installer, installiere es und aktiviere deine Lizenz. Schließe den Installer nach dem Download.">Wähle GSX Pro im FSDT-Installer, installiere es und aktiviere deine Lizenz. Schließe den Installer nach dem Download.</p></div><button id="gsx-open" class="button secondary" disabled data-i18n="FSDT-Installer öffnen">FSDT-Installer öffnen</button></li>
+            <li id="gsx-step-3"><div><span id="gsx-step-status-3" class="fenix-step-status"></span><h3 data-i18n="Automatischen GSX-Start einrichten">Automatischen GSX-Start einrichten</h3><p data-i18n="Übernimmt den von FSDT angelegten Start mit MSFS. Prüfe anschließend das GSX-Menü und die Bodendienste im Simulator.">Übernimmt den von FSDT angelegten Start mit MSFS. Prüfe anschließend das GSX-Menü und die Bodendienste im Simulator.</p></div><button id="gsx-configure" class="button secondary" disabled data-i18n="Automatischen Start einrichten">Automatischen Start einrichten</button></li>
+          </ol>
+          <p id="gsx-message" class="muted" role="status" aria-live="polite"></p><p id="gsx-error" class="notice error" role="alert" hidden></p>
+          <div class="update-actions"><button id="gsx-refresh" class="text-link" data-i18n="Status neu laden">Status neu laden</button><button id="gsx-stop" class="button secondary" hidden disabled data-i18n="FSDT schließen">FSDT schließen</button><button id="gsx-disable" class="button secondary" hidden disabled data-i18n="GSX-Autostart ausschalten">GSX-Autostart ausschalten</button><button id="gsx-recover" class="button secondary" hidden disabled data-i18n="GSX-Vorbereitung wiederherstellen">GSX-Vorbereitung wiederherstellen</button><a class="text-link" href="https://www.fsdreamteam.com/products_gsxpro.html" target="_blank" rel="noreferrer" data-i18n="GSX bei FSDreamTeam">GSX bei FSDreamTeam</a></div>
+                  </div>
+        </details>
         <div class="mods-toolbar"><button id="mods-open" class="button dark" disabled><svg class="icon"><use href="#i-folder"/></svg><span id="mods-open-label" data-i18n="Community-Ordner öffnen">Community-Ordner öffnen</span></button><button id="mods-refresh" class="button secondary"><svg class="icon"><use href="#i-refresh"/></svg><span id="mods-refresh-label" data-i18n="Aktualisieren">Aktualisieren</span></button></div>
         <p id="mods-message" class="mods-message" role="status" aria-live="polite"></p>
         <p id="mods-error" class="notice error" role="status" hidden></p><p id="mods-stale" class="muted" hidden data-i18n="Letzte geladene Liste. Bitte aktualisieren, bevor du den Ordner öffnest.">Letzte geladene Liste. Bitte aktualisieren, bevor du den Ordner öffnest.</p>

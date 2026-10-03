@@ -1,21 +1,40 @@
 # Changes and release status
 
-## Unreleased
+## 0.1.19 — release candidate
 
-- Add experimental selection of installed Proton versions, including discovery
-  in Steam libraries and a custom-folder option. Trials use an independent
-  Wine/DXVK/VKD3D copy and Windows profile, with recovery and return to Flightdeck.
-- Add a descriptor-backed launch bridge for unmodified Proton, preserving
-  normal Xbox entitlement checks, encrypted game files and the Store/GDK layer.
-- Keep account/save helpers on the original runner and the Fenix patch restricted
-  to its matched runner. Record Proton version and loader in diagnostics.
-- Record the 0.1.18 NVIDIA follow-up: corrected build `628afa6f9cfece4` loads in
-  Automatic mode, but the affected tester's main globe/map and cockpit stay black.
+This candidate combines experimental Proton selection and GSX Pro setup with a
+more compact launcher interface. It is prepared locally and not published yet.
 
-Synthetic executable/DLL loading, Store interface loading, mixed D3D11/D3D12
-rendering and return to the original profile passed with Proton Experimental
-11.0 (20260924) and CachyOS Proton 10.0 sunset. These tests used AMD hardware;
-full MSFS operation and the NVIDIA black-view fix remain unconfirmed.
+- Select an installed Proton version under Setup, discovered in Steam libraries
+  or chosen by folder. Each trial has its own Wine/DXVK/VKD3D copy and Windows
+  profile, with recovery and a return to the original Flightdeck environment.
+- Preserve normal Xbox entitlement checks and Store/GDK integration with the
+  alternative launch bridge. Account/save helpers keep the original runner.
+- Add GSX Pro preparation under Mods for MSFS 2024: prepare the pinned official
+  FSDT installer and .NET, install and activate through FSDT, then enable its
+  existing Couatl startup entry. Retain a profile backup and support recovery.
+- Keep GSX setup and Proton recovery from replacing each other's profiles.
+  Return to Flightdeck before changing FSDT setup; recover incomplete GSX setup
+  before switching Proton. Internal add-on links stay inside copied profiles.
+- Show Fenix and GSX as compact status cards, with one setup workflow expanded
+  at a time. NVIDIA, VR, Proton and maintenance settings also open on demand.
+  Keyboard access and German/English mobile layouts remain available.
+- Update the managed runtime script checksums, including GSX session cleanup,
+  and include the selected Proton version in diagnostics.
+
+Proton Experimental 11.0 (20260924) and CachyOS Proton 10.0 sunset passed synthetic
+executable/DLL loading, Store interface loading, mixed D3D11/D3D12 rendering and
+return to the original profile on AMD. Full MSFS operation with these runners
+and a fix for the NVIDIA black view remain unconfirmed. The 0.1.18 follow-up
+confirms that corrected renderer build `628afa6f9cfece4` loads but the affected
+system's globe/map and cockpit remain black.
+
+FSDT installer preparation, opening and closing were tested under Wine. GSX
+package installation, activation, Couatl/SimConnect and ground services still
+need validation with a licensed copy. Fenix keeps its matched Flightdeck runner.
+No native or renderer binaries change; their existing corresponding sources and
+notices are retained. [GSX setup](addons.md#gsx-pro-experimental) ·
+[Proton trials](runtime.md#experimental-proton-selection).
 
 ## 0.1.18 — 2 October 2026
 

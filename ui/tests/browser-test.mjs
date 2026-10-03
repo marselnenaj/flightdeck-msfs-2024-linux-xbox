@@ -51,6 +51,7 @@ let discovered=[{name:'Microsoft Flight Simulator 2024',path:'/synthetic/path wi
 let setup = {available:true,install_available:false,prepare_available:true,state:'idle',job:null,defaults:{mode:'existing',runtime_path:status.runtime.path,market:'AT',local_saves:true,destination_path:'/synthetic/new-msfs'}};
 let mods={state:'ready',message:'',folder_path:'/synthetic/Community',can_open:true,mods:[],count:0,scanned_count:0,limited:false};
 let modsUnavailable=false;
+let gsx={state:'available',prepared:false,package_installed:false,startup_found:false,configured:false,idle:true,can_change:true,can_stop:false,manager_running:false,can_recover:false,verified_in_simulator:false,job:null};
 let fenix={state:'available',installed:false,configured:false,settings_ready:false,idle:true,fenix_installed:false,manager_installed:false,can_restore:false,can_change:true,fenix_running:false,can_stop:false,job:null};
 let gameUpdate={integrity:{available:true,can_check:true,result:null},can_repair:true,available:true,installed_version:'1.8.16.0',latest_version:null,update_available:null,can_check:true,can_start:false,can_rollback:false,auth_required:false};
 let updateUnavailable=false,updateDelay=0,updateReplies=0,updateWaiting=false,updateBarrier=null,releaseUpdate=null;
@@ -64,7 +65,7 @@ let problemReport={recipient:'contact@flightdeck-app.com',draft:null,unreadable:
 let storeCheck={job:null};
 let maintenance={job:null,can_restore:false};
 let proton={selected:'Flightdeck (Xodus)',experimental:false,can_restore:false,error:'',fenix:false,job:null};
-const files = new Set(['proton.js','problem-reports.js','store-check.js','maintenance.js','launcher-updates.js','notices.js','fenix.js','cloud-saves.js','manrope-variable.woff2','updates.js','mods.js','index.html','styles.css','app.js','setup.js','state.js','i18n.js','mark.svg','flight-panorama.png','flight-panorama-2020.png']);
+const files = new Set(['proton.js','gsx.js','problem-reports.js','store-check.js','maintenance.js','launcher-updates.js','notices.js','fenix.js','cloud-saves.js','manrope-variable.woff2','updates.js','mods.js','index.html','styles.css','app.js','setup.js','state.js','i18n.js','mark.svg','flight-panorama.png','flight-panorama-2020.png']);
 const server = createServer(async (req,res) => {
   const url = new URL(req.url, 'http://localhost');
   if (url.pathname.startsWith('/api/')) {
@@ -91,6 +92,7 @@ const server = createServer(async (req,res) => {
       }
       if (url.pathname === '/api/game-update') {if(updateDelay)await sleep(updateDelay);if(updateBarrier){updateWaiting=true;await updateBarrier;}updateReplies++;if(updateUnavailable){res.writeHead(503);res.end(JSON.stringify({ok:false,error:'Synthetic update status unavailable'}));return;}res.end(JSON.stringify({...gameUpdate,job:setup.job?.mode==='update'?setup.job:null}));return;}
       if (url.pathname === '/api/cloud-saves') {if(cloudBarrier){cloudWaiting=true;await cloudBarrier;}cloudReplies++;if(cloudUnavailable){res.writeHead(404);res.end(JSON.stringify({ok:false,error:'Synthetic cloud component unavailable'}));return;}res.end(JSON.stringify({...cloudData,automatic:status.cloud}));return;}
+      if (url.pathname === '/api/gsx') {res.end(JSON.stringify({...gsx,runtime_path:status.runtime.path,can_change:gsx.can_change&&status.game.state==='stopped'}));return;}
       if (url.pathname === '/api/fenix') {res.end(JSON.stringify({...fenix,runtime_path:status.runtime.path,busy:status.game.state!=='stopped',can_change:fenix.can_change&&status.game.state==='stopped'}));return;}
       if (url.pathname === '/api/mods') {if(modsUnavailable){res.writeHead(503);res.end(JSON.stringify({ok:false,error:'Synthetic inventory unavailable'}));return;}res.end(JSON.stringify(mods));return;}
       if (url.pathname === '/api/diagnostics') {res.end(JSON.stringify({summary:{Runtime:'Bereit',Speichermodus:'Lokal',Experimentell:true,store_calls:[{method:'XStoreShowPurchaseUIAsync',hresult:'80004001'}],store_catalog:[{stage:'inventory-mapping',hresult:'80004001'}],store_session:{components_at_launch:null,events:[{time_ms:1790540000000,phase:'checkout_ready',outcome:'passed'},{time_ms:1790540001000,phase:'complete',outcome:'cancelled'}],partial:true},store_check:storeCheck.job,cloud_sync:{state:'attention',phase:'after_exit',error_code:'transport',error_details:{http_status:503}},graphics:{status:'ready',session:'wayland',devices:[{name:'NVIDIA GeForce RTX 4060',vendor_id:4318,type:2,api_version:'1.3.280',driver_version:'580.126.9.0'}]}},checks,generated_at:'2026-09-17T17:00:00Z',csrf_token:csrf,private_log:'MUST-NOT-EXPORT'}));return;}
@@ -201,6 +203,15 @@ const server = createServer(async (req,res) => {
         }
         status.app.version='0.1.5';launcherUpdate={...launcherDefault(),installed_version:'0.1.5',latest_version:'0.1.5',update_available:false,can_rollback:true};
         res.end(JSON.stringify({ok:true}));return;
+      }
+      if (url.pathname.startsWith('/api/gsx/')) {
+        assert.deepEqual(JSON.parse(body),{runtime_path:status.runtime.path});
+        const operation=url.pathname.split('/').at(-1);
+        if(operation==='prepare')gsx={...gsx,can_change:false,job:{state:'running',operation,message:'Synthetic GSX preparation'}};
+        else if(operation==='open'){gsx={...gsx,can_change:false,can_stop:true,manager_running:true,job:{state:'running',operation,message:'Synthetic FSDT installer'}};status.game={...status.game,state:'external'};}
+        else if(operation==='stop'){gsx={...gsx,can_change:true,can_stop:false,manager_running:false,job:{state:'complete',operation,message:'FSDT closed'}};status.game={...status.game,state:'stopped'};}
+        else if(operation==='configure')gsx={...gsx,configured:true,job:{state:'complete',operation,message:'Startup configured; flight unverified'}};
+        res.end(JSON.stringify({ok:true,job_id:'gsx-fixture'}));return;
       }
       if (url.pathname === '/api/fenix/install') {assert.deepEqual(JSON.parse(body),{bundle_path:''});fenix={...fenix,can_change:false,job:{state:'running',message:'Synthetic Fenix setup'}};res.end(JSON.stringify({ok:true,job_id:'fenix-fixture'}));return;}
       if (url.pathname === '/api/fenix/configure') {assert.deepEqual(JSON.parse(body),{});fenix={...fenix,configured:true,job:{state:'complete',operation:'configure',message:'Synthetic displays configured'}};res.end(JSON.stringify({ok:true,job_id:'fenix-configure-fixture'}));return;}
@@ -334,6 +345,9 @@ try {
   await call('Emulation.setDeviceMetricsOverride',{width:1536,height:1024,deviceScaleFactor:1,mobile:false});
   await language('de');await route('installation');
   await refresh(`!document.getElementById('graphics-card').hidden && !document.getElementById('graphics-mode').disabled`);
+  await check('Optional runtime settings start compact',`!document.getElementById('graphics-card').open && !document.getElementById('vr-card').open && !document.getElementById('proton-card').open && !document.getElementById('maintenance-card').open`);
+  await screenshot('settings-compact-desktop.png');
+  await click('graphics-toggle');
   await check('NVIDIA settings identify the selected simulator and automatic default',`document.getElementById('graphics-game').textContent===${JSON.stringify(status.runtime.game_name)} && document.getElementById('graphics-mode').value==='auto' && document.getElementById('graphics-save').disabled`);
   await evaluate(`document.getElementById('graphics-mode').value='compatibility';document.getElementById('graphics-mode').dispatchEvent(new Event('change',{bubbles:true}))`);
   await refresh(`document.getElementById('graphics-mode').value==='compatibility' && !document.getElementById('graphics-save').disabled`);
@@ -344,6 +358,7 @@ try {
   await evaluate(`document.getElementById('graphics-card').scrollIntoView({block:'start'})`);await screenshot('nvidia-compatibility-desktop.png');
   await call('Page.reload');await until(()=>evaluate(`document.getElementById('graphics-mode')?.value==='compatibility' && !document.getElementById('graphics-mode').disabled`),'Saved NVIDIA mode did not survive page reload');
   results.push('NVIDIA preference persists through reload without restarting the service');
+  await click('graphics-toggle');
   await language('en');await call('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
   await evaluate(`document.getElementById('graphics-card').scrollIntoView({block:'start'})`);await screenshot('nvidia-compatibility-mobile.png');
   await check('NVIDIA mode is translated and fits mobile width',`document.getElementById('graphics-title').textContent==='NVIDIA graphics' && document.getElementById('graphics-description').textContent.includes('disabled') && document.documentElement.scrollWidth<=innerWidth`);
@@ -376,6 +391,7 @@ try {
   results.push('AMD/Intel-only systems do not offer NVIDIA controls');
   status.vr={available:true,mode:'off',state:'off',message:'VR is off.',error:'',check:null};
   await refresh(`!document.getElementById('vr-card').hidden && !document.getElementById('vr-mode').disabled`);
+  await click('vr-toggle');
   await check('VR is available on AMD and disabled by default',`document.getElementById('vr-mode').value==='off' && document.getElementById('vr-check').disabled && document.getElementById('vr-save').disabled && document.getElementById('vr-nvidia').hidden`);
   await evaluate(`document.getElementById('vr-mode').value='wivrn';document.getElementById('vr-mode').dispatchEvent(new Event('change',{bubbles:true}))`);
   await refresh(`document.getElementById('vr-mode').value==='wivrn' && !document.getElementById('vr-save').disabled`);
@@ -383,6 +399,7 @@ try {
   await click('vr-save');await until(()=>evaluate(`!document.getElementById('vr-check').disabled && document.getElementById('notice').textContent.includes('VR mode saved')`),'VR preference did not save');
   assert.equal(status.vr.mode,'wivrn');
   await call('Page.reload');await until(()=>evaluate(`document.getElementById('vr-mode')?.value==='wivrn' && !document.getElementById('vr-check').disabled`),'VR preference did not survive reload');
+  await click('vr-toggle');
   await click('vr-check');await until(()=>evaluate(`document.getElementById('vr-result').textContent.includes('Checking') && document.getElementById('vr-mode').disabled`),'VR check did not reserve setup');
   status.setup={busy:false};status.vr.check={state:'headset_missing',message:'No headset is available.',checked_at:'2026-10-02T10:00:03Z'};
   await refresh(`!document.getElementById('vr-check').disabled && document.getElementById('vr-result').textContent==='No headset is available.'`);
@@ -405,6 +422,7 @@ try {
   results.push('VR setup persists, reserves the runtime during checks, reports failures, and blocks changes while playing or syncing');
   await call('Emulation.setDeviceMetricsOverride',{width:1536,height:1024,deviceScaleFactor:1,mobile:false});await language('de');await route('overview');
   await route('installation');await until(()=>evaluate(`!document.getElementById('proton-select').disabled`),'Proton selection unavailable');
+  await click('proton-toggle');
   await evaluate(`document.getElementById('proton-select').value='/fixture/Proton Experimental';document.getElementById('proton-select').dispatchEvent(new Event('change'))`);
   await click('proton-apply');await until(()=>evaluate(`!document.getElementById('proton-progress').hidden && document.getElementById('launch-button').disabled`),'Proton preparation did not reserve runtime');
   assert.equal(posts.at(-1).path,'/api/proton/select');
@@ -419,6 +437,7 @@ try {
   results.push('Proton selection reserves the installation and can return to the original environment');
   // Maintenance uses a reviewed plan; opening or changing options never deletes.
   await route('installation');await until(()=>evaluate(`!document.getElementById('maintenance-reset').disabled`),'Maintenance not available');
+  await click('maintenance-toggle');
   await check('Maintenance belongs to selected edition and preserves data by default',`document.getElementById('maintenance-game').textContent===${JSON.stringify(status.runtime.game_name)} && document.getElementById('maintenance-keep-data').checked`);
   status.cloud={...autoIdle(),state:'syncing',phase:'before_start',request_id:autoRequest};
   await refresh(`document.getElementById('maintenance-reset').disabled`);
@@ -780,6 +799,20 @@ try {
   status.saves.can_backup=false;await refresh(`document.getElementById('backup-button').disabled`);await check('Unavailable backup remains disabled',`document.getElementById('backup-button').disabled`);
   status.saves.can_backup=true;await refresh(`!document.getElementById('backup-button').disabled`);
   const beforeMods=posts.length;await route('mods');
+  await check('Mods opens as a compact overview with both statuses visible',`!document.getElementById('fenix-card').open && !document.getElementById('gsx-card').open && document.getElementById('fenix-toggle').getClientRects().length>0 && document.getElementById('gsx-toggle').getClientRects().length>0`);
+  await call('Emulation.setDeviceMetricsOverride',{width:1536,height:1024,deviceScaleFactor:1,mobile:false});
+  await screenshot('mods-overview-desktop.png');
+  await call('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});await language('en');
+  await check('Compact add-ons fit mobile width in English',`document.documentElement.scrollWidth<=innerWidth && document.getElementById('gsx-compact-state').textContent.length>0`);
+  await screenshot('mods-overview-mobile.png');
+  await evaluate(`document.getElementById('fenix-toggle').focus()`);
+  await call('Input.dispatchKeyEvent',{type:'keyDown',key:'Enter',code:'Enter',windowsVirtualKeyCode:13,text:'\r'});
+  await call('Input.dispatchKeyEvent',{type:'keyUp',key:'Enter',code:'Enter',windowsVirtualKeyCode:13});
+  await until(()=>evaluate(`document.getElementById('fenix-card').open`),'Keyboard did not open the Fenix workflow');
+  await click('gsx-toggle');
+  await check('Add-on disclosures support keyboard and exclusive expansion',`!document.getElementById('fenix-card').open && document.getElementById('gsx-card').open`);
+  await click('gsx-toggle');await language('de');
+  await call('Emulation.setDeviceMetricsOverride',{width:1536,height:1024,deviceScaleFactor:1,mobile:false});
   await until(()=>evaluate(`!document.getElementById('mods-inventory').hidden && !document.getElementById('mods-open').disabled`),'Community inventory missing');
   await check('Empty inventory offers the actual folder and provider installation guidance',`!document.getElementById('mods-empty').hidden && document.getElementById('mods-empty').textContent.includes('Noch keine Add-ons') && document.getElementById('mods-folder').textContent==='/synthetic/Community' && !document.getElementById('mods-empty-help').hidden`);
   assert.equal(posts.length,beforeMods);results.push('Opening the Mods tab only reads inventory');
@@ -1161,7 +1194,7 @@ try {
   // Fenix: current runtime, stopped/running permissions, reservation and error text.
   status.runtime={...status.runtime,path:'/fixture/fenix-msfs2024',game_id:'msfs2024',game_name:'Microsoft Flight Simulator 2024'};
   await refresh(`document.getElementById('launch-game-name').textContent==='Microsoft Flight Simulator 2024'`);
-  await route('mods');await click('fenix-refresh');
+  await route('mods');await click('fenix-toggle');await click('fenix-refresh');
   await until(()=>evaluate(`!document.getElementById('fenix-install').disabled`),'Fenix install unavailable');
   await check('Fenix has no installer execution before a selected EXE',`document.getElementById('fenix-installer').disabled && document.getElementById('fenix-configure').disabled`);
   await check('Fenix initial step is explicit and never called ready',`document.getElementById('fenix-state').textContent==='Einrichtung noch nicht abgeschlossen' && document.getElementById('fenix-next').textContent.includes('Schritt 1 von 4') && document.getElementById('fenix-step-1').getAttribute('aria-current')==='step' && document.getElementById('fenix-overview').hidden`);
@@ -1215,6 +1248,27 @@ try {
   await evaluate(`document.getElementById('fenix-card').scrollIntoView({block:'start'})`);
   await check('Fenix setup is translated and fits mobile width',`document.documentElement.scrollWidth<=innerWidth && document.getElementById('fenix-install').textContent==='Install patch'`);await screenshot('fenix-setup-mobile.png');
   await language('de');
+
+  // GSX installer readiness never becomes a claim of licensed, working ground services.
+  await call('Emulation.setDeviceMetricsOverride',{width:1536,height:1024,deviceScaleFactor:1,mobile:false});
+  await click('gsx-toggle');
+  await check('Opening GSX keeps only one add-on workflow expanded',`document.getElementById('gsx-card').open && !document.getElementById('fenix-card').open`);
+  await click('gsx-refresh');await until(()=>evaluate(`!document.getElementById('gsx-prepare').disabled`),'GSX preparation is unavailable');
+  await evaluate(`document.getElementById('gsx-card').scrollIntoView({block:'start'})`);await screenshot('gsx-setup-desktop.png');
+  await click('gsx-prepare');await until(()=>evaluate(`document.getElementById('launch-button').disabled`),'GSX preparation did not reserve the runtime');
+  await check('GSX preparation blocks Fenix and game actions',`document.getElementById('fenix-install').disabled && document.getElementById('gsx-open').disabled && document.getElementById('gsx-configure').disabled`);
+  gsx={...gsx,prepared:true,can_change:true,job:{state:'complete',operation:'prepare'}};await click('gsx-refresh');
+  await until(()=>evaluate(`!document.getElementById('gsx-open').disabled`),'Prepared FSDT installer cannot open');
+  await check('Prepared installer still needs the GSX aircraft-side package and official startup entry',`document.getElementById('gsx-configure').disabled && document.getElementById('gsx-next').textContent.includes('Schritt 2 von 3')`);
+  await click('gsx-open');await until(()=>evaluate(`!document.getElementById('gsx-stop').disabled`),'FSDT stop is blocked by its own lease');
+  await click('gsx-stop');await until(()=>evaluate(`!document.getElementById('gsx-open').disabled`),'FSDT close did not release setup');
+  gsx={...gsx,package_installed:true,startup_found:true};await click('gsx-refresh');
+  await until(()=>evaluate(`!document.getElementById('gsx-configure').disabled`),'Detected FSDT startup entry cannot be enabled');await click('gsx-configure');
+  await until(()=>evaluate(`document.getElementById('gsx-state').textContent==='GSX eingerichtet · Flugtest ausstehend'`),'GSX incorrectly claims flight validation');
+  await language('en');await call('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
+  await evaluate(`document.getElementById('gsx-card').scrollIntoView({block:'start'})`);
+  await check('GSX remains explicitly experimental in English and fits mobile width',`document.documentElement.scrollWidth<=innerWidth && document.getElementById('gsx-state').textContent==='GSX configured · Flight test pending' && document.getElementById('gsx-card').textContent.includes('remain untested')`);await screenshot('gsx-setup-mobile.png');
+  await language('de');gsx={...gsx,job:null};
 
   // Launcher updates use a separate GitHub workflow, with explicit user actions.
   await call('Emulation.setDeviceMetricsOverride',{width:1536,height:1024,deviceScaleFactor:1,mobile:false});

@@ -71,6 +71,23 @@ else
     fi
 fi
 unset MSFS_INHERITED_LOCK_FD
+if [[ -e "$MSFS_LINUX_ROOT/private/gsx-setup.json" || -L "$MSFS_LINUX_ROOT/private/gsx-setup.json" ]]; then
+    python3 - "$MSFS_LINUX_ROOT/private/gsx-setup.json" <<'GSX_SETUP'
+import json, os, re, stat, sys
+try:
+    fd = os.open(sys.argv[1], os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+    with os.fdopen(fd, 'rb') as stream:
+        info = os.fstat(stream.fileno())
+        if not stat.S_ISREG(info.st_mode) or info.st_size > 1024 * 1024:
+            raise ValueError()
+        value = json.load(stream)
+        if (value.get('format') != 1 or value.get('state') != 'ready' or
+                not isinstance(value.get('id'), str) or not re.fullmatch(r'[0-9a-f]{32}', value['id'])):
+            raise ValueError()
+except (OSError, ValueError, AttributeError):
+    raise SystemExit('GSX setup is incomplete. Recover it under Mods in Flightdeck before starting MSFS.')
+GSX_SETUP
+fi
 : "${XDG_RUNTIME_DIR:?Start from your graphical Linux session}"
 if [[ -z ${FLIGHTDECK_SOCKET_DIR:-} ]]; then
     # Older prepared runtimes use Xodus's default socket directly under XDG.
@@ -137,6 +154,16 @@ names = {'fenix.exe', 'fenixbootstrapper.exe', 'fenixsystem.exe',
 handles = {}
 poller = select.poll()
 
+try:
+    import json
+    marker = root / 'private/gsx-startup.json'
+    if marker.is_file() and not marker.is_symlink() and marker.stat().st_size <= 65536:
+        state = json.loads(marker.read_text())
+        if state.get('format') == 1 and state.get('enabled') is True:
+            names.update({'couatl64_boot.exe', 'couatl64_msfs.exe', 'couatl64_msfs2024.exe'})
+except (OSError, ValueError, AttributeError):
+    pass
+
 def collect():
     for proc in Path('/proc').iterdir():
         if not proc.name.isdecimal() or int(proc.name) in handles:
@@ -191,7 +218,7 @@ try:
             env.pop('WINE_DLL_FILE_MAP', None)
             env.pop('WINEDLLPATH', None)
             env['WINEDLLOVERRIDES'] = 'winemenubuilder.exe=d'
-            # Wine taskkill without /F posts WM_CLOSE. Give Fenix a chance to
+            # Wine taskkill without /F posts WM_CLOSE. Give add-ons a chance to
             # persist settings before handling hidden/stuck companions below.
             arguments = [str(wine), 'taskkill.exe']
             for name in sorted({name for _, name in live()}):
@@ -210,7 +237,7 @@ try:
         collect()
         send(signal.SIGKILL)
         wait_for_exit(1)
-        print('Fenix session cleanup: %d companion processes, %d still running.' %
+        print('Add-on session cleanup: %d companion processes, %d still running.' %
               (len(handles), len(live())), flush=True)
         if live():
             raise SystemExit(1)
@@ -226,7 +253,7 @@ cleanup() {
         stop_owned_process "$MSFS_GAME_PID"
     fi
     if [[ -n "$MSFS_GAME_PID" ]]; then
-        stop_fenix_companions || printf '%s\n' 'Some Fenix companions could not be closed; check the private launcher log.' >&2
+        stop_fenix_companions || printf '%s\n' 'Some add-on companions could not be closed; check the private launcher log.' >&2
     fi
     if [[ -n "$MSFS_SERVICE_PID" ]]; then stop_owned_process "$MSFS_SERVICE_PID"; fi
     return "$status"

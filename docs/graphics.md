@@ -53,7 +53,7 @@ The 3D-texture correction is therefore not a fix for that reporting system.
 See [known issues](known-issues.md) and the
 [Steam compatibility reference](nvidia-steam-parity.md).
 
-The current development build offers an experimental
+The 0.1.19 release candidate offers an experimental
 [Proton selection](runtime.md#experimental-proton-selection) for comparing whole
 Wine/DXVK/VKD3D versions with a separate profile and a return to Flightdeck.
 This feature is not part of the published 0.1.18 package and does not establish
