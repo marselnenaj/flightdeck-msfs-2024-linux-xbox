@@ -318,12 +318,20 @@ try {
   const language=async value=>{await evaluate(`document.getElementById('language-select').value=${JSON.stringify(value)};document.getElementById('language-select').dispatchEvent(new Event('change'))`);await until(()=>evaluate(`document.documentElement.lang===${JSON.stringify(value)}`),'Language not applied');};
   const route=async view=>{await evaluate(`location.hash=${JSON.stringify(view)}`);await until(()=>evaluate(`!document.getElementById('view-'+${JSON.stringify(view)}).hidden`),'Route not rendered');};
   const screenshot=async name=>{await sleep(200);const shot=await call('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});await writeFile(join(artifacts,name),Buffer.from(shot.data,'base64'));};
+  const reload=async(expression,message)=>{
+    await evaluate('window.flightdeckReloadPending=true');
+    await call('Page.reload');
+    await until(()=>evaluate(`!window.flightdeckReloadPending && (${expression})`),message);
+  };
   // Page.navigate acknowledges before the replacement document has a root.
   // Poll absence as not-ready; do not turn that normal state into a TypeError.
   const queryLanguageReady=`document.documentElement?.lang==='de' && document.getElementById('game-state')?.textContent==='Bereit zum Start'`;
+  const pausedSetupReady=`document.getElementById('setup-job-title')?.textContent==='Download paused'`;
+  const activeSetupReady=`document.getElementById('setup-job-title')?.textContent==='MSFS wird heruntergeladen'`;
   await call('Runtime.enable');await call('Page.enable');await call('Network.enable');
   await evaluate('document.open()');
   await check('Navigation readiness waits safely while the new document has no root',`document.documentElement===null && (${queryLanguageReady})===false`);
+  await check('Setup reload readiness waits for content in the replacement document',`(${pausedSetupReady})===false && (${activeSetupReady})===false`);
   await call('Emulation.setDeviceMetricsOverride',{width:1536,height:1024,deviceScaleFactor:1,mobile:false});
   await call('Page.navigate',{url:origin+'/?lang=de'});
   await until(()=>evaluate(`document.getElementById('game-state')?.textContent === 'Bereit zum Start'`),'Ready status absent');
@@ -724,13 +732,12 @@ try {
   await screenshot('setup-paused-en-desktop.png');
   await call('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});await check('Paused download actions fit on mobile without scrolling',`document.documentElement.scrollWidth<=innerWidth && document.getElementById('setup-resume').getBoundingClientRect().bottom<=innerHeight && document.getElementById('setup-mode-choices').hidden`);await screenshot('setup-paused-en-mobile.png');
   await call('Emulation.setDeviceMetricsOverride',{width:1536,height:1024,deviceScaleFactor:1,mobile:false});
-  await call('Page.reload');await until(()=>evaluate(`document.getElementById('setup-job-title').textContent==='Download paused'`),'Paused job was not restored after page reload');
+  await reload(pausedSetupReady,'Paused job was not restored after page reload');
   assert.deepEqual(posts.slice(beforePause).map(post=>post.path),['/api/setup/pause']);results.push('Language change and page reload never resume a paused download automatically');
   await click('setup-resume');await until(()=>evaluate(`document.getElementById('setup-job-title').textContent==='Downloading MSFS'`),'Download not resumed');
   assert.deepEqual(posts.slice(beforePause).map(post=>post.path),['/api/setup/pause','/api/setup/resume']);assert.equal(posts.at(-1).body.job_id,setup.job.id);assert.equal(posts.at(-1).token,csrf);results.push('Explicit resume uses the exact existing job and CSRF');
   await language('de');
-  await call('Page.reload');
-  await until(()=>evaluate(`document.getElementById('setup-job-title').textContent==='MSFS wird heruntergeladen'`),'Active install mode was not restored on reload');
+  await reload(activeSetupReady,'Active install mode was not restored on reload');
   await check('Reload restores the active install job and its actual transfer',`document.querySelector('input[name=setup_mode][value=install]').checked && document.getElementById('setup-progress').value===25.6 && document.getElementById('setup-transfer').textContent==='512 MB von 2 GB · 25,6 %'`);
   setup.job={...setup.job,phase:'provision'};
   await eventualCheck('Provisioning clears download bytes without claiming setup is complete',`document.getElementById('setup-transfer').hidden && !document.getElementById('setup-progress').hasAttribute('value') && document.getElementById('setup-complete').hidden`);
