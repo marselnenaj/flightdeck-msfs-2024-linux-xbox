@@ -52,11 +52,16 @@ Versionen haben nicht jeden Fall behoben. Ein funktionierendes zweites Fenster
 bestätigt nicht die Behebung der Hauptansicht. Siehe [bekannte Probleme](known-issues.de.md)
 und die [Steam-Kompatibilitätsreferenz](nvidia-steam-parity.md).
 
-[Flightdeck 0.1.17](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.17)
-ist eine Vorabversion zum Testen einer gezielten Korrektur für 3D-Texturen.
-Ihre Wirkung auf dieses Problem ist noch nicht bestätigt. Installiere zum Testen
-das vollständige Paket manuell; es wird unter **Updates → Flightdeck** nicht
-angeboten. Siehe [Test und Wiederherstellung](nvidia-renderer.md#3d-texture-layout-correction-0117-prerelease).
+Ein betroffener Tester hat **0.1.18**, **Automatisch** und den korrigierten
+Renderer-Build `628afa6f9cfece4` bestätigt. Globus/Karte und Cockpit bleiben
+auf seinem System schwarz. Die 3D-Texturkorrektur behebt diesen Fall somit nicht.
+
+Der aktuelle Entwicklungsstand bietet unter **Einrichtung → Proton-Version
+(experimentell)** eine Auswahl installierter Proton-Versionen mit eigener
+Windows-Umgebung und Rückkehr zum bisherigen Flightdeck-Runner. Diese Funktion
+ist noch nicht Teil des veröffentlichten Pakets 0.1.18. Sie ermöglicht den
+Vergleich ganzer Wine-/DXVK-/VKD3D-Versionen; eine Behebung des NVIDIA-Problems
+ist damit noch nicht bestätigt. [Ablauf und Grenzen](runtime.md#experimental-proton-selection).
 
 Der lokale Render-Test umfasst gleichzeitig verwendete DirectX-11-/12-Geräte,
 Haupt- und Zweitfenster, Größenänderungen und das Schließen von Fenstern. Er

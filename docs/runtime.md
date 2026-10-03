@@ -23,6 +23,46 @@ save storage together. The encrypted package's `.xodus-streaming.msixvc` and
 MicrosoftGame.Config must remain alongside the game. Xodus obtains and checks
 the user's actual entitlement; the compatibility code does not grant licenses.
 
+## Experimental Proton selection
+
+In a build containing this feature, open **Setup → Proton version (experimental)**.
+Flightdeck discovers Proton installations in Steam's registered libraries,
+including Flatpak Steam and `compatibilitytools.d`. You can also enter the
+folder of an installed Proton Experimental, GE-Proton or another Proton build.
+The selected folder must contain a complete Wine, DXVK and VKD3D distribution.
+Downloads remain managed by Steam or your existing Proton installer.
+
+**Prepare and use Proton** copies the runner and a copy of the original Windows
+profile into `local/proton-tests/`, checks the required files, runs Wine setup
+and installs that runner's graphics libraries for both architectures. Failed or
+cancelled preparation leaves the active environment intact. Steam updates do
+not change the copied test runner. Select the installed version again to test
+an update. Every new trial starts from the retained original Flightdeck profile.
+
+**Return to Flightdeck environment** restores the original runner and Windows
+profile. Trial profiles are retained in their `previous-prefix` backup folders;
+their settings and installed add-ons are not merged into the restored profile.
+The existing game files, account store and Flightdeck-managed local/cloud saves
+remain in the same runtime. Account and save helpers keep the original runner.
+A journal blocks game launch after an interrupted switch; the return action
+recovers it. Close MSFS and all prefix applications before switching.
+
+The alternative launch bridge exposes Xodus' already-open, licensed image
+descriptors through temporary `/proc` symlinks. Executables and DLLs remain in
+memory; encrypted game files are not rewritten. This removes the need for the
+custom `WINE_DLL_FILE_MAP` Wine extension for these trials. Xodus still performs
+normal licensing, and Flightdeck retains its Store/GDK libraries. Flightdeck
+starts the chosen Wine directly; Steam's Proton launcher and its game-specific
+launch options are not invoked. Unsupported host dependencies fail preparation.
+
+This is experimental compatibility support, not a verified NVIDIA fix. The
+Fenix patch still requires its matched Flightdeck runner; restore that patch
+before trying another runner. Return to Flightdeck before environment resets or
+uninstallation. Diagnostics record the chosen version and loader with each
+start. Maintainers can run `scripts/check-proton.py` for synthetic executable/DLL
+loading, Store interface loading, rendering and restoration without a game or
+account login.
+
 ## Advanced: prepare a runtime from existing files
 
 The installed launcher provides the same preparation logic under **Install MSFS

@@ -91,6 +91,23 @@ class ServerTests(unittest.TestCase):
                 {"Content-Type": "application/json", "X-Flightdeck-Token": self.server.token})[0], 200)
             configure.assert_called_once_with("/fixture", "compatibility")
 
+    def test_proton_selection_requires_session_and_carries_runtime_binding(self):
+        manager = self.server.launcher.proton
+        headers = {"Content-Type": "application/json", "X-Flightdeck-Token": self.server.token}
+        self.assertEqual(self.request("GET", "/proton.js")[0], 200)
+        self.assertEqual(self.request("GET", "/api/proton")[0], 200)
+        with patch('flightdeck.proton.discover', return_value=[]):
+            self.assertEqual(json.loads(self.request("GET", "/api/proton/discover")[2]), {"choices": []})
+        data = {"runtime_path": "/fixture", "mode": "proton", "path": "/fixture/Proton"}
+        with patch.object(manager, "start", return_value={"ok": True}) as start:
+            self.assertEqual(self.request("POST", "/api/proton/select", json.dumps(data), {"Content-Type": "application/json"})[0], 403)
+            start.assert_not_called()
+            self.assertEqual(self.request("POST", "/api/proton/select", json.dumps(data), headers)[0], 200)
+            start.assert_called_once_with(data)
+        with patch.object(manager, "cancel", return_value={"ok": True}) as cancel:
+            self.assertEqual(self.request("POST", "/api/proton/cancel", '{"job_id":"current"}', headers)[0], 200)
+            cancel.assert_called_once_with("current")
+
     def test_maintenance_preview_and_confirm_require_current_session(self):
         manager = self.server.launcher.maintenance
         headers = {"Content-Type": "application/json", "X-Flightdeck-Token": self.server.token}

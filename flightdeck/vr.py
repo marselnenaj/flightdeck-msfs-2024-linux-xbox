@@ -284,7 +284,8 @@ def prepare(runtime, environment):
             stream.write(registry)
         child_env = dict(env, WINEPREFIX=str(runtime / "local/msfs-prefix"), WINEDEBUG="-all", WINEESYNC="0", WINEFSYNC="0")
         child_env.pop("WINE_DLL_FILE_MAP", None)
-        applied = run_child([str(runtime / "runner/files/bin/wine"), "regedit", "/S", name], child_env, timeout=20)
+        from .setup import runner_wine
+        applied = run_child([str(runner_wine(runtime / "runner")), "regedit", "/S", name], child_env, timeout=20)
         if applied.get("returncode") != 0:
             raise LauncherError("Die OpenXR-Anbindung konnte nicht eingerichtet werden. Beende Programme dieser Spielumgebung und versuche es erneut.")
     except OSError:

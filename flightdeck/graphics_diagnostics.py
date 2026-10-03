@@ -76,6 +76,8 @@ def launch_record(runtime, report, environment, *, state, at):
     if report.get("nvidia_mode") in graphics.NVIDIA_MODES:
         result["nvidia_mode"] = report["nvidia_mode"]
     result["hide_nvidia"] = environment.get("WINE_HIDE_NVIDIA_GPU") == "1"
+    from .proton import diagnostic
+    result["proton"] = diagnostic(runtime)
     return result
 
 
@@ -146,6 +148,12 @@ def load_launch(runtime):
             result["nvidia_mode"] = value["nvidia_mode"]
         if type(value.get("hide_nvidia")) is bool:
             result["hide_nvidia"] = value["hide_nvidia"]
+        proton = value.get("proton")
+        if (isinstance(proton, dict) and proton.get("mode") in {"proton", "flightdeck", "unavailable"}
+                and proton.get("loader") in {"portable", "native", "unknown"}
+                and isinstance(proton.get("version"), str)
+                and re.fullmatch(r"[A-Za-z0-9_. +()-]{1,128}", proton["version"])):
+            result["proton"] = {key: proton[key] for key in ("mode", "version", "loader")}
         return result
     except (OSError, ValueError, TypeError, KeyError):
         return None

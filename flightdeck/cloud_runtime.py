@@ -131,7 +131,8 @@ def _paths(runtime, source_root=None, *, verify=True, write=False):
     if (helper.is_symlink() or not helper.is_file() or not re.fullmatch(r"[a-f0-9]{64}", expected)
             or (verify and hashlib.sha256(_read(helper, 16 * 1024 * 1024)).hexdigest() != expected)):
         raise CloudStorageError("transport")
-    runner = runtime / "runner/files/bin/wine"
+    from .proton import base_runner
+    runner = base_runner(runtime) / "files/bin/wine"
     if not runner.is_file():
         # Explicit legacy layout of this pinned runner; never scan arbitrary files.
         directory = lock["runner"]["directory"]

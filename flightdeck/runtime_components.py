@@ -274,6 +274,10 @@ def refresh(launcher):
         if launcher.runtime is None or launcher.setup_busy or launcher.process is not None or launcher.managed_session is not None:
             raise ComponentUpdateError("Das Spiel und die Einrichtung müssen für das Komponentenupdate beendet sein.")
         root = launcher.runtime
+        from .proton import check as proton_check
+        error = proton_check(root)
+        if error:
+            raise ComponentUpdateError(error)
         with launcher.runtime_lock(operation="components"):
             private = root / "private"
             if private.is_symlink() or not private.is_dir() or private.stat().st_uid != os.getuid():

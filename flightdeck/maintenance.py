@@ -234,6 +234,9 @@ class Maintenance:
 
     def preview(self, data):
         operation = data.get("operation")
+        from .proton import selection, check
+        if self.launcher.runtime and (selection(self.launcher.runtime) or check(self.launcher.runtime)):
+            raise LauncherError("Kehre vor der Wartung unter Proton-Version zur Flightdeck-Umgebung zurück.")
         keep_data = data.get("keep_data", True)
         delete_packages = data.get("delete_packages", True)
         if operation not in {"reset", "restore", "uninstall"} or type(keep_data) is not bool or type(delete_packages) is not bool:

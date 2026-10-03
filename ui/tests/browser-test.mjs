@@ -63,7 +63,8 @@ let cloudReplies=0,cloudUnavailable=false,cloudBarrier=null,releaseCloud=null,cl
 let problemReport={recipient:'contact@flightdeck-app.com',draft:null,unreadable:false},problemFailure=false;
 let storeCheck={job:null};
 let maintenance={job:null,can_restore:false};
-const files = new Set(['problem-reports.js','store-check.js','maintenance.js','launcher-updates.js','notices.js','fenix.js','cloud-saves.js','manrope-variable.woff2','updates.js','mods.js','index.html','styles.css','app.js','setup.js','state.js','i18n.js','mark.svg','flight-panorama.png','flight-panorama-2020.png']);
+let proton={selected:'Flightdeck (Xodus)',experimental:false,can_restore:false,error:'',fenix:false,job:null};
+const files = new Set(['proton.js','problem-reports.js','store-check.js','maintenance.js','launcher-updates.js','notices.js','fenix.js','cloud-saves.js','manrope-variable.woff2','updates.js','mods.js','index.html','styles.css','app.js','setup.js','state.js','i18n.js','mark.svg','flight-panorama.png','flight-panorama-2020.png']);
 const server = createServer(async (req,res) => {
   const url = new URL(req.url, 'http://localhost');
   if (url.pathname.startsWith('/api/')) {
@@ -76,6 +77,8 @@ const server = createServer(async (req,res) => {
         const job=storeCheck.job;
         res.end(JSON.stringify({job:job?{...job,steps:job.steps.map(row=>row.exit_code===83&&language==='en'?{...row,message:'The Microsoft sign-in response XML could not be read (sign-in code 83).'}:row)}:null}));return;
       }
+      if (url.pathname === '/api/proton') {res.end(JSON.stringify({...proton,runtime_path:status.runtime.path}));return;}
+      if (url.pathname === '/api/proton/discover') {res.end(JSON.stringify({choices:[{path:'/fixture/Proton Experimental',label:'Proton Experimental',version:'experimental-11'}]}));return;}
       if (url.pathname === '/api/maintenance') {res.end(JSON.stringify(maintenance));return;}
       if (url.pathname === '/api/status') {if(statusBarrier){statusWaiting=true;await statusBarrier;}res.end(JSON.stringify({...status,runtime:{...status.runtime,checks:localizeChecks(status.runtime.checks,language)}}));return;}
       if (url.pathname === '/api/setup/discover') {res.end(JSON.stringify({ok:true,runtimes:discovered,checked_count:discovered.length,limited:false}));return;}
@@ -103,6 +106,12 @@ const server = createServer(async (req,res) => {
         res.end(JSON.stringify({ok:true}));return;
       }
       posts.push({path:url.pathname,token:req.headers['x-flightdeck-token'],body:JSON.parse(body)});
+      if(url.pathname==='/api/proton/select') {
+        const data=JSON.parse(body);assert.equal(data.runtime_path,status.runtime.path);
+        if(data.mode==='default'){proton={...proton,selected:'Flightdeck (Xodus)',experimental:false,can_restore:false,job:null};status.setup.busy=false;}
+        else{assert.equal(data.path,'/fixture/Proton Experimental');proton={...proton,job:{id:'proton-test',state:'preparing',runtime_path:status.runtime.path,message:'Preparing Proton'}};status.setup.busy=true;}
+        res.end(JSON.stringify({ok:true}));return;
+      }
       if(url.pathname.startsWith('/api/maintenance/')) {
         assert.equal(req.headers['x-flightdeck-token'],csrf);
         const data=JSON.parse(body);
@@ -395,6 +404,19 @@ try {
   await refresh(`document.getElementById('vr-card').hidden`);
   results.push('VR setup persists, reserves the runtime during checks, reports failures, and blocks changes while playing or syncing');
   await call('Emulation.setDeviceMetricsOverride',{width:1536,height:1024,deviceScaleFactor:1,mobile:false});await language('de');await route('overview');
+  await route('installation');await until(()=>evaluate(`!document.getElementById('proton-select').disabled`),'Proton selection unavailable');
+  await evaluate(`document.getElementById('proton-select').value='/fixture/Proton Experimental';document.getElementById('proton-select').dispatchEvent(new Event('change'))`);
+  await click('proton-apply');await until(()=>evaluate(`!document.getElementById('proton-progress').hidden && document.getElementById('launch-button').disabled`),'Proton preparation did not reserve runtime');
+  assert.equal(posts.at(-1).path,'/api/proton/select');
+  proton={...proton,selected:'experimental-11',experimental:true,can_restore:true,job:{...proton.job,state:'complete',message:'Proton ready'}};status.setup.busy=false;
+  await refresh(`document.getElementById('proton-current').textContent==='experimental-11' && !document.getElementById('proton-restore').disabled`);
+  await evaluate(`document.getElementById('proton-card').scrollIntoView({block:'start'})`);await screenshot('proton-desktop-de.png');
+  await call('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});await language('en');
+  await evaluate(`document.getElementById('proton-card').scrollIntoView({block:'start'})`);
+  await check('Proton trials are translated and fit mobile width',`document.documentElement.scrollWidth<=innerWidth && document.getElementById('proton-title').textContent==='Proton version (experimental)'`);await screenshot('proton-mobile-en.png');
+  await click('proton-restore');await refresh(`document.getElementById('proton-current').textContent==='Flightdeck (Xodus)'`);
+  await call('Emulation.setDeviceMetricsOverride',{width:1536,height:1024,deviceScaleFactor:1,mobile:false});await language('de');
+  results.push('Proton selection reserves the installation and can return to the original environment');
   // Maintenance uses a reviewed plan; opening or changing options never deletes.
   await route('installation');await until(()=>evaluate(`!document.getElementById('maintenance-reset').disabled`),'Maintenance not available');
   await check('Maintenance belongs to selected edition and preserves data by default',`document.getElementById('maintenance-game').textContent===${JSON.stringify(status.runtime.game_name)} && document.getElementById('maintenance-keep-data').checked`);

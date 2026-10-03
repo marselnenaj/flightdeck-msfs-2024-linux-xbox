@@ -75,7 +75,8 @@ Fehlercode und die Flightdeck-Version im Bericht an.
 
 **NVIDIA-Rendererkorrektur (0.1.17, in 0.1.18 enthalten):** Die Korrektur der
 Bildzustände von 3D-Texturen besteht den isolierten Vulkan-Regressionstest.
-Ihre Wirkung auf die schwarze NVIDIA-Hauptansicht ist noch nicht bestätigt.
+Ein Tester bestätigt den geladenen korrigierten Build unter 0.1.18;
+die schwarze NVIDIA-Hauptansicht bleibt auf seinem System unverändert.
 Beide Versionen sind reguläre Releases und über **Updates → Flightdeck** verfügbar.
 [Details und Prüfungen](nvidia-renderer.md#3d-texture-layout-correction-0117).
 

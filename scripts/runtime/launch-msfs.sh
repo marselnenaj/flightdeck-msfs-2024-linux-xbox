@@ -40,6 +40,7 @@ else
 fi
 configuration=$(python3 - "$MSFS_LINUX_ROOT/private/runtime.json" <<'PY'
 import json, re, sys
+from pathlib import Path
 settings = json.load(open(sys.argv[1]))
 market = settings['market']
 game_id = settings.get('game_id', 'msfs2024')
@@ -47,10 +48,34 @@ if not isinstance(market, str) or not re.fullmatch('[A-Z]{2}', market):
     raise SystemExit('Invalid configured market')
 if game_id not in ('msfs2020', 'msfs2024'):
     raise SystemExit('Invalid configured game')
-print(game_id, market)
+private = Path(sys.argv[1]).parent
+if (private / 'proton-switch.json').exists():
+    raise SystemExit('Interrupted Proton switch. Restore Flightdeck from the Proton settings first.')
+proton = private / 'proton-selection.json'
+loader = 'native'
+if proton.exists() or proton.is_symlink():
+    if proton.is_symlink() or not proton.is_file() or proton.stat().st_size > 65536:
+        raise SystemExit('Invalid Proton selection')
+    selected = json.loads(proton.read_text())
+    runner = selected.get('runner', '')
+    if (selected.get('schema') != 1 or not isinstance(runner, str)
+            or not re.fullmatch(r'local/proton-tests/[0-9a-f]{32}/runner', runner)
+            or (private.parent / 'runner').resolve() != private.parent / runner):
+        raise SystemExit('Invalid Proton runner selection')
+    loader = 'portable'
+print(game_id, market, loader)
 PY
 )
-read -r game_id market <<< "$configuration"
+read -r game_id market FLIGHTDECK_PROTON_LOADER <<< "$configuration"
+export FLIGHTDECK_PROTON_LOADER
+if [[ "$FLIGHTDECK_PROTON_LOADER" == portable ]]; then
+    export WINE_DISABLE_FAST_SYNC=1
+    if [[ -x "$MSFS_LINUX_ROOT/runner/files/bin/wine64" ]]; then
+        export XODUS_WINE_RUNNER="$MSFS_LINUX_ROOT/runner/files/bin/wine64"
+    fi
+    export WINELOADER="$XODUS_WINE_RUNNER"
+    export WINESERVER="$MSFS_LINUX_ROOT/runner/files/bin/wineserver"
+fi
 case "$game_id" in
     msfs2020) directory=MSFS2020; executable=FlightSimulator.exe ;;
     msfs2024) directory=MSFS2024; executable=FlightSimulator2024.exe ;;

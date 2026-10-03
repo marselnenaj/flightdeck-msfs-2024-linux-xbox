@@ -326,23 +326,12 @@ def prepare_prefix(runner, prefix, *, cancel=None):
     env = dict(os.environ, WINEPREFIX=str(prefix), WINEARCH="win64", WINEESYNC="0", WINEFSYNC="0", WINEDEBUG="-all")
     env.pop("WINEDLLPATH", None)
     env.pop("WINEDLLOVERRIDES", None)
-    wine = runner / "files/bin/wine"
+    from .setup import runner_wine
+    wine = runner_wine(runner)
     try:
         _command([wine, "wineboot", "-u"], env=env, cancel=cancel)
         _command([runner / "files/bin/wineserver", "-w"], env=env, cancel=cancel)
-        from .setup import prefix_system32
-        prefix_system32(prefix)
-        for architecture, target in (("x86_64-windows", "system32"), ("i386-windows", "syswow64")):
-            folder = prefix / "drive_c/windows" / target
-            if folder.is_symlink() or not folder.is_dir():
-                raise SetupError("Die neue Spielumgebung enthält ungültige Systemordner.")
-            for library, names in (("dxvk", ("dxgi", "d3d11", "d3d10core")), ("vkd3d-proton", ("d3d12", "d3d12core"))):
-                for name in names:
-                    _copy_file(runner / "files/lib/wine" / library / architecture / (name + ".dll"), folder / (name + ".dll"))
-        registry = prefix.parent / "graphics.reg"
-        registry.write_text('Windows Registry Editor Version 5.00\n\n[HKEY_CURRENT_USER\\Software\\Wine\\DllOverrides]\n' +
-                            ''.join('"' + name + '"="native"\n' for name in ("dxgi", "d3d11", "d3d10core", "d3d12", "d3d12core")))
-        _command([wine, "regedit", "/S", registry], env=env, cancel=cancel)
+        install_graphics(runner, prefix, env=env, cancel=cancel)
         _command([runner / "files/bin/wineserver", "-w"], env=env, cancel=cancel)
     finally:
         # This environment names only this job's new prefix, never a live game.
@@ -351,6 +340,24 @@ def prepare_prefix(runner, prefix, *, cancel=None):
     for name in ("system.reg", "user.reg"):
         if not (prefix / name).is_file():
             raise SetupError("Die neue Spielumgebung wurde nicht vollständig eingerichtet.")
+
+
+def install_graphics(runner, prefix, *, env, cancel=None):
+    """Install both architectures from one selected runner into a private prefix."""
+    from .setup import prefix_system32
+    prefix_system32(prefix)
+    for architecture, target in (("x86_64-windows", "system32"), ("i386-windows", "syswow64")):
+        folder = prefix / "drive_c/windows" / target
+        if folder.is_symlink() or not folder.is_dir():
+            raise SetupError("Die neue Spielumgebung enthält ungültige Systemordner.")
+        for library, names in (("dxvk", ("dxgi", "d3d11", "d3d10core")), ("vkd3d-proton", ("d3d12", "d3d12core"))):
+            for name in names:
+                _copy_file(runner / "files/lib/wine" / library / architecture / (name + ".dll"), folder / (name + ".dll"))
+    registry = prefix.parent / "graphics.reg"
+    registry.write_text('Windows Registry Editor Version 5.00\n\n[HKEY_CURRENT_USER\\Software\\Wine\\DllOverrides]\n' +
+                        ''.join('"' + name + '"="native"\n' for name in ("dxgi", "d3d11", "d3d10core", "d3d12", "d3d12core")))
+    from .setup import runner_wine
+    _command([runner_wine(runner), "regedit", "/S", registry], env=env, cancel=cancel)
 
 
 def bootstrap(plan, *, notify=None, cancel=None, transfer=None):

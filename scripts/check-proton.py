@@ -1,0 +1,114 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+"""Test Proton switching using own PEs and fresh prefixes, without starting a game."""
+import argparse
+import json
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import sys
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+from flightdeck import bootstrap, proton, setup
+from flightdeck.backend import Launcher
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--runtime', type=Path, required=True, help='Read only: source of the installed Store DLLs and base runner')
+    parser.add_argument('--runner', type=Path, required=True)
+    parser.add_argument('--output', type=Path, required=True)
+    args = parser.parse_args()
+    original = args.runtime.resolve(strict=True)
+    runner = proton.base_runner(original).resolve(strict=True)
+    output = args.output.resolve()
+    output.mkdir(parents=True, exist_ok=False)
+    runtime = output / 'runtime'
+    (runtime / 'private').mkdir(parents=True, mode=0o700)
+    (runtime / 'local').mkdir()
+    (runtime / 'runner').symlink_to(runner)
+    shutil.copytree(ROOT / 'scripts/runtime', runtime / 'tools')
+    for path in (runtime / 'tools').iterdir():
+        path.chmod(0o700)
+    (runtime / 'private/runtime.json').write_text('{"game_id":"msfs2024","market":"AT"}\n')
+    prefix = runtime / 'local/msfs-prefix'
+    bootstrap.prepare_prefix(runner, prefix)
+    source = setup.prefix_system32(original / 'local/msfs-prefix')
+    system = setup.prefix_system32(prefix)
+    hashes = {}
+    for name in proton.BRIDGE:
+        setup._copy_file(source / name, system / name)
+        hashes[name] = setup.digest(system / name)
+    shutil.copytree(original / 'local/store-runtime', runtime / 'local/store-runtime', symlinks=True)
+    manifest = {'original_runtime_sha256': hashes['xgameruntime_original.dll'], 'artifacts': {'files': {
+        'runtime/xgameruntime.dll': hashes['xgameruntime.dll'],
+        'builtin/x86_64-windows/xodus_store_test.dll': hashes['xodus_store_test.dll']}}}
+    (runtime / 'private/import-manifest.json').write_text(json.dumps(manifest))
+    (prefix / 'original-marker').write_text('preserve this profile')
+    before = proton._id(prefix)
+    exe = output / 'probe.exe'
+    dll = output / 'probe.dll'
+    dll_source = output / 'dll.c'
+    dll_source.write_text('__declspec(dllexport) int probe(void) { return 42; }\n')
+    subprocess.run(['x86_64-w64-mingw32-gcc', '-O2', '-Wall', '-Wextra', str(ROOT / 'tests/graphics/proton-loader.c'), '-o', str(exe)], check=True)
+    subprocess.run(['x86_64-w64-mingw32-gcc', '-shared', str(dll_source), '-o', str(dll)], check=True)
+    graphics = output / 'multiwindow.exe'
+    subprocess.run(['x86_64-w64-mingw32-gcc', '-O2', '-Wall', '-Wextra', '-Werror', str(ROOT / 'tests/graphics/multiwindow.c'), '-o', str(graphics),
+                    '-ld3d12', '-ld3d11', '-ldxgi', '-ldxguid', '-lgdi32'], check=True)
+    game = runtime / 'games/MSFS2024'
+    (game / 'nested').mkdir(parents=True)
+    names = ('FlightSimulator2024.exe', 'nested/probe.dll')
+    for name in names:
+        (game / name).write_bytes(b'Synthetic encrypted placeholder; must remain unchanged.\n')
+    expected = {name: setup.digest(game / name) for name in names}
+    launcher = Launcher(output / 'state', str(runtime))
+    launcher.proton.start({'runtime_path': str(runtime), 'mode': 'proton', 'path': str(args.runner.resolve())})
+    launcher.proton.thread.join(600)
+    if launcher.proton.job['state'] != 'complete':
+        raise RuntimeError(launcher.proton.job)
+    selected = proton.selection(runtime)
+    env = proton._prefix_env(prefix, output)
+    env.update(FLIGHTDECK_PROTON_LOADER='portable', WINEDLLPATH=str(runtime / 'local/store-runtime'),
+               XODUS_WINE_RUNNER=str(setup.runner_wine(runtime / 'runner')),
+               WINELOADER=str(setup.runner_wine(runtime / 'runner')), WINESERVER=str(runtime / 'runner/files/bin/wineserver'),
+               WINEDLLOVERRIDES='xgameruntime=n;xgameruntime_original=n,b;xodus_store_test=b;winemenubuilder.exe=d',
+               DXVK_LOG_LEVEL='info', VKD3D_DEBUG='warn')
+    fds = []
+    try:
+        for path in (exe, dll):
+            fd = os.memfd_create('flightdeck-synthetic-probe', 0)
+            os.write(fd, path.read_bytes())
+            fds.append(fd)
+        env['WINE_DLL_FILE_MAP'] = '|'.join(f'{fd}:\\??\\Z:' + str(game / name).replace('/', '\\') for fd, name in zip(fds, names))
+        with (output / 'loader.log').open('w') as log:
+            result = subprocess.run([str(runtime / 'tools/xodus-wine-launch'), str(game / names[0])],
+                                    env=env, pass_fds=tuple(fds), stdout=log, stderr=subprocess.STDOUT, timeout=60)
+        env.pop('WINE_DLL_FILE_MAP')
+        with (output / 'render.log').open('w') as log:
+            rendering = subprocess.run([str(setup.runner_wine(runtime / 'runner')), str(graphics)],
+                                       cwd=output, env=env, stdout=log, stderr=subprocess.STDOUT, timeout=90)
+    finally:
+        for fd in fds:
+            os.close(fd)
+        for option in ('-k', '-w'):
+            subprocess.run([str(runtime / 'runner/files/bin/wineserver'), option], env=env, timeout=10)
+    assert result.returncode == 0, (output / 'loader.log').read_text()
+    assert rendering.returncode == 0, (output / 'render.log').read_text()
+    assert all(setup.digest(game / name) == expected[name] for name in names)
+    assert not list(game.glob('.xodus-launch-*'))
+    launcher.proton.start({'runtime_path': str(runtime), 'mode': 'default'})
+    launcher.proton.thread.join(30)
+    assert launcher.proton.job['state'] == 'complete', launcher.proton.job
+    assert proton._id(prefix) == before and (prefix / 'original-marker').read_text() == 'preserve this profile'
+    assert (runtime / 'runner').resolve() == runner
+    report = {'version': selected['version'], 'loader_passed': True, 'rendering_passed': True,
+              'original_files_unchanged': True, 'return_to_default_passed': True,
+              'scope': 'Synthetic memfd EXE/DLL, Store library loading, D3D11/D3D12 rendering and profile round trip; no game/account'}
+    (output / 'result.json').write_text(json.dumps(report, indent=2) + '\n')
+    print(json.dumps(report, indent=2))
+
+
+if __name__ == '__main__':
+    main()

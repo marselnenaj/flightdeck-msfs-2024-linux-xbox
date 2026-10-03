@@ -101,6 +101,12 @@ def data_home():
     return folder if folder.is_absolute() else Path.home() / ".local/share"
 
 
+def runner_wine(runner):
+    """Classic split builds need wine64 for a 64-bit prefix; new WoW64 uses wine."""
+    wine64 = Path(runner) / "files/bin/wine64"
+    return wine64 if wine64.is_file() else Path(runner) / "files/bin/wine"
+
+
 def _region_file(path, maximum):
     """Small, fixed system hints only; never wait on a pipe or scan user files."""
     try:

@@ -1,5 +1,22 @@
 # Changes and release status
 
+## Unreleased
+
+- Add experimental selection of installed Proton versions, including discovery
+  in Steam libraries and a custom-folder option. Trials use an independent
+  Wine/DXVK/VKD3D copy and Windows profile, with recovery and return to Flightdeck.
+- Add a descriptor-backed launch bridge for unmodified Proton, preserving
+  normal Xbox entitlement checks, encrypted game files and the Store/GDK layer.
+- Keep account/save helpers on the original runner and the Fenix patch restricted
+  to its matched runner. Record Proton version and loader in diagnostics.
+- Record the 0.1.18 NVIDIA follow-up: corrected build `628afa6f9cfece4` loads in
+  Automatic mode, but the affected tester's main globe/map and cockpit stay black.
+
+Synthetic executable/DLL loading, Store interface loading, mixed D3D11/D3D12
+rendering and return to the original profile passed with Proton Experimental
+11.0 (20260924) and CachyOS Proton 10.0 sunset. These tests used AMD hardware;
+full MSFS operation and the NVIDIA black-view fix remain unconfirmed.
+
 ## 0.1.18 — 2 October 2026
 
 [Download Flightdeck 0.1.18](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.18).

@@ -81,11 +81,15 @@ documented opt-out effective as well; it is not inferred from that warning.
    compatibility path passes, document that DLSS/Reflex/Frame Generation are
    unavailable in that supported configuration.
 
-Runner selection is useful as an advanced feature. Each choice must identify
-the whole runner and its graphics libraries, validate the Store/GDK loader
-capabilities, and use a separate test prefix before migration. Arbitrary system
-Wine and Steam Proton are not currently interchangeable with this Store loader.
-Providing a dropdown does not resolve the rendering defect.
+The experimental [Proton selection](runtime.md#experimental-proton-selection)
+now copies an installed runner and its graphics libraries into a separate trial
+profile. A portable descriptor-backed launch bridge allows unmodified Wine to
+load Xodus' licensed executable and DLL images. The original Store/GDK libraries
+remain installed, and account/save helpers retain the original runner. This is
+not a call to Steam's `proton run`; the inherited-descriptor and prefix contract
+is preserved. Synthetic loader and renderer tests do not establish full MSFS
+or NVIDIA compatibility. The 0.1.18 follow-up confirms that the layout backport
+alone did not resolve the reporting user's black main view.
 
 The local D3D12 clear/readback/present, shader and multi-window checks passed on
 an RX 6900 XT. There is no local NVIDIA GPU for the game qualification above.

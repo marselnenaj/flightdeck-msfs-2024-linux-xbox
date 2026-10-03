@@ -132,6 +132,11 @@ class Handler(BaseHTTPRequestHandler):
                 self.reply(200, self.server.launcher.cloud_saves.snapshot())
             elif path == "/api/fenix":
                 self.reply(200, self.server.launcher.fenix.snapshot())
+            elif path == "/api/proton":
+                self.reply(200, self.server.launcher.proton.snapshot())
+            elif path == "/api/proton/discover":
+                from .proton import discover
+                self.reply(200, {"choices": discover()}, translate=False)
             elif path == "/api/mods":
                 from .mods import snapshot
                 self.reply(200, snapshot(self.server.launcher))
@@ -139,7 +144,7 @@ class Handler(BaseHTTPRequestHandler):
                 self.reply(200, self.server.launcher.setup.snapshot())
             elif path == "/api/setup/discover":
                 self.reply(200, self.server.launcher.setup.discover())
-            elif path in {"/", "/index.html", "/app.js", "/problem-reports.js", "/setup.js", "/mods.js", "/fenix.js", "/updates.js", "/maintenance.js", "/store-check.js", "/launcher-updates.js", "/notices.js", "/cloud-saves.js", "/i18n.js", "/state.js", "/styles.css", "/mark.svg", "/flight-panorama.png", "/flight-panorama-2020.png", "/manrope-variable.woff2"}:
+            elif path in {"/", "/index.html", "/app.js", "/proton.js", "/problem-reports.js", "/setup.js", "/mods.js", "/fenix.js", "/updates.js", "/maintenance.js", "/store-check.js", "/launcher-updates.js", "/notices.js", "/cloud-saves.js", "/i18n.js", "/state.js", "/styles.css", "/mark.svg", "/flight-panorama.png", "/flight-panorama-2020.png", "/manrope-variable.woff2"}:
                 name = "index.html" if path == "/" else path[1:]
                 types = {".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".svg": "image/svg+xml", ".png": "image/png", ".woff2": "font/woff2"}
                 file = self.server.ui_root / name
@@ -194,6 +199,10 @@ class Handler(BaseHTTPRequestHandler):
                 result = launcher.configure(data.get("runtime_path"))
             elif path == "/api/graphics":
                 result = launcher.configure_graphics(data.get("runtime_path"), data.get("nvidia_mode"))
+            elif path == "/api/proton/select":
+                result = launcher.proton.start(data)
+            elif path == "/api/proton/cancel":
+                result = launcher.proton.cancel(data.get("job_id"))
             elif path == "/api/vr/configure":
                 result = launcher.vr.configure(data.get("runtime_path"), data.get("mode"))
             elif path == "/api/vr/check":

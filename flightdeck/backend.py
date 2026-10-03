@@ -139,6 +139,8 @@ class Launcher:
         self.store_check = StoreCheck(self)
         from .problem_reports import ProblemReports
         self.problem_reports = ProblemReports(self)
+        from .proton import ProtonManager
+        self.proton = ProtonManager(self)
 
     @staticmethod
     def validate_runtime(value):
@@ -387,6 +389,10 @@ class Launcher:
             ("bridge", "Kompatibilitätsbibliothek", "local/msfs-prefix/drive_c/windows/system32/xgameruntime.dll", False),
         )
         result = []
+        from .proton import check as proton_check
+        proton_error = proton_check(root)
+        if proton_error:
+            result.append({"id": "proton", "label": "Proton-Version", "ok": False, "detail": proton_error})
         if version_error:
             result.append({"id": "version", "label": "MSFS-Version", "ok": False, "detail": version_error})
         for key, label, name, executable in definitions:
@@ -568,6 +574,12 @@ class Launcher:
                 graphics_diagnostics.save_launch(self.runtime, graphics_record)
                 try:
                     environment, report = graphics.prepare(self.runtime)
+                    from .proton import selection
+                    if selection(self.runtime):
+                        environment["WINE_DISABLE_FAST_SYNC"] = "1"
+                        from .setup import runner_wine
+                        environment["WINELOADER"] = str(runner_wine(self.runtime / "runner"))
+                        environment["WINESERVER"] = str(self.runtime / "runner/files/bin/wineserver")
                     from . import vr
                     environment = vr.prepare(self.runtime, environment)
                 except graphics.GraphicsError:
@@ -732,6 +744,8 @@ class Launcher:
         cloud = self.cloud_saves.automation.snapshot()
         summary["cloud_sync"] = {key: cloud[key] for key in ("state", "phase", "error_code", "error_details")}
         summary["graphics"] = graphics.probe()
+        from .proton import diagnostic as proton_diagnostic
+        summary["proton"] = proton_diagnostic(root)
         vr_status = self.vr.snapshot()
         summary["vr"] = {key: vr_status[key] for key in ("mode", "state")}
         if vr_status.get("check"):

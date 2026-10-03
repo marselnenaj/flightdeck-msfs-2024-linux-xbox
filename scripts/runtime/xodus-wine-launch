@@ -25,6 +25,55 @@ def fail(message):
 def nt_path(path):
     return "\\??\\Z:" + str(path).replace("/", "\\")
 
+def portable_tree(source_dir, launch_dir, mappings):
+    """Expose licensed, already-open Xodus images to unmodified Wine.
+
+    Only symlinks are written. The parent retains the memfds for the entire
+    game lifetime, including Wine processes which close inherited descriptors.
+    Ordinary resources retain their original directory and contents.
+    """
+    mapped = {}
+    for fd, name in mappings:
+        if not name.startswith("\\??\\Z:\\"):
+            fail("Portable Proton requires Z: image mappings")
+        path = Path(name[6:].replace("\\", "/"))
+        if ".." in path.parts or not path.is_relative_to(source_dir):
+            fail("An image mapping is outside the game directory")
+        relative = path.relative_to(source_dir)
+        key = str(relative).casefold()
+        if not relative.parts or key in mapped:
+            fail("Duplicate or invalid image mapping")
+        mapped[key] = (relative, fd)
+
+    linked = set()
+    def populate(original, destination, relative=Path()):
+        seen = set()
+        for resource in original.iterdir():
+            if resource == launch_dir or resource.name.startswith((".xodus-fenix-", ".xodus-launch-")):
+                continue
+            rel = relative / resource.name
+            key = str(rel).casefold()
+            if key in seen:
+                fail("Ambiguous game image paths")
+            seen.add(key)
+            target = destination / resource.name
+            if key in mapped:
+                target.symlink_to(f"/proc/{os.getpid()}/fd/{mapped[key][1]}")
+                linked.add(key)
+            elif any(name.startswith(key + "/") for name in mapped):
+                if resource.is_symlink() or not resource.is_dir():
+                    fail("Invalid mapped image directory")
+                target.mkdir()
+                populate(resource, target, rel)
+            else:
+                target.symlink_to(resource)
+        for key, (rel, _) in mapped.items():
+            if rel.parent == relative and key not in seen:
+                fail("Mapped image is missing from the game directory")
+    populate(source_dir, launch_dir)
+    if linked != set(mapped):
+        fail("Mapped image is missing from the game directory")
+
 def main():
     if len(sys.argv) < 2:
         fail("Expected the executable path supplied by xodus-cli run")
@@ -90,13 +139,17 @@ def main():
     stub = launch_dir / source.name
     guard = None
     try:
-        for resource in source.parent.iterdir():
-            if resource == source or resource == launch_dir or resource.name.startswith((".xodus-fenix-", ".xodus-launch-")):
-                continue
-            (launch_dir / resource.name).symlink_to(resource)
-        with stub.open("xb") as stream:
-            stream.write(headers)
-            stream.truncate(file_size)
+        portable = os.environ.get("FLIGHTDECK_PROTON_LOADER") == "portable"
+        if portable:
+            portable_tree(source.parent, launch_dir, mappings)
+        else:
+            for resource in source.parent.iterdir():
+                if resource == source or resource == launch_dir or resource.name.startswith((".xodus-fenix-", ".xodus-launch-")):
+                    continue
+                (launch_dir / resource.name).symlink_to(resource)
+            with stub.open("xb") as stream:
+                stream.write(headers)
+                stream.truncate(file_size)
         child_env = dict(os.environ)
         child_env.setdefault("WINEPREFIX", str(BASE.parent / "local/msfs-prefix"))
         prefix = Path(child_env["WINEPREFIX"]).resolve()
@@ -112,7 +165,10 @@ def main():
         aliases = [(fd, nt_path(launch_dir) + "\\" + name[len(source_parent):])
                    for fd, name in mappings
                    if name.casefold().startswith(source_parent.casefold())]
-        child_env["WINE_DLL_FILE_MAP"] = map_value + "|" + "|".join(f"{fd}:{name}" for fd, name in aliases)
+        if portable:
+            child_env.pop("WINE_DLL_FILE_MAP", None)
+        else:
+            child_env["WINE_DLL_FILE_MAP"] = map_value + "|" + "|".join(f"{fd}:{name}" for fd, name in aliases)
         wine = Path(child_env.get("XODUS_WINE_RUNNER", str(DEFAULT_WINE))).resolve(strict=True)
         guard_path = prefix / "drive_c/windows/system32/FenixWindowGuard.exe"
         if child_env.get("WINE_FENIX_WINDOW_GUARD") == "1" and guard_path.is_file():

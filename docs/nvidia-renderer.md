@@ -45,6 +45,22 @@ It does not replace Wine or the Fenix overlay. All
 NVIDIA modes use the corrections in the full installer package. AMD/Intel-only
 starts retain their existing renderer.
 
+### Confirmed follow-up: black main view persists
+
+On 2 October 2026, the affected tester `autopilot01tr` reported testing **0.1.18**
+in **Automatic** mode. The log identifies corrected VKD3D build
+`628afa6f9cfece4`, but the main globe/map and cockpit remain black. The
+"never been rendered to" warning also remains. This is a confirmed negative
+result for that system: the layout correction below did not fix its black main
+view. It remains a separately demonstrated bug fix, not an established cause of
+the NVIDIA issue. The warning alone still cannot identify the cause.
+
+The experimental Proton selection now enables a complete alternative Wine,
+DXVK and VKD3D trial with a separate prefix and a return to the original profile.
+See [Proton trials](runtime.md#experimental-proton-selection). Neither a
+successful synthetic rendering test nor the new selector establishes that the
+NVIDIA MSFS issue is resolved.
+
 Automatic and Compatibility exclude `VK_NV_low_latency2` in VKD3D. Features
 mode restores normal extension availability unless an exclusion was explicitly
 inherited. The patched lifetime handling remains relevant when features are enabled.
@@ -75,16 +91,14 @@ four changed files under `libs/vkd3d/`. The version string is
 recursive submodule revisions and binary hashes are recorded in the graphics lock.
 
 The isolated test demonstrates a real layout bug and its correction on AMD.
-It does not establish that this bug causes the reported NVIDIA black main view.
-Confirmation requires the corrected DLL pair to load on an affected NVIDIA
-system and the main globe/map and cockpit to render. Install the full 0.1.17
-package manually from the release page; the stable update channel also
-offers it. Close MSFS and Flightdeck before installing, reopen Flightdeck, select
-**Automatic** NVIDIA graphics and check the main map and cockpit. The game log
-must identify build `628afa6f9cfece4` to establish that the corrected pair loaded.
-To restore the stable renderer, reinstall the 0.1.16 full package with both
-applications closed, then reopen Flightdeck and start MSFS. Managed renderer
-files are restored on the next start; custom DLLs remain untouched.
+It does not establish that this bug causes the reported NVIDIA black main view;
+the 0.1.18 follow-up above confirms no improvement on the reporting system.
+Further investigation needs to compare the main globe/map and cockpit with a
+complete alternative Proton environment and record the selected version and
+renderer. Build `628afa6f9cfece4` identifies the corrected Flightdeck renderer;
+seeing that build in a log establishes that it loaded, not that the NVIDIA issue
+is resolved. To end a Proton trial, use **Return to Flightdeck environment** in
+the launcher.
 
 ## Installation contract
 

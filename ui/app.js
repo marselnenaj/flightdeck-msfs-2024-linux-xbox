@@ -1,5 +1,6 @@
 import {t, locale, plural, getLanguage, setLanguage, applyTranslations} from './i18n.js';
 import {createMaintenance} from './maintenance.js';
+import {createProton} from './proton.js';
 import {createStoreCheck} from './store-check.js';
 import {createProblemReports} from './problem-reports.js';
 import {createSetup} from './setup.js';
@@ -20,6 +21,8 @@ let storeCheckController = null;
 let problemReportsController = null;
 let storeCheckReserved = false;
 let maintenanceController = null;
+let protonController = null;
+let protonReserved = false;
 let maintenanceReserved = false;
 let setupReserved = false;
 let setupController = null;
@@ -149,13 +152,14 @@ function renderStatus() {
   document.body.classList.toggle('game-switch-pending', state.pending === 'switch');
   storeCheckController?.render();
   maintenanceController?.render();
+  protonController?.render();
   modsController?.render();
   fenixController?.render();
   updatesController?.render();
   launcherUpdatesController?.render();
   cloudController?.render();
   const status = state.status;
-  const permissions = actionPermissions(status, state.online, state.pending || fenixReserved || setupReserved || updateReserved || cloudReserved || launcherUpdateReserved || maintenanceReserved || storeCheckReserved);
+  const permissions = actionPermissions(status, state.online, state.pending || fenixReserved || setupReserved || updateReserved || cloudReserved || launcherUpdateReserved || maintenanceReserved || protonReserved || storeCheckReserved);
   const game = gamePresentation(status, state.online);
   const connected = state.online && !!status;
   text('service-notice', status?.service?.message || '');
@@ -221,7 +225,7 @@ function renderStatus() {
 
 function canEditGraphics() {
   return graphicsEditable(state.status, state.online, state.pending || setupReserved || fenixReserved ||
-    updateReserved || cloudReserved || launcherUpdateReserved || maintenanceReserved || storeCheckReserved);
+    updateReserved || cloudReserved || launcherUpdateReserved || maintenanceReserved || protonReserved || storeCheckReserved);
 }
 
 function canEditVR() {
@@ -278,7 +282,7 @@ async function refreshStatus() {
   statusRequest = (async () => {
     try { state.status = normalizeStatus(await request('/api/status')); state.online = true; }
     catch { state.online = false; }
-    finally { renderStatus(); setupController?.render(); statusRequest = null; maintenanceController?.poll(); storeCheckController?.poll(); void checkStartupUpdates(); }
+    finally { renderStatus(); setupController?.render(); statusRequest = null; maintenanceController?.poll(); protonController?.poll(); storeCheckController?.poll(); void checkStartupUpdates(); }
   })();
   return statusRequest;
 }
@@ -322,7 +326,7 @@ function setView() {
     else nav.removeAttribute('aria-current');
   }
   document.title = `${t(VIEWS[state.view])} · Flightdeck`;
-  if (state.view === 'installation') {void setupController?.poll();void maintenanceController?.load();}
+  if (state.view === 'installation') {void setupController?.poll();void maintenanceController?.load();void protonController?.load();}
   if (state.view === 'mods') { void modsController?.load(); void fenixController?.load(); }
   if (state.view === 'updates') {void updatesController?.load();void launcherUpdatesController?.load();}
   if (state.view === 'diagnostics') void storeCheckController?.load();
@@ -370,7 +374,7 @@ async function loadDiagnostics() {
 }
 
 $('launch-button').addEventListener('click', () => {
-  const permissions = actionPermissions(state.status, state.online, state.pending || fenixReserved || setupReserved || updateReserved || cloudReserved || launcherUpdateReserved || maintenanceReserved || storeCheckReserved);
+  const permissions = actionPermissions(state.status, state.online, state.pending || fenixReserved || setupReserved || updateReserved || cloudReserved || launcherUpdateReserved || maintenanceReserved || protonReserved || storeCheckReserved);
   if (permissions.stop) void mutate('stop', '/api/stop');
   else if (permissions.start) void mutate('launch', '/api/launch');
   else if (permissions.setup) location.hash = 'installation';
@@ -378,7 +382,7 @@ $('launch-button').addEventListener('click', () => {
 for (const gameId of ['msfs2024','msfs2020']) {
   $('version-'+gameId).addEventListener('click',()=>{
     const status=state.status;
-    if (!state.online||!status||state.pending||fenixReserved||setupReserved||updateReserved||cloudReserved||launcherUpdateReserved||maintenanceReserved||storeCheckReserved||automaticBusy(status)||status.game.state!=='stopped')return;
+    if (!state.online||!status||state.pending||fenixReserved||setupReserved||updateReserved||cloudReserved||launcherUpdateReserved||maintenanceReserved||protonReserved||storeCheckReserved||automaticBusy(status)||status.game.state!=='stopped')return;
     if (status.runtime.configured&&status.runtime.game_id===gameId)return;
     const version=status.versions[gameId];
     if (version.ready) void mutate('switch','/api/game/select',{game_id:gameId});
@@ -414,7 +418,7 @@ $('graphics-save').addEventListener('click', () => {
   });
 });
 $('backup-button').addEventListener('click', () => {
-  if (actionPermissions(state.status, state.online, state.pending || fenixReserved || setupReserved || updateReserved || cloudReserved || launcherUpdateReserved || maintenanceReserved || storeCheckReserved).backup) void mutate('backup', '/api/saves/backup');
+  if (actionPermissions(state.status, state.online, state.pending || fenixReserved || setupReserved || updateReserved || cloudReserved || launcherUpdateReserved || maintenanceReserved || protonReserved || storeCheckReserved).backup) void mutate('backup', '/api/saves/backup');
 });
 $('diagnostic-refresh').addEventListener('click', () => void loadDiagnostics());
 $('diagnostic-copy').addEventListener('click', async () => {
@@ -439,22 +443,25 @@ window.addEventListener('hashchange', setView);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) void refreshStatus(); });
 applyTranslations();
 problemReportsController = createProblemReports({request,getStatus:()=>state.status,isOnline:()=>state.online&&!state.pending});
-setupController = createSetup({request,getStatus:()=>state.status,isOnline:()=>state.online && !state.pending && !fenixReserved && !updateReserved && !cloudReserved && !launcherUpdateReserved&&!maintenanceReserved&&!storeCheckReserved && !automaticBusy(state.status),renderChecks,notice:showNotice,refreshStatus,changed:reserved=>{setupReserved=reserved;renderStatus();}});
-fenixController = createFenix({request,getStatus:()=>state.status,isOnline:()=>state.online&&!state.pending,isReserved:()=>setupReserved||updateReserved||cloudReserved||launcherUpdateReserved||maintenanceReserved||storeCheckReserved||automaticBusy(state.status),refreshStatus,notice:showNotice,changed:value=>{fenixReserved=value;renderStatus();}});
-modsController = createMods({request,getStatus:()=>state.status,isOnline:()=>state.online&&!state.pending,isReserved:()=>fenixReserved||setupReserved||updateReserved||cloudReserved||launcherUpdateReserved||maintenanceReserved||storeCheckReserved||automaticBusy(state.status),notice:showNotice});
-updatesController = createUpdates({request,getStatus:()=>state.status,isOnline:()=>state.online&&!state.pending,getSetupJob:()=>setupController.job(),isReserved:()=>fenixReserved||setupReserved||cloudReserved||launcherUpdateReserved||maintenanceReserved||storeCheckReserved||automaticBusy(state.status),refreshStatus,refreshSetup:()=>setupController.poll(),renderChecks,availableChanged:value=>renderUpdateNotice('game',value),changed:value=>{updateReserved=value;setupController?.render();renderStatus();}});
-cloudController = createCloudSaves({request,getStatus:()=>state.status,isOnline:()=>state.online&&!state.pending,isReserved:()=>fenixReserved||setupReserved||updateReserved||launcherUpdateReserved||maintenanceReserved||storeCheckReserved,refreshStatus,changed:value=>{cloudReserved=value;setupController?.render();renderStatus();}});
+setupController = createSetup({request,getStatus:()=>state.status,isOnline:()=>state.online && !state.pending && !fenixReserved && !updateReserved && !cloudReserved && !launcherUpdateReserved&&!maintenanceReserved&&!protonReserved&&!storeCheckReserved && !automaticBusy(state.status),renderChecks,notice:showNotice,refreshStatus,changed:reserved=>{setupReserved=reserved;renderStatus();}});
+fenixController = createFenix({request,getStatus:()=>state.status,isOnline:()=>state.online&&!state.pending,isReserved:()=>setupReserved||updateReserved||cloudReserved||launcherUpdateReserved||maintenanceReserved||protonReserved||storeCheckReserved||automaticBusy(state.status),refreshStatus,notice:showNotice,changed:value=>{fenixReserved=value;renderStatus();}});
+modsController = createMods({request,getStatus:()=>state.status,isOnline:()=>state.online&&!state.pending,isReserved:()=>fenixReserved||setupReserved||updateReserved||cloudReserved||launcherUpdateReserved||maintenanceReserved||protonReserved||storeCheckReserved||automaticBusy(state.status),notice:showNotice});
+updatesController = createUpdates({request,getStatus:()=>state.status,isOnline:()=>state.online&&!state.pending,getSetupJob:()=>setupController.job(),isReserved:()=>fenixReserved||setupReserved||cloudReserved||launcherUpdateReserved||maintenanceReserved||protonReserved||storeCheckReserved||automaticBusy(state.status),refreshStatus,refreshSetup:()=>setupController.poll(),renderChecks,availableChanged:value=>renderUpdateNotice('game',value),changed:value=>{updateReserved=value;setupController?.render();renderStatus();}});
+cloudController = createCloudSaves({request,getStatus:()=>state.status,isOnline:()=>state.online&&!state.pending,isReserved:()=>fenixReserved||setupReserved||updateReserved||launcherUpdateReserved||maintenanceReserved||protonReserved||storeCheckReserved,refreshStatus,changed:value=>{cloudReserved=value;setupController?.render();renderStatus();}});
 launcherUpdatesController = createLauncherUpdates({request,getStatus:()=>state.status,isOnline:()=>state.online&&!state.pending,
-  isReserved:()=>fenixReserved||setupReserved||updateReserved||cloudReserved||maintenanceReserved||storeCheckReserved||automaticBusy(state.status),
+  isReserved:()=>fenixReserved||setupReserved||updateReserved||cloudReserved||maintenanceReserved||protonReserved||storeCheckReserved||automaticBusy(state.status),
   availableChanged:value=>renderUpdateNotice('launcher',value),
   refreshStatus,notice:showNotice,changed:value=>{launcherUpdateReserved=value;setupController?.render();renderStatus();}});
 maintenanceController = createMaintenance({request,getStatus:()=>state.status,isOnline:()=>state.online&&!state.pending,
   isSetupActive:()=>setupReserved,
-  isReserved:()=>setupReserved||updateReserved||fenixReserved||cloudReserved||launcherUpdateReserved||storeCheckReserved,
+  isReserved:()=>setupReserved||updateReserved||fenixReserved||cloudReserved||launcherUpdateReserved||protonReserved||storeCheckReserved,
   refreshStatus,changed:value=>{maintenanceReserved=value;setupController?.render();renderStatus();}});
 storeCheckController = createStoreCheck({request,getStatus:()=>state.status,isOnline:()=>state.online&&!state.pending,
-  isReserved:()=>setupReserved||updateReserved||fenixReserved||cloudReserved||launcherUpdateReserved||maintenanceReserved,
+  isReserved:()=>setupReserved||updateReserved||fenixReserved||cloudReserved||launcherUpdateReserved||maintenanceReserved||protonReserved,
   refreshStatus,changed:value=>{storeCheckReserved=value;setupController?.render();renderStatus();}});
+protonController = createProton({request,getStatus:()=>state.status,isOnline:()=>state.online&&!state.pending,
+  isReserved:()=>setupReserved||updateReserved||fenixReserved||cloudReserved||launcherUpdateReserved||maintenanceReserved||storeCheckReserved,
+  refreshStatus,changed:value=>{protonReserved=value;setupController?.render();renderStatus();}});
 setView();
 void refreshStatus().then(()=>{setupController.render();void updatesController.load();void launcherUpdatesController.load();});
 setInterval(() => { if (!document.hidden && !state.pending) void refreshStatus(); }, 3000);

@@ -47,14 +47,17 @@ not contain the rebuilt libraries; use the full installer for this correction.
 Working menus with a black globe, free-flight map or primary cockpit view remain
 a reported NVIDIA issue. Earlier releases' modes did not resolve every case.
 A working second render window does not establish that the primary view is fixed.
+An affected tester confirmed that **0.1.18**, **Automatic** mode and corrected
+renderer build `628afa6f9cfece4` still produce a black globe/map and cockpit.
+The 3D-texture correction is therefore not a fix for that reporting system.
 See [known issues](known-issues.md) and the
 [Steam compatibility reference](nvidia-steam-parity.md).
 
-[Flightdeck 0.1.17](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.17)
-is a prerelease for testing a targeted 3D-texture layout correction. Its effect
-on this issue remains unverified. Install its full package manually to test;
-it is not offered through **Updates → Flightdeck**. Follow the
-[test and restoration instructions](nvidia-renderer.md#3d-texture-layout-correction-0117-prerelease).
+The current development build offers an experimental
+[Proton selection](runtime.md#experimental-proton-selection) for comparing whole
+Wine/DXVK/VKD3D versions with a separate profile and a return to Flightdeck.
+This feature is not part of the published 0.1.18 package and does not establish
+that the black main view is fixed.
 
 The local rendering regression covers mixed DirectX 11/12 devices, primary and
 secondary swapchains, resize and destruction. It passed on AMD hardware and does

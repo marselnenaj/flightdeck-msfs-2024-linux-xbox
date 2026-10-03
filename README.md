@@ -70,8 +70,9 @@ and Flightdeck version in your report.
 [Current status and scope](docs/known-issues.md).
 
 **NVIDIA renderer correction (0.1.17, included in 0.1.18):** the 3D-texture
-layout correction passes an isolated Vulkan regression check. Its effect on
-the NVIDIA black main view remains unverified. Both versions are regular
+layout correction passes an isolated Vulkan regression check. A tester confirmed
+the corrected build loads in 0.1.18, but their NVIDIA main view remains black.
+Both versions are regular
 releases available through **Updates → Flightdeck**.
 [Details and validation](docs/nvidia-renderer.md#3d-texture-layout-correction-0117).
 

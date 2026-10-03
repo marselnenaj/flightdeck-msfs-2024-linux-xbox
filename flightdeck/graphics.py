@@ -393,7 +393,11 @@ def prepare(runtime, environment=None):
     if report["status"] != "ready" or not any(d["vendor_id"] == 0x10de and d["type"] != 4 for d in report["devices"]):
         raise GraphicsError("NVIDIA wurde erkannt, aber Vulkan ist nicht verfügbar. Bitte den empfohlenen NVIDIA-Treiber der Distribution installieren und Linux neu starten.")
     from . import renderer
-    renderer.install(runtime)
+    from .proton import selection as proton_selection
+    # A Proton trial deliberately uses that runner's complete renderer, even
+    # when its original hashes happen to match the default Flightdeck bundle.
+    if proton_selection(runtime) is None:
+        renderer.install(runtime)
     # Adapter selection and GLVND setup are needed even without NVAPI. An
     # opt-out must not also change which physical GPU DXGI and D3D12 use.
     # Keep explicit choices and never guess among multiple discrete GPUs.
