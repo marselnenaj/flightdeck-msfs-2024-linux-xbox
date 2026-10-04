@@ -5,8 +5,9 @@ updater and runtime helpers in Rust. It retains the local HTML/CSS/JavaScript
 interface and the established C/C++ Wine/Store ABI components. Version 0.1.22
 is the Python transition release and offers 0.2.1 through its normal updater.
 Older launchers receive 0.1.22 first, then 0.2.1 after restarting and checking
-again. Direct installation of the full native package also works. The earlier
-0.2.0-dev.1 prerelease remains available as a historical manual preview.
+again. Direct installation of the full native package also works. The superseded
+0.2.0-dev.1 preview and withdrawn 0.2.0 release entries have been removed;
+0.2.1 is the only published native release.
 
 ## Implemented contracts
 

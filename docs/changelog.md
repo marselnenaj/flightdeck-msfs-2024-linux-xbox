@@ -30,13 +30,14 @@ remain unchanged.
 Withdrawn immediately after the public migration check exposed an HTTP body-read
 panic in the native updater. Existing 0.1.22 launchers could discover and install
 it, but the resulting Rust service could not perform its next update check. Use
-0.2.1. The historical tag and artifact bytes remain unchanged.
+0.2.1. Its GitHub release entry has been removed; the source tag is retained
+for historical reference.
 
-## 0.2.0-dev.1 — 4 October 2026 (prerelease)
+## 0.2.0-dev.1 — 4 October 2026 (retired preview)
 
-[Download the native preview](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.2.0-dev.1)
-and run its installer to opt in. Stable update checks continue to offer 0.1.22;
-GitHub's Latest entry stays on that Python transition release.
+This preview has been superseded by 0.2.1 and removed from the GitHub release
+list. Use the current 0.2.1 installer. GitHub's Latest entry stays on the
+0.1.22 Python transition release so older launchers receive the bridge first.
 
 - Share one UI polling timer, refresh idle views every ten seconds and retain
   faster updates during running jobs. Pause all scheduled reads while hidden,
