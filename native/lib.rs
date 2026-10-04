@@ -65,6 +65,7 @@ pub mod setup;
 pub mod startup_updates;
 pub mod store_check;
 pub mod store_diagnostics;
+mod strict_json;
 pub mod supervisor;
 pub mod transaction;
 pub mod vr;

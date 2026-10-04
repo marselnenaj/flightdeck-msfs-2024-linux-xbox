@@ -27,6 +27,10 @@ fn prepared_clients_choose_the_newest_stable_release_independently_of_legacy_lat
     draft["draft"] = json!(true);
     for values in [json!([old, native, preview, draft]), json!([native, old])] {
         assert_eq!(update::stable_release(&values).unwrap()["version"], "0.3.0");
+        assert_eq!(
+            update::release_feed(&serde_json::to_vec(&values).unwrap()).unwrap()["version"],
+            "0.3.0"
+        );
     }
     let mut bad = native.clone();
     bad["assets"][0]["digest"] = json!("sha256:bad");
@@ -41,6 +45,28 @@ fn prepared_clients_choose_the_newest_stable_release_independently_of_legacy_lat
     ] {
         assert!(update::stable_release(&values).is_err());
     }
+}
+#[test]
+fn wire_feed_rejects_duplicate_keys_invalid_shapes_and_oversized_bodies() {
+    let encoded = serde_json::to_string(&json!([metadata()])).unwrap();
+    for bad in [
+        encoded.replace(
+            "\"prerelease\":false",
+            "\"prerelease\":true,\"prerelease\":false",
+        ),
+        encoded.replace("\"size\":1234", "\"size\":12,\"size\":1234"),
+        "{}".into(),
+        "null".into(),
+        "[".into(),
+        format!("{encoded} trailing"),
+        " ".repeat(2 * 1024 * 1024 + 1),
+    ] {
+        assert!(update::release_feed(bad.as_bytes()).is_err());
+    }
+    assert!(
+        flightdeck::cloud::json(encoded.as_bytes()).is_err(),
+        "Cloud objects must still reject top-level arrays"
+    );
 }
 #[test]
 fn release_identity_is_exact_and_public_urls_cannot_be_redirected_to_other_hosts() {

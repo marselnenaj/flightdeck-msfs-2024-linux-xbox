@@ -198,11 +198,14 @@ pub fn latest_release() -> Result<Value> {
         .take(2 * 1024 * 1024 + 1)
         .read_to_end(&mut data)
         .map_err(|_| Error::Invalid(NETWORK))?;
+    release_feed(&data)
+}
+pub fn release_feed(data: &[u8]) -> Result<Value> {
     require(
         data.len() <= 2 * 1024 * 1024,
         "Die GitHub-Antwort ist zu groß.",
     )?;
-    stable_release(&crate::cloud::json(&data)?)
+    stable_release(&crate::strict_json::decode(data).map_err(|_| Error::Invalid(INVALID))?)
 }
 pub fn download(
     release: &Value,

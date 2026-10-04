@@ -14,7 +14,10 @@ mixed an asynchronous read timer with blocking response reads; ordinary download
 workers could panic when reading a response body without a Tokio runtime. Both
 now use the blocking client's own connection/read/write timeouts. Slow reads
 still time out, while complete downloads may span many individual read windows.
-HTTPS, redirect restrictions and checksum validation remain enforced. Local
+The release feed now also accepts GitHub’s top-level JSON array; the old
+object-only decoder rejected it. Duplicate-key rejection is retained at every
+level, and cloud APIs still require objects. HTTPS, redirect restrictions and
+checksum validation remain enforced. Local
 streamed-body and stalled-body tests reproduce the old defect and cover the fix.
 
 This stable release also makes the native launcher available through 0.1.22;
