@@ -1,10 +1,10 @@
 # Native launcher status
 
-The **0.2.0-dev.1** development package runs the Flightdeck backend, installer,
+The **[0.2.0-dev.1 prerelease](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.2.0-dev.1)** runs the Flightdeck backend, installer,
 updater and runtime helpers in Rust. It retains the local HTML/CSS/JavaScript
 interface and the established C/C++ Wine/Store ABI components. The published
-0.1.22 package is the Python transition release; this native development
-package remains unpublished.
+0.1.22 package is the Python transition release. The native preview is a manual
+download; stable updaters ignore prereleases and continue to offer the bridge.
 
 ## Implemented contracts
 
@@ -55,6 +55,16 @@ PATH. Separate account-free Wine checks cover:
 - Experimental 11.0 (20260924) and CachyOS Proton 10.0 sunset: relative DLL loads
   from the licensed temporary game view, Store bridge loading, D3D11/D3D12
   rendering, retained profile markers and return to the default runner.
+- Default Flightdeck runner through Python and Rust: automatic `-FastLaunch`
+  reaches the Windows process, mapped DLLs load from the working and module
+  directories, and mixed D3D11/D3D12 rendering succeeds. The default DLL probe
+  fails with error 193 before the loader correction.
+
+Later CachyOS multiwindow-renderer repetitions timed out twice, then succeeded
+in a Wine virtual desktop and again after returning to the host compositor.
+This remains an intermittent synthetic-test issue; it does not establish a
+virtual-desktop requirement or reproduce the NVIDIA MSFS failure. See the
+[NVIDIA investigation](nvidia-renderer.md#default-runner-dll-mapping-correction).
 
 These checks reproduce the loader defect behind a plausible MSFS menu failure
 and verify its correction. They do not establish that the reported menu failure

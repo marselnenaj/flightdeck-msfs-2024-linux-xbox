@@ -8,6 +8,7 @@ import {resolve, dirname, join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 
 const base = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const assetBase = process.env.FLIGHTDECK_UI_SOURCE ? resolve(process.env.FLIGHTDECK_UI_SOURCE) : base;
 const artifacts = process.env.FLIGHTDECK_UI_ARTIFACTS ? resolve(process.env.FLIGHTDECK_UI_ARTIFACTS) : await mkdtemp(join(tmpdir(), 'flightdeck-ui-artifacts-'));
 await mkdir(artifacts, {recursive: true});
 const temp = await mkdtemp(join(tmpdir(), 'flightdeck-ui-'));
@@ -65,7 +66,7 @@ let problemReport={recipient:'contact@flightdeck-app.com',draft:null,unreadable:
 let storeCheck={job:null};
 let maintenance={job:null,can_restore:false};
 let proton={selected:'Flightdeck (Xodus)',experimental:false,can_restore:false,error:'',fenix:false,job:null};
-const files = new Set(['proton.js','gsx.js','problem-reports.js','store-check.js','maintenance.js','launcher-updates.js','notices.js','fenix.js','cloud-saves.js','manrope-variable.woff2','updates.js','mods.js','index.html','styles.css','app.js','setup.js','state.js','i18n.js','mark.svg','flight-panorama.png','flight-panorama-2020.png']);
+const files = new Set(['polling.js','reservations.js','checks.js','formatters.js','proton.js','gsx.js','problem-reports.js','store-check.js','maintenance.js','launcher-updates.js','notices.js','fenix.js','cloud-saves.js','manrope-variable.woff2','updates.js','mods.js','index.html','styles.css','app.js','setup.js','state.js','i18n.js','mark.svg','flight-panorama.png','flight-panorama-2020.png']);
 const server = createServer(async (req,res) => {
   const url = new URL(req.url, 'http://localhost');
   if (url.pathname.startsWith('/api/')) {
@@ -264,7 +265,7 @@ const server = createServer(async (req,res) => {
   const name = url.pathname === '/' ? 'index.html' : url.pathname.slice(1);
   if (!files.has(name)) {res.writeHead(404);res.end();return;}
   const type = {html:'text/html',css:'text/css',js:'text/javascript',svg:'image/svg+xml',png:'image/png',woff2:'font/woff2'}[name.split('.').pop()];
-  res.setHeader('Content-Type',type);res.end(await readFile(join(base,name)));
+  res.setHeader('Content-Type',type);res.end(await readFile(join(assetBase,name)));
 });
 await new Promise((resolve,reject) => {server.once('error',reject);server.listen(0,'127.0.0.1',resolve);});
 const origin = `http://127.0.0.1:${server.address().port}`;
@@ -278,12 +279,13 @@ let chromeErrors=''; chrome.stderr.on('data',chunk => {chromeErrors+=chunk;});
 let chromeFailure=null; chrome.once('error',error=>{chromeFailure=error;});
 let socket, realBackend;
 const sleep = ms => new Promise(resolve => setTimeout(resolve,ms));
-async function until(fn, message, timeout=10000) {
+async function until(fn, message, timeout=15000) {
   const end=Date.now()+timeout;
   while(Date.now()<end) {if(await fn())return;await sleep(50);}
   throw new Error(message);
 }
 try {
+  await (async () => {
   let port;
   await until(async()=>{
     if(chromeFailure)throw chromeFailure;
@@ -336,6 +338,29 @@ try {
   await call('Page.navigate',{url:origin+'/?lang=de'});
   await until(()=>evaluate(`document.getElementById('game-state')?.textContent === 'Bereit zum Start'`),'Ready status absent');
   await until(()=>evaluate(`!document.getElementById('available-updates').hidden && document.getElementById('available-updates-label').textContent==='Updates für Flightdeck und MSFS sind verfügbar.'`),'Automatic startup update offers missing');
+  if (process.env.FLIGHTDECK_UI_BENCHMARK === '1') {
+    const measurements = [];
+    for (const view of ['overview','installation']) {
+      await route(view); await sleep(1000);
+      assert.equal(await evaluate('document.hidden'), false);
+      await evaluate(`window.checkMutations=0;window.checkObserver=new MutationObserver(records=>{checkMutations+=records.length;});for(const id of ['overview-checks','installation-checks'])checkObserver.observe(document.getElementById(id),{subtree:true,childList:true,characterData:true});`);
+      const start = apiRequests.length, started = performance.now();
+      await sleep(30000);
+      const elapsedMs = performance.now() - started;
+      const reads = apiRequests.slice(start).filter(item=>item.method==='GET');
+      const counts = Object.fromEntries([...new Set(reads.map(item=>item.path))].sort().map(path=>[path,reads.filter(item=>item.path===path).length]));
+      const checkMutations = await evaluate('checkObserver.disconnect();checkMutations');
+      measurements.push({view,elapsedMs,requests:reads.length,endpoints:counts,checkMutations});
+    }
+    assert.deepEqual(errors,[]);assert.deepEqual(consoleIssues,[]);assert.deepEqual(externalRequests,[]);
+    const report={method:'Visible isolated Chromium, unchanged synthetic state, 30 seconds per view after settling; actual HTTP reads and check-list DOM mutations',measurements,gameOrAccountAccess:false};
+    await writeFile(join(artifacts,'ui-performance.json'),JSON.stringify(report,null,2)+'\n');
+    console.log(JSON.stringify(report));return;
+  }
+  await evaluate(`window.stableCheck=document.getElementById('overview-checks').firstElementChild;window.checkWrites=0;window.checkObserver=new MutationObserver(records=>{checkWrites+=records.length;});checkObserver.observe(document.getElementById('overview-checks'),{subtree:true,childList:true,characterData:true});`);
+  await refresh(`document.getElementById('game-state').textContent==='Bereit zum Start'`);
+  await check('Unchanged status preserves check-list nodes without DOM writes',`document.getElementById('overview-checks').firstElementChild===stableCheck && checkWrites===0`);
+  await evaluate('checkObserver.disconnect()');
   await check('Startup checks show available updates on the real overview without blocking play',`location.origin===${JSON.stringify(origin)} && document.title==='Übersicht · Flightdeck' && !document.getElementById('launch-button').disabled && !document.getElementById('view-overview').hidden`);
   assert.equal(startupRequests.length,1);assert.equal(posts.length,0);results.push('Startup requests only version discovery, never download, login or install');
   await screenshot('startup-updates-de-desktop.png');
@@ -877,11 +902,12 @@ try {
   await screenshot('updates-idle-desktop.png');
   updateDelay=200;const beforePolls=updateReplies;
   await evaluate(`(()=>{const b=document.getElementById('update-check');b.focus();window.updateButton=b;window.updateButtonChild=b.firstChild;window.updatePollFlicker=false;window.updatePollObserver=new MutationObserver(()=>{if(b.disabled||b.hidden||document.activeElement!==b||b!==document.getElementById('update-check')||b.firstChild!==window.updateButtonChild)window.updatePollFlicker=true;});window.updatePollObserver.observe(document.getElementById('view-updates'),{subtree:true,childList:true,attributes:true,attributeFilter:['disabled','hidden']});})()`);
-  await until(()=>updateReplies>=beforePolls+3,'Three background update polls did not finish');
+  for(let n=0;n<3;n++){const previous=updateReplies;await evaluate("window.dispatchEvent(new Event('focus'))");await until(()=>updateReplies>previous,'Focus revalidation did not finish');}
+  assert.ok(updateReplies>=beforePolls+3);
   await check('Unchanged background polls preserve update button DOM, focus and enabled state',`!window.updatePollFlicker && document.activeElement===window.updateButton && !window.updateButton.disabled`);
   await evaluate(`window.updatePollObserver.disconnect()`);updateDelay=0;
   updateWaiting=false;updateBarrier=new Promise(resolve=>{releaseUpdate=resolve;});
-  await until(()=>updateWaiting,'Failure poll did not reach barrier');
+  await evaluate("window.dispatchEvent(new Event('focus'))");await until(()=>updateWaiting,'Failure poll did not reach barrier');
   await click('update-check');updateUnavailable=true;
   releaseUpdate();updateBarrier=null;releaseUpdate=null;
   await until(()=>evaluate(`!document.getElementById('update-error').hidden && !document.getElementById('update-refresh').disabled`),'Failed poll did not finish reconciliation');
@@ -891,7 +917,7 @@ try {
   await until(()=>evaluate(`!document.getElementById('update-check').disabled`),'Update status did not recover');
   statusWaiting=false;statusBarrier=new Promise(resolve=>{releaseStatus=resolve;});
   updateWaiting=false;updateBarrier=new Promise(resolve=>{releaseUpdate=resolve;});
-  await until(()=>updateWaiting,'Background update poll did not reach barrier');
+  await evaluate("window.dispatchEvent(new Event('focus'))");await until(()=>updateWaiting,'Background update poll did not reach barrier');
   await click('update-check');
   await check('Explicit check during a background poll immediately reserves controls',`document.getElementById('update-check').disabled && document.getElementById('launch-button').disabled`);
   assert.equal(posts.length,beforeUpdates);results.push('Explicit check waits for the prior read before posting');
@@ -1005,10 +1031,10 @@ try {
   await evaluate(`document.getElementById('cloud-advanced').open=true`);
   await check('Cloud starts unknown, without an invented empty inventory',`document.getElementById('cloud-results').hidden && document.getElementById('cloud-status').textContent==='Noch nicht geprüft' && document.getElementById('cloud-title').textContent==='Xbox-Cloud-Spielstände'`);
   await evaluate(`window.cloudButton=document.getElementById('cloud-check');cloudButton.focus();window.cloudDisabled=[];window.cloudObserver=new MutationObserver(()=>cloudDisabled.push(cloudButton.disabled));cloudObserver.observe(cloudButton,{attributes:true,attributeFilter:['disabled']})`);
-  const cloudReads=cloudReplies;await until(()=>cloudReplies>=cloudReads+2,'Cloud background polling missing');
+  const cloudReads=cloudReplies;for(let n=0;n<2;n++){const previous=cloudReplies;await evaluate("window.dispatchEvent(new Event('focus'))");await until(()=>cloudReplies>previous,'Cloud focus revalidation missing');}assert.ok(cloudReplies>=cloudReads+2);
   await check('Quiet cloud polls preserve button node, focus and enabled state',`document.getElementById('cloud-check')===cloudButton && document.activeElement===cloudButton && cloudDisabled.length===0`);
   await evaluate(`cloudObserver.disconnect()`);
-  cloudBarrier=new Promise(resolve=>releaseCloud=resolve);await until(()=>cloudWaiting,'Cloud barrier did not receive a poll');
+  cloudBarrier=new Promise(resolve=>releaseCloud=resolve);await evaluate("window.dispatchEvent(new Event('focus'))");await until(()=>cloudWaiting,'Cloud barrier did not receive a poll');
   const beforeCloudPosts=posts.length;await click('cloud-check');
   await check('Cloud click during quiet poll immediately reserves other actions',`document.getElementById('backup-button').disabled && document.getElementById('launch-button').disabled`);
   assert.equal(posts.length,beforeCloudPosts);releaseCloud();cloudBarrier=null;cloudWaiting=false;
@@ -1078,7 +1104,7 @@ try {
   cloudUnavailable=false;await click('cloud-refresh');await until(()=>evaluate(`!document.getElementById('cloud-check').disabled`),'Cloud recovery failed');
   status.game={...status.game,state:'running'};await refresh(`document.getElementById('cloud-check').disabled`);await check('Running game blocks cloud check and copy',`document.getElementById('cloud-download').disabled && !document.getElementById('cloud-busy').hidden`);
   status.game={state:'stopped',managed:false,can_start:true,can_stop:false};await refresh(`!document.getElementById('cloud-check').disabled`);
-  cloudBarrier=new Promise(resolve=>releaseCloud=resolve);await until(()=>cloudWaiting,'Second cloud poll barrier missing');await click('cloud-check');
+  cloudBarrier=new Promise(resolve=>releaseCloud=resolve);await evaluate("window.dispatchEvent(new Event('focus'))");await until(()=>cloudWaiting,'Second cloud poll barrier missing');await click('cloud-check');
   const cloudPostCount=posts.filter(p=>p.path==='/api/cloud-saves/check').length;
   status.runtime.path='/synthetic/other-runtime';await refresh(`document.getElementById('current-path').textContent==='/synthetic/other-runtime'`);
   releaseCloud();cloudBarrier=null;cloudWaiting=false;await until(()=>evaluate(`!document.getElementById('cloud-refresh').disabled`),'Runtime-switch request did not settle');
@@ -1395,6 +1421,7 @@ try {
   assert.deepEqual(errors,[]);assert.deepEqual(consoleIssues,[]);assert.deepEqual(externalRequests,[]);results.push('No runtime exceptions, console warnings/errors or external network requests');
   await writeFile(join(artifacts,'browser-results.json'),JSON.stringify({passed:results.length,checks:results,method:'Isolated Chromium CDP, synthetic API mutations and real empty backend reads',viewport:{desktop:[1536,1024],mobile:[390,844]},realRuntimeActions:false},null,2)+'\n');
   console.log(`PASS ${results.length} browser checks; screenshots: ${artifacts}`);
+  })();
 } catch(error) {
   console.error(error.stack);console.error(JSON.stringify(errors));console.error(chromeErrors.slice(-2000));process.exitCode=1;
 } finally {

@@ -55,7 +55,9 @@ result for that system: the layout correction below did not fix its black main
 view. It remains a separately demonstrated bug fix, not an established cause of
 the NVIDIA issue. The warning alone still cannot identify the cause.
 
-### Intro startup workaround (unreleased)
+### Intro startup workaround
+
+Included in the 0.2.0-dev.1 native prerelease and its Python reference source.
 
 The [black-world-map report](https://forums.flightsimulator.com/t/black-world-map-after-su3/734967)
 describes a black main map/cockpit with a rendered second view on an RTX 4090.
@@ -126,7 +128,9 @@ These findings strengthen the intro/presentation investigation, but do not
 establish one universal NVIDIA fix. Full-display hangs, VR-only crashes,
 black login dialogs and missing aircraft instruments are separate symptoms.
 
-### Default-runner DLL mapping correction (unreleased)
+### Default-runner DLL mapping correction
+
+Included in the 0.2.0-dev.1 native prerelease and its Python reference source.
 
 Extending `scripts/check-proton.py` with `--default-runner` exposed a separate
 reproducible failure: the synthetic main EXE receives `-FastLaunch`, but
@@ -174,7 +178,7 @@ uses RX 6700 XT IDs when hiding NVIDIA; an AMD label is not evidence of an AMD
 driver. In [VKD3D](https://github.com/HansKristian-Work/vkd3d-proton/blob/44cf7c2042168f3/libs/vkd3d/swapchain.c),
 `user index` refers to a swapchain backbuffer, not a GPU index.
 
-The unreleased launcher reconciles saved MSFS 2024 Video options with the
+The 0.2.0-dev.1 launcher reconciles saved MSFS 2024 Video options with the
 effective NVIDIA mode. Previously it disabled the runtime APIs while retaining
 saved DLSS, Reflex and DLSS frame-generation requests. It now backs up and
 adjusts only these known values, and restores unchanged managed values when

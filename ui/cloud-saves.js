@@ -82,7 +82,7 @@ export function automaticTitle(cloud) {
   return t({idle:'Automatisch vor und nach dem Spielen',syncing:'Spielstände werden synchronisiert',playing:'Abgleich nach dem Beenden',synced:'Spielstände synchronisiert',local:'Diese Sitzung bleibt lokal'}[cloud.state]);
 }
 
-export function createCloudSaves({request,getStatus,isOnline,isReserved,refreshStatus,changed}) {
+export function createCloudSaves({request,polling,getStatus,isOnline,isReserved,refreshStatus,changed}) {
   const $=id=>document.getElementById(id);
   const text=(id,value)=>{if($(id).textContent!==value)$(id).textContent=value;};
   let data=null,loading=null,foreground=false,pending=false,fresh=false,error='',actionError='',loadedRuntime,reservation=false;
@@ -204,6 +204,6 @@ export function createCloudSaves({request,getStatus,isOnline,isReserved,refreshS
   for(const prefix of ['overview-cloud','auto-cloud'])for(const action of ['sign-in','retry','play-local','cancel-auto','cloud','local'])$(prefix+'-'+action).addEventListener('click',()=>void mutateAutomatic(action));
   window.addEventListener('flightdeck-languagechange',()=>{actionError='';render();});
   $('cloud-refresh').addEventListener('click',()=>{actionError='';void load();});
-  setInterval(()=>{if(!document.hidden&&!pending&&(location.hash==='#saves'||(sameRuntime()&&running(data))))void load({background:true});},1500);
+  polling.add('cloud-saves', () => load({background:true}), () => pending ? null : sameRuntime() && running(data) ? 1500 : location.hash === '#saves' ? 10000 : null);
   render();return {load,render};
 }

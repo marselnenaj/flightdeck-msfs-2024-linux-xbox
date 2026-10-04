@@ -8,7 +8,7 @@ export function maintenanceActions(job, status, {online=true, reserved=false, pe
     discard:!pending&&job?.state==='ready', busy};
 }
 
-export function createMaintenance({request,getStatus,isOnline,isReserved,isSetupActive,refreshStatus,changed}) {
+export function createMaintenance({request,polling,getStatus,isOnline,isReserved,isSetupActive,refreshStatus,changed}) {
   const $=id=>document.getElementById(id);
   let data={job:null}, pending=false, loading=null, error='', actionError='', reserved=false;
   const options=()=>({online:isOnline(),reserved:isReserved(),pending});
@@ -84,5 +84,6 @@ export function createMaintenance({request,getStatus,isOnline,isReserved,isSetup
     if(data.job?.state==='ready')void action('/api/maintenance/discard',{job_id:data.job.id});
     render();
   });
-  return {render,load,poll:()=>{if(reserved||location.hash==='#installation')void load();}};
+  polling.add('maintenance', load, () => pending ? null : reserved ? 1500 : location.hash === '#installation' ? 10000 : null);
+  return {render,load};
 }

@@ -40,7 +40,7 @@ Der Kompatibilitätsmodus entfernt keine DLLs, ändert keine Treiber und wählt 
 integrierte Grafik. AMD-/Intel-Systeme behalten ihre bisherige Grafikeinrichtung
 und zeigen diese Auswahl nicht an.
 
-Der noch unveröffentlichte native Build gleicht vor dem Start auch die
+Die native Testversion 0.2.0-dev.1 gleicht vor dem Start auch die
 gespeicherten Grafikoptionen von MSFS 2024 ab. Bei abgeschalteten NVIDIA-Funktionen
 ersetzt er gespeichertes DLSS durch TAA und deaktiviert Reflex sowie NVIDIA
 Frame Generation, einschließlich ihrer VR-Einstellungen. Die ursprünglichen
@@ -50,9 +50,9 @@ FSR, andere Frame-Generatoren, Auflösung, Grafikqualität und spätere manuelle
 Änderungen bleiben erhalten. Uneindeutige oder extern verknüpfte Dateien bleiben
 unverändert. Diese Anpassung ist noch nicht im veröffentlichten Paket 0.1.22.
 
-Der unveröffentlichte Launcher startet beide Simulator-Versionen außerdem mit
+Der Launcher 0.2.0-dev.1 startet beide Simulator-Versionen außerdem mit
 `-FastLaunch`. Das übernimmt einen [berichteten Workaround für die schwarze
-Hauptansicht](nvidia-renderer.md#intro-startup-workaround-unreleased) auch beim
+Hauptansicht](nvidia-renderer.md#intro-startup-workaround) auch beim
 Standard-Runner und den ausgewählten Proton-Versionen. Die Wirkung beim
 gemeldeten Linux-/NVIDIA-Fall ist damit noch nicht bestätigt.
 

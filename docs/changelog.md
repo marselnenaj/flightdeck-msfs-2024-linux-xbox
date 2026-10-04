@@ -1,28 +1,20 @@
 # Changes and release status
 
-## 0.1.22 — 3 October 2026
+## 0.2.0-dev.1 — 4 October 2026 (prerelease)
 
-Prepare existing Python installations for the native launcher. This release
-still runs on Python 3.10+ and can be installed by the 0.1.21 in-app updater.
+[Download the native preview](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.2.0-dev.1)
+and run its installer to opt in. Stable update checks continue to offer 0.1.22;
+GitHub's Latest entry stays on that Python transition release.
 
-- Recognize native packages, verify their manifest, x86-64 executable and
-  SHA256 checksum, and run the incoming native installer with the expected
-  current release bound to the update.
-- Restart the native service at the existing browser address. Preserve the
-  installation manager through rollback to Python and a subsequent return
-  to Rust. Terminal updates and installer launches accept the new shell wrapper.
-- Discover stable full packages from the release list. Keep GitHub's Latest
-  entry on 0.1.22 so older clients receive this prerequisite first; later
-  stable native releases remain discoverable by updated clients. Follow the
-  [staged release procedure](rust-transition.md).
-- Include the Python-side automatic .NET repair and Experimental/CachyOS
-  loader corrections described below, with the same live-validation limits.
-
-The real 0.1.21 package, transition package and a local native candidate pass
-the isolated in-app update and rollback chain. The native candidate is a local
-test build; this release installs the Python transition launcher.
-
-## Unreleased — 0.2.0 native development build
+- Share one UI polling timer, refresh idle views every ten seconds and retain
+  faster updates during running jobs. Pause all scheduled reads while hidden,
+  then revalidate on focus/visibility return. Explicit refresh remains immediate.
+- Preserve unchanged check-list DOM nodes, reuse locale formatters and centralize
+  job reservations so completing one operation cannot release another's lock.
+  Strict JSDoc/TypeScript checks cover these shared UI modules in CI.
+- Serve the Rust launcher's embedded images and UI assets without allocating
+  another complete copy for each response. Origin, CSP and no-store protections
+  remain enforced.
 
 - Fix delayed mapped-DLL loading with the default Flightdeck runner. The
   native Wine mapping redirects the main EXE only; both bridges now expose
@@ -60,7 +52,10 @@ expanded synthetic test reproduces that failure before the fix and passes with
 Experimental 11.0 (20260924) and CachyOS Proton 10 sunset after it, including
 D3D11/D3D12 rendering and return to the default runner. This fixes a loader defect;
 confirmation of the reported MSFS menu failure on the affected system is still
-outstanding. Known Fenix launch scripts receive the correction through the
+outstanding. Later CachyOS repetitions timed out twice, then passed in a Wine
+virtual desktop and again after returning to the host compositor. This
+intermittent graphics-test issue remains unexplained. Known Fenix launch scripts
+receive the correction through the
 component updater, and selecting a Fenix overlay retains the current launcher
 scripts instead of reinstalling older archive copies.
 
@@ -88,8 +83,30 @@ Fresh .NET setup, repair of a deliberately removed x86 CLR (including matching
 restored file hash), and an idempotent follow-up passed with the pinned Flightdeck
 Wine runner in an isolated, account-free profile. The remote report's exact
 failure still requires its setup log; this test does not establish every Proton
-build or distribution. The native build remains unreleased; the Python-side
-repair and Proton corrections ship in 0.1.22.
+build or distribution. This native build is a prerelease; the Python-side
+.NET repair and earlier selected-Proton corrections ship in 0.1.22.
+
+## 0.1.22 — 3 October 2026
+
+Prepare existing Python installations for the native launcher. This release
+still runs on Python 3.10+ and can be installed by the 0.1.21 in-app updater.
+
+- Recognize native packages, verify their manifest, x86-64 executable and
+  SHA256 checksum, and run the incoming native installer with the expected
+  current release bound to the update.
+- Restart the native service at the existing browser address. Preserve the
+  installation manager through rollback to Python and a subsequent return
+  to Rust. Terminal updates and installer launches accept the new shell wrapper.
+- Discover stable full packages from the release list. Keep GitHub's Latest
+  entry on 0.1.22 so older clients receive this prerequisite first; later
+  stable native releases remain discoverable by updated clients. Follow the
+  [staged release procedure](rust-transition.md).
+- Include the Python-side automatic .NET repair and Experimental/CachyOS
+  loader corrections described below, with the same live-validation limits.
+
+The real 0.1.21 package, transition package and a local native candidate pass
+the isolated in-app update and rollback chain. The native candidate is a local
+test build; this release installs the Python transition launcher.
 
 ## 0.1.21 — 3 October 2026
 

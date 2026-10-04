@@ -3,7 +3,7 @@
 use crate::{Error, Result, api, backend::Launcher, i18n, resources};
 use axum::{
     Router,
-    body::{Body, to_bytes},
+    body::{Body, Bytes, to_bytes},
     extract::State,
     http::{Request, Response, StatusCode, header},
     routing::any,
@@ -27,7 +27,8 @@ pub struct Service {
     pub pending: Arc<AtomicBool>,
     pub shutdown: Arc<tokio::sync::Notify>,
 }
-fn reply(status: StatusCode, body: Vec<u8>, kind: &str) -> Response<Body> {
+fn reply(status: StatusCode, body: impl Into<Bytes>, kind: &str) -> Response<Body> {
+    let body = body.into();
     Response::builder().status(status).header(header::CONTENT_TYPE,kind).header(header::CONTENT_LENGTH,body.len()).header(header::CACHE_CONTROL,"no-store").header("X-Content-Type-Options","nosniff").header("Referrer-Policy","no-referrer").header("Cross-Origin-Resource-Policy","same-origin").header("Content-Security-Policy","default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; font-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'").body(Body::from(body)).expect("constant response headers")
 }
 fn json_reply(
@@ -205,7 +206,7 @@ async fn handle(State(service): State<Service>, request: Request<Body>) -> Respo
                 "woff2" => "font/woff2",
                 _ => return error(StatusCode::NOT_FOUND, "Nicht gefunden.", locale),
             };
-            return reply(StatusCode::OK, data.to_vec(), content);
+            return reply(StatusCode::OK, Bytes::from_static(data), content);
         }
         return error(StatusCode::NOT_FOUND, "Nicht gefunden.", locale);
     }

@@ -194,8 +194,9 @@ check again when a stable native release is available.
 Version 0.1.22 still uses Python; it learns to verify, install and restart the
 native package. Versions 0.1.21 and earlier cannot install that package directly.
 The [release procedure](rust-transition.md) prevents those versions from skipping
-the transition update, even after a newer native release exists. The native
-release is not published yet.
+the transition update, even after a newer native release exists. The
+[0.2.0-dev.1 native preview](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.2.0-dev.1)
+is a manual prerelease download; stable update checks continue to offer 0.1.22.
 
 Alternatively, run the **new native package's `./install.sh`** directly. The
 installer retains the old launcher for rollback. Subsequent native releases use

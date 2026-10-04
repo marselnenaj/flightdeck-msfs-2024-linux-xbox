@@ -1,0 +1,98 @@
+{
+  "baseline_commit": "4ef1fc7105a68118221c7846b01f460281aede22",
+  "scope": "Launcher UI only; one 30-second observation per view and implementation, synthetic API, no account/game/FPS or browser memory measurement.",
+  "before": {
+    "method": "Visible isolated Chromium, unchanged synthetic state, 30 seconds per view after settling; actual HTTP reads and check-list DOM mutations",
+    "measurements": [
+      {
+        "view": "overview",
+        "elapsedMs": 30000.201364,
+        "requests": 10,
+        "endpoints": {
+          "/api/status": 10
+        },
+        "checkMutations": 40
+      },
+      {
+        "view": "installation",
+        "elapsedMs": 29999.511000000002,
+        "requests": 50,
+        "endpoints": {
+          "/api/maintenance": 10,
+          "/api/proton": 10,
+          "/api/setup": 20,
+          "/api/status": 10
+        },
+        "checkMutations": 80
+      }
+    ],
+    "gameOrAccountAccess": false
+  },
+  "after": {
+    "method": "Visible isolated Chromium, unchanged synthetic state, 30 seconds per view after settling; actual HTTP reads and check-list DOM mutations",
+    "measurements": [
+      {
+        "view": "overview",
+        "elapsedMs": 30000.179484,
+        "requests": 3,
+        "endpoints": {
+          "/api/status": 3
+        },
+        "checkMutations": 0
+      },
+      {
+        "view": "installation",
+        "elapsedMs": 29999.449781000003,
+        "requests": 12,
+        "endpoints": {
+          "/api/maintenance": 3,
+          "/api/proton": 3,
+          "/api/setup": 3,
+          "/api/status": 3
+        },
+        "checkMutations": 0
+      }
+    ],
+    "gameOrAccountAccess": false
+  },
+  "source_hashes": {
+    "before": {
+      "app.js": "d98cd32b1b38d9e300db7018ba6c9148b7003b06bb77deccff20c20ffc17c035",
+      "cloud-saves.js": "e9f9d60c622fb194f91af5e46e749776e5bd361ad512c4174b20237f4197335c",
+      "fenix.js": "b5d72dd729f642d5b6a17c4336e1309bb6c75d6c31d9e3c909a4f4d8463a3c65",
+      "gsx.js": "7cc0429a85224a568f53b8b39ed822a301a4ff75c0105df732b9d493167afc8b",
+      "i18n.js": "83664f000e972fbdf5fcdf1372339f0a89b625dbdcee0e627223e813c5b4eeae",
+      "launcher-updates.js": "8e0ced6efd9d713284b8daab52ed16e176b22e9c7fbf493a9dac7099b10cccb0",
+      "maintenance.js": "9bb8a6e977f7efeefa77ffeaa478281ac0f65d151c241d53907193740450d2fb",
+      "mods.js": "ed3f4bdf7fdcc004ae14546c52d4083e64cd95dd2c15cd62ad14d220f302bb1f",
+      "notices.js": "de4fa33b84339f51338c6204d7c13405aa2b44019e0e8d3df57b36a59d6218fb",
+      "problem-reports.js": "a08e08041c940dd3f53624039775aaa2701fac27dea3dc42e0f1dcc65fb1ff97",
+      "proton.js": "25d29a7f4dc1ec20c75302e8fffe73c6b41a9520a6957eb906d5407803cc4d71",
+      "setup.js": "218aea4bac37b3b039889ed4791f371aefb0b5e24cc7705c044bf1fe7952f6ea",
+      "state.js": "583ef4e71240f55bc11160041b73d52574ee4964133855280ca02b9f113a165f",
+      "store-check.js": "8ab040f43713e403dfedd36e9596ac13fbdaa097761f05305b1ad3d23910fe9c",
+      "updates.js": "664472762d98737df4a8a4545bf11c5a3b2551422f2ff34f0f6a87a978858635"
+    },
+    "after": {
+      "app.js": "1548936489125dcbd947e24cc7a0a8f918caa2038aee4a00eb52a40663e24d4d",
+      "checks.js": "a81a99b1e687e3a3b3d13c7542c796d82c1239fadf15dcab120ea4136b08e22a",
+      "cloud-saves.js": "23c6a2e6c6a86b702d72a91e685a53c714e2340489bc25856e64e792ee16df13",
+      "fenix.js": "00041a50aa2e7a5e8eccf6122877a64b96d4cb2cf250c8e01980d6c4ab730a43",
+      "formatters.js": "6611f50787351ead7ac8da8ce63795d113a283cf21c5839c7a6f1723cf0612a6",
+      "gsx.js": "4c3dcf1fa35b0052cf82387598dee2aacf90e26567621ae4658e9950c84a2299",
+      "i18n.js": "83664f000e972fbdf5fcdf1372339f0a89b625dbdcee0e627223e813c5b4eeae",
+      "launcher-updates.js": "d5e68157606d5a953f7bf0ad8776b5e975b5f3665b4c28ce82dce3d396945385",
+      "maintenance.js": "6303fffbc445de92fd1e1e59983bf139866cf8ce98018276dbe97215abc4c4a6",
+      "mods.js": "ed3f4bdf7fdcc004ae14546c52d4083e64cd95dd2c15cd62ad14d220f302bb1f",
+      "notices.js": "de4fa33b84339f51338c6204d7c13405aa2b44019e0e8d3df57b36a59d6218fb",
+      "polling.js": "f2238317634454b85f2342da18f2640e13879ab009382160d4148eccb4894b27",
+      "problem-reports.js": "a08e08041c940dd3f53624039775aaa2701fac27dea3dc42e0f1dcc65fb1ff97",
+      "proton.js": "f545e3010b4573deaf1d24945e6e88c362753f9a3f045bf0f1b8d4757662d046",
+      "reservations.js": "709bfdb957986631ecd2d3211971b6c32f892a25043a9f481d68fa266e2d9131",
+      "setup.js": "02d7646682a73e074782cd198113b14b00abe8b21219aae074e3570ab8637055",
+      "state.js": "23d7bd6760a39de25e2ff1b557b48544290bc2d5fea377a13ce61d6ec8a894b9",
+      "store-check.js": "04ebf2dab1aeffe59257981abca8e874fa85a46e512614a1d29dff059dc9686c",
+      "updates.js": "3bb04c56101113d79205c245e10d2b9bda14916228bf324af4e32b5d1f020250"
+    }
+  }
+}

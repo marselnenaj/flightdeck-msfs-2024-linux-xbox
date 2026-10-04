@@ -1,3 +1,4 @@
+import {formatters} from './formatters.js';
 import {t, locale} from './i18n.js';
 // Keep policy separate from rendering so missing/stale status cannot enable actions.
 export const VIEWS = Object.freeze({
@@ -107,14 +108,14 @@ export function nonnegativeNumber(value) {
 }
 
 export function formatCount(value) {
-  return nonnegativeNumber(value) === null ? '—' : new Intl.NumberFormat(locale()).format(value);
+  return nonnegativeNumber(value) === null ? '—' : formatters(locale()).count.format(value);
 }
 
 export function formatBytes(value) {
   if (nonnegativeNumber(value) === null) return '—';
   if (value < 1024) return `${formatCount(value)} B`;
   const unit = Math.min(Math.floor(Math.log(value) / Math.log(1024)), 4);
-  return `${new Intl.NumberFormat(locale(), {maximumFractionDigits: 1}).format(value / 1024 ** unit)} ${['B', 'KiB', 'MiB', 'GiB', 'TiB'][unit]}`;
+  return `${formatters(locale()).decimal.format(value / 1024 ** unit)} ${['B', 'KiB', 'MiB', 'GiB', 'TiB'][unit]}`;
 }
 
 export function normalizeTransfer(raw) {
@@ -132,7 +133,7 @@ export function normalizeTransfer(raw) {
 
 function transferBytes(value) {
   const unit = value < 1000 ? 0 : Math.min(Math.floor(Math.log10(value) / 3), 4);
-  return `${new Intl.NumberFormat(locale(), {maximumFractionDigits:1}).format(value / 1000 ** unit)} ${['B','KB','MB','GB','TB'][unit]}`;
+  return `${formatters(locale()).decimal.format(value / 1000 ** unit)} ${['B','KB','MB','GB','TB'][unit]}`;
 }
 
 export function jobProgress(job) {
@@ -148,7 +149,7 @@ export function jobProgress(job) {
       value = transfer.received_bytes === transfer.total_bytes && transfer.verified_bytes === transfer.total_bytes && filesComplete
         ? 100 : Math.min(99.9, Math.floor(transfer.received_bytes / transfer.total_bytes * 1000) / 10);
       detail = t('{received} von {total} · {percent} %', {received:transferBytes(transfer.received_bytes),
-        total:transferBytes(transfer.total_bytes), percent:new Intl.NumberFormat(locale(), {maximumFractionDigits:1}).format(value)});
+        total:transferBytes(transfer.total_bytes), percent:formatters(locale()).decimal.format(value)});
     } else detail = t('{received} empfangen', {received:transferBytes(transfer.received_bytes)});
     if (job.phase === 'paused') detail = t('Pausiert · {progress}', {progress:detail});
   }
@@ -169,7 +170,7 @@ export function formatDate(value) {
   if ((typeof value !== 'string' || !value) && typeof value !== 'number') return null;
   const date = new Date(typeof value === 'number' ? value * 1000 : value);
   if (!Number.isFinite(date.getTime())) return null;
-  return new Intl.DateTimeFormat(locale(), {dateStyle: 'medium', timeStyle: 'short'}).format(date);
+  return formatters(locale()).date.format(date);
 }
 
 export function gamePresentation(status, online = true) {

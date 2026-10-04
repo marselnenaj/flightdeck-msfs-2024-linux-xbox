@@ -63,7 +63,7 @@ export function installationHelp(job) {
   return '';
 }
 
-export function createSetup({request, getStatus, isOnline, renderChecks, notice, refreshStatus, changed}) {
+export function createSetup({request,polling: scheduler, getStatus, isOnline, renderChecks, notice, refreshStatus, changed}) {
   const $ = id => document.getElementById(id);
   const fieldIds = {runtime_path:'runtime-path', artifacts_path:'setup-artifacts', game_path:'setup-game',
     runner_path:'setup-runner', prefix_path:'setup-prefix', destination_path:'setup-destination',
@@ -338,7 +338,7 @@ export function createSetup({request, getStatus, isOnline, renderChecks, notice,
     if(!$('setup-advanced').open&&mode==='prepare'&&!pending&&!setupBusy(data?.job))mode=getStatus()?.runtime.configured?'existing':'install';
     render();
   });
-  setInterval(()=>{if(!document.hidden&&!pending&&(location.hash==='#installation'||setupBusy(data?.job)))void poll();},1500);
+  scheduler.add('setup', poll, () => pending ? null : setupBusy(data?.job) ? 1500 : location.hash === '#installation' ? 10000 : null);
   void poll();
   return {poll,render,discover,job:()=>data?.job,reserved:()=>pending||setupBusy(data?.job),
     chooseInstall:gameId=>focusSetup({mode:'install',gameId}),

@@ -24,9 +24,13 @@ anmelden, das Spiel herunterladen und im Launcher starten.
 
 **Aktuelle stabile Version: [Flightdeck 0.1.22](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.22).**
 Aktualisiere über **Updates → Flightdeck** oder verwende den vollständigen Installer.
-Der **Entwicklungsstand 0.2.0-dev.1** verwendet jetzt Rust für Backend, Installer
-und Runtime-Helfer. Dieses Paket benötigt kein Python und ist noch nicht
-veröffentlicht. [Status](rust-migration.md) · [Build-Anleitung](../BUILDING.md).
+Die **[Rust-Vorabversion 0.2.0-dev.1](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.2.0-dev.1)**
+verwendet Rust für Backend, Installer und Runtime-Helfer und benötigt kein Python.
+Sie ist als manueller Download verfügbar; der stabile Updater bietet weiterhin
+0.1.22 an. Enthalten sind automatisches `-FastLaunch`, die DLL-Ladekorrektur für
+den Standard-Runner und der Abgleich gespeicherter NVIDIA-Einstellungen.
+Die schwarze NVIDIA-Hauptansicht ist noch nicht als behoben bestätigt.
+[Status](rust-migration.md) · [Build-Anleitung](../BUILDING.md).
 Das **Zwischenupdate 0.1.22** bereitet den Wechsel zu Rust über den vorhandenen
 Updater vor und erhält die bestehende Installation. Ältere Versionen erhalten
 zuerst 0.1.22, auch wenn bereits eine stabile Rust-Version verfügbar ist. Nach

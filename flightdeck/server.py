@@ -147,7 +147,7 @@ class Handler(BaseHTTPRequestHandler):
                 self.reply(200, self.server.launcher.setup.snapshot())
             elif path == "/api/setup/discover":
                 self.reply(200, self.server.launcher.setup.discover())
-            elif path in {"/", "/index.html", "/app.js", "/proton.js", "/gsx.js", "/problem-reports.js", "/setup.js", "/mods.js", "/fenix.js", "/updates.js", "/maintenance.js", "/store-check.js", "/launcher-updates.js", "/notices.js", "/cloud-saves.js", "/i18n.js", "/state.js", "/styles.css", "/mark.svg", "/flight-panorama.png", "/flight-panorama-2020.png", "/manrope-variable.woff2"}:
+            elif path in {"/", "/index.html", "/app.js", "/polling.js", "/reservations.js", "/checks.js", "/formatters.js", "/proton.js", "/gsx.js", "/problem-reports.js", "/setup.js", "/mods.js", "/fenix.js", "/updates.js", "/maintenance.js", "/store-check.js", "/launcher-updates.js", "/notices.js", "/cloud-saves.js", "/i18n.js", "/state.js", "/styles.css", "/mark.svg", "/flight-panorama.png", "/flight-panorama-2020.png", "/manrope-variable.woff2"}:
                 name = "index.html" if path == "/" else path[1:]
                 types = {".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".svg": "image/svg+xml", ".png": "image/png", ".woff2": "font/woff2"}
                 file = self.server.ui_root / name

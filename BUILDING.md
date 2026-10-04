@@ -15,6 +15,8 @@ cargo fmt --all -- --check
 cargo clippy --locked --all-targets -- -D warnings
 python3 scripts/check-rust-parity.py --binary target/debug/flightdeck-rust
 python3 scripts/check-rust-http.py --binary target/debug/flightdeck-rust
+npm --prefix ui ci --ignore-scripts --no-audit --no-fund
+npm --prefix ui run typecheck
 node --test ui/tests/*.test.mjs
 FLIGHTDECK_TEST_BINARY=target/debug/flightdeck-rust node ui/tests/browser-test.mjs
 target/debug/flightdeck-rust --no-browser
@@ -24,6 +26,12 @@ The parity/HTTP/browser checks use isolated synthetic data. The browser suite
 needs Chromium. See [native status](docs/rust-migration.md) for scope and live
 validation limits. Python reference checks remain available with
 `python3 -m unittest discover -s tests -p 'test_*.py'`.
+
+TypeScript is a pinned development tool, not a runtime dependency. It checks
+the JSDoc contracts in the shared polling, reservation, check-list and formatting
+modules with strict checking and no emitted code. The application continues to
+serve ordinary ES modules. Existing controller behavior is covered by the
+Node and Chromium suites; those controllers are not yet fully type-checked.
 
 ### Native packages
 

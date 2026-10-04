@@ -54,7 +54,7 @@ export function fenixProgress(data, status) {
   return {ready:ready&&!active,supported,step,steps,title,detail,busy};
 }
 
-export function createFenix({request,getStatus,isOnline,isReserved,changed,refreshStatus,notice}) {
+export function createFenix({request,polling,getStatus,isOnline,isReserved,changed,refreshStatus,notice}) {
   const $=id=>document.getElementById(id);
   let data=null,loading=false,pending=false,fresh=false,error='',active=false;
   function permissions() {return fenixPermissions(data,getStatus(),fresh&&isOnline()&&!isReserved()&&!pending);}
@@ -132,7 +132,7 @@ export function createFenix({request,getStatus,isOnline,isReserved,changed,refre
   for(const kind of ['installer','bundle'])$('fenix-pick-'+kind).addEventListener('click',()=>void pick(kind));
   $('fenix-installer-path').addEventListener('input',render);
   $('fenix-refresh').addEventListener('click',()=>void load());
-  setInterval(()=>{if(active||(!document.hidden&&location.hash==='#mods'))void load();},2500);
+  polling.add('fenix', load, () => pending ? null : active ? 2500 : location.hash === '#mods' ? 10000 : null);
   render();
   return {load,render};
 }

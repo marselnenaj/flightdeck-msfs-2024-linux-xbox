@@ -27,7 +27,7 @@ export function launcherUpdateTitle(data) {
   return t('Noch nicht nach Updates gesucht');
 }
 
-export function createLauncherUpdates({request,getStatus,isOnline,isReserved=()=>false,refreshStatus,changed,notice,availableChanged=()=>{}}) {
+export function createLauncherUpdates({request,polling,getStatus,isOnline,isReserved=()=>false,refreshStatus,changed,notice,availableChanged=()=>{}}) {
   const $=id=>document.getElementById('launcher-update-'+id);
   let data=null,loading=null,pending=false,fresh=false,error='',actionError='',confirmRollback=false,restarting=false,restartStarted=0,reserved=false;
   function render() {
@@ -94,6 +94,6 @@ export function createLauncherUpdates({request,getStatus,isOnline,isReserved=()=
   $('rollback').addEventListener('click',()=>{confirmRollback=true;render();});
   $('rollback-no').addEventListener('click',()=>{confirmRollback=false;render();});
   $('rollback-yes').addEventListener('click',()=>{if(confirmRollback)void action('rollback');});
-  setInterval(()=>{if(!document.hidden&&!pending&&(location.hash==='#updates'||data?.job?.state==='running'||restarting))void load();},1500);
+  polling.add('launcher-updates', load, () => pending ? null : data?.job?.state === 'running' || restarting ? 1500 : location.hash === '#updates' ? 10000 : null);
   return {load,render};
 }

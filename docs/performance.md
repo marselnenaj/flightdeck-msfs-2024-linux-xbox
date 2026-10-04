@@ -93,3 +93,44 @@ Omit both installed-launcher arguments to measure direct invocation only. The
 output path must be new. The script cleans up only its own temporary services
 and data. It does not flush the workstation's filesystem cache or change CPU
 settings.
+
+## UI idle work
+
+A separate Chromium comparison uses the JavaScript UI from commit
+`4ef1fc7105a68118221c7846b01f460281aede22` and the optimized native-preview UI.
+Both receive identical synthetic API responses. Each view stays visible and
+unchanged for 30 seconds after settling; the implementations run sequentially.
+
+| Work in 30 seconds | Previous UI | Optimized UI |
+| --- | ---: | ---: |
+| Overview: HTTP status reads | 10 | 3 |
+| Installation: HTTP status reads across four endpoints | 50 | 12 |
+| Overview: check-list DOM mutation records | 40 | 0 |
+| Installation: check-list DOM mutation records | 80 | 0 |
+
+That is **70% fewer idle requests on Overview and 76% fewer on Installation**
+in this observation. Unchanged check lists keep their existing nodes. This
+measures actual HTTP requests and DOM mutation records, not CPU usage, browser
+memory or simulator performance. It is one observation per view, not a latency
+or throughput benchmark.
+
+One shared timer now polls idle views every ten seconds. Active jobs keep
+1.5–3 second intervals, reads do not overlap, and scheduled polling stops while
+the document is hidden. Focus/visibility return and explicit refresh revalidate
+immediately. Service-side jobs continue independently of the browser. Job
+reservations now share a single registry; unchanged reservation values do not
+trigger another whole-app render. Locale formatters are reused until the language
+changes. The Rust server also sends its embedded UI bytes without first copying
+each entire asset into a new buffer; no separate speedup is claimed for that change.
+
+[Measurement data and UI source hashes](ui-performance-results.json) record
+both runs. Reproduce using the Chromium fixture (no real backend/game calls):
+
+```sh
+mkdir -p build/ui-before
+git archive 4ef1fc7105a68118221c7846b01f460281aede22 ui | tar -xf - -C build/ui-before
+FLIGHTDECK_UI_SOURCE=build/ui-before/ui FLIGHTDECK_UI_BENCHMARK=1 \
+  FLIGHTDECK_UI_ARTIFACTS=build/ui-measure-before node ui/tests/browser-test.mjs
+FLIGHTDECK_UI_BENCHMARK=1 FLIGHTDECK_UI_ARTIFACTS=build/ui-measure-after \
+  node ui/tests/browser-test.mjs
+```

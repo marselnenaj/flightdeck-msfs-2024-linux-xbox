@@ -53,7 +53,7 @@ export function updateTitle(data) {
   return t('Noch nicht nach Updates gesucht');
 }
 
-export function createUpdates({request,getStatus,isOnline,getSetupJob,isReserved,refreshStatus,refreshSetup,renderChecks,changed,availableChanged=()=>{}}) {
+export function createUpdates({request,polling,getStatus,isOnline,getSetupJob,isReserved,refreshStatus,refreshSetup,renderChecks,changed,availableChanged=()=>{}}) {
   const $=id=>document.getElementById(id);
   let data=null,loading=null,foregroundLoading=false,pending=false,fresh=false,error='',actionError='',loadedRuntime,confirmRollback=false;
   let reservation=false;
@@ -153,6 +153,6 @@ export function createUpdates({request,getStatus,isOnline,getSetupJob,isReserved
   $('update-rollback').addEventListener('click',()=>{if(actions().rollback){confirmRollback=true;render();}});
   $('update-rollback-no').addEventListener('click',()=>{confirmRollback=false;render();});
   $('update-rollback-yes').addEventListener('click',()=>{if(confirmRollback)void mutate('rollback','/api/game-update/rollback');});
-  setInterval(()=>{if(!document.hidden&&!pending&&(location.hash==='#updates'||setupBusy(data?.job)||data?.background_checking))void load({background:true});},1500);
+  polling.add('updates', () => load({background:true}), () => pending ? null : setupBusy(data?.job) || data?.background_checking ? 1500 : location.hash === '#updates' ? 10000 : null);
   render();return {load,render};
 }

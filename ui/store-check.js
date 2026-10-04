@@ -17,7 +17,7 @@ export function storeCheckActions(job,status,{online=true,reserved=false,pending
   return {start:!!(online&&!reserved&&!pending&&status?.csrf_token&&status.runtime.configured&&status.game.state==='stopped'&&!status.setup?.busy&&!['syncing','playing'].includes(status.cloud?.state)&&!running),
     cancel:!!(online&&!pending&&running),running};
 }
-export function createStoreCheck({request,getStatus,isOnline,isReserved,refreshStatus,changed}) {
+export function createStoreCheck({request,polling,getStatus,isOnline,isReserved,refreshStatus,changed}) {
   const $=id=>document.getElementById(id);
   let data={job:null},pending=false,loading=null,error='',reserved=false;
   const allowed=()=>storeCheckActions(data.job,getStatus(),{online:isOnline(),reserved:isReserved(),pending});
@@ -55,5 +55,6 @@ export function createStoreCheck({request,getStatus,isOnline,isReserved,refreshS
   $('store-check-start').addEventListener('click',()=>{if(allowed().start)void action('/api/store-check/start');});
   $('store-check-sign-in').addEventListener('click',()=>{if(allowed().start)void action('/api/store-check/sign-in',{job_id:data.job?.id});});
   $('store-check-cancel').addEventListener('click',()=>{if(allowed().cancel)void action('/api/store-check/cancel',{job_id:data.job.id});});
-  return {render,load,poll:()=>{if(reserved||location.hash==='#diagnostics')void load();}};
+  polling.add('store-check', load, () => pending ? null : reserved ? 1500 : location.hash === '#diagnostics' ? 10000 : null);
+  return {render,load};
 }

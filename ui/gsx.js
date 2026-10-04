@@ -31,7 +31,7 @@ export function gsxProgress(data) {
   return {title,detail,steps,step,active};
 }
 
-export function createGSX({request,getStatus,isOnline,isReserved,changed,refreshStatus,notice}) {
+export function createGSX({request,polling,getStatus,isOnline,isReserved,changed,refreshStatus,notice}) {
   const $=id=>document.getElementById(id);
   let data=null,fresh=false,loading=false,pending=false,active=false,error='';
   const permissions=()=>gsxPermissions(data,getStatus(),fresh&&isOnline()&&!isReserved()&&!pending);
@@ -84,7 +84,7 @@ export function createGSX({request,getStatus,isOnline,isReserved,changed,refresh
   }
   for(const actionName of ['prepare','open','configure','disable','recover','stop'])$('gsx-'+actionName).addEventListener('click',()=>void action(actionName));
   $('gsx-refresh').addEventListener('click',()=>void load());
-  setInterval(()=>{if(active||(!document.hidden&&location.hash==='#mods'))void load();},2500);
+  polling.add('gsx', load, () => pending ? null : active ? 2500 : location.hash === '#mods' ? 10000 : null);
   render();
   return {load,render};
 }

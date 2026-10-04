@@ -9,7 +9,7 @@ export function protonActions(data,status,{online=true,pending=false,reserved=fa
     cancel:online&&!pending&&busy&&data.job.runtime_path===status?.runtime.path,busy};
 }
 
-export function createProton({request,getStatus,isOnline,isReserved,isSetupActive=()=>false,refreshStatus,changed}) {
+export function createProton({request,polling,getStatus,isOnline,isReserved,isSetupActive=()=>false,refreshStatus,changed}) {
   const $=id=>document.getElementById(id);
   let data=null,pending=false,loading=null,error='',reserved=false,boundPath=null;
   function render() {
@@ -102,5 +102,6 @@ export function createProton({request,getStatus,isOnline,isReserved,isSetupActiv
     catch(problem){error=problem.message;}
     finally{pending=false;await load();render();}
   });
-  return {render,load,poll:()=>{if(reserved||location.hash==='#installation')void load();}};
+  polling.add('proton', load, () => pending ? null : reserved ? 1500 : location.hash === '#installation' ? 10000 : null);
+  return {render,load};
 }
