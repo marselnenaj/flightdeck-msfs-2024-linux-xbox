@@ -1,5 +1,19 @@
 # Changes and release status
 
+## 0.2.0 — 4 October 2026
+
+[Download Flightdeck 0.2.0](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.2.0)
+or use **Updates → Flightdeck** in 0.1.22. Earlier launchers receive 0.1.22
+first; install it, restart, then check again for 0.2.0. GitHub Latest remains on
+0.1.22 so those older updaters do not skip the required bridge.
+
+The previous 0.2.0-dev.1 release was marked as a prerelease and used a preview
+tag, so stable updaters correctly ignored it. This release carries matching
+stable `0.2.0` versions in its tag, package manifest and executable. It contains
+the same launcher implementation, UI optimizations and runtime corrections as
+the tested preview below; only release identity and documentation change.
+The known NVIDIA/MSFS and live-validation limits remain unchanged.
+
 ## 0.2.0-dev.1 — 4 October 2026 (prerelease)
 
 [Download the native preview](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.2.0-dev.1)

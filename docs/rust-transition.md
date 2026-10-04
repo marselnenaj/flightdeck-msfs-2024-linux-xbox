@@ -4,16 +4,18 @@
 installations receive the Rust launcher through their current update interface:
 
 ```text
-0.1.21 → 0.1.22 → stable native release
+0.1.21 → 0.1.22 → 0.2.0
            Python       Rust
 ```
 
 Each step uses **Updates → Flightdeck → Download & install**, followed by
 **Restart Flightdeck now**. The bridge preserves settings and game files,
 verifies the native package before executing its installer, and starts the
-native service at the existing browser address. The current native development
-version `0.2.0-dev.1` is a prerelease and is not offered by the stable updater.
-Direct installation with a native full package remains available.
+native service at the existing browser address. The native release **0.2.0**
+is offered by 0.1.22 after restarting and checking for updates. The earlier
+`0.2.0-dev.1` preview is excluded because stable clients reject both prerelease
+flags and prerelease version tags. The 0.2.0 tag, package manifest and executable
+all carry the matching stable version. Direct installation remains available.
 
 The bridge needs Python 3.10 or later. Normal native operation no longer needs
 Python. Restoring a retained Python version still needs its interpreter. A

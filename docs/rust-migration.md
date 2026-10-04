@@ -1,10 +1,12 @@
 # Native launcher status
 
-The **[0.2.0-dev.1 prerelease](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.2.0-dev.1)** runs the Flightdeck backend, installer,
+The **[0.2.0 release](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.2.0)** runs the Flightdeck backend, installer,
 updater and runtime helpers in Rust. It retains the local HTML/CSS/JavaScript
-interface and the established C/C++ Wine/Store ABI components. The published
-0.1.22 package is the Python transition release. The native preview is a manual
-download; stable updaters ignore prereleases and continue to offer the bridge.
+interface and the established C/C++ Wine/Store ABI components. Version 0.1.22
+is the Python transition release and offers 0.2.0 through its normal updater.
+Older launchers receive 0.1.22 first, then 0.2.0 after restarting and checking
+again. Direct installation of the full native package also works. The earlier
+0.2.0-dev.1 prerelease remains available as a historical manual preview.
 
 ## Implemented contracts
 
@@ -26,7 +28,7 @@ An explicit rollback to an older Python release still needs that release's
 Python runtime; normal native operation does not.
 The Python **0.1.22 transition update** accepts native packages and
 hands the existing browser session to the native service. The in-app path is
-**0.1.21 → 0.1.22 → a stable native release**. Older updaters only accept the
+**0.1.21 → 0.1.22 → 0.2.0**. Older updaters only accept the
 Python source layout, so the [staged release procedure](rust-transition.md)
 keeps their discovery endpoint on the bridge. Direct installation with the new
 full package also works. Native-to-native updates use the Rust updater. Update

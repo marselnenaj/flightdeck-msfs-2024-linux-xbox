@@ -2,7 +2,7 @@
 
 ## Rust launcher
 
-The development launcher, installer, updater and runtime helpers use Rust.
+The launcher, installer, updater and runtime helpers use Rust.
 The web interface and Wine/Store ABI components remain in their existing
 languages. The native package needs no Python interpreter; Python 3.11+ is
 used for building packages and running reference checks. Build with Rust/Cargo
@@ -48,7 +48,7 @@ python3 scripts/native-release.py \
   --native build/flightdeck-compat-0.1.16-linux-x86_64.tar.gz \
   --graphics build/graphics \
   --output build/native-package
-python3 scripts/source-release.py --output build/native-package/flightdeck-source-0.2.0-dev.1.tar.gz
+python3 scripts/source-release.py --output build/native-package/flightdeck-source-0.2.0.tar.gz
 ```
 
 Install the toolchain's `rust-docs` component if its standard-library notices

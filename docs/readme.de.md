@@ -22,20 +22,19 @@ Flightdeck installiert und startet deine **gekaufte Xbox-PC-/Microsoft-Store-
 Version von MSFS 2024 oder 2020** unter Linux mit Wine/Proton. Mit dem Microsoft-Konto
 anmelden, das Spiel herunterladen und im Launcher starten.
 
-**Aktuelle stabile Version: [Flightdeck 0.1.22](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.22).**
+**Aktuelle Version: [Flightdeck 0.2.0](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.2.0).**
 Aktualisiere über **Updates → Flightdeck** oder verwende den vollständigen Installer.
-Die **[Rust-Vorabversion 0.2.0-dev.1](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.2.0-dev.1)**
-verwendet Rust für Backend, Installer und Runtime-Helfer und benötigt kein Python.
-Sie ist als manueller Download verfügbar; der stabile Updater bietet weiterhin
-0.1.22 an. Enthalten sind automatisches `-FastLaunch`, die DLL-Ladekorrektur für
-den Standard-Runner und der Abgleich gespeicherter NVIDIA-Einstellungen.
-Die schwarze NVIDIA-Hauptansicht ist noch nicht als behoben bestätigt.
-[Status](rust-migration.md) · [Build-Anleitung](../BUILDING.md).
-Das **Zwischenupdate 0.1.22** bereitet den Wechsel zu Rust über den vorhandenen
-Updater vor und erhält die bestehende Installation. Ältere Versionen erhalten
-zuerst 0.1.22, auch wenn bereits eine stabile Rust-Version verfügbar ist. Nach
-dem Neustart erkennt 0.1.22 dann dieses nächste Update.
-[Gestaffelte Veröffentlichung](rust-transition.md).
+Backend, Installer, Updater und Runtime-Helfer verwenden Rust und benötigen kein
+Python. **0.1.22** findet diese Version im vorhandenen Updater. Ältere Launcher
+erhalten **zuerst 0.1.22**: installieren, Flightdeck neu starten und anschließend
+erneut nach Updates suchen, um **0.2.0** zu erhalten. GitHubs Latest-Eintrag bleibt
+absichtlich beim Zwischenupdate. Die frühere Vorabversion `0.2.0-dev.1` wurde
+von der stabilen Update-Suche ausgeschlossen. [Update-Reihenfolge](rust-transition.md).
+
+Enthalten sind automatisches `-FastLaunch`, die DLL-Ladekorrektur für den
+Standard-Runner, der Abgleich gespeicherter NVIDIA-Einstellungen und weniger
+Arbeit der Oberfläche im Leerlauf. Die schwarze NVIDIA-Hauptansicht ist noch
+nicht als behoben bestätigt. [Status](rust-migration.md) · [Build-Anleitung](../BUILDING.md).
 **Neu in 0.1.20:** Proton-Wechsel mit erhaltenen Add-ons und passenden Fenix-Patches für Experimental und CachyOS. [Änderungen](changelog.md#0120--3-october-2026).
 
 **0.1.18** ergänzt die optionale VR-Einrichtung für WiVRn, SteamVR und Monado,
@@ -139,8 +138,8 @@ Schlüsselbund. GTK 3, WebKitGTK 4.1, OpenSSL 3 sowie GStreamer Good/Bad/Libav
 müssen vorhanden sein. Für die Erstinstallation mindestens **100 GiB freien
 Speicher** vorsehen; Updates und Reparaturen behalten zusätzlich das bisherige
 Spielpaket.
-Die veröffentlichte Version 0.1.22 benötigt zusätzlich Python 3.10.12+;
-das native Entwicklungspaket 0.2.0 benötigt keinen Python-Interpreter.
+Das Zwischenupdate 0.1.22 benötigt zusätzlich Python 3.10.12+;
+die native Version 0.2.0 benötigt keinen Python-Interpreter.
 Sein optionaler grafischer Installer verwendet Zenity oder KDialog.
 
 Getestet wurde Arch Linux. Andere Distributionen benötigen kompatible

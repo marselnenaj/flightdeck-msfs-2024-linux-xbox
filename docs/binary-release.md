@@ -6,13 +6,13 @@ not contain Microsoft game files, a Wine prefix, account data, Linux system
 libraries or the upstream Proton runner. The Git repository and source-only
 archive still exclude compiled runtime binaries.
 
-The **0.2.0-dev.1 native launcher package** additionally contains the Rust
+The **0.2.0 native launcher package** additionally contains the Rust
 Flightdeck executable, its locked dependency notices and inventory, and the
 Rust standard-library notices. The UI and fixed launcher scripts are embedded
 in the executable. No Python application code is installed. Its component and
 graphics payloads retain the 0.1.16/0.1.11/0.1.17 pins below. This
-[prerelease](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.2.0-dev.1)
-is distributed as a manual download; 0.1.22 remains the stable updater's bridge.
+[release](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.2.0)
+is offered by the 0.1.22 updater; older launchers receive that bridge first.
 
 The **0.1.22 transition package** retains the Python launcher and the
 same pinned component/graphics bundles. Its builder replaces only the full

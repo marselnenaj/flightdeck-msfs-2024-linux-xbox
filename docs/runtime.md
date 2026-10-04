@@ -67,7 +67,7 @@ normal licensing, and Flightdeck retains its Store/GDK libraries. Flightdeck
 starts the chosen Wine directly; Steam's Proton launcher and its game-specific
 launch options are not invoked. Unsupported host dependencies fail preparation.
 
-The 0.2.0-dev.1 default loader also exposes mapped DLLs through this view and
+The 0.2.0 default loader also exposes mapped DLLs through this view and
 uses it as the working directory. Its executable still uses the native Wine
 mapping and a header-only stub. The pinned native mapping handles the main
 image, so ordinary delayed DLL loads cannot rely on map aliases alone.
@@ -161,7 +161,7 @@ reject active Wine/Fenix processes.
 
 ### NVIDIA graphics in launcher-managed starts
 
-The Python/Rust Wine bridges in the 0.2.0-dev.1 source add `-FastLaunch` when starting MSFS
+The Python/Rust Wine bridges in the 0.2.0 source add `-FastLaunch` when starting MSFS
 2020/2024, independently of the graphics mode or selected runner. This uses the
 [reported intro-path workaround](nvidia-renderer.md#intro-startup-workaround).
 An explicitly supplied spelling is retained once; other arguments are preserved.
@@ -222,7 +222,7 @@ loading even when an earlier start installed these libraries.
 Generic Steam launch options do not configure Flightdeck's existing background
 service. Changing the mode in Flightdeck requires no service restart.
 
-The 0.2.0-dev.1 launcher also reconciles MSFS 2024 `UserCfg.opt` Video options
+The 0.2.0 launcher also reconciles MSFS 2024 `UserCfg.opt` Video options
 before starting Wine, under the runtime lease. NVAPI-disabled starts replace
 DLSS with TAA, Reflex with OFF and DLSSG with NONE, including the VR variants.
 Only known values in one unambiguous Video block are eligible. The per-field

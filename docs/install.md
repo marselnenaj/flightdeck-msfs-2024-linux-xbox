@@ -1,13 +1,12 @@
 # Install the Flightdeck launcher
 
-The current stable package is **0.1.22**, the Python transition release. It
-prepares the updater for the upcoming native launcher. This guide also notes
-differences in the **0.2.0-dev.1 native development package**, which is not yet
-published. See [BUILDING.md](../BUILDING.md), [changes](changelog.md) and
-[native status](rust-migration.md) for development and validation scope.
+The current package is **0.2.0**, the native Rust launcher. It needs no Python
+interpreter. Existing older launchers update through **0.1.22**, the Python
+transition release, before receiving 0.2.0. See [update ordering](rust-transition.md),
+[changes](changelog.md) and [native status](rust-migration.md).
 
 Download **Flightdeck-Linux-x86_64.tar.gz** from the
-[releases page](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases)
+[0.2.0 release](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.2.0)
 and extract it on your Linux computer. This full installer includes the six
 pinned compatibility components and their license notices. Version 0.1.22
 needs Python 3.10.12+ and the Linux libraries listed below. The native package
@@ -190,13 +189,13 @@ it; users do not need to manage the HTTP service themselves.
 
 The **0.1.22 transition update** prepares the move from Python to Rust
 through **Updates → Flightdeck**. Install 0.1.22 and restart Flightdeck, then
-check again when a stable native release is available.
+check again to receive **0.2.0**.
 Version 0.1.22 still uses Python; it learns to verify, install and restart the
 native package. Versions 0.1.21 and earlier cannot install that package directly.
 The [release procedure](rust-transition.md) prevents those versions from skipping
 the transition update, even after a newer native release exists. The
-[0.2.0-dev.1 native preview](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.2.0-dev.1)
-is a manual prerelease download; stable update checks continue to offer 0.1.22.
+[0.2.0 native release](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.2.0)
+is on the stable update channel. Only the earlier 0.2.0-dev.1 preview is excluded.
 
 Alternatively, run the **new native package's `./install.sh`** directly. The
 installer retains the old launcher for rollback. Subsequent native releases use

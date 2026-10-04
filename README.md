@@ -22,18 +22,19 @@ Flightdeck installs and launches your **purchased Xbox PC / Microsoft Store copy
 of MSFS 2024 or 2020** on your Linux computer through Wine/Proton. Sign in with your
 Microsoft account, download the game and start it from one application.
 
-**Current stable release: [Flightdeck 0.1.22](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.22).**
+**Current release: [Flightdeck 0.2.0](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.2.0).**
 Update through **Updates → Flightdeck** or use the full installer.
-The **[0.2.0-dev.1 native preview](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.2.0-dev.1)**
-uses a Rust backend, installer and runtime helpers, without Python. Download
-this prerelease manually; the stable updater continues to offer 0.1.22.
-It adds automatic `-FastLaunch`, a default-runner DLL-loading correction and
-saved NVIDIA settings reconciliation. The reported NVIDIA black main view
-remains unconfirmed fixed. [Native status](docs/rust-migration.md) · [Build instructions](BUILDING.md).
-The **0.1.22 transition update** prepares the move to Rust through the existing
-updater, preserving the current installation. Older versions receive 0.1.22
-first, even after a stable native release becomes available; after restarting,
-0.1.22 can discover that next update. See the [staged release procedure](docs/rust-transition.md).
+The backend, installer, updater and runtime helpers use Rust and need no Python.
+Version **0.1.22** discovers this release through its existing updater. Older
+launchers receive **0.1.22 first**; install it, restart Flightdeck, then check
+again for **0.2.0**. GitHub's Latest badge deliberately remains on the bridge.
+The earlier `0.2.0-dev.1` preview was excluded from stable update checks.
+See [update ordering](docs/rust-transition.md).
+
+This release includes automatic `-FastLaunch`, the default-runner DLL-loading
+correction, saved NVIDIA settings reconciliation and reduced idle UI work.
+The reported NVIDIA black main view remains unconfirmed fixed.
+[Native status](docs/rust-migration.md) · [Build instructions](BUILDING.md).
 **New in 0.1.20:** Proton switching with retained add-ons and matched Fenix patches for Experimental and CachyOS. [Changes](docs/changelog.md#0120--3-october-2026).
 
 **0.1.18** adds optional VR setup for WiVRn, SteamVR and Monado, headset checks,
@@ -97,7 +98,7 @@ Wine; GSX operation in the simulator is unverified.
 **1. Install Flightdeck**
 
 Get **Flightdeck-Linux-x86_64.tar.gz** from the
-[releases page](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases),
+[0.2.0 release](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.2.0),
 extract it and double-click **Install Flightdeck.desktop**. Your file manager
 may ask you to trust this local launcher.
 
@@ -127,8 +128,7 @@ drivers and a graphical desktop with a Linux Secret
 Service keyring. GTK 3, WebKitGTK 4.1, OpenSSL 3 and the GStreamer Good/Bad/Libav
 media plugins are required. Allow at least **100 GiB free** for a first install;
 an update or repair also keeps the previous game package.
-The published 0.1.22 launcher also requires Python 3.10.12+; the native
-0.2.0 development package does not. Its optional graphical installer uses
+The 0.1.22 bridge requires Python 3.10.12+; native Flightdeck 0.2.0 does not. Its optional graphical installer uses
 Zenity or KDialog.
 
 Arch Linux has been tested. Other distributions need compatible libraries and
@@ -228,8 +228,7 @@ confirm activation or working aircraft systems.
 
 ## Local by design
 
-The stable launcher uses Python; the native development build uses Rust. Both
-serve local HTML, CSS and JavaScript and listen only on loopback. Local-origin checks and a per-session token
+The launcher uses Rust and serves local HTML, CSS and JavaScript and listens only on loopback. Local-origin checks and a per-session token
 protect actions. There is no telemetry or CDN dependency in the launcher.
 Microsoft sign-in, downloads and the simulator's online content still use their
 respective network services.
