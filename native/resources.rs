@@ -10,17 +10,9 @@ pub fn asset(name: &str) -> Option<&'static [u8]> {
     ASSETS.iter().find(|v| v.0 == name).map(|v| v.1)
 }
 pub fn json(name: &str) -> Result<Value> {
-    let mut value: Value = serde_json::from_slice(
+    let value: Value = serde_json::from_slice(
         asset(name).ok_or(Error::Invalid("Eine Programmressource fehlt."))?,
     )?;
-    if name == "compat/bootstrap.lock.json" {
-        let legacy = value["runtime_scripts"]["files"].clone();
-        value["runtime_scripts"]["upgrade_from"]
-            .as_array_mut()
-            .ok_or(Error::Invalid("Ungültige Skriptbeschreibung."))?
-            .push(legacy);
-        value["runtime_scripts"]["files"] = value["runtime_scripts"]["rust_files"].clone();
-    }
     Ok(value)
 }
 pub fn release_identity() -> &'static str {

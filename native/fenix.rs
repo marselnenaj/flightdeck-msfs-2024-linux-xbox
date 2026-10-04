@@ -206,6 +206,9 @@ pub fn verify_installed(root: &Path, state: &Value) -> Result<()> {
         )?;
     }
     for (name, hash) in lock["prefix_files"].as_object().into_iter().flatten() {
+        if name == &format!("drive_c/windows/system32/{}", bundle::LEGACY_DISPLAY_HELPER) {
+            continue;
+        }
         require(
             tx::digest(&bundle::contained(&root.join("local/msfs-prefix"), name)?)? == *hash,
             "Installed Fenix dependency changed.",

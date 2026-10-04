@@ -70,45 +70,17 @@ fn oversized_changed_and_symlink_logs_never_claim_complete() {
 fn diagnostic_evidence_matches_reference_and_discards_private_text() {
     let t = tempfile::tempdir().unwrap();
     let path = t.path().join("game.log");
-    let text = concat!(
-        "[xodus-store-query] kind=1 hr=00000000 time_ms=1790623215379\n",
-        "[xodus-store] XStoreCreateContext account=private-token hr=00000000\n",
-        "[xodus-gamesave] local_init enabled=1 sync_on_demand=0 hr=00000000\n",
-        "xodus-title-auth: host=xsts.auth.xboxlive.com status=401\n",
-        "xodus-user-policy-cache: stage=title_fetch hr=80072EE2\n",
-        "xodus-signature-policy: call=4 host=private-title.playfabapi.com matched=0 has_policy=0 index=0 version=0 supported=0 token_only=0 hr=80004001\n",
-        "xodus-user-api: signature.policy call=0 hr=80004001\n",
-        "xodus-user-api: XUserGetTokenAndSignatureAsync.complete call=0 hr=80004001\n",
-        "[xodus-network] security scheme=https host=private.xboxlive.com policy=fetch-failed result=80072ee2\n",
-        "[xodus-network] security scheme=https host=xboxlive.com.private policy=unmatched result=80070490\n",
-        "[xodus-network] security scheme=https host=private policy=private result=80004001\n",
-        "[xodus-store-catalog] stage=mapping hr=80004001 time_ms=1790623216000 reason=sku-selection\n",
-        "[xodus-store-catalog] stage=mapping hr=80004001 time_ms=1790623216003 reason=private-token\n",
-        "[xodus-store-catalog] stage=inventory-mapping hr=80004001 time_ms=1790623216001 reason=product-language\n",
-        "00ac:err:mmdevapi:init_driver:No driver from L\"private-path\" could be initialized.\n",
-        "00ac:warn:pulse:pulse_contextcallback:Context failed: private-server\n",
-        "00ac:warn:mmdevapi:get_mmdevice_by_activatepath:Failed to get requested device (private-device): 80070490\n",
-        "00ac:err:xaudio2:private_function:private-account\n",
-        "123:00ac:err:vkd3d-proton:vkd3d_create_device:Failed, vr -4. private-token\n",
-        "DXVK: v2.7.1\ninfo:vkd3d-proton: vkd3d-proton - build: abcdef12+.\n",
-        "info:vkd3d-proton: vkd3d-proton - applicationVersion: 3.0.0.\n",
-        "Application is presenting user index 0, but it has never been rendered to.\n",
-        "DXVK: No adapters found VK_ERROR_DEVICE_LOST VK_ERROR_PRIVATE\n",
-        "xodus-user-api: private-token call=0 hr=80004001\nAuthorization: Bearer private-token\n",
-        "xodus-wine-launch: wine_pid=123 signal=11 shell_exit_code=139 elapsed_seconds=2.250\n"
-    );
-    files::atomic(&path, text.as_bytes()).unwrap();
-    files::atomic(&t.path().join("service.log"),b"[flightdeck-store-event] time_ms=1790623216002 seq=2 phase=checkout_ready outcome=passed\n").unwrap();
+    let reference: Value =
+        serde_json::from_str(include_str!("fixtures/legacy-python/diagnostics.json")).unwrap();
+    files::atomic(&path, reference["game_log"].as_str().unwrap().as_bytes()).unwrap();
+    files::atomic(
+        &t.path().join("service.log"),
+        reference["service_log"].as_str().unwrap().as_bytes(),
+    )
+    .unwrap();
     let actual = run_diagnostics::read(&path).unwrap().0;
-    let reference=Command::new("python3").args(["-c","import json,sys;from pathlib import Path;from flightdeck import run_diagnostics,store_diagnostics;print(json.dumps([run_diagnostics.read(Path(sys.argv[1]))[0],store_diagnostics.session(Path(sys.argv[1]).parent)]))"]).arg(&path).current_dir(env!("CARGO_MANIFEST_DIR")).output().unwrap();
-    assert!(
-        reference.status.success(),
-        "{}",
-        String::from_utf8_lossy(&reference.stderr)
-    );
-    let reference: Value = serde_json::from_slice(&reference.stdout).unwrap();
-    assert_eq!(actual, reference[0]);
-    assert_eq!(store_diagnostics::session(t.path()), reference[1]);
+    assert_eq!(actual, reference["run"]);
+    assert_eq!(store_diagnostics::session(t.path()), reference["store"]);
     assert!(!actual.to_string().contains("private"));
 }
 #[test]

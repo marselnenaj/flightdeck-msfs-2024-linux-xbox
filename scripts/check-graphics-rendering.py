@@ -6,11 +6,9 @@ import json
 import os
 from pathlib import Path
 import subprocess
-import sys
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))
-from flightdeck import bootstrap, graphics, renderer
+import native_dev as native
 
 
 def main():
@@ -27,16 +25,17 @@ def main():
     (runtime / "local").mkdir()
     (runtime / "runner").symlink_to(runner, target_is_directory=True)
     prefix = runtime / "local/msfs-prefix"
-    probe = graphics.probe(include_device_ids=True)
+    probe = native.call("probe")
     devices = [d for d in probe["devices"] if d["type"] == 2]
-    if len(devices) != 1 or not graphics._device_uuid(devices[0]):
+    if len(devices) != 1 or not devices[0].get("device_uuid"):
         parser.error("Requires one discrete Vulkan GPU with a device UUID")
     gpu = devices[0]
     binary = output / "multiwindow.exe"
     subprocess.run(["x86_64-w64-mingw32-gcc", "-O2", "-Wall", "-Wextra", "-Werror",
                     str(ROOT / "tests/graphics/multiwindow.c"), "-o", str(binary),
                     "-ld3d12", "-ld3d11", "-ldxgi", "-ldxguid", "-lgdi32"], check=True)
-    bootstrap.prepare_prefix(runner, prefix)
+    native.mark(runtime)
+    native.call("prefix", root=runtime)
     environment = {k: v for k, v in os.environ.items()
                    if not k.startswith(("WINE", "DXVK", "VKD3D", "PROTON", "NVIDIA_WINE"))}
     environment.update(WINEPREFIX=str(prefix), WINEESYNC="0", WINEFSYNC="0", WINEDEBUG="-all",
@@ -44,17 +43,17 @@ def main():
     results = []
     for name, patched, mode in (("runner", False, "features"), ("backport", True, "features"),
                                 ("backport-automatic", True, "auto")):
-        (runtime / "private" / graphics.SETTINGS_FILE).write_text(json.dumps({"schema": 1, "nvidia_mode": mode}))
-        env, _ = graphics.prepare(runtime, environment)
+        (runtime / "private" / "graphics-settings.json").write_text(json.dumps({"schema": 1, "nvidia_mode": mode}))
+        env, _ = native.call("graphics", root=runtime, environment=environment)
         # A packaged launcher can install its default bundle during prepare().
         # Restore the runner pair explicitly for the baseline comparison.
-        state = renderer.install(runtime, bundle=bundle if patched else output / "no-bundle")
+        state = native.call("renderer", root=runtime, bundle=bundle if patched else None)
         if state != ("backport" if patched else "runner"):
             raise ValueError("The supplied bundle does not match the runner")
         # On non-NVIDIA hardware this also checks the explicit extension opt-out
         # but does not claim to exercise the NVIDIA driver or vendor hiding.
         if mode == "auto" and gpu["vendor_id"] != 0x10de:
-            graphics._nvidia_mode(env, mode)
+            env = native.call("mode", environment=env, mode=mode)
         command = [str(runner / "files/bin/wine"), str(binary)]
         if args.visible and name == "backport":
             command.append("--visible")

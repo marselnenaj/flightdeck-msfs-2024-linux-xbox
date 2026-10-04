@@ -92,7 +92,8 @@ Translations do not change these machine-readable values.
 No Microsoft login or game download is needed for the automated regression tests:
 
 ```sh
-python3 -m unittest tests.test_game_install tests.test_setup tests.test_i18n tests.test_server
+cargo test --locked --test native_setup --test native_updates
+python3 scripts/check-rust-http.py --binary target/debug/flightdeck-rust
 cargo test --locked --manifest-path build/compat/xodus-src/Cargo.toml -p msixvc
 cargo test --locked --manifest-path build/compat/xodus-src/Cargo.toml -p xodus-cli
 cargo test --locked --manifest-path build/compat/xodus-src/Cargo.toml -p xodus resume_expiry_tests

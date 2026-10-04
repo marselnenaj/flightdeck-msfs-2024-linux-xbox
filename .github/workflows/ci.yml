@@ -36,10 +36,9 @@ jobs:
           npm --prefix ui run typecheck
       - name: Native format, filesystem and concurrency tests
         run: cargo +1.98.0 test --locked
-      - name: Compare with existing format implementations
+      - name: Native HTTP contract and developer probes
         run: |
-          cargo +1.98.0 build --locked
-          python3 scripts/check-rust-parity.py --binary target/debug/flightdeck-rust
+          cargo +1.98.0 build --locked --bin flightdeck-rust --example runtime-lab
           python3 scripts/check-rust-http.py --binary target/debug/flightdeck-rust
       - name: Browser contract against the native service
         run: |
@@ -61,13 +60,13 @@ jobs:
             build/flightdeck-source.tar.gz
           if-no-files-found: error
           retention-days: 14
-  launcher:
+  tooling-and-ui:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
-        python: ['3.10', '3.14']
+        python: ['3.11', '3.14']
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -78,17 +77,9 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: '24'
-      - name: Launcher, setup and installer tests
-        run: python -m unittest discover -s tests -p 'test_*.py' -v
+      - name: Build tooling and compatibility boundary tests
+        run: python -m unittest discover -s tests/compat -p 'test_*.py' -v
       - name: UI state tests
         run: node --test ui/tests/*.test.mjs
       - name: Source-release boundary
         run: python scripts/check-source-export.py
-      - name: Compatibility packaging tests
-        if: matrix.python == '3.14'
-        run: python -m unittest discover -s tests/compat -p 'test_*.py' -v
-      - name: Real Chromium UI checks
-        if: matrix.python == '3.14'
-        run: |
-          export CHROME_BIN="$(command -v google-chrome || command -v chromium)"
-          node ui/tests/browser-test.mjs

@@ -17,7 +17,7 @@ import tarfile
 import tomllib
 
 ROOT = Path(__file__).resolve().parents[1]
-VERSION = tomllib.loads((ROOT / "pyproject.toml").read_text())["project"]["version"]
+VERSION = tomllib.loads((ROOT / "Cargo.toml").read_text())["package"]["version"]
 NATIVE_FEATURES = ("connected-storage-read-v1", "connected-storage-sync-v1")
 CLI_FEATURES = ("streaming-resume-files-v1", "package-info-json-v1",
                 "streaming-integrity-index-v1", "streaming-progress-v1")

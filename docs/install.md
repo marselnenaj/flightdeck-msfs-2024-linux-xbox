@@ -24,11 +24,10 @@ from that directory with one command:
 ./install.sh
 ```
 
-For 0.1.22, the equivalent command is
-`python3 scripts/install-launcher.py --source .`. Native packages instead use
-`./bin/flightdeck install --source .` and run their supplied Rust binary.
-Neither installer uses sudo, pip, a virtual environment or a remotely executed
-shell script.
+The equivalent native command is `./bin/flightdeck install --source .`.
+It runs the supplied Rust binary and needs no sudo, pip or virtual environment.
+The historical 0.1.22 package retains its own Python installer; its installation
+instructions apply only inside that extracted release.
 
 The installer creates a **Flightdeck** application-menu entry and opens the
 launcher as an application window when a compatible browser is available,
@@ -312,9 +311,9 @@ is also preserved by an explicit `--refresh-components` command.
 Launcher rollback does not automatically reverse
 a completed runtime component update.
 
-The source bytes, UI assets, six setup runtime scripts, both runtime lock files
-and the vendored Fenix engine/manifests
-form a reproducible SHA-256 release ID. All inputs are captured before installation.
+The native executable, package resources, component bytes and manifests
+form a reproducible SHA-256 release ID. The UI, runtime scripts and Fenix
+implementation are embedded in the Rust executable. All inputs are captured before installation.
 Flightdeck installs into a new release directory and atomically switches its
 small installation record after the files and entrypoints are ready. Reported
 write failures restore earlier entrypoints and leave the previous active source
@@ -440,7 +439,6 @@ with no real account, game or desktop changes:
 
 ```sh
 cargo test --locked --test native_installer --test native_launcher_updates
-python3 -m unittest discover -s tests -p 'test_installer.py' -v
 ```
 
 For full packages, `scripts/check-native-package.py --package NEW_PACKAGE

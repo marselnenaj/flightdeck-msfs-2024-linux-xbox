@@ -1,0 +1,185 @@
+{
+  "source_commit": "fba133dcba4eb64ed7085264f4d804eafa784544",
+  "source_sha256": {
+    "flightdeck/_fenix/core.py": "4cb220a01adeb666faa189215e498fb44cfb356f85908171b55f12aaa7e6be78"
+  },
+  "synthetic": true,
+  "cases": [
+    {
+      "registry": "[Software\\\\Microsoft\\\\NET Framework Setup\\\\NDP\\\\v4\\\\Full] 123\n\"Release\"=dword:00080eb1\n\n[Software\\\\Wow6432Node\\\\Microsoft\\\\NET Framework Setup\\\\NDP\\\\v4\\\\Full] 123\n\"Release\"=dword:00080eb1\n",
+      "clr_files": [
+        "drive_c/windows/Microsoft.NET/Framework64/v4.0.30319/clr.dll",
+        "drive_c/windows/Microsoft.NET/Framework/v4.0.30319/clr.dll"
+      ],
+      "expected": {
+        "x86": {
+          "release": 528049,
+          "clr": true
+        },
+        "x64": {
+          "release": 528049,
+          "clr": true
+        },
+        "ready": true
+      }
+    },
+    {
+      "registry": "[Software\\\\Microsoft\\\\NET Framework Setup\\\\NDP\\\\v4\\\\Full] 123\n\"Release\"=dword:00080eb1\n",
+      "clr_files": [
+        "drive_c/windows/Microsoft.NET/Framework64/v4.0.30319/clr.dll"
+      ],
+      "expected": {
+        "x86": {
+          "release": 0,
+          "clr": false
+        },
+        "x64": {
+          "release": 528049,
+          "clr": true
+        },
+        "ready": false
+      }
+    },
+    {
+      "registry": "[Software\\\\Wow6432Node\\\\Microsoft\\\\NET Framework Setup\\\\NDP\\\\v4\\\\Full] 123\n\"Release\"=dword:00080eb1\n",
+      "clr_files": [
+        "drive_c/windows/Microsoft.NET/Framework/v4.0.30319/clr.dll"
+      ],
+      "expected": {
+        "x86": {
+          "release": 528049,
+          "clr": true
+        },
+        "x64": {
+          "release": 0,
+          "clr": false
+        },
+        "ready": false
+      }
+    },
+    {
+      "registry": "[Software\\\\Microsoft\\\\NET Framework Setup\\\\NDP\\\\v4\\\\Full] 123\n\"Release\"=dword:00070bf0\n\n[Software\\\\Wow6432Node\\\\Microsoft\\\\NET Framework Setup\\\\NDP\\\\v4\\\\Full] 123\n\"Release\"=dword:00070bf0\n",
+      "clr_files": [
+        "drive_c/windows/Microsoft.NET/Framework64/v4.0.30319/clr.dll",
+        "drive_c/windows/Microsoft.NET/Framework/v4.0.30319/clr.dll"
+      ],
+      "expected": {
+        "x86": {
+          "release": 461808,
+          "clr": true
+        },
+        "x64": {
+          "release": 461808,
+          "clr": true
+        },
+        "ready": false
+      }
+    },
+    {
+      "registry": "[Software\\\\Microsoft\\\\NET Framework Setup\\\\NDP\\\\v4\\\\Full] 123\n\"Release\"=dword:00082348\n\n[Software\\\\Wow6432Node\\\\Microsoft\\\\NET Framework Setup\\\\NDP\\\\v4\\\\Full] 123\n\"Release\"=dword:00082348\n",
+      "clr_files": [
+        "drive_c/windows/Microsoft.NET/Framework64/v4.0.30319/clr.dll",
+        "drive_c/windows/Microsoft.NET/Framework/v4.0.30319/clr.dll"
+      ],
+      "expected": {
+        "x86": {
+          "release": 533320,
+          "clr": true
+        },
+        "x64": {
+          "release": 533320,
+          "clr": true
+        },
+        "ready": true
+      }
+    },
+    {
+      "registry": "[software\\\\microsoft\\\\net framework setup\\\\ndp\\\\v4\\\\full] 123\n\"release\"=dword:00080eb1\n\n[software\\\\wow6432node\\\\microsoft\\\\net framework setup\\\\ndp\\\\v4\\\\full] 123\n\"release\"=dword:00080eb1\n",
+      "clr_files": [
+        "drive_c/windows/microsoft.net/framework64/v4.0.30319/clr.dll",
+        "drive_c/windows/microsoft.net/framework/v4.0.30319/clr.dll"
+      ],
+      "expected": {
+        "x86": {
+          "release": 528049,
+          "clr": true
+        },
+        "x64": {
+          "release": 528049,
+          "clr": true
+        },
+        "ready": true
+      }
+    },
+    {
+      "registry": "[software\\\\microsoft\\\\net framework setup\\\\ndp\\\\v4\\\\full] 123\n\"release\"=dword:00080eb1\n",
+      "clr_files": [
+        "drive_c/windows/microsoft.net/framework64/v4.0.30319/clr.dll"
+      ],
+      "expected": {
+        "x86": {
+          "release": 0,
+          "clr": false
+        },
+        "x64": {
+          "release": 528049,
+          "clr": true
+        },
+        "ready": false
+      }
+    },
+    {
+      "registry": "[software\\\\wow6432node\\\\microsoft\\\\net framework setup\\\\ndp\\\\v4\\\\full] 123\n\"release\"=dword:00080eb1\n",
+      "clr_files": [
+        "drive_c/windows/microsoft.net/framework/v4.0.30319/clr.dll"
+      ],
+      "expected": {
+        "x86": {
+          "release": 528049,
+          "clr": true
+        },
+        "x64": {
+          "release": 0,
+          "clr": false
+        },
+        "ready": false
+      }
+    },
+    {
+      "registry": "[software\\\\microsoft\\\\net framework setup\\\\ndp\\\\v4\\\\full] 123\n\"release\"=dword:00070bf0\n\n[software\\\\wow6432node\\\\microsoft\\\\net framework setup\\\\ndp\\\\v4\\\\full] 123\n\"release\"=dword:00070bf0\n",
+      "clr_files": [
+        "drive_c/windows/microsoft.net/framework64/v4.0.30319/clr.dll",
+        "drive_c/windows/microsoft.net/framework/v4.0.30319/clr.dll"
+      ],
+      "expected": {
+        "x86": {
+          "release": 461808,
+          "clr": true
+        },
+        "x64": {
+          "release": 461808,
+          "clr": true
+        },
+        "ready": false
+      }
+    },
+    {
+      "registry": "[software\\\\microsoft\\\\net framework setup\\\\ndp\\\\v4\\\\full] 123\n\"release\"=dword:00082348\n\n[software\\\\wow6432node\\\\microsoft\\\\net framework setup\\\\ndp\\\\v4\\\\full] 123\n\"release\"=dword:00082348\n",
+      "clr_files": [
+        "drive_c/windows/microsoft.net/framework64/v4.0.30319/clr.dll",
+        "drive_c/windows/microsoft.net/framework/v4.0.30319/clr.dll"
+      ],
+      "expected": {
+        "x86": {
+          "release": 533320,
+          "clr": true
+        },
+        "x64": {
+          "release": 533320,
+          "clr": true
+        },
+        "ready": true
+      }
+    }
+  ]
+}

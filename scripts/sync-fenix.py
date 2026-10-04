@@ -18,12 +18,10 @@ def main():
     release = json.loads((project / "dist/flightdeck-release.json").read_text())
     if bundle["version"] != release["version"]:
         raise ValueError("Release and installer versions differ")
-    for name in ("core.py", "__init__.py"):
-        shutil.copy2(project / "fenix_patch" / name, ROOT / "flightdeck/_fenix" / name)
     shutil.copy2(project / "bundle.json", ROOT / "compat/fenix/bundle.json")
     shutil.copy2(project / "dist/flightdeck-release.json", ROOT / "compat/fenix/release.json")
     shutil.copy2(project / "LICENSE", ROOT / "compat/fenix/LICENSE")
-    print("Imported Fenix", bundle["version"], "— review manifests and run Fenix tests before release.")
+    print("Imported Fenix component manifests", bundle["version"], "— review manifests and run Fenix tests before release.")
 
 
 if __name__ == "__main__": main()

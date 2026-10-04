@@ -1,0 +1,44 @@
+{
+  "source_commit": "fba133dcba4eb64ed7085264f4d804eafa784544",
+  "source_sha256": {
+    "flightdeck/graphics_settings.py": "7f425b658d1e4e0e995007e74874c4781e9ca8a7c525720a7d3a14fba5f07e96"
+  },
+  "synthetic": true,
+  "original": "Version 66\r\n{Video\r\n\tAdapter \"NVIDIA GeForce RTX 4080\"\r\n\tAntiAliasing DLSS\r\n\tReflex ONBOOST\r\n\tFrameGeneration DLSSG\r\n\tAntiAliasingVR DLSS\r\n\tReflexVR ON\r\n\tFrameGenerationVR DLSSG\r\n\tResolution 3840 2160\r\n}\r\n{Graphics\r\n\t{Texture\r\n\t\tQuality 3\r\n\t}\r\n}\r\nInstalledPackagesPath \"C:\\Flüge\\Packages\"\r\n",
+  "prepared": "Version 66\r\n{Video\r\n\tAdapter \"NVIDIA GeForce RTX 4080\"\r\n\tAntiAliasing TAA\r\n\tReflex OFF\r\n\tFrameGeneration NONE\r\n\tAntiAliasingVR TAA\r\n\tReflexVR OFF\r\n\tFrameGenerationVR NONE\r\n\tResolution 3840 2160\r\n}\r\n{Graphics\r\n\t{Texture\r\n\t\tQuality 3\r\n\t}\r\n}\r\nInstalledPackagesPath \"C:\\Flüge\\Packages\"\r\n",
+  "marker": {
+    "schema": 1,
+    "original": {
+      "AntiAliasing": "DLSS",
+      "Reflex": "ONBOOST",
+      "FrameGeneration": "DLSSG",
+      "AntiAliasingVR": "DLSS",
+      "ReflexVR": "ON",
+      "FrameGenerationVR": "DLSSG"
+    }
+  },
+  "prepare_result": {
+    "changed_files": 1,
+    "changed_options": [
+      "AntiAliasing",
+      "AntiAliasingVR",
+      "FrameGeneration",
+      "FrameGenerationVR",
+      "Reflex",
+      "ReflexVR"
+    ],
+    "skipped_files": 0
+  },
+  "restore_result": {
+    "changed_files": 1,
+    "changed_options": [
+      "AntiAliasing",
+      "AntiAliasingVR",
+      "FrameGeneration",
+      "FrameGenerationVR",
+      "Reflex",
+      "ReflexVR"
+    ],
+    "skipped_files": 0
+  }
+}

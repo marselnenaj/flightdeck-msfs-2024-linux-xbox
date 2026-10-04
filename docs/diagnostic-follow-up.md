@@ -51,15 +51,15 @@ The read-only tool works with existing 0.1.8 logs, without installing a new
 Flightdeck release, starting the game or connecting to Microsoft:
 
 ```sh
-python3 scripts/diagnose-run.py --output flightdeck-session.json
+flightdeck diagnose-run --output flightdeck-session.json
 ```
 
 It reads the selected runtime from the normal Flightdeck state directory. With
 a custom state location or to select an older run explicitly:
 
 ```sh
-python3 scripts/diagnose-run.py --runtime /path/to/runtime --output flightdeck-session.json
-python3 scripts/diagnose-run.py --run /path/to/private/run-YYYYMMDD-HHMMSS-XXXXXX --output flightdeck-session.json
+flightdeck diagnose-run --runtime /path/to/runtime --output flightdeck-session.json
+flightdeck diagnose-run --run /path/to/private/run-YYYYMMDD-HHMMSS-XXXXXX --output flightdeck-session.json
 ```
 
 Use a new output filename. Send the JSON, the exact visible symptom and whether

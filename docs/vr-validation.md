@@ -7,7 +7,7 @@ inherited descriptors. Proton's Steam helper normally initializes VR registry
 state; the direct launcher did not run it. An OpenXR runtime on Linux therefore
 was insufficient by itself.
 
-`flightdeck/vr.py` discovers native runtime manifests without loading their
+`native/vr.rs` discovers native runtime manifests without loading their
 libraries. Explicit checks and enabled game starts run `vr_probe.py` in a child
 process, with bounded output and a 15-second deadline. The probe uses the
 OpenXR loader, `XR_KHR_vulkan_enable`, the runtime's required Vulkan extensions

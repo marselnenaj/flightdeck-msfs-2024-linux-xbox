@@ -95,8 +95,8 @@ directory and published only after successful verification. Cancelling removes
 that operation's temporary copy. No source prefix, game or runner is overwritten.
 The existing-runtime option checks an already prepared folder and connects it.
 
-Both the guided interface and the command below use `flightdeck.setup`, so the
-artifact checks, runner fingerprint and no-overwrite rules stay consistent.
+The guided interface uses `native/setup.rs` for artifact checks, the runner
+fingerprint and the rule that existing destinations cannot be overwritten.
 Close any application using the source Wine prefix before copying it.
 
 Supply your own Xodus-compatible Proton runner, game downloaded using your
@@ -108,19 +108,13 @@ rejected because the proxy's private interface layout was checked against the
 pinned version. A normal upstream Wine build lacks the required
 `WINE_DLL_FILE_MAP` loader extension.
 
-```sh
-python3 scripts/stage-runtime.py \
-  --artifacts build/compat/artifacts \
-  --game "$OWNED_GAME_DIRECTORY" --runner "$RUNNER" \
-  --prefix "$PREPARED_WINE_PREFIX" --destination "$NEW_RUNTIME_DIRECTORY" \
-  --market "$STORE_COUNTRY_CODE" --local-saves
-```
+Start the Rust launcher with `target/debug/flightdeck-rust` and choose
+**Install MSFS → Prepare a new runtime**. Supply the artifact directory,
+owned game directory, runner, prepared Wine prefix, new destination and Store
+country. The form supports both MSFS 2024 and MSFS 2020. The obsolete Python
+staging command has been removed.
 
-This command-line helper currently stages MSFS 2024. For a prepared MSFS 2020
-runtime, select that edition in Flightdeck's setup form; the helper has no
-`--game-id` option.
-
-The command verifies artifact hashes and the runner ABI fingerprint, copies
+Setup verifies artifact hashes and the runner ABI fingerprint, copies
 the prefix using reflinks where available, links the supplied game and runner,
 and installs the newly built components into the copy. It refuses an existing
 destination. The original prefix, runner and game content are not rewritten.
@@ -130,7 +124,7 @@ The configured market is also used for public Store catalog prices. Product
 text follows the Wine user locale; this setting does not select or change the
 authenticated Microsoft Store account.
 
-The staging command's `--local-saves` option creates
+The local-save option creates
 `private/local-saves.enabled` with mode0600 and its storage directory with
 mode0700. The startup wrapper uses this gate to set the native provider option.
 Normal launcher starts enable this provider automatically for cloud-backed
@@ -141,7 +135,7 @@ The implementation rejects `syncOnDemand=true`; the observed game uses false.
 Keep the entire local-saves directory when backing up or moving this runtime.
 
 The game requires native Vulkan/DXVK/VKD3D setup in the supplied prefix and
-compatible GStreamer codecs for startup video. `--media-plugins DIRECTORY`
+compatible GStreamer codecs for startup video. The media-plugin directory field
 adds an already prepared plugin directory without modifying the system. Codec
 ABI and driver availability are host-specific. The source builder does not
 download or install graphics, multimedia or system packages.
@@ -161,7 +155,7 @@ reject active Wine/Fenix processes.
 
 ### NVIDIA graphics in launcher-managed starts
 
-The Python/Rust Wine bridges in the 0.2.1 source add `-FastLaunch` when starting MSFS
+The Rust Wine bridge adds `-FastLaunch` when starting MSFS
 2020/2024, independently of the graphics mode or selected runner. This uses the
 [reported intro-path workaround](nvidia-renderer.md#intro-startup-workaround).
 An explicitly supplied spelling is retained once; other arguments are preserved.

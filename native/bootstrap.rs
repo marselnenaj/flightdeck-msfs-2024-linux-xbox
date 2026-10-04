@@ -77,7 +77,7 @@ pub fn native_candidates(lock: &Value) -> Result<Vec<PathBuf>> {
     }
     if let Some(source) = resources::source_root() {
         for p in [
-            "flightdeck/resources/native",
+            "resources/native",
             "build/compat/artifacts",
             "build/compat-marketplace-run23/artifacts",
         ] {

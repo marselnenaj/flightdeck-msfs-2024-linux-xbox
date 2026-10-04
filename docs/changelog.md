@@ -1,5 +1,19 @@
 # Changes and release status
 
+## Unreleased — finish the source transition
+
+Remove the Python launcher, vendored Fenix engine, Python installer, pip package
+metadata and duplicated application tests from the current branch. Runtime
+entry scripts now have one Rust-backed source. Native builds and packaging no
+longer depend on the retired application or its installer. The published 0.1.22
+bridge and previous release archives remain unchanged for migration and rollback.
+
+Keep legacy save, .NET, graphics-undo and diagnostic behavior covered with frozen
+synthetic fixtures and Rust tests. Browser checks now always start Rust. Graphics,
+VR, Proton and C++ save probes invoke the production Rust implementations through
+a development-only driver; Fenix no longer installs the unused Python display
+helper. Remaining Python files are maintainer build/test tools only.
+
 ## 0.2.1 — 4 October 2026
 
 Use **Updates → Flightdeck** in 0.1.22, or download the

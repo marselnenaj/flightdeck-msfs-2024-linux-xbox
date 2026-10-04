@@ -28,7 +28,7 @@ def module(name):
     return value
 
 
-legacy = module("full-installer-release")
+components = module("release-support")
 
 
 def encoded(value):
@@ -40,7 +40,7 @@ def digest(data):
 
 
 def notices(metadata):
-    graph = legacy.read_json(legacy.read_regular(metadata, 32 * 1024 * 1024), "Cargo graph")
+    graph = components.read_json(components.read_regular(metadata, 32 * 1024 * 1024), "Cargo graph")
     locked = tomllib.loads((ROOT / "Cargo.lock").read_text())["package"]
     expected = {(p["name"], p["version"]): p for p in locked}
     inventory, texts, seen = [], [], set()
@@ -68,7 +68,7 @@ def notices(metadata):
             raise ValueError("Missing dependency license text: " + name)
         included = []
         for path in paths:
-            data = legacy.read_regular(path, 4 * 1024 * 1024)
+            data = components.read_regular(path, 4 * 1024 * 1024)
             relative = str(path.relative_to(folder))
             texts.append(f"\n{'=' * 72}\n{name} {version} / {relative}\n{'=' * 72}\n" + data.decode())
             included.append({"name": relative, "sha256": digest(data)})
@@ -86,7 +86,7 @@ def notices(metadata):
 
 
 def payload(binary, metadata, rust_notices, native=None, graphics=None):
-    raw = legacy.read_regular(binary, 128 * 1024 * 1024)
+    raw = components.read_regular(binary, 128 * 1024 * 1024)
     if len(raw) < 64 or raw[:6] != b"\x7fELF\x02\x01" or raw[18:20] != b"\x3e\x00":
         raise ValueError("Expected a Linux x86-64 release binary")
     reported = subprocess.run([str(binary.resolve()), "--version"], check=True, capture_output=True, timeout=10).stdout.decode().strip()
@@ -94,22 +94,22 @@ def payload(binary, metadata, rust_notices, native=None, graphics=None):
         raise ValueError("Binary version differs from Cargo.toml")
     notice, inventory = notices(metadata)
     values = {"bin/flightdeck": raw, "THIRD-PARTY-NOTICES.txt": notice,
-              "RUST-STANDARD-LIBRARY-NOTICES.html": legacy.read_regular(rust_notices, 16 * 1024 * 1024),
+              "RUST-STANDARD-LIBRARY-NOTICES.html": components.read_regular(rust_notices, 16 * 1024 * 1024),
               "LICENSE": (ROOT / "LICENSE").read_bytes(), "ui/mark.svg": (ROOT / "ui/mark.svg").read_bytes()}
     for name in ("bootstrap", "graphics"):
         values[f"compat/{name}.lock.json"] = (ROOT / f"compat/{name}.lock.json").read_bytes()
     if native is not None:
-        lock = json.loads(values["compat/bootstrap.lock.json"])["native"]
-        archive = legacy.read_regular(native, legacy.NATIVE_ARCHIVE_MAX)
+        lock = components.read_json(values["compat/bootstrap.lock.json"], "Bootstrap lock")["native"]
+        components.validate_native_lock(lock)
+        archive = components.read_regular(native, components.NATIVE_ARCHIVE_MAX)
         if digest(archive) != lock["archive_sha256"]:
             raise ValueError("Compatibility archive differs from bootstrap lock")
-        components = legacy.read_archive(archive, native=True)
-        legacy.verify_native(components, lock)
-        values.update({"resources/native/" + name: data for name, data in components.items()})
+        members = components.read_archive(archive)
+        components.verify_native(members, lock)
+        values.update({"resources/native/" + name: data for name, data in members.items()})
     if graphics is not None:
-        inputs = {legacy.SOURCE_ROOT + "compat/graphics.lock.json": values["compat/graphics.lock.json"]}
-        components = legacy.graphics_files(inputs, graphics)
-        values.update({"resources/graphics/" + name.removeprefix(legacy.GRAPHICS_ROOT): data for name, data in components.items()})
+        members = components.graphics_files(values["compat/graphics.lock.json"], graphics)
+        values.update({"resources/graphics/" + name: data for name, data in members.items()})
     values["README.txt"] = (f"Flightdeck {VERSION}\n\nRun ./install.sh (terminal) or ./install.sh --gui.\n"
         "No Python, pip or Rust toolchain is required to install or run this package.\n"
         "The optional install dialog needs Zenity or KDialog.\n"

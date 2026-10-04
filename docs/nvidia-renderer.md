@@ -310,8 +310,9 @@ bundle license. The corresponding DXVK source archive contains all pinned
 submodules, original notices, the patch and graphics lock. The 0.1.11 DXVK build
 used MinGW GCC 16.2.0, Meson 1.10.0 and Ninja 1.13.2.
 
-Create the standard checked launcher source archive, then pass this bundle to
-`scripts/full-installer-release.py` alongside the pinned 0.1.9 native archive. The full installer also contains
+Create the checked launcher source archive and use `scripts/native-release.py`
+with the component archive selected by the current `compat/bootstrap.lock.json`
+and this matching graphics bundle. See [native package commands](../BUILDING.md#native-packages). The full installer also contains
 the [Store session recovery correction](store-session-refresh.md).
 Distribute the corresponding patched VKD3D and DXVK sources, pinned submodules and their
 original licenses with the release, separately from the WineGDK/Xodus sources.

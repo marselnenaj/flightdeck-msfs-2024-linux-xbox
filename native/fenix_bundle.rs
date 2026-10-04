@@ -16,6 +16,8 @@ use std::{
     path::{Path, PathBuf},
 };
 pub const LAUNCH_FILES: [&str; 2] = ["launch-msfs.sh", "xodus-wine-launch"];
+// Kept in upstream manifests for old launchers; Rust owns display refresh now.
+pub const LEGACY_DISPLAY_HELPER: &str = "fenix-display-refresh.py";
 pub fn manifest(variant: Option<&str>) -> Result<Value> {
     let mut lock = resources::json("compat/fenix/bundle.json")?;
     if let Some(variant) = variant {
@@ -137,6 +139,9 @@ fn wanted(lock: &Value) -> Result<BTreeMap<String, Option<String>>> {
         }
     }
     for (name, hash) in map(&lock["integration"])? {
+        if name == LEGACY_DISPLAY_HELPER {
+            continue;
+        }
         wanted.insert(format!("integration/{name}"), Some(hash));
     }
     Ok(wanted)
@@ -308,11 +313,7 @@ pub fn overlay(
             )?;
         }
     }
-    for name in [
-        "FenixWindowGuard.exe",
-        "FenixMCDURefresh.exe",
-        "fenix-display-refresh.py",
-    ] {
+    for name in ["FenixWindowGuard.exe", "FenixMCDURefresh.exe"] {
         if let Some(hash) = lock["integration"][name].as_str() {
             let bytes = files::read(&bundle.join("integration").join(name), 32 * 1024 * 1024)?;
             require(

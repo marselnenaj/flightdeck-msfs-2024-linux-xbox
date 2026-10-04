@@ -8,9 +8,12 @@ from pathlib import Path
 import re
 
 ROOT = Path(__file__).resolve().parents[1]
-DIRECTORIES = ("compat", "scripts", "docs", "tests", "flightdeck", "native", "ui", ".github")
-TOP_LEVEL = ("README.md", "BUILDING.md", "LICENSE", "pyproject.toml", ".gitignore",
-             "install.sh", "Install Flightdeck.desktop", "build_support.py", "MANIFEST.in", "Cargo.toml", "Cargo.lock")
+DIRECTORIES = ("compat", "scripts", "docs", "tests", "examples", "native", "ui", ".github")
+TOP_LEVEL = ("README.md", "BUILDING.md", "LICENSE", ".gitignore",
+             "install.sh", "Install Flightdeck.desktop", "Cargo.toml", "Cargo.lock")
+RETIRED = ("flightdeck", "pyproject.toml", "build_support.py", "MANIFEST.in",
+           "scripts/native-runtime", "scripts/install-launcher.py", "scripts/install-launcher-gui.py",
+           "scripts/install-python.sh", "scripts/transition-release.py", "scripts/full-installer-release.py")
 SKIP = {"__pycache__", "node_modules", "build", "dist", "target", "artifacts", "coverage", ".git", ".venv", ".pytest_cache"}
 EXTENSIONS = {".py", ".sh", ".md", ".txt", ".json", ".toml", ".lock", ".patch",
               ".c", ".h", ".cpp", ".hpp", ".inc", ".idl", ".spec", ".def", ".rs",
@@ -104,6 +107,9 @@ def private_content(text):
 
 
 def source_files():
+    for name in RETIRED:
+        if (ROOT / name).exists() or (ROOT / name).is_symlink():
+            raise ValueError("Retired Python application/build path in current source tree: " + name)
     files = []
     for name in TOP_LEVEL:
         path = ROOT / name

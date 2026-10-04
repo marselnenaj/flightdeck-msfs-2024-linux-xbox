@@ -25,6 +25,6 @@ int wmain(int argc,wchar_t** argv) {
     local_save::close_update(update);
     local_save::close_container(container);
     local_save::close_provider(provider);
-    std::puts("SUMMARY Python fixture read; native transaction committed");
+    std::puts("SUMMARY Rust fixture read; native transaction committed");
     return 0;
 }

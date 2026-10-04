@@ -1,0 +1,229 @@
+{
+  "source_commit": "fba133dcba4eb64ed7085264f4d804eafa784544",
+  "source_sha256": {
+    "flightdeck/run_diagnostics.py": "71ccdf403f00e8df1804f02de8ebdaedd5ad9d6db6cddb544c9ef37e09cc64ea",
+    "flightdeck/store_diagnostics.py": "23ad03983148c20b3c5adb2083947eb5c5f9b5215a423bef4109e547823f6b6b",
+    "flightdeck/log_reader.py": "8f59277a76fbac93bf80eccbcf244e4f690d715562e53e5823e42c04d68a1ef5"
+  },
+  "synthetic": true,
+  "game_log": "[xodus-store-query] kind=1 hr=00000000 time_ms=1790623215379\n[xodus-store] XStoreCreateContext account=private-token hr=00000000\n[xodus-gamesave] local_init enabled=1 sync_on_demand=0 hr=00000000\nxodus-title-auth: host=xsts.auth.xboxlive.com status=401\nxodus-user-policy-cache: stage=title_fetch hr=80072EE2\nxodus-signature-policy: call=4 host=private-title.playfabapi.com matched=0 has_policy=0 index=0 version=0 supported=0 token_only=0 hr=80004001\nxodus-user-api: signature.policy call=0 hr=80004001\nxodus-user-api: XUserGetTokenAndSignatureAsync.complete call=0 hr=80004001\n[xodus-network] security scheme=https host=private.xboxlive.com policy=fetch-failed result=80072ee2\n[xodus-network] security scheme=https host=xboxlive.com.private policy=unmatched result=80070490\n[xodus-network] security scheme=https host=private policy=private result=80004001\n[xodus-store-catalog] stage=mapping hr=80004001 time_ms=1790623216000 reason=sku-selection\n[xodus-store-catalog] stage=mapping hr=80004001 time_ms=1790623216003 reason=private-token\n[xodus-store-catalog] stage=inventory-mapping hr=80004001 time_ms=1790623216001 reason=product-language\n00ac:err:mmdevapi:init_driver:No driver from L\"private-path\" could be initialized.\n00ac:warn:pulse:pulse_contextcallback:Context failed: private-server\n00ac:warn:mmdevapi:get_mmdevice_by_activatepath:Failed to get requested device (private-device): 80070490\n00ac:err:xaudio2:private_function:private-account\n123:00ac:err:vkd3d-proton:vkd3d_create_device:Failed, vr -4. private-token\nDXVK: v2.7.1\ninfo:vkd3d-proton: vkd3d-proton - build: abcdef12+.\ninfo:vkd3d-proton: vkd3d-proton - applicationVersion: 3.0.0.\nApplication is presenting user index 0, but it has never been rendered to.\nDXVK: No adapters found VK_ERROR_DEVICE_LOST VK_ERROR_PRIVATE\nxodus-user-api: private-token call=0 hr=80004001\nAuthorization: Bearer private-token\nxodus-wine-launch: wine_pid=123 signal=11 shell_exit_code=139 elapsed_seconds=2.250\n",
+  "service_log": "[flightdeck-store-event] time_ms=1790623216002 seq=2 phase=checkout_ready outcome=passed\n",
+  "run": {
+    "local_save_init": [
+      {
+        "enabled": 1,
+        "sync_on_demand": 0,
+        "hresult": "00000000"
+      }
+    ],
+    "store_calls": [
+      {
+        "method": "XStoreCreateContext",
+        "hresult": "00000000"
+      },
+      {
+        "method": "XStoreQueryEntitledProductsAsync",
+        "hresult": "00000000"
+      }
+    ],
+    "store_catalog": [
+      {
+        "stage": "inventory-mapping",
+        "hresult": "80004001",
+        "reason": "product-language"
+      },
+      {
+        "stage": "mapping",
+        "hresult": "80004001"
+      },
+      {
+        "stage": "mapping",
+        "hresult": "80004001",
+        "reason": "sku-selection"
+      }
+    ],
+    "user_calls": [
+      {
+        "method": "XUserGetTokenAndSignatureAsync.complete",
+        "hresult": "80004001"
+      },
+      {
+        "method": "signature.policy",
+        "hresult": "80004001"
+      }
+    ],
+    "policy_cache": [
+      {
+        "stage": "title_fetch",
+        "hresult": "80072ee2"
+      }
+    ],
+    "signature_policy": [
+      {
+        "host_category": "playfab",
+        "matched": false,
+        "has_policy": false,
+        "version": 0,
+        "supported": false,
+        "token_only": false,
+        "hresult": "80004001"
+      }
+    ],
+    "network_security": [
+      {
+        "host_category": "xboxlive",
+        "policy": "fetch-failed",
+        "hresult": "80072ee2"
+      },
+      {
+        "host_category": "other",
+        "policy": "unmatched",
+        "hresult": "80070490"
+      }
+    ],
+    "auth_http": [
+      401
+    ],
+    "exit": {
+      "signal": 11,
+      "code": 139,
+      "seconds": 2.25
+    },
+    "log_coverage": {
+      "scope": "bounded_scan",
+      "bytes_total": 1958,
+      "bytes_read": 1958,
+      "omitted_bytes": 0,
+      "oversized_lines": 0,
+      "changed_during_read": false,
+      "complete": true
+    },
+    "summary_limited": false,
+    "graphics_log": {
+      "scope": "bounded_scan",
+      "observed_components": [
+        "dxvk",
+        "vkd3d-proton"
+      ],
+      "error_symbols": [
+        "VK_ERROR_DEVICE_LOST"
+      ],
+      "observed_versions": {
+        "dxvk": [
+          "v2.7.1"
+        ],
+        "vkd3d-proton": [
+          "3.0.0"
+        ],
+        "vkd3d-proton-build": [
+          "abcdef12+"
+        ]
+      },
+      "observations": {
+        "present_without_render": 1,
+        "no_dxvk_adapters": 1
+      },
+      "coverage": {
+        "scope": "bounded_scan",
+        "bytes_total": 1958,
+        "bytes_read": 1958,
+        "omitted_bytes": 0,
+        "oversized_lines": 0,
+        "changed_during_read": false,
+        "complete": true
+      },
+      "error_counts": {
+        "vkd3d-proton": 1
+      },
+      "warning_counts": {}
+    },
+    "audio": {
+      "scope": "game_log",
+      "coverage": {
+        "scope": "bounded_scan",
+        "bytes_total": 1958,
+        "bytes_read": 1958,
+        "omitted_bytes": 0,
+        "oversized_lines": 0,
+        "changed_during_read": false,
+        "complete": true
+      },
+      "error_counts": {
+        "mmdevapi": 1,
+        "xaudio2": 1
+      },
+      "warning_counts": {
+        "pulse": 1,
+        "mmdevapi": 1
+      },
+      "observations": {
+        "no_audio_driver": 1,
+        "pulse_context_failed": 1,
+        "audio_device_unavailable": 1
+      }
+    }
+  },
+  "store": {
+    "components_at_launch": null,
+    "events": [
+      {
+        "time_ms": 1790623215379,
+        "source": "game",
+        "method": "XStoreQueryEntitledProductsAsync",
+        "phase": "result",
+        "hresult": "00000000"
+      },
+      {
+        "time_ms": 1790623216000,
+        "source": "game",
+        "phase": "mapping",
+        "hresult": "80004001",
+        "reason": "sku-selection"
+      },
+      {
+        "time_ms": 1790623216001,
+        "source": "game",
+        "phase": "inventory-mapping",
+        "hresult": "80004001",
+        "reason": "product-language"
+      },
+      {
+        "time_ms": 1790623216002,
+        "source": "service",
+        "phase": "checkout_ready",
+        "outcome": "passed"
+      },
+      {
+        "time_ms": 1790623216003,
+        "source": "game",
+        "phase": "mapping",
+        "hresult": "80004001"
+      }
+    ],
+    "partial": false,
+    "sources": {
+      "game": "complete",
+      "service": "complete"
+    },
+    "coverage": {
+      "game": {
+        "scope": "bounded_scan",
+        "bytes_total": 1958,
+        "bytes_read": 1958,
+        "omitted_bytes": 0,
+        "oversized_lines": 0,
+        "changed_during_read": false,
+        "complete": true
+      },
+      "service": {
+        "scope": "bounded_scan",
+        "bytes_total": 89,
+        "bytes_read": 89,
+        "omitted_bytes": 0,
+        "oversized_lines": 0,
+        "changed_during_read": false,
+        "complete": true
+      }
+    }
+  }
+}

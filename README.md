@@ -263,9 +263,7 @@ cargo build --locked
 cargo test --locked
 cargo fmt --all -- --check
 cargo clippy --locked --all-targets -- -D warnings
-python3 scripts/check-rust-parity.py --binary target/debug/flightdeck-rust
 python3 scripts/check-rust-http.py --binary target/debug/flightdeck-rust
-python3 -m unittest discover -s tests -p 'test_*.py' -v
 python3 -m unittest discover -s tests/compat -p 'test_*.py' -v
 node --test ui/tests/*.test.mjs
 FLIGHTDECK_TEST_BINARY=target/debug/flightdeck-rust node ui/tests/browser-test.mjs
@@ -276,8 +274,9 @@ The browser suite needs Chromium. HTTP and browser tests bind temporary local
 sockets and use isolated fixtures, not your account or live game. Native
 compatibility checks require the toolchain described in [BUILDING.md](BUILDING.md).
 For a foreground development service, use `target/debug/flightdeck-rust --no-browser`.
-The Python implementation remains a test reference; native packages contain no
-Python application code.
+The current source tree contains one Rust application. Python is used only for
+maintainer build/test tools and explicit checks against historical release packages.
+Frozen synthetic migration fixtures keep the old file formats covered by Rust tests.
 
 </details>
 

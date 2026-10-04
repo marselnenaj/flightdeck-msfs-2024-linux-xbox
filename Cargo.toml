@@ -6,7 +6,7 @@ rust-version = "1.98"
 license = "MIT"
 description = "Local MSFS launcher for Linux"
 publish = false
-include = ["Cargo.toml", "Cargo.lock", "LICENSE", "native/**", "tests/*.rs", "ui/*.js", "ui/*.css", "ui/*.html", "ui/*.svg", "ui/*.png", "ui/*.woff2", "scripts/runtime/*", "scripts/native-runtime/*", "compat/*.json", "compat/fenix/*.json"]
+include = ["Cargo.toml", "Cargo.lock", "LICENSE", "native/**", "tests/*.rs", "tests/fixtures/**", "examples/**", "ui/*.js", "ui/*.css", "ui/*.html", "ui/*.svg", "ui/*.png", "ui/*.woff2", "scripts/runtime/*", "compat/*.json", "compat/fenix/*.json"]
 
 [lib]
 name = "flightdeck"

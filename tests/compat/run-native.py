@@ -11,6 +11,8 @@ import sys
 import tempfile
 
 REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "scripts"))
+import native_dev as native
 
 
 def run(args):
@@ -71,13 +73,10 @@ def run(args):
         if name in ("catalog-batch", "catalog-coins"):
             hashed_sources.append(REPO / "tests/compat/catalog-test.cpp")
         if name == "save-interchange":
-            sys.path.insert(0, str(REPO))
-            from flightdeck.save_state import State, Container, encode, decode
-            hashed_sources.append(REPO / "flightdeck/save_state.py")
+            hashed_sources.extend((REPO / "native/save_state.rs", REPO / "examples/runtime-lab.rs"))
             namespace = data / ("a" * 64)
             namespace.mkdir()
-            (namespace / "state.bin").write_bytes(encode(
-                State(7, {"profile": Container("Pilot", 123, {"data": b"\0\xffB"})})))
+            native.call("save-write", file=namespace / "state.bin")
         env = dict(os.environ)
         for key in ("DISPLAY", "WAYLAND_DISPLAY", "WINE_DLL_FILE_MAP", "WINEDLLPATH",
                     "XODUS_USER_RUNTIME", "XODUS_USER_SOCKET_SUFFIX", "XODUS_LOCAL_GAMESAVE", "XODUS_LOCAL_GAMESAVE_ROOT",
@@ -95,10 +94,8 @@ def run(args):
             lines = process.stdout.decode(errors="replace").splitlines()
             passed = process.returncode == 0 and any("SUMMARY" in line or "failures=0" in line for line in lines)
             if name == "save-interchange" and passed:
-                state = decode((namespace / "state.bin").read_bytes())
-                passed = (state.generation == 8 and state.containers["profile"].display_name == "Native reply"
-                          and state.containers["profile"].blobs == {"data": b"\0\xffB", "native_result": b"PE\0\xff"})
-                lines.append("PASS native save read back by Python" if passed else "FAIL native save interchange")
+                passed = native.call("save-reply", file=namespace / "state.bin")
+                lines.append("PASS C++ save read back by Rust" if passed else "FAIL native save interchange")
             report["cases"][name] = {"exit_code": process.returncode, "passed": passed, "checks": lines,
                                     "source_sha256": {str(p.relative_to(runtime) if p.is_relative_to(runtime)
                                                          else p.relative_to(args.stage.resolve()) if p.is_relative_to(args.stage.resolve())

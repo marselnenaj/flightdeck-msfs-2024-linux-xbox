@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-//! Core for Flightdeck's native launcher migration, using the existing runtime formats.
+//! Flightdeck's Rust launcher, installer and runtime services.
 pub mod api;
 pub mod backend;
 pub mod bootstrap;

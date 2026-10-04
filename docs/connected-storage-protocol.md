@@ -112,7 +112,7 @@ reports that recovery is required and retains the local source and backups.
 
 Public read-route and atom-format cross-checks include
 [Xodus's pinned notes](https://github.com/xodus-gaming/xodus/blob/0670e25aeb0e0e9f800f8f2f4968ae3b681842a7/docs/xbox/titlestorage.md)
-and the original implementations linked in `flightdeck/cloud_storage.py`.
+and the original implementations linked in `native/cloud_storage.rs`.
 They do not replace the owner-fencing evidence above. The native write adapter
 must separately validate its atom-allocation, byte-upload and atom-commit flow
 before any production write is enabled.

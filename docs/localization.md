@@ -46,7 +46,7 @@ languages from paths or rewrite arbitrary strings to translate error messages.
 When adding a supported language, update selection validation, all catalogs,
 CLI/installer choices and documentation together.
 
-Run the Python tests and `node --test ui/tests/*.test.mjs`, then exercise the
+Run `cargo test --locked`, the HTTP checks and `node --test ui/tests/*.test.mjs`, then exercise the
 browser suite. Check long labels at desktop and mobile sizes, persisted language
 choice, switching during setup, failed requests and safe diagnostic exports.
 Technical filenames and product names are intentionally not translated.

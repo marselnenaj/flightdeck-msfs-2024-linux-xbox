@@ -6,12 +6,10 @@ import json
 import os
 from pathlib import Path
 import subprocess
-import sys
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))
-from flightdeck import bootstrap, graphics
+import native_dev as native
 
 
 def main():
@@ -22,9 +20,9 @@ def main():
     runner = args.runner.resolve(strict=True)
     if not all((runner / "files/bin" / name).is_file() for name in ("wine", "wineserver")):
         parser.error("--runner must name a Proton-style runner")
-    report = graphics.probe(include_device_ids=True)
+    report = native.call("probe")
     devices = [d for d in report["devices"] if d["type"] == 2]
-    if len(devices) != 1 or not graphics._device_uuid(devices[0]):
+    if len(devices) != 1 or not devices[0].get("device_uuid"):
         parser.error("This regression check requires one discrete Vulkan GPU with a device UUID")
     device = devices[0]
     output = args.output.resolve() if args.output else Path(tempfile.mkdtemp(prefix="flightdeck-graphics-"))
@@ -39,7 +37,8 @@ def main():
     subprocess.run(["x86_64-w64-mingw32-gcc", "-O2", "-Wall", "-Wextra", "-Werror",
                     str(ROOT / "tests/graphics/adapter-probe.c"), "-o", str(binary),
                     "-ld3d12", "-ldxgi", "-ldxguid"], check=True)
-    bootstrap.prepare_prefix(runner, prefix)
+    native.mark(runtime)
+    native.call("prefix", root=runtime)
     environment = {k: v for k, v in os.environ.items()
                    if not k.startswith(("WINE", "DXVK", "VKD3D", "PROTON", "NVIDIA_WINE"))}
     environment.update(WINEPREFIX=str(prefix), WINEDEBUG="-all", WINEESYNC="0", WINEFSYNC="0",
@@ -54,8 +53,8 @@ def main():
         cases.append(("uuid-hidden-vendor", {**selection, hide[device["vendor_id"]]: "1"}, True))
     if device["vendor_id"] == 0x10de:
         for mode in ("auto", "compatibility"):
-            (runtime / "private" / graphics.SETTINGS_FILE).write_text(json.dumps({"schema": 1, "nvidia_mode": mode}))
-            prepared, _ = graphics.prepare(runtime, environment)
+            (runtime / "private" / "graphics-settings.json").write_text(json.dumps({"schema": 1, "nvidia_mode": mode}))
+            prepared, _ = native.call("graphics", root=runtime, environment=environment)
             cases.append(("flightdeck-" + mode, prepared, True))
     results = []
     for name, overrides, expected in cases:

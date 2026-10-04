@@ -300,9 +300,14 @@ pub fn renderer(root: &Path) -> Result<&'static str> {
         candidates.push(parent.join("resources/graphics"));
     }
     if let Some(source) = crate::resources::source_root() {
-        candidates.push(source.join("flightdeck/resources/graphics"));
+        candidates.push(source.join("resources/graphics"));
     }
     let bundle = candidates.into_iter().find(|path| path.is_dir());
+    renderer_from(root, bundle.as_deref())
+}
+/// Install a verified renderer pair or restore the runner's originals. Explicit
+/// bundles also let the isolated hardware probes exercise this production path.
+pub fn renderer_from(root: &Path, bundle: Option<&Path>) -> Result<&'static str> {
     let marker = root.join("private/renderer-runtime.json");
     let bundle = bundle.filter(|p| p.is_dir());
     if bundle.is_none() && !files::exists(&marker) {

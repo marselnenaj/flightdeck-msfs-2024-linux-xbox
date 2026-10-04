@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-//! Real file transitions and Python/native parity; no game or account.
+//! Real file transitions and frozen migration contracts; no game or account.
 #![allow(clippy::unwrap_used)]
 use flightdeck::{files, graphics_settings as gs};
 use serde_json::{Value, json};
@@ -7,7 +7,6 @@ use std::{
     fs,
     os::unix::fs::symlink,
     path::{Path, PathBuf},
-    process::Command,
 };
 const CONFIG: &str = "Version 66\r\n{Video\r\n\tAdapter \"NVIDIA GeForce RTX 4080\"\r\n\tAntiAliasing DLSS\r\n\tReflex ONBOOST\r\n\tFrameGeneration DLSSG\r\n\tAntiAliasingVR DLSS\r\n\tReflexVR ON\r\n\tFrameGenerationVR DLSSG\r\n\tResolution 3840 2160\r\n}\r\n{Graphics\r\n\t{Texture\r\n\t\tQuality 3\r\n\t}\r\n}\r\nInstalledPackagesPath \"C:\\Flüge\\Packages\"\r\n";
 fn fixture(root: &Path) -> PathBuf {
@@ -17,26 +16,25 @@ fn fixture(root: &Path) -> PathBuf {
     files::atomic(&config, CONFIG.as_bytes()).unwrap();
     config
 }
-fn python(root: &Path, compatibility: bool) -> Value {
-    let output = Command::new("python3").args(["-c", "import json,sys;from pathlib import Path;from flightdeck.graphics_settings import prepare;print(json.dumps(prepare(Path(sys.argv[1]),sys.argv[2]=='1')))"])
-        .arg(root).arg(if compatibility { "1" } else { "0" }).current_dir(env!("CARGO_MANIFEST_DIR")).output().unwrap();
-    assert!(
-        output.status.success(),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
-    serde_json::from_slice(&output.stdout).unwrap()
-}
 #[test]
-fn both_implementations_share_the_undo_record_across_restarts_and_migration() {
+fn legacy_undo_records_survive_restarts_and_migration() {
+    let legacy: Value = serde_json::from_str(include_str!(
+        "fixtures/legacy-python/graphics-settings.json"
+    ))
+    .unwrap();
+    assert_eq!(legacy["original"], CONFIG);
     let t = tempfile::tempdir().unwrap();
     let root = t.path().join("native");
     let config = fixture(&root);
-    let reference = t.path().join("python");
+    let reference = t.path().join("legacy");
     let pyconfig = fixture(&reference);
+    files::atomic(&pyconfig, legacy["prepared"].as_str().unwrap().as_bytes()).unwrap();
+    files::atomic_json(&pyconfig.with_file_name(gs::MARKER), &legacy["marker"]).unwrap();
     let result = gs::prepare(&root, true).unwrap();
-    assert_eq!(result, python(&reference, true));
+    assert_eq!(result, legacy["prepare_result"]);
     assert_eq!(fs::read(&config).unwrap(), fs::read(&pyconfig).unwrap());
+    let marker: Value = files::json(&config.with_file_name(gs::MARKER), 65536).unwrap();
+    assert_eq!(marker, legacy["marker"]);
     let stamp = config.metadata().unwrap().modified().unwrap();
     assert_eq!(gs::prepare(&root, true).unwrap()["changed_files"], 0);
     assert_eq!(config.metadata().unwrap().modified().unwrap(), stamp);
@@ -45,11 +43,12 @@ fn both_implementations_share_the_undo_record_across_restarts_and_migration() {
             .unwrap()
             .contains("Packages")
     );
-    // Use the other implementation to restore each prefix, as during migration.
+    // Restore a recorded Python prefix and a newly prepared native prefix.
     assert_eq!(
         gs::prepare(&reference, false).unwrap(),
-        python(&root, false)
+        legacy["restore_result"]
     );
+    assert_eq!(gs::prepare(&root, false).unwrap(), legacy["restore_result"]);
     assert_eq!(fs::read(&config).unwrap(), CONFIG.as_bytes());
     assert_eq!(fs::read(&pyconfig).unwrap(), CONFIG.as_bytes());
     assert!(!config.with_file_name(gs::MARKER).exists());
@@ -164,6 +163,6 @@ fn invalid_optional_package_identity_keeps_roaming_settings_available() {
     files::private_dir(&game).unwrap();
     files::atomic(&game.join("MicrosoftGame.Config"), b"<broken").unwrap();
     assert_eq!(gs::prepare(t.path(), true).unwrap()["changed_files"], 1);
-    assert_eq!(python(t.path(), false)["changed_files"], 1);
+    assert_eq!(gs::prepare(t.path(), false).unwrap()["changed_files"], 1);
     assert_eq!(fs::read(config).unwrap(), CONFIG.as_bytes());
 }

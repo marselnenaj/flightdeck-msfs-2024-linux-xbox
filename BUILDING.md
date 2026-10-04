@@ -5,7 +5,7 @@
 The launcher, installer, updater and runtime helpers use Rust.
 The web interface and Wine/Store ABI components remain in their existing
 languages. The native package needs no Python interpreter; Python 3.11+ is
-used for building packages and running reference checks. Build with Rust/Cargo
+used only by maintainer packaging and integration-test tools. Build with Rust/Cargo
 1.98 or newer:
 
 ```sh
@@ -13,7 +13,6 @@ cargo build --locked
 cargo test --locked
 cargo fmt --all -- --check
 cargo clippy --locked --all-targets -- -D warnings
-python3 scripts/check-rust-parity.py --binary target/debug/flightdeck-rust
 python3 scripts/check-rust-http.py --binary target/debug/flightdeck-rust
 npm --prefix ui ci --ignore-scripts --no-audit --no-fund
 npm --prefix ui run typecheck
@@ -22,10 +21,11 @@ FLIGHTDECK_TEST_BINARY=target/debug/flightdeck-rust node ui/tests/browser-test.m
 target/debug/flightdeck-rust --no-browser
 ```
 
-The parity/HTTP/browser checks use isolated synthetic data. The browser suite
-needs Chromium. See [native status](docs/rust-migration.md) for scope and live
-validation limits. Python reference checks remain available with
-`python3 -m unittest discover -s tests -p 'test_*.py'`.
+The Rust migration fixtures, HTTP checks and browser checks use isolated synthetic
+data. The browser suite needs Chromium. See [native status](docs/rust-migration.md)
+for scope and live validation limits. Packaging and compatibility-tool tests run with
+`python3 -m unittest discover -s tests/compat -p 'test_*.py'`. There is no Python
+application, pip package or Python launcher test suite in the current source tree.
 
 TypeScript is a pinned development tool, not a runtime dependency. It checks
 the JSDoc contracts in the shared polling, reservation, check-list and formatting
@@ -79,24 +79,15 @@ The Rust executable also links to the host's `liblzma.so.5` and `libgcc_s.so.1`.
 
 ### Python transition package (0.1.22)
 
-Build the intermediate update with the same pinned component and graphics
-inputs. Existing 0.1.21 installations can install this Python package before
-moving to Rust through the in-app updater:
+The bridge is already published and remains available to older installations.
+Its sources and historical builder are preserved in tag `v0.1.22` and the
+published `flightdeck-source-0.1.22.tar.gz`. Reproduce the bridge only from that
+revision, in a separate checkout; the current branch builds Rust packages only.
+Do not replace the published bridge with bytes from the current branch.
 
-```sh
-python3 scripts/transition-release.py \
-  --native build/flightdeck-compat-0.1.16-linux-x86_64.tar.gz \
-  --graphics build/graphics \
-  --output build/releases/flightdeck-0.1.22
-```
-
-The output contains the full tar/ZIP installers, a checked source archive,
-package validation and checksums. The full package uses the Python bootstrap
-template and needs Python 3.10+ at runtime. Publish the same corresponding-source
-archives listed above alongside it, and regenerate `SHA256SUMS` after adding
-release notes and validation results. No build command publishes a release.
-The [transition guide](docs/rust-transition.md) covers integration checks and
-the release settings required to keep older clients on the supported path.
+The [transition guide](docs/rust-transition.md) explains update ordering and
+checks against the unchanged published packages. It does not require keeping
+or installing the old Python application in the current source tree.
 
 The commands below build the Wine/Store compatibility components independently.
 
@@ -168,8 +159,10 @@ To reproduce the automatic .NET repair with real Microsoft installers and a
 supported, unmodified runner:
 
 ```sh
-python3 tests/compat/framework-repair-test.py --runner "$RUNNER" \
-  --cache "$RUNTIME/private/fenix-downloads" --output build/framework-repair-check
+FLIGHTDECK_TEST_RUNNER="$RUNNER" \
+FLIGHTDECK_TEST_CACHE="$RUNTIME/private/fenix-downloads" \
+FLIGHTDECK_TEST_OUTPUT="$PWD/build/framework-repair-check" \
+cargo test --locked --test native_live_framework -- --ignored --nocapture
 ```
 
 The output directory must be new. Both pinned installers must already be in the
@@ -180,6 +173,18 @@ Results and private setup logs stay under `build/`. No Fenix license or game is
 needed. This check takes several minutes and is separate from the synthetic CI
 suite.
 
+The hardware and C++ interchange harnesses invoke `examples/runtime-lab.rs` to
+use the actual Rust prefix, graphics, VR, Fenix and save implementations. Build
+this development-only executable before running them:
+
+```sh
+cargo build --locked --bin flightdeck-rust --example runtime-lab
+```
+
+It is not shipped in installer packages. `FLIGHTDECK_PROBE_BINARY` can select
+another built copy. Each mutating probe requires a new synthetic runtime; it
+cannot use an ordinary game runtime as its test destination.
+
 With a separately supplied compatible Wine runner:
 
 ```sh
@@ -188,13 +193,13 @@ python3 tests/compat/run-native.py --stage build/compat \
 # Run just one family when investigating a change:
 python3 tests/compat/run-native.py --suite store --stage build/compat \
   --wine "$RUNNER/files/bin/wine"
-# --suite gamesave selects local storage and Python/native interchange tests.
+# --suite gamesave selects local storage and Rust/C++ interchange tests.
 # --suite catalog selects only the three catalog/mapper tests.
 # --suite user selects authenticated-user lookup and handle lifetime tests.
 ```
 
 The default `--suite all` builds and runs the core, synchronous bridge and
-asynchronous GameSave tests, the Python/native save-format interchange test,
+asynchronous GameSave tests, the Rust/C++ save-format interchange test,
 plus seven Store tests and the user-lookup/cache test. Each test uses its own new
 Wine prefix. `--suite gamesave` selects storage and interchange tests; `--suite store`
 selects explicit product queries, Durable license handles, base-package update
@@ -299,19 +304,19 @@ flight stability. Raw device UUIDs are omitted from the result summary.
 
 ## Experimental GSX setup
 
-The GSX integration reuses the vendored engine's .NET prerequisites, profile
+The GSX integration reuses Rust's .NET prerequisites, profile
 copying and runtime lock without applying a Fenix patch. It downloads the official
-FSDT installer from the URL and SHA-256 in `flightdeck/gsx_core.py`; no proprietary
+FSDT installer from the URL and SHA-256 in `native/gsx.rs`; no proprietary
 programs or activated profiles belong in the source or installer archives.
 
 ```sh
-python3 -m unittest discover -s tests -p 'test_gsx*.py' -v
+cargo test --locked --test native_addons --test native_framework --test native_supervisor
 node --test ui/tests/gsx.test.mjs
 node ui/tests/browser-test.mjs
 ```
 
 Runtime cleanup and direct-launch interruption checks also live in
-`tests/test_backend.py`. Synthetic package/startup fixtures establish local setup
+`tests/native_supervisor.rs`. Synthetic package/startup fixtures establish local setup
 behavior, not GSX activation or a working simulator connection. Review a changed
 official installer in a separate profile before updating the pin, including its
 licensing registration and automatic updater behavior. See the
@@ -321,20 +326,20 @@ licensing registration and automatic updater behavior. See the
 
 The Fenix Wine overlay has a separate source/build pipeline in
 [fenix-a320-linux-patch](https://github.com/marselnenaj/fenix-a320-linux-patch/blob/main/BUILDING.md).
-It is not one of the six native components above. Flightdeck vendors its MIT
-installer engine and pins the separately downloaded Wine payload. A normal
+It is not one of the six native components above. Flightdeck implements its MIT installer contract in Rust and pins the
+separately downloaded Wine payload. A normal
 Flightdeck build does not compile or bundle Fenix/Microsoft software.
 
-After building and verifying a new patch release, maintainers import its engine
+After building and verifying a new patch release, maintainers import its license
 and manifests with:
 
 ```sh
 python3 scripts/sync-fenix.py /absolute/path/to/fenix-a320-linux-patch
-python3 -m unittest discover -s tests -p 'test_fenix.py' -v
+cargo test --locked --test native_addons --test native_framework --test native_proton
 node --test ui/tests/fenix.test.mjs
 ```
 
-Review the imported engine, `compat/fenix/bundle.json` and
+Review the matching Rust implementation, `compat/fenix/bundle.json` and
 `compat/fenix/release.json` together. Publish the exact ZIP and corresponding
 sources at the pinned public GitHub release URL before publishing a Flightdeck
 package that depends on it. Replacing an existing ZIP with different bytes

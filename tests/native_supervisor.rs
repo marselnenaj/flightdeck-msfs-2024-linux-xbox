@@ -103,7 +103,7 @@ fn command(root: &Path, base: &Path) -> Command {
 #[test]
 fn native_loader_preserves_image_descriptors_and_applies_msfs_startup_arguments() {
     let result = Command::new("python3")
-        .args(["tests/compat/test_loader_wrapper.py", "-q"])
+        .args(["tests/compat/loader-test.py", "-q"])
         .env(
             "FLIGHTDECK_TEST_BINARY",
             env!("CARGO_BIN_EXE_flightdeck-rust"),

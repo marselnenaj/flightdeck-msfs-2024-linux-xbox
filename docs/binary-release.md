@@ -15,7 +15,8 @@ graphics payloads retain the 0.1.16/0.1.11/0.1.17 pins below. This
 is offered by the 0.1.22 updater; older launchers receive that bridge first.
 
 The **0.1.22 transition package** retains the Python launcher and the
-same pinned component/graphics bundles. Its builder replaces only the full
+same pinned component/graphics bundles. Its historical builder, retained in
+tag `v0.1.22` and that release's source archive, replaces only the full
 package's root `install.sh` with the reviewed `scripts/install-python.sh`
 template and regenerates the source manifest for that package. The separate
 source archive preserves the original checkout and records the inputs needed
@@ -59,8 +60,7 @@ every executable/library and the notice file to SHA256 checksums. The installer
 accepts only these eight native files. Bootstrap rechecks executable hashes
 before use. Native archive readers reject links, traversal, duplicate names and
 oversized payloads, with bounded member counts and expanded sizes. Downloads
-use HTTPS with checksums checked before use. Python's data filter remains in
-the build/reference tools.
+use HTTPS with checksums checked before use. Build/test archive readers also enforce explicit extraction limits.
 
 ## Build and sources
 
@@ -121,8 +121,8 @@ These upstream attribution omissions are recorded in
 ## Separate Fenix payload
 
 Flightdeck's Fenix panel uses a Rust implementation of the MIT installer
-contract and fixed manifests. The Python engine remains in the source archive
-as the compatibility reference.
+contract and fixed manifests. The current source archive contains no Python
+application or vendored Python installer engine.
 The optional Wine overlay is downloaded from
 [Fenix patch releases](https://github.com/marselnenaj/fenix-a320-linux-patch/releases)
 only when requested, with its ZIP hash checked against `compat/fenix/release.json`

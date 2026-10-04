@@ -9,11 +9,9 @@ import os
 from pathlib import Path
 import re
 import subprocess
-import sys
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))
-from flightdeck import bootstrap, graphics, renderer
+import native_dev as native
 
 
 def main():
@@ -34,15 +32,16 @@ def main():
     (runtime / "local").mkdir()
     (runtime / "runner").symlink_to(runner, target_is_directory=True)
     prefix = runtime / "local/msfs-prefix"
-    devices = [d for d in graphics.probe(include_device_ids=True)["devices"] if d["type"] == 2]
-    if len(devices) != 1 or not graphics._device_uuid(devices[0]):
+    devices = [d for d in native.call("probe")["devices"] if d["type"] == 2]
+    if len(devices) != 1 or not devices[0].get("device_uuid"):
         parser.error("Requires one discrete Vulkan GPU with a device UUID")
     gpu = devices[0]
     source = ROOT / "tests/graphics/volume-copy.c"
     binary = output / "volume-copy.exe"
     subprocess.run(["x86_64-w64-mingw32-gcc", "-O2", "-Wall", "-Wextra", "-Werror",
                     str(source), "-o", str(binary), "-ld3d12", "-ldxgi", "-ldxguid"], check=True)
-    bootstrap.prepare_prefix(runner, prefix)
+    native.mark(runtime)
+    native.call("prefix", root=runtime)
     environment = {k: v for k, v in os.environ.items()
                    if not k.startswith(("WINE", "DXVK", "VKD3D", "PROTON", "NVIDIA_WINE"))}
     environment.update(WINEPREFIX=str(prefix), WINEESYNC="0", WINEFSYNC="0", WINEDEBUG="-all",
@@ -56,7 +55,7 @@ def main():
     for name, payload, disable in (("released", baseline, False), ("fixed", bundle, False),
                                    ("released-without-maintenance9", baseline, True),
                                    ("fixed-without-maintenance9", bundle, True)):
-        if renderer.install(runtime, bundle=payload) != "backport":
+        if native.call("renderer", root=runtime, bundle=payload) != "backport":
             raise ValueError("Bundle does not match the runner")
         env = dict(environment)
         if disable:
@@ -77,7 +76,7 @@ def main():
                             "validation_errors": dict(errors),
                             "volume_layout_error": bool(errors) and bool(re.search(
                                 r"(?:layer [1-3], mip 0|mipLevel = 0, arrayLayer = [1-3])", text)),
-                            "renderer_sha256": {n: graphics._digest(payload / n) for n in renderer.FILES}})
+                            "renderer_sha256": {n: hashlib.sha256((payload / n).read_bytes()).hexdigest() for n in ("d3d12.dll", "d3d12core.dll", "dxgi.dll", "d3d11.dll", "d3d10core.dll")}})
         finally:
             for option in ("-k", "-w"):
                 subprocess.run([str(runner / "files/bin/wineserver"), option], env=env,

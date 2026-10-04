@@ -71,21 +71,16 @@ created or changed by the build and validation scripts.
 
 ## Build and provenance
 
-See [BUILDING.md](../BUILDING.md#python-transition-package-0122) for the command.
-`scripts/transition-release.py` checks all source files, the pinned compatibility
-archive and the graphics bundle. It emits:
+The bridge and its historical Python builder are preserved in tag `v0.1.22`
+and its published source archive. The current branch contains only the Rust
+application and no bridge builder. See [BUILDING.md](../BUILDING.md#python-transition-package-0122)
+for the historical rebuild boundary. Existing published assets remain immutable.
 
-- `Flightdeck-Linux-x86_64.tar.gz` and `Flightdeck-0.1.22-Linux-x86_64.zip`;
-- `flightdeck-source-0.1.22.tar.gz`;
-- `package-validation.json` and `SHA256SUMS`.
-
-The repository's regular `install.sh` selects the native launcher. The bridge
-builder substitutes the reviewed `scripts/install-python.sh` template in the
-full packages and regenerates their source manifest. The separate source
-archive contains the unchanged sources, both bootstraps and the builder;
-`package-validation.json` records the substitution. The full package retains
-the pinned 0.1.16 compatibility, 0.1.11 DXVK and 0.1.17 VKD3D artifacts and
-notices. Distribute their complete corresponding-source archives alongside it.
+The unchanged bridge contains the pinned 0.1.16 compatibility, 0.1.11 DXVK and
+0.1.17 VKD3D artifacts and notices. Their complete corresponding-source archives
+remain available with the release. Retaining those published packages is enough
+to validate and support older clients; it does not require a second application
+in the current source tree.
 
 ## Isolated migration check
 

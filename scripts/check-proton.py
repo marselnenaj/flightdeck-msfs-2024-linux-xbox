@@ -13,12 +13,19 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
-import sys
+import hashlib
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))
-from flightdeck import bootstrap, proton, setup
-from flightdeck.backend import Launcher
+import native_dev as native
+
+
+def digest(path):
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def identity(path):
+    info = path.stat()
+    return info.st_dev, info.st_ino
 
 
 class NativeLauncher:
@@ -80,10 +87,10 @@ def main():
     mode.add_argument('--default-runner', action='store_true', help='Exercise the default Flightdeck runner and native memfd mapping')
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--fenix-bundle', type=Path, help='Test matching Fenix modules with synthetic apps; no licensed Fenix application')
-    parser.add_argument('--native-launcher', type=Path, help='Exercise Rust HTTP Proton jobs and the Rust memfd loader')
+    parser.add_argument('--native-launcher', type=Path, default=ROOT / 'target/debug/flightdeck-rust', help='Rust launcher binary (built by cargo build)')
     args = parser.parse_args()
     original = args.runtime.resolve(strict=True)
-    runner = proton.base_runner(original).resolve(strict=True)
+    runner = Path(native.call('proton-info', root=original)['base_runner']).resolve(strict=True)
     output = args.output.resolve()
     output.mkdir(parents=True, exist_ok=False)
     runtime = output / 'runtime'
@@ -95,20 +102,21 @@ def main():
         path.chmod(0o700)
     (runtime / 'private/runtime.json').write_text('{"game_id":"msfs2024","market":"AT"}\n')
     prefix = runtime / 'local/msfs-prefix'
-    bootstrap.prepare_prefix(runner, prefix)
-    source = setup.prefix_system32(original / 'local/msfs-prefix')
-    system = setup.prefix_system32(prefix)
+    native.mark(runtime)
+    native.call('prefix', root=runtime)
+    source = original / 'local/msfs-prefix/drive_c/windows/system32'
+    system = prefix / 'drive_c/windows/system32'
     hashes = {}
-    for name in proton.BRIDGE:
-        setup._copy_file(source / name, system / name)
-        hashes[name] = setup.digest(system / name)
+    for name in native.call('proton-info', root=runtime)['bridge']:
+        (system / name).unlink(missing_ok=True)
+        shutil.copyfile(source / name, system / name)
+        hashes[name] = digest(system / name)
     shutil.copytree(original / 'local/store-runtime', runtime / 'local/store-runtime', symlinks=True)
     manifest = {'original_runtime_sha256': hashes['xgameruntime_original.dll'], 'artifacts': {'files': {
         'runtime/xgameruntime.dll': hashes['xgameruntime.dll'],
         'builtin/x86_64-windows/xodus_store_test.dll': hashes['xodus_store_test.dll']}}}
     (runtime / 'private/import-manifest.json').write_text(json.dumps(manifest))
     (prefix / 'original-marker').write_text('preserve this profile')
-    before = proton._id(prefix)
     exe = output / 'probe.exe'
     dll = output / 'probe.dll'
     dll_source = output / 'dll.c'
@@ -123,45 +131,24 @@ def main():
     names = ('FlightSimulator2024.exe', 'nested/probe.dll')
     for name in names:
         (game / name).write_bytes(b'Synthetic encrypted placeholder; must remain unchanged.\n')
-    expected = {name: setup.digest(game / name) for name in names}
-    launcher = Launcher(output / 'state', str(runtime))
+    expected = {name: digest(game / name) for name in names}
+    launcher = NativeLauncher(args.native_launcher, output, runtime)
     if args.fenix_bundle:
-        from flightdeck.fenix import core
-        bundle = core.verify_bundle(args.fenix_bundle)
-        work = runtime / 'local/fenix-patch-20261003T000000-00000000'
-        work.mkdir()
-        core.copy_tree(runner, work / 'runner')
-        with (output / 'geometry-setup.log').open('w') as log:
-            wine = core.Wine(prefix, work / 'runner', log)
-            try:
-                core.prepare_geometry(wine, bundle / 'build/downloads', bundle, print)
-            finally:
-                wine.stop()
-        core.apply_overlay(prefix, work / 'runner', bundle)
-        core.replace_link(runtime / 'runner', work / 'runner')
-        core.write_json(runtime / core.MARKER, {'format': 1, 'state': 'installed', 'version': core.manifest()['version'],
-            'work': str(work.relative_to(runtime)), 'backup': 'private/fenix-fixture', 'configured': False})
-        cache = launcher.state_dir / 'fenix-bundles'
+        fixture = native.call('fenix', root=runtime, bundle=args.fenix_bundle.resolve(strict=True))
+        cache = output / 'native-state/fenix-bundles'
         cache.mkdir(parents=True)
-        (cache / core.manifest()['version']).symlink_to(bundle, target_is_directory=True)
-    native = NativeLauncher(args.native_launcher, output, runtime) if args.native_launcher else None
+        (cache / fixture['version']).symlink_to(fixture['bundle'], target_is_directory=True)
+    before = identity(prefix)
     if args.runner:
-        if native:
-            native.switch(runtime, 'proton', args.runner.resolve())
-        else:
-            launcher.proton.start({'runtime_path': str(runtime), 'mode': 'proton', 'path': str(args.runner.resolve())})
-            launcher.proton.thread.join(600)
-            if launcher.proton.job['state'] != 'complete':
-                raise RuntimeError(launcher.proton.job)
-    selected = proton.selection(runtime)
+        launcher.switch(runtime, 'proton', args.runner.resolve(strict=True))
+    info = native.call('proton-info', root=runtime)
+    selected = info['selection']
     assert bool(selected) == bool(args.runner)
-    env = proton._prefix_env(prefix, output)
-    if args.fenix_bundle:
-        env.update(core.ENV)
+    env = native.isolated_environment(runtime)
     env.update(FLIGHTDECK_PROTON_LOADER='portable' if selected else 'native', WINEDLLPATH=str(runtime / 'local/store-runtime'),
                FLIGHTDECK_FAST_LAUNCH='1',
-               XODUS_WINE_RUNNER=str(setup.runner_wine(runtime / 'runner')),
-               WINELOADER=str(setup.runner_wine(runtime / 'runner')), WINESERVER=str(runtime / 'runner/files/bin/wineserver'),
+               XODUS_WINE_RUNNER=info['wine'],
+               WINELOADER=info['wine'], WINESERVER=str(runtime / 'runner/files/bin/wineserver'),
                WINEDLLOVERRIDES='xgameruntime=n;xgameruntime_original=n,b;xodus_store_test=b;winemenubuilder.exe=d',
                DXVK_LOG_LEVEL='info', VKD3D_DEBUG='warn')
     fds = []
@@ -172,13 +159,12 @@ def main():
             fds.append(fd)
         env['WINE_DLL_FILE_MAP'] = '|'.join(f'{fd}:\\??\\Z:' + str(game / name).replace('/', '\\') for fd, name in zip(fds, names))
         with (output / 'loader.log').open('w') as log:
-            command = ([str(args.native_launcher.resolve()), 'wine-launch', '--runtime', str(runtime), '--', str(game / names[0])]
-                       if native else [str(runtime / 'tools/xodus-wine-launch'), str(game / names[0])])
+            command = [str(args.native_launcher.resolve()), 'wine-launch', '--runtime', str(runtime), '--', str(game / names[0])]
             result = subprocess.run(command,
                                     env=env, pass_fds=tuple(fds), stdout=log, stderr=subprocess.STDOUT, timeout=60)
         env.pop('WINE_DLL_FILE_MAP')
         with (output / 'render.log').open('w') as log:
-            rendering = subprocess.run([str(setup.runner_wine(runtime / 'runner')), str(graphics)],
+            rendering = subprocess.run([info['wine'], str(graphics)],
                                        cwd=output, env=env, stdout=log, stderr=subprocess.STDOUT, timeout=90)
     finally:
         for fd in fds:
@@ -187,27 +173,22 @@ def main():
             subprocess.run([str(runtime / 'runner/files/bin/wineserver'), option], env=env, timeout=10)
     assert result.returncode == 0, (output / 'loader.log').read_text()
     assert rendering.returncode == 0, (output / 'render.log').read_text()
-    assert all(setup.digest(game / name) == expected[name] for name in names)
+    assert all(digest(game / name) == expected[name] for name in names)
     assert not list(game.glob('.xodus-launch-*'))
     (prefix / 'installed-on-proton').write_text('retain add-ons and settings')
     if selected:
-        if native:
-            native.switch(runtime, 'default')
-        else:
-            launcher.proton.start({'runtime_path': str(runtime), 'mode': 'default'})
-            launcher.proton.thread.join(180)
-            assert launcher.proton.job['state'] == 'complete', launcher.proton.job
-    if native:
-        native.close()
-    assert proton._id(runtime / selected['base_prefix'] if selected else prefix) == before
+        launcher.switch(runtime, 'default')
+    launcher.close()
+    assert identity(runtime / selected['base_prefix'] if selected else prefix) == before
     assert (prefix / 'original-marker').read_text() == 'preserve this profile'
     assert (prefix / 'installed-on-proton').read_text() == 'retain add-ons and settings'
-    assert proton.selection(runtime) is None
-    assert proton._version(runtime / 'runner') == proton._version(runner)
+    final = native.call('proton-info', root=runtime)
+    assert final['selection'] is None
+    assert final['version'] == (runner / 'version').read_text().strip()
     if args.fenix_bundle:
-        core.verify_installed(runtime, core.read_json(runtime / core.MARKER))
-    report = {'implementation': 'rust' if native else 'python', 'mode': 'proton' if selected else 'flightdeck',
-              'version': selected['version'] if selected else proton._version(runner),
+        native.call('fenix-check', root=runtime)
+    report = {'implementation': 'rust', 'mode': 'proton' if selected else 'flightdeck',
+              'version': selected['version'] if selected else (runner / 'version').read_text().strip(),
               'loader': 'portable' if selected else 'native',
               'loader_passed': True, 'fastlaunch_argument_passed': True, 'working_directory_dll_passed': True, 'rendering_passed': True,
               'original_files_unchanged': True, 'return_to_default_passed': True if selected else None,

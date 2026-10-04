@@ -35,9 +35,12 @@ keeps their discovery endpoint on the bridge. Direct installation with the new
 full package also works. Native-to-native updates use the Rust updater. Update
 and rollback preserve the installed release selection and browser origin.
 
-The Python source remains in the repository as a compatibility reference and
-test oracle, and supplies this transitional release. Python also runs build,
-packaging and integration-test tools. The
+The current branch has removed the Python application, its installer, pip
+metadata and duplicated tests. Rust tests consume frozen synthetic Python
+results in `tests/fixtures/legacy-python/`, including the producing commit and
+source hashes. Migration and benchmark harnesses take explicit historical
+packages or checkouts; they cannot import an application from the current tree.
+Python remains only in maintainer build, packaging and test tools. The
 proprietary Fenix application remains a Windows .NET application: changing the
 launcher's implementation language does not remove that prerequisite.
 
@@ -48,8 +51,8 @@ save format and existing transaction journals. Known managed files can be
 updated while idle; custom files are retained. Restoring a launcher version does
 not roll back game files, account state or saves.
 
-Validation includes native filesystem/concurrency/transaction tests, differential
-Python/Rust save tests, HTTP contract checks and the Chromium UI suite running
+Validation includes native filesystem/concurrency/transaction tests, frozen
+legacy save/.NET/settings/diagnostic contracts, HTTP contract checks and the Chromium UI suite running
 against the native service. The installer is exercised with Python absent from
 PATH. Separate account-free Wine checks cover:
 
@@ -58,7 +61,7 @@ PATH. Separate account-free Wine checks cover:
 - Experimental 11.0 (20260924) and CachyOS Proton 10.0 sunset: relative DLL loads
   from the licensed temporary game view, Store bridge loading, D3D11/D3D12
   rendering, retained profile markers and return to the default runner.
-- Default Flightdeck runner through Python and Rust: automatic `-FastLaunch`
+- Default Flightdeck runner through the historical Python and current Rust builds: automatic `-FastLaunch`
   reaches the Windows process, mapped DLLs load from the working and module
   directories, and mixed D3D11/D3D12 rendering succeeds. The default DLL probe
   fails with error 193 before the loader correction.

@@ -7,11 +7,9 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
-import sys
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))
-from flightdeck import bootstrap, renderer, vr
+import native_dev as native
 
 
 def main():
@@ -33,7 +31,7 @@ def main():
     (runtime / "private").mkdir(parents=True, mode=0o700)
     (runtime / "local").mkdir()
     (runtime / "runner").symlink_to(runner, target_is_directory=True)
-    (runtime / "private" / vr.SETTINGS).write_text('{"schema":1,"mode":"auto"}')
+    (runtime / "private" / "vr-settings.json").write_text('{"schema":1,"mode":"auto"}')
     include = output / "include"
     shutil.copytree(args.headers, include / "openxr")
     binary = output / "openxr-stereo.exe"
@@ -41,7 +39,8 @@ def main():
                     "-I" + str(include), str(ROOT / "tests/graphics/openxr-stereo.c"), "-o", str(binary),
                     "-ld3d11", "-ld3d12", "-ldxgi", "-ldxguid"], check=True)
     prefix = runtime / "local/msfs-prefix"
-    bootstrap.prepare_prefix(runner, prefix)
+    native.mark(runtime)
+    native.call("prefix", root=runtime)
     env = {key: value for key, value in os.environ.items()
            if not key.startswith(("WINE", "DXVK", "VKD3D", "PROTON", "NVIDIA_WINE"))}
     env.update(WINEPREFIX=str(prefix), WINEDEBUG="-all", WINEESYNC="0", WINEFSYNC="0",
@@ -53,9 +52,9 @@ def main():
         cases.append(("backport", args.bundle.resolve(strict=True)))
     results = []
     for name, bundle in cases:
-        if renderer.install(runtime, bundle=bundle) != name:
+        if native.call("renderer", root=runtime, bundle=bundle) != name:
             raise ValueError("The renderer bundle does not match the runner")
-        prepared = vr.prepare(runtime, env)
+        prepared = native.call("vr", root=runtime, environment=env)
         for key, part in (("XDG_CONFIG_HOME", "config"), ("XDG_DATA_HOME", "data"),
                           ("XDG_CACHE_HOME", "cache"), ("XDG_STATE_HOME", "state")):
             directory = runtime / "private/xdg" / part

@@ -36,6 +36,16 @@ class SourceExport(unittest.TestCase):
             (self.root / directory / "secret.txt").write_text("not for release")
         self.assertEqual(list(source_check.inspect()["files"]), ["scripts/example.py"])
 
+    def test_retired_application_and_installers_cannot_return_to_the_source_package(self):
+        for name in source_check.RETIRED:
+            with self.subTest(name=name):
+                path = self.root / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("obsolete application or build entry point")
+                with self.assertRaisesRegex(ValueError, "Retired Python"):
+                    source_check.inspect()
+                path.unlink()
+
     def test_binary_extension_and_magic_rejected(self):
         bad = self.root / "scripts/bad.dll"; bad.write_bytes(b"dummy")
         with self.assertRaisesRegex(ValueError, "Unrecognized"):

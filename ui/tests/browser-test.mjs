@@ -1393,11 +1393,10 @@ try {
   launcherUpdate=launcherDefault();await language('de');
 
   // Real backend and empty state; only the public release lookup is stubbed.
-  const offlineBackend=`from flightdeck import launcher_update\nfrom urllib.error import URLError\ndef offline(): raise URLError('synthetic offline startup')\nlauncher_update.latest_release=offline\nfrom flightdeck.__main__ import main\nmain()`;
-  const nativeBackend=process.env.FLIGHTDECK_TEST_BINARY;
+  const nativeBackend=resolve(process.env.FLIGHTDECK_TEST_BINARY || join(base,'../target/debug/flightdeck-rust'));
   const backendArguments=['--state-dir',join(temp,'empty-backend-state'),'--no-browser'];
   const backendEnvironment={...process.env,...Object.fromEntries(['CONFIG','DATA','CACHE','STATE'].map(name=>[`XDG_${name}_HOME`,join(temp,`empty-${name.toLowerCase()}`)])),HTTPS_PROXY:'http://127.0.0.1:1',https_proxy:'http://127.0.0.1:1',NO_PROXY:'127.0.0.1,localhost',no_proxy:'127.0.0.1,localhost'};
-  realBackend=spawn(nativeBackend?resolve(nativeBackend):'python',nativeBackend?backendArguments:['-c',offlineBackend,...backendArguments],{cwd:resolve(base,'..'),env:backendEnvironment,stdio:['ignore','pipe','pipe']});
+  realBackend=spawn(nativeBackend,backendArguments,{cwd:resolve(base,'..'),env:backendEnvironment,stdio:['ignore','pipe','pipe']});
   let backendOutput='';realBackend.stdout.on('data',chunk=>{backendOutput+=chunk;});
   await until(()=>/Flightdeck: (http:\/\/127\.0\.0\.1:\d+)/.test(backendOutput),'Real backend did not start');
   const backendOrigin=backendOutput.match(/Flightdeck: (http:\/\/127\.0\.0\.1:\d+)/)[1];allowedOrigins.add(backendOrigin);
@@ -1406,7 +1405,7 @@ try {
   await until(()=>evaluate(`document.getElementById('game-state')?.textContent === 'Installation noch nicht verbunden'`),'Real service status/CSP did not render');
   await until(()=>evaluate(`document.fonts.check('16px Manrope')`),'Local font did not load');
   await check('Local Manrope font loads without a third-party request',`document.fonts.check('16px Manrope')`);
-  await check(`Real ${nativeBackend?'Rust':'Python'} backend loads every local module under CSP`,`document.getElementById('connection').classList.contains('online') && document.getElementById('launch-label').textContent==='Installation einrichten'`);
+  await check('Real Rust backend loads every local module under CSP',`document.getElementById('connection').classList.contains('online') && document.getElementById('launch-label').textContent==='Installation einrichten'`);
   await click('launch-button');await until(()=>evaluate(`!document.querySelector('input[name=setup_mode][value=existing]').disabled`),'Real setup mode unavailable');await evaluate(`document.querySelector('input[name=setup_mode][value=existing]').click()`);await until(()=>evaluate(`!document.getElementById('runtime-path').disabled`),'Real setup form unavailable');await check('Real unconfigured backend offers setup only',`location.hash === '#installation' && !document.getElementById('runtime-path').disabled`);
   await screenshot('installation-real-backend.png');
   await route('mods');await until(()=>evaluate(`!document.getElementById('mods-setup').hidden`),'Real unconfigured Community state missing');

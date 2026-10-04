@@ -12,13 +12,14 @@ mocked request is not evidence that a feature works in the simulator.
 | `native/games.rs`, `native/components.rs` | Simulator identities and checked runtime updates |
 | `native/fenix.rs`, `native/framework_maintenance.rs`, `native/gsx.rs` | Add-on setup, automatic .NET repair and recovery |
 | `native/cloud_*.rs` | Cloud protocol, comparison, transactions and automatic sync |
-| `flightdeck/` | Python compatibility reference and test oracle |
+| `tests/fixtures/legacy-python/` | Frozen synthetic pre-migration contracts, with source provenance |
+| `examples/runtime-lab.rs` | Rust driver for isolated hardware and C++ save interchange probes |
 | `ui/` | Browser interface, using the local API |
 | `compat/runtime/` | Native Wine/GDK bridge, asynchronous results and local saves |
 | `compat/patches/` | Changes against the pinned WineGDK and Xodus sources |
 | `compat/upstreams.lock.json` | Upstream revisions, checksums and license identification |
 | `compat/fenix/` | Fenix payload manifest, release URL/checksum and installer license |
-| `scripts/` | Isolated source builds, runtime staging and source releases |
+| `scripts/` | Maintainer source builds, test harnesses and release packaging |
 | `tests/` | Synthetic launcher, packaging and native regression checks |
 
 The launcher has no responsibility for authenticating with Microsoft or granting
@@ -88,25 +89,25 @@ listed in [the provenance notes](../compat/THIRD_PARTY_NOTICES.md).
 ### Fenix patch releases
 
 The separate [Fenix patch repository](https://github.com/marselnenaj/fenix-a320-linux-patch)
-is the canonical source for the installer engine and Wine overlay. Change and
-validate the engine there, then use `scripts/sync-fenix.py` to import it into
-Flightdeck; do not let the two engine copies drift.
+owns the Wine overlay and standalone installer. Flightdeck implements the
+installer contract in Rust. `scripts/sync-fenix.py` imports only the payload and
+release manifests and license. Review protocol changes against the Rust
+implementation; no Python engine is copied into Flightdeck.
 
 1. Build and test the patch with its documented upstream sources. Publish its
    Linux installer ZIP, complete corresponding sources and `SHA256SUMS` as a
    public GitHub release. Keep already pinned release assets immutable.
 2. Run `python3 scripts/sync-fenix.py /absolute/path/to/patch-project` and review
-   the engine, licenses and both imported manifests. The import command copies
+   the Rust integration, license and both imported manifests. The import command copies
    files; it does not independently validate a published GitHub asset.
 3. Verify the release can be downloaded without GitHub authentication and its
-   SHA-256 matches `compat/fenix/release.json`. Run the Fenix Python/UI tests,
-   source-installer checks and the existing browser flow tests.
+   SHA-256 matches `compat/fenix/release.json`. Run the native add-on/framework/Proton tests,
+   installer checks and the UI/browser flow tests.
 4. Update the English/German add-on guides and changelog, then include the
    integration in the next Flightdeck source/full package. Publishing the patch
    alone does not update an already installed Flightdeck launcher.
 
-The native launcher implements the installer contract in Rust. The vendored
-Python engine remains the compatibility reference. The native installer
+The native launcher implements the installer contract in Rust. The installer
 extracts only fixed Wine/window-helper payloads named in the manifest and
 deploys current launcher-owned scripts; downloaded Python code is not imported.
 Fenix aircraft, Microsoft prerequisites, fonts,

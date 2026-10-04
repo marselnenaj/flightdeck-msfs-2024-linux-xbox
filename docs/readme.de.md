@@ -251,8 +251,9 @@ Dateien, aber keine Aktivierung oder funktionierenden Cockpit-Systeme.
 
 ## Lokale Daten
 
-Die stabile Version verwendet Python, der native Entwicklungsstand Rust. Beide
-verwenden lokale HTML-, CSS- und JavaScript-Dateien und lauschen nur auf Loopback. Herkunftsprüfungen und
+Flightdeck 0.2.1 verwendet Rust. Der aktuelle Quellstand enthält keinen alten
+Python-Launcher mehr; Python-Skripte dienen nur noch dem Paketbau und Tests.
+Der Launcher verwendet lokale HTML-, CSS- und JavaScript-Dateien und lauscht nur auf Loopback. Herkunftsprüfungen und
 ein Sitzungstoken schützen Aktionen. Der Launcher enthält keine Telemetrie und
 braucht kein CDN. Microsoft-Anmeldung, Downloads und Online-Inhalte des Spiels
 verwenden weiterhin ihre jeweiligen Netzwerkdienste.
