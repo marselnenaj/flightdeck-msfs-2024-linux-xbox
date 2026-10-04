@@ -439,7 +439,7 @@ dependencies = [
 
 [[package]]
 name = "flightdeck-linux"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "axum",
  "chrono",

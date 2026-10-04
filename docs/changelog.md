@@ -1,6 +1,12 @@
 # Changes and release status
 
-## Unreleased — finish the source transition
+## 0.2.2 — 4 October 2026
+
+Update from 0.2.1 through **Updates → Flightdeck**, or use the
+[full 0.2.2 installer](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.2.2).
+Older Python launchers still receive 0.1.22 first, then the current native release.
+The bridge remains GitHub Latest. This release finishes the Rust source transition;
+it does not establish a new fix for the reported NVIDIA simulator failure.
 
 Remove the Python launcher, vendored Fenix engine, Python installer, pip package
 metadata and duplicated application tests from the current branch. Runtime

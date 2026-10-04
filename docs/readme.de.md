@@ -22,19 +22,22 @@ Flightdeck installiert und startet deine **gekaufte Xbox-PC-/Microsoft-Store-
 Version von MSFS 2024 oder 2020** unter Linux mit Wine/Proton. Mit dem Microsoft-Konto
 anmelden, das Spiel herunterladen und im Launcher starten.
 
-**Aktuelle Version: [Flightdeck 0.2.1](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.2.1).**
-Aktualisiere über **Updates → Flightdeck** oder verwende den vollständigen Installer.
+**Aktuelle Version: [Flightdeck 0.2.2](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.2.2).**
+Aktualisiere von 0.2.1 über **Updates → Flightdeck** oder verwende den vollständigen Installer.
 Backend, Installer, Updater und Runtime-Helfer verwenden Rust und benötigen kein
 Python. **0.1.22** findet diese Version im vorhandenen Updater. Ältere Launcher
 erhalten **zuerst 0.1.22**: installieren, Flightdeck neu starten und anschließend
-erneut nach Updates suchen, um **0.2.1** zu erhalten. GitHubs Latest-Eintrag bleibt
+erneut nach Updates suchen, um **0.2.2** zu erhalten. GitHubs Latest-Eintrag bleibt
 absichtlich beim Zwischenupdate. Die frühere Vorabversion `0.2.0-dev.1` wurde
 von der stabilen Update-Suche ausgeschlossen. In dieser Vorabversion und der
 zurückgezogenen 0.2.0 ist die native Update-Suche fehlerhaft; hier einmal den
-vollständigen 0.2.1-Installer verwenden. Die bestehende Installation bleibt erhalten.
+vollständigen 0.2.2-Installer verwenden. Die bestehende Installation bleibt erhalten.
 [Update-Reihenfolge](rust-transition.md).
 
-Enthalten sind automatisches `-FastLaunch`, die DLL-Ladekorrektur für den
+Version 0.2.2 schließt die Umstellung des Quellcodes ab: Der alte Python-Launcher
+und Installer sind entfernt, Fenix installiert keinen ungenutzten Python-Displayhelfer
+mehr. Start, Einrichtung und Runtime-Verwaltung laufen in Rust. Enthalten bleiben
+automatisches `-FastLaunch`, die DLL-Ladekorrektur für den
 Standard-Runner, der Abgleich gespeicherter NVIDIA-Einstellungen und weniger
 Arbeit der Oberfläche im Leerlauf. Die schwarze NVIDIA-Hauptansicht ist noch
 nicht als behoben bestätigt. [Status](rust-migration.md) · [Build-Anleitung](../BUILDING.md).
@@ -142,7 +145,7 @@ müssen vorhanden sein. Für die Erstinstallation mindestens **100 GiB freien
 Speicher** vorsehen; Updates und Reparaturen behalten zusätzlich das bisherige
 Spielpaket.
 Das Zwischenupdate 0.1.22 benötigt zusätzlich Python 3.10.12+;
-die native Version 0.2.1 benötigt keinen Python-Interpreter.
+die native Version 0.2.2 benötigt keinen Python-Interpreter.
 Sein optionaler grafischer Installer verwendet Zenity oder KDialog.
 
 Getestet wurde Arch Linux. Andere Distributionen benötigen kompatible
@@ -251,7 +254,7 @@ Dateien, aber keine Aktivierung oder funktionierenden Cockpit-Systeme.
 
 ## Lokale Daten
 
-Flightdeck 0.2.1 verwendet Rust. Der aktuelle Quellstand enthält keinen alten
+Flightdeck 0.2.2 verwendet Rust. Der aktuelle Quellstand enthält keinen alten
 Python-Launcher mehr; Python-Skripte dienen nur noch dem Paketbau und Tests.
 Der Launcher verwendet lokale HTML-, CSS- und JavaScript-Dateien und lauscht nur auf Loopback. Herkunftsprüfungen und
 ein Sitzungstoken schützen Aktionen. Der Launcher enthält keine Telemetrie und
