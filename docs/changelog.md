@@ -1,18 +1,33 @@
 # Changes and release status
 
-## 0.2.0 — 4 October 2026
+## 0.2.1 — 4 October 2026
 
-[Download Flightdeck 0.2.0](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.2.0)
-or use **Updates → Flightdeck** in 0.1.22. Earlier launchers receive 0.1.22
-first; install it, restart, then check again for 0.2.0. GitHub Latest remains on
-0.1.22 so those older updaters do not skip the required bridge.
+Use **Updates → Flightdeck** in 0.1.22, or download the
+[full 0.2.1 installer](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.2.1).
+Earlier launchers receive 0.1.22 first; install, restart and check again. GitHub
+Latest remains on that bridge. Versions 0.2.0-dev.1 and the withdrawn 0.2.0 need
+the full installer because their native update check has the defect fixed here.
+The installer preserves the existing configuration and previous launcher.
 
-The previous 0.2.0-dev.1 release was marked as a prerelease and used a preview
-tag, so stable updaters correctly ignored it. This release carries matching
-stable `0.2.0` versions in its tag, package manifest and executable. It contains
-the same launcher implementation, UI optimizations and runtime corrections as
-the tested preview below; only release identity and documentation change.
-The known NVIDIA/MSFS and live-validation limits remain unchanged.
+Fix native update discovery and streamed component downloads. The HTTP clients
+mixed an asynchronous read timer with blocking response reads; ordinary download
+workers could panic when reading a response body without a Tokio runtime. Both
+now use the blocking client's own connection/read/write timeouts. Slow reads
+still time out, while complete downloads may span many individual read windows.
+HTTPS, redirect restrictions and checksum validation remain enforced. Local
+streamed-body and stalled-body tests reproduce the old defect and cover the fix.
+
+This stable release also makes the native launcher available through 0.1.22;
+preview flags and preview version tags had excluded 0.2.0-dev.1 from discovery.
+It includes the launcher/UI/runtime changes below. NVIDIA/MSFS hardware limits
+remain unchanged.
+
+## 0.2.0 — 4 October 2026 (withdrawn)
+
+Withdrawn immediately after the public migration check exposed an HTTP body-read
+panic in the native updater. Existing 0.1.22 launchers could discover and install
+it, but the resulting Rust service could not perform its next update check. Use
+0.2.1. The historical tag and artifact bytes remain unchanged.
 
 ## 0.2.0-dev.1 — 4 October 2026 (prerelease)
 

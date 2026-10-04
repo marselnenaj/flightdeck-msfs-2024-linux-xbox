@@ -39,6 +39,7 @@ pub mod graphics;
 pub mod graphics_diagnostics;
 pub mod graphics_settings;
 pub mod gsx;
+mod http_client;
 pub mod i18n;
 pub mod inherited_fd;
 pub mod installer;

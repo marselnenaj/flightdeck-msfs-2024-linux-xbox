@@ -4,18 +4,24 @@
 installations receive the Rust launcher through their current update interface:
 
 ```text
-0.1.21 → 0.1.22 → 0.2.0
+0.1.21 → 0.1.22 → 0.2.1
            Python       Rust
 ```
 
 Each step uses **Updates → Flightdeck → Download & install**, followed by
 **Restart Flightdeck now**. The bridge preserves settings and game files,
 verifies the native package before executing its installer, and starts the
-native service at the existing browser address. The native release **0.2.0**
+native service at the existing browser address. The native release **0.2.1**
 is offered by 0.1.22 after restarting and checking for updates. The earlier
 `0.2.0-dev.1` preview is excluded because stable clients reject both prerelease
-flags and prerelease version tags. The 0.2.0 tag, package manifest and executable
+flags and prerelease version tags. The 0.2.1 tag, package manifest and executable
 all carry the matching stable version. Direct installation remains available.
+
+The briefly published 0.2.0 was withdrawn after a public check exposed a native
+HTTP body-read panic, also present in 0.2.0-dev.1. Users of either native version
+need the complete 0.2.1 installer once; their affected updater cannot fetch its
+own repair. Python 0.1.22 discovers and installs 0.2.1 normally. Version 0.2.1
+uses blocking HTTP timeouts and includes streamed/stalled-body regression tests.
 
 The bridge needs Python 3.10 or later. Normal native operation no longer needs
 Python. Restoring a retained Python version still needs its interpreter. A
@@ -28,7 +34,7 @@ archives and cannot skip the bridge. Version 0.1.22 and the updated native
 launcher instead read `/releases?per_page=50` and select the highest stable
 version containing `Flightdeck-Linux-x86_64.tar.gz`.
 
-An older launcher continues to receive **0.1.22 first**, even after 0.2.0 or a
+An older launcher continues to receive **0.1.22 first**, even after 0.2.1 or a
 later stable native release exists. Installing 0.1.22 and restarting loads the
 new updater, which can then offer the native release. Versions before the
 in-app updater was introduced in 0.1.4 need the full installer.
@@ -84,7 +90,7 @@ notices. Distribute their complete corresponding-source archives alongside it.
 ## Isolated migration check
 
 Run against the real extracted old release, the bridge archive and a native
-archive with a stable version. A test candidate may use `0.2.0` in an isolated
+archive with a stable version. A test candidate may use `0.2.1` in an isolated
 source copy; keep the development checkout and published tags unchanged.
 
 ```sh

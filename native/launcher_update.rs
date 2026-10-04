@@ -133,24 +133,18 @@ pub fn release_metadata(raw: &Value) -> Result<Value> {
         json!({"version":tag.trim_start_matches('v'),"tag":tag,"url":url,"sha256":checksum,"size":asset["size"],"release_url":format!("{PROJECT}/releases/tag/{tag}"),"notes":raw["body"].as_str().unwrap_or("").chars().take(12000).collect::<String>()}),
     )
 }
-fn open(url: &str, timeout: Duration) -> Result<reqwest::blocking::Response> {
+fn open(url: &str) -> Result<reqwest::blocking::Response> {
     require(safe_url(url), "Ungültige GitHub-Downloadadresse.")?;
-    let client = reqwest::blocking::ClientBuilder::from(
-        reqwest::Client::builder().read_timeout(Duration::from_secs(20)),
-    )
-    .https_only(true)
-    .connect_timeout(Duration::from_secs(20))
-    .timeout(timeout)
-    .user_agent(format!("Flightdeck/{}", crate::VERSION))
-    .redirect(reqwest::redirect::Policy::custom(|attempt| {
-        if attempt.previous().len() >= 5 || !safe_url(attempt.url().as_str()) {
-            attempt.error("invalid update redirect")
-        } else {
-            attempt.follow()
-        }
-    }))
-    .build()
-    .map_err(|_| Error::Invalid(NETWORK))?;
+    let client = crate::http_client::builder(Duration::from_secs(20))
+        .redirect(reqwest::redirect::Policy::custom(|attempt| {
+            if attempt.previous().len() >= 5 || !safe_url(attempt.url().as_str()) {
+                attempt.error("invalid update redirect")
+            } else {
+                attempt.follow()
+            }
+        }))
+        .build()
+        .map_err(|_| Error::Invalid(NETWORK))?;
     let response = client
         .get(url)
         .header("Accept", "application/vnd.github+json")
@@ -200,7 +194,7 @@ pub fn stable_release(raw: &Value) -> Result<Value> {
 
 pub fn latest_release() -> Result<Value> {
     let mut data = Vec::new();
-    open(API, Duration::from_secs(20))?
+    open(API)?
         .take(2 * 1024 * 1024 + 1)
         .read_to_end(&mut data)
         .map_err(|_| Error::Invalid(NETWORK))?;
@@ -222,7 +216,7 @@ pub fn download(
         .ok_or(Error::Invalid(INVALID))?;
     let hash = string(release, "sha256")?;
     require(files::hex_digest(hash), INVALID)?;
-    let mut response = open(string(release, "url")?, Duration::from_secs(1800))?;
+    let mut response = open(string(release, "url")?)?;
     require(response.content_length().is_none_or(|v| v == size), INVALID)?;
     installer::no_links(target)?;
     let mut output = fs::OpenOptions::new()

@@ -22,13 +22,15 @@ Flightdeck installs and launches your **purchased Xbox PC / Microsoft Store copy
 of MSFS 2024 or 2020** on your Linux computer through Wine/Proton. Sign in with your
 Microsoft account, download the game and start it from one application.
 
-**Current release: [Flightdeck 0.2.0](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.2.0).**
+**Current release: [Flightdeck 0.2.1](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.2.1).**
 Update through **Updates → Flightdeck** or use the full installer.
 The backend, installer, updater and runtime helpers use Rust and need no Python.
 Version **0.1.22** discovers this release through its existing updater. Older
 launchers receive **0.1.22 first**; install it, restart Flightdeck, then check
-again for **0.2.0**. GitHub's Latest badge deliberately remains on the bridge.
+again for **0.2.1**. GitHub's Latest badge deliberately remains on the bridge.
 The earlier `0.2.0-dev.1` preview was excluded from stable update checks.
+The preview and withdrawn 0.2.0 have a native update-check defect; users of
+those versions need the full 0.2.1 installer once. It preserves the installation.
 See [update ordering](docs/rust-transition.md).
 
 This release includes automatic `-FastLaunch`, the default-runner DLL-loading
@@ -98,7 +100,7 @@ Wine; GSX operation in the simulator is unverified.
 **1. Install Flightdeck**
 
 Get **Flightdeck-Linux-x86_64.tar.gz** from the
-[0.2.0 release](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.2.0),
+[0.2.1 release](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.2.1),
 extract it and double-click **Install Flightdeck.desktop**. Your file manager
 may ask you to trust this local launcher.
 
@@ -128,7 +130,7 @@ drivers and a graphical desktop with a Linux Secret
 Service keyring. GTK 3, WebKitGTK 4.1, OpenSSL 3 and the GStreamer Good/Bad/Libav
 media plugins are required. Allow at least **100 GiB free** for a first install;
 an update or repair also keeps the previous game package.
-The 0.1.22 bridge requires Python 3.10.12+; native Flightdeck 0.2.0 does not. Its optional graphical installer uses
+The 0.1.22 bridge requires Python 3.10.12+; native Flightdeck 0.2.1 does not. Its optional graphical installer uses
 Zenity or KDialog.
 
 Arch Linux has been tested. Other distributions need compatible libraries and

@@ -48,7 +48,7 @@ python3 scripts/native-release.py \
   --native build/flightdeck-compat-0.1.16-linux-x86_64.tar.gz \
   --graphics build/graphics \
   --output build/native-package
-python3 scripts/source-release.py --output build/native-package/flightdeck-source-0.2.0.tar.gz
+python3 scripts/source-release.py --output build/native-package/flightdeck-source-0.2.1.tar.gz
 ```
 
 Install the toolchain's `rust-docs` component if its standard-library notices

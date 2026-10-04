@@ -38,7 +38,7 @@ restores feature availability on the next start. Compatibility does not remove
 DLLs, change drivers or select integrated graphics. AMD/Intel-only systems do
 not display these controls and keep their existing graphics setup.
 
-The 0.2.0 native release also reconciles MSFS 2024's saved graphics options
+The 0.2.1 native release also reconciles MSFS 2024's saved graphics options
 before launch. Saved DLSS selects TAA while NVIDIA features are disabled;
 saved Reflex and NVIDIA frame generation are switched off, including their VR
 settings. Their original values are retained in the Wine profile. Switching
@@ -47,7 +47,7 @@ change. FSR, other frame generators, display/quality settings and later manual
 changes are retained. Unsupported, ambiguous or externally linked configuration
 files are left intact. This change is not in the published 0.1.22 package.
 
-The 0.2.0 launcher also starts both simulator editions with `-FastLaunch`.
+The 0.2.1 launcher also starts both simulator editions with `-FastLaunch`.
 This applies a [reported intro-path workaround](nvidia-renderer.md#intro-startup-workaround)
 for black main views to the default runner and selected Proton versions. It
 does not yet establish that the reported Linux/NVIDIA case is resolved.

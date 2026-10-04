@@ -130,15 +130,11 @@ pub fn download(
     files::private_dir(parent)?;
     let temp = parent.join(format!(".download-{}", uuid::Uuid::new_v4().simple()));
     let result = (|| {
-        let client = reqwest::blocking::ClientBuilder::from(
-            reqwest::Client::builder().read_timeout(Duration::from_secs(30)),
-        )
-        .https_only(true)
-        .connect_timeout(Duration::from_secs(30))
-        .timeout(Duration::from_secs(3600))
-        .user_agent(format!("Flightdeck/{}", crate::VERSION))
-        .build()
-        .map_err(|_| Error::Invalid("Der Komponentendownload konnte nicht vorbereitet werden."))?;
+        let client = crate::http_client::builder(Duration::from_secs(30))
+            .build()
+            .map_err(|_| {
+                Error::Invalid("Der Komponentendownload konnte nicht vorbereitet werden.")
+            })?;
         let mut response=client.get(url).send().and_then(reqwest::blocking::Response::error_for_status).map_err(|_|Error::Invalid("Die Laufzeitkomponenten konnten nicht heruntergeladen werden. Verbindung prüfen oder das vollständige Flightdeck-Paket verwenden."))?;
         require(
             response.url().scheme() == "https",
