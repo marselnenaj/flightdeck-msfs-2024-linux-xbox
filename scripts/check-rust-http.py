@@ -22,7 +22,8 @@ def main():
     checks = 0
     with tempfile.TemporaryDirectory(prefix="flightdeck-native-http-") as temporary:
         work = Path(temporary)
-        env = {**os.environ, **{"XDG_" + name + "_HOME": str(work / name.lower()) for name in ("CONFIG", "DATA", "CACHE", "STATE")}}
+        env = {key: value for key, value in os.environ.items() if not key.startswith("FLIGHTDECK_")}
+        env.update(HOME=str(work), **{"XDG_" + name + "_HOME": str(work / name.lower()) for name in ("CONFIG", "DATA", "CACHE", "STATE")})
         child = subprocess.Popen([str(binary), "--state-dir", str(work / "state"), "--no-browser"],
                                  env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         try:
@@ -33,8 +34,8 @@ def main():
             match = re.fullmatch(r"Flightdeck: http://127\.0\.0\.1:(\d+)\n", line)
             assert match, "Unexpected service startup output"
             port = int(match[1])
-            def request(path, payload=None, headers=None, raw=None):
-                connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+            def request(path, payload=None, headers=None, raw=None, timeout=5):
+                connection = http.client.HTTPConnection("127.0.0.1", port, timeout=timeout)
                 try:
                     body = json.dumps(payload).encode() if payload is not None else raw
                     supplied = {"Accept-Language": "en", **(headers or {})}
@@ -47,7 +48,11 @@ def main():
                 finally:
                     connection.close()
 
-            code, headers, initial = request("/api/status")
+            # The first status hashes the executable for the service identity.
+            # Unoptimized native-GUI debug binaries exceed 400 MiB and need
+            # around 16 seconds on CI. Only startup gets this larger budget;
+            # the steady-state HTTP contract keeps its five-second timeout.
+            code, headers, initial = request("/api/status", timeout=30)
             assert code == 200 and initial["app"]["name"] == "Flightdeck"
             assert initial["runtime"]["configured"] is False and initial["game"]["can_start"] is False
             assert headers["cache-control"] == "no-store"
