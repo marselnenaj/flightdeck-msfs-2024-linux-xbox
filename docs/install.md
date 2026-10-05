@@ -1,12 +1,12 @@
 # Install the Flightdeck launcher
 
-The current package is **0.2.2**, the native Rust launcher. It needs no Python
+The current package is **0.2.3**, the native Rust launcher. It needs no Python
 interpreter. Existing older launchers update through **0.1.22**, the Python
-transition release, before receiving 0.2.2. See [update ordering](rust-transition.md),
+transition release, before receiving 0.2.3. See [update ordering](rust-transition.md),
 [changes](changelog.md) and [native status](rust-migration.md).
 
 Download **Flightdeck-Linux-x86_64.tar.gz** from the
-[0.2.2 release](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.2.2)
+[0.2.3 release](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.2.3)
 and extract it on your Linux computer. This full installer includes the six
 pinned compatibility components and their license notices. Version 0.1.22
 needs Python 3.10.12+ and the Linux libraries listed below. The native package
@@ -30,8 +30,7 @@ The historical 0.1.22 package retains its own Python installer; its installation
 instructions apply only inside that extracted release.
 
 The installer creates a **Flightdeck** application-menu entry and opens the
-launcher as an application window when a compatible browser is available,
-otherwise in the default browser. On first start, follow the setup view. No
+native Rust window on Wayland or X11. On first start, follow the setup view. No
 terminal has to remain open. Subsequent starts are available from the application
 menu or `~/.local/bin/flightdeck`. Closing the interface leaves a running
 simulator alone.
@@ -58,7 +57,7 @@ startup and complete-flight compatibility remain unconfirmed. See the
 [MSFS 2020 limitations](marketplace-collections.md#package-checks-and-the-msfs-2020-disc-prompt).
 
 Microsoft sign-in opens in a separate GTK/WebKitGTK window provided by Xodus.
-It does not use the browser showing Flightdeck's local interface. If the
+It is separate from Flightdeck's native interface. If the
 sign-in window is not visible, check the desktop's open windows before retrying;
 if setup reports an error, keep the displayed phase and code for diagnosis.
 
@@ -87,6 +86,12 @@ do not include this binary bundle and require the documented
 [component build](../BUILDING.md) or bootstrap path. Neither package includes
 game files, account credentials, a game license or proprietary SDK files, and
 setup does not purchase the game.
+
+Flightdeck 0.2.3 opens a native Rust desktop window. Its local
+HTTP endpoint exposes only the API. Native language preferences are stored in
+`ui-preferences.json` under the launcher state directory; an explicit
+`--language de` or `--language en` overrides the saved choice. See [the native
+interface](native-ui.md) for build and Fenix installer changes.
 
 ## Download size and storage
 
@@ -143,8 +148,9 @@ for update, rollback and uninstall messages:
 ```
 
 An explicit `--language` also selects the interface language when the launcher
-opens. A normal start, update or rollback without this flag leaves the browser's
-saved language choice intact. Changing the installer language does not alter
+opens. A normal start without this flag uses the native window's saved language
+choice. A retained older browser UI keeps its own preferences for rollback.
+Changing the installer language does not alter
 your runtime configuration, country/Store market, account or saves.
 
 Rollback keeps the current installation manager while selecting the previous
@@ -154,7 +160,7 @@ without the unsupported flag; management commands remain translated.
 ## Installation options
 
 ```sh
-# Install without opening a browser/server.
+# Install without opening the window or starting its service.
 ./install.sh --no-launch
 
 # Omit the new application menu entry.
@@ -188,16 +194,16 @@ it; users do not need to manage the HTTP service themselves.
 
 The **0.1.22 transition update** prepares the move from Python to Rust
 through **Updates → Flightdeck**. Install 0.1.22 and restart Flightdeck, then
-check again to receive **0.2.2**.
+check again to receive **0.2.3**.
 Version 0.1.22 still uses Python; it learns to verify, install and restart the
 native package. Versions 0.1.21 and earlier cannot install that package directly.
 The [release procedure](rust-transition.md) prevents those versions from skipping
 the transition update, even after a newer native release exists. The
-[0.2.2 native release](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.2.2)
+[0.2.3 native release](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.2.3)
 is on the stable update channel. Only the earlier 0.2.0-dev.1 preview is excluded.
 
 If you already installed 0.2.0-dev.1 or the withdrawn 0.2.0, use the complete
-0.2.2 installer once. Their native HTTP update check is defective and cannot
+0.2.3 installer once. Their native HTTP update check is defective and cannot
 download this repair; 0.1.22's updater is unaffected.
 
 Alternatively, run the **new native package's `./install.sh`** directly. The

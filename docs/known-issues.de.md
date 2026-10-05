@@ -2,7 +2,7 @@
 
 [English](known-issues.md)
 
-Stand: Flightdeck 0.1.18, 2. Oktober 2026.
+Stand: Flightdeck 0.2.3, 5. Oktober 2026.
 
 **VR:** Die optionale OpenXR-Einrichtung für WiVRn, SteamVR und Monado ist
 verfügbar. DirectX-11-/DirectX-12-Stereo-Frames bestehen den Test auf AMD mit
@@ -34,10 +34,18 @@ Simulator geprüft wird.
   während Weltkarte und 3D-Hauptansicht schwarz bleiben. 0.1.11 korrigiert DXVKs
   wirkungslose Low-Latency-Abschaltung und verwendet automatisch das vollständige
   Kompatibilitätsprofil für DirectX 11 und 12. DLSS, Reflex und NVIDIA Frame
-  Generation sind damit standardmäßig deaktiviert. Die Behebung der schwarzen
-  Hauptansicht ist noch nicht auf NVIDIA-Hardware bestätigt. Ein funktionierendes
-  zweites Fenster bestätigt sie nicht.
+  Generation sind damit standardmäßig deaktiviert. Ein Nutzer meldete, dass die
+  späteren Startkorrekturen die Hauptansicht wiederherstellen; das Ladevideo
+  bleibt bei ihm schwarz. Das ist eine Nutzerrückmeldung, keine Bestätigung für
+  alle NVIDIA-Karten und Treiber. Ein funktionierendes zweites Fenster allein
+  bestätigt die Hauptansicht nicht.
   [Grafikmodi und aktueller Stand](graphics.de.md).
+- **Fenix-Installation:** 0.2.3 korrigiert den reproduzierten ICU-Fehler beim
+  Installationshook und wartet auf Installer-Unterprozesse. Der offizielle Hook
+  besteht den Test in einem separaten Wine-Profil. Die allgemeine Warnung im
+  gemeldeten Bild beweist die genaue Ursache beim Nutzer nicht. Erneut über
+  **Mods → Fenix → Installer starten** ausführen und danach alle Fenster schließen.
+  [Korrektur und Prüfumfang](native-ui.md#fenix-install-hook-warning).
 - **Cloud-Spielstände:** Wiederholte Sync-Fehler werden auch nach den
   Timeout-Korrekturen aus 0.1.8 gemeldet. Wiederherstellung und lokales Spielen
   beschreibt die [Cloud-Anleitung](cloud-saves.de.md). Lokales Spielen bestätigt

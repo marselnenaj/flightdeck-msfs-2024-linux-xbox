@@ -14,6 +14,10 @@ use std::{
     time::Duration,
 };
 
+pub const DOTNET_COMPATIBILITY: &[(&str, &str)] = &[
+    ("DOTNET_SYSTEM_GLOBALIZATION_USENLS", "1"),
+    ("DOTNET_ReadyToRun", "0"),
+];
 pub fn environment(prefix: &Path, runner: &Path) -> BTreeMap<String, String> {
     let mut env: BTreeMap<_, _> = std::env::vars()
         .filter(|(key, _)| {
@@ -45,11 +49,12 @@ pub fn environment(prefix: &Path, runner: &Path) -> BTreeMap<String, String> {
             "WINE_DWRITE_UNHINTED_OUTLINES",
             "FenixDisplay.exe;FenixCDU.exe",
         ),
-        ("DOTNET_SYSTEM_GLOBALIZATION_USENLS", "1"),
-        ("DOTNET_ReadyToRun", "0"),
         ("WINEDLLOVERRIDES", "winemenubuilder.exe=d"),
     ] {
         env.insert(key.into(), value.into());
+    }
+    for (key, value) in DOTNET_COMPATIBILITY {
+        env.insert((*key).into(), (*value).into());
     }
     for (key, path) in [
         ("WINEPREFIX", prefix.into()),

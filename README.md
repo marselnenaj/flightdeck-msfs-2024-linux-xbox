@@ -22,24 +22,26 @@ Flightdeck installs and launches your **purchased Xbox PC / Microsoft Store copy
 of MSFS 2024 or 2020** on your Linux computer through Wine/Proton. Sign in with your
 Microsoft account, download the game and start it from one application.
 
-**Current release: [Flightdeck 0.2.2](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.2.2).**
-Update from 0.2.1 through **Updates → Flightdeck** or use the full installer.
-The backend, installer, updater and runtime helpers use Rust and need no Python.
+**Current release: [Flightdeck 0.2.3](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.2.3).**
+Update from 0.2.1 or 0.2.2 through **Updates → Flightdeck** or use the full installer.
+The desktop, backend, installer, updater and runtime helpers use Rust and need no Python.
 Version **0.1.22** discovers this release through its existing updater. Older
 launchers receive **0.1.22 first**; install it, restart Flightdeck, then check
-again for **0.2.2**. GitHub's Latest badge deliberately remains on the bridge.
+again for **0.2.3**. GitHub's Latest badge deliberately remains on the bridge.
 The earlier `0.2.0-dev.1` preview was excluded from stable update checks.
 The preview and withdrawn 0.2.0 have a native update-check defect; users of
-those versions need the full 0.2.2 installer once. It preserves the installation.
+those versions need the full 0.2.3 installer once. It preserves the installation.
 See [update ordering](docs/rust-transition.md).
 
-Version 0.2.2 completes the source transition: the old Python application and
-installer are removed, and Fenix setup no longer installs an unused Python
-display helper. Launcher, setup and runtime operations use Rust. It retains
-automatic `-FastLaunch`, the default-runner DLL-loading correction, saved NVIDIA
-settings reconciliation and reduced idle UI work.
-The reported NVIDIA black main view remains unconfirmed fixed.
-[Native status](docs/rust-migration.md) · [Build instructions](BUILDING.md).
+Version **0.2.3** moves all six desktop views to native Rust: overview, setup,
+updates, saves, mods and diagnostics. It preserves the artwork, font and German/
+English interface, runs on Wayland/X11 and needs no browser or JavaScript runtime.
+Fenix setup now persists .NET compatibility settings in its Wine profile, waits
+for installer children and checks failed install hooks. The official Fenix hook
+passes an isolated test for the known ICU failure; the reported screenshot alone
+does not establish the remote user's cause.
+[Native desktop and Fenix verification](docs/native-ui.md).
+
 **New in 0.1.20:** Proton switching with retained add-ons and matched Fenix patches for Experimental and CachyOS. [Changes](docs/changelog.md#0120--3-october-2026).
 
 **0.1.18** adds optional VR setup for WiVRn, SteamVR and Monado, headset checks,
@@ -103,7 +105,7 @@ Wine; GSX operation in the simulator is unverified.
 **1. Install Flightdeck**
 
 Get **Flightdeck-Linux-x86_64.tar.gz** from the
-[0.2.2 release](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.2.2),
+[0.2.3 release](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.2.3),
 extract it and double-click **Install Flightdeck.desktop**. Your file manager
 may ask you to trust this local launcher.
 
@@ -133,14 +135,13 @@ drivers and a graphical desktop with a Linux Secret
 Service keyring. GTK 3, WebKitGTK 4.1, OpenSSL 3 and the GStreamer Good/Bad/Libav
 media plugins are required. Allow at least **100 GiB free** for a first install;
 an update or repair also keeps the previous game package.
-The 0.1.22 bridge requires Python 3.10.12+; native Flightdeck 0.2.2 does not. Its optional graphical installer uses
+The 0.1.22 bridge requires Python 3.10.12+; native Flightdeck 0.2.3 does not. Its optional graphical installer uses
 Zenity or KDialog.
 
 Arch Linux has been tested. Other distributions need compatible libraries and
 remain unverified. Setup reports missing prerequisites before installation.
 Install any missing system packages through your distribution's software manager.
-Chromium provides the application window when available; the default browser
-is the fallback.
+The native Rust window needs libxkbcommon plus Wayland or X11 libraries.
 
 - [Installation details](docs/install.md)
 - [Connect an existing prepared runtime](docs/runtime.md)
@@ -251,6 +252,7 @@ alone.
 | [Changes](docs/changelog.md) | Release history |
 | [Known issues](docs/known-issues.md) · [Deutsch](docs/known-issues.de.md) | NVIDIA black main view, cloud-sync failures and Marketplace session errors |
 | [NVIDIA graphics](docs/graphics.md) · [Deutsch](docs/graphics.de.md) | Driver requirements, graphics modes and troubleshooting |
+| [Experimental AMD neural rendering](docs/neural-rendering.md) | Rust model import, RX 6900 XT validation and experimental launch binding |
 | [Cloud saves](docs/cloud-saves.md) · [Deutsch](docs/cloud-saves.de.md) | Automatic sync, conflict recovery, backups and current limits |
 | [Game maintenance](docs/game-updates.md) | Updates, file verification, full repair and rollback |
 | [Add-ons](docs/addons.md) · [Deutsch](docs/addons.de.md) | Community packages, FlyByWire, SimBridge and Fenix |
@@ -263,18 +265,18 @@ alone.
 
 ```sh
 cargo build --locked
-cargo test --locked
+cargo test --locked --workspace
 cargo fmt --all -- --check
-cargo clippy --locked --all-targets -- -D warnings
+cargo clippy --locked --workspace --all-targets -- -D warnings
 python3 scripts/check-rust-http.py --binary target/debug/flightdeck-rust
 python3 -m unittest discover -s tests/compat -p 'test_*.py' -v
-node --test ui/tests/*.test.mjs
-FLIGHTDECK_TEST_BINARY=target/debug/flightdeck-rust node ui/tests/browser-test.mjs
+node --test tests/reference-web/tests/*.test.mjs
+ICED_TEST_BACKEND=tiny-skia cargo test --locked -p flightdeck-ui capture_all_native_screens -- --ignored
 python3 scripts/check-source-export.py
 ```
 
-The browser suite needs Chromium. HTTP and browser tests bind temporary local
-sockets and use isolated fixtures, not your account or live game. Native
+Native desktop rendering tests need no browser or display. HTTP tests bind
+temporary local sockets and use isolated fixtures, not your account or live game. Native
 compatibility checks require the toolchain described in [BUILDING.md](BUILDING.md).
 For a foreground development service, use `target/debug/flightdeck-rust --no-browser`.
 The current source tree contains one Rust application. Python is used only for

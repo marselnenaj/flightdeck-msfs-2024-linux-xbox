@@ -28,7 +28,7 @@ struct Arguments {
     language: Option<String>,
     #[arg(long)]
     refresh_components: bool,
-    #[arg(long, hide=true, value_parser=["graphics","vr","nvidia-directory"])]
+    #[arg(long, hide=true, value_parser=["graphics","vr","nvidia-directory","hip"])]
     native_probe: Option<String>,
     #[command(subcommand)]
     command: Option<Command>,
@@ -42,6 +42,10 @@ enum Command {
     },
     /// Install or update Flightdeck for the current user.
     Install(flightdeck::cli::Install),
+    /// Configure the experimental Linux AMD neural-rendering bridge.
+    NeuralRendering(flightdeck::neural_rendering::Options),
+    /// Convert your local NR model to an experimental HIP cache (CPU only).
+    NeuralWeights(flightdeck::neural_weights::Options),
     /// Export a private-data-free summary of an existing game log.
     DiagnoseRun {
         #[arg(long, conflicts_with = "runtime")]
@@ -97,6 +101,10 @@ enum Command {
 }
 fn run(command: Command) -> Result<(serde_json::Value, bool)> {
     match command {
+        Command::NeuralRendering(options) => {
+            Ok((flightdeck::neural_rendering::cli(options)?, true))
+        }
+        Command::NeuralWeights(options) => Ok((flightdeck::neural_weights::cli(options)?, true)),
         Command::Install(_)
         | Command::DiagnoseRun { .. }
         | Command::DesktopHandoff { .. }
@@ -231,12 +239,7 @@ fn main() -> ExitCode {
         }
         Some(Command::DesktopHandoff { state_dir, port }) => {
             return finish(
-                flightdeck::desktop::ensure_service(state_dir, None, *port).and_then(|record| {
-                    flightdeck::error::require(
-                        record["update_pending"] != true,
-                        "Bitte beende Spiel und Einrichtung vor dem Launcher-Neustart.",
-                    )
-                }),
+                flightdeck::desktop::handoff(state_dir, *port),
                 Some(&language),
             );
         }
@@ -273,6 +276,9 @@ fn main() -> ExitCode {
         let result = match probe {
             "graphics" => flightdeck::native_probe::graphics(),
             "vr" => Ok(flightdeck::native_probe::vr()),
+            "hip" => std::env::var_os("FLIGHTDECK_HIP_LIBRARY")
+                .ok_or(flightdeck::Error::Invalid("Missing HIP library path."))
+                .and_then(|p| flightdeck::hip_probe::probe(&PathBuf::from(p))),
             _ => flightdeck::native_probe::nvidia_directory(),
         };
         return match result {
@@ -289,10 +295,7 @@ fn main() -> ExitCode {
                 .state_dir
                 .clone()
                 .unwrap_or_else(|| files::xdg("XDG_STATE_HOME", ".local/state").join("flightdeck"));
-            if arguments.desktop
-                && !arguments.no_browser
-                && !arguments.desktop_service
-                && !arguments.refresh_components
+            if !arguments.no_browser && !arguments.desktop_service && !arguments.refresh_components
             {
                 return flightdeck::desktop::start(
                     &state_dir,

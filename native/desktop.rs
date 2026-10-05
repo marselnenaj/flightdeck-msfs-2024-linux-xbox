@@ -7,6 +7,7 @@ use std::{
     os::unix::{fs::MetadataExt, process::CommandExt},
     path::{Path, PathBuf},
     process::{Command, Stdio},
+    sync::Arc,
     thread,
     time::{Duration, Instant},
 };
@@ -232,68 +233,74 @@ pub fn ensure_service(root: &Path, runtime: Option<&str>, port: u16) -> Result<V
         "Der Launcher konnte nicht im Hintergrund starten. Bitte den Einstellungsordner prüfen; flightdeck --no-browser zeigt Details.",
     ))
 }
+pub fn language(root: &Path, explicit: Option<&str>) -> String {
+    let saved = files::json::<Value>(&root.join("ui-preferences.json"), 4096).ok();
+    crate::cli::locale(explicit.or_else(|| saved.as_ref().and_then(|v| v["language"].as_str())))
+}
 pub fn open_interface(root: &Path, record: &Value, language: Option<&str>) -> Result<String> {
-    let port = record["port"].as_u64().ok_or(Error::Invalid(UNVERIFIED))?;
-    let url = format!(
-        "http://127.0.0.1:{port}{}",
-        language.map(|v| format!("/?lang={v}")).unwrap_or_default()
-    );
-    let browser = [
-        "chromium",
-        "chromium-browser",
-        "google-chrome-stable",
-        "google-chrome",
-        "brave-browser",
-        "brave",
-    ]
-    .into_iter()
-    .find_map(process::which);
-    if let Some(browser) = browser {
-        let profile = state_directory(&root.join("desktop-browser"))?;
-        if let Ok(mut child) = process::spawn(
-            Command::new(browser)
-                .arg(format!("--app={url}"))
-                .arg("--class=Flightdeck")
-                .arg(format!("--user-data-dir={}", profile.display()))
-                .args(["--no-first-run", "--no-default-browser-check"])
-                .stdin(Stdio::null())
-                .stdout(Stdio::null())
-                .stderr(Stdio::null())
-                .process_group(0),
-            None,
-        ) {
-            thread::spawn(move || {
-                let _ = child.wait();
-            });
-            return Ok(url);
-        }
-    }
-    process::open_uri(&url)?;
-    Ok(url)
+    require(
+        ["DISPLAY", "WAYLAND_DISPLAY"]
+            .iter()
+            .any(|key| std::env::var_os(key).is_some_and(|v| !v.is_empty())),
+        "Das native Flightdeck-Fenster konnte nicht geöffnet werden. Starte Flightdeck in einer X11- oder Wayland-Sitzung.",
+    )?;
+    let client = flightdeck_ui::Client::new(
+        record["port"]
+            .as_u64()
+            .ok_or(Error::Invalid("Invalid local service port."))? as u16,
+        record["token"]
+            .as_str()
+            .ok_or(Error::Invalid("Invalid local service identity."))?
+            .to_string(),
+    )
+    .map_err(|_| Error::Invalid("Der lokale Flightdeck-Dienst konnte nicht verbunden werden."))?;
+    let language = self::language(root, language);
+    let state = root.to_path_buf();
+    let connector: flightdeck_ui::Connector = Arc::new(move || {
+        let record = verified(&state)
+            .map_err(|e| e.to_string())?
+            .ok_or_else(|| {
+                "Der lokale Dienst ist nicht erreichbar. Bitte Flightdeck erneut öffnen."
+                    .to_string()
+            })?;
+        flightdeck_ui::Client::new(
+            record["port"].as_u64().unwrap_or(0) as u16,
+            record["token"].as_str().unwrap_or("").to_string(),
+        )
+    });
+    flightdeck_ui::run(client, if language == "en" {flightdeck_ui::Language::En} else {flightdeck_ui::Language::De}, Some(connector))
+        .map_err(|_| Error::Invalid("Das native Flightdeck-Fenster konnte nicht geöffnet werden. Starte Flightdeck in einer X11- oder Wayland-Sitzung."))?;
+    Ok("native".into())
 }
 pub fn start(root: &Path, runtime: Option<&str>, port: u16, language: Option<&str>) -> Result<()> {
     let root = state_directory(root)?;
-    let previous = verified(&root)?;
-    let reuse = previous
-        .as_ref()
-        .and_then(|r| request(r, "/api/launcher-update", None))
-        .is_some_and(|r| {
-            runtime.is_none()
-                && r["pending_restart"] == true
-                && r["job"]["operation"] == "restart"
-                && r["job"]["state"] == "running"
-        });
-    let port = if reuse && port == 0 {
-        previous
-            .as_ref()
-            .and_then(|r| r["port"].as_u64())
-            .unwrap_or(0) as u16
-    } else {
-        port
-    };
     let record = ensure_service(&root, runtime, port)?;
-    if !reuse {
-        open_interface(&root, &record, language)?;
-    }
+    open_interface(&root, &record, language)?;
+    Ok(())
+}
+/// The updater waits for this coordinator, not for the lifetime of a GUI window.
+/// Start a new frontend only after the new service has been verified.
+pub fn handoff(root: &Path, port: u16) -> Result<()> {
+    let record = ensure_service(root, None, port)?;
+    require(
+        record["update_pending"] != true,
+        "Bitte beende Spiel und Einrichtung vor dem Launcher-Neustart.",
+    )?;
+    let mut child = process::spawn(
+        Command::new(std::env::current_exe()?)
+            .arg("--desktop")
+            .arg("--state-dir")
+            .arg(root)
+            .arg("--port")
+            .arg(record["port"].as_u64().unwrap_or(0).to_string())
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .process_group(0),
+        None,
+    )?;
+    std::thread::spawn(move || {
+        let _ = child.wait();
+    });
     Ok(())
 }

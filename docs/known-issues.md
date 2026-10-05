@@ -2,7 +2,7 @@
 
 [Deutsch](known-issues.de.md)
 
-Status: Flightdeck 0.1.18, 2 October 2026.
+Status: Flightdeck 0.2.3, 5 October 2026.
 
 **VR:** Optional OpenXR setup is available for WiVRn, SteamVR and Monado.
 D3D11/D3D12 stereo frames pass on AMD with a simulated Monado headset. Physical
@@ -31,9 +31,17 @@ installation. A sign-in failure can prevent testing simulator rendering.
   and primary 3D view stay black. 0.1.11 corrects DXVK's ignored Low Latency
   opt-out and automatically uses the complete DirectX 11/12 compatibility
   profile. DLSS, Reflex and NVIDIA Frame Generation are disabled by default.
-  Resolution of the black main view has not yet been confirmed on NVIDIA
-  hardware. A working second window does not confirm it.
+  One user reported that the later startup fixes restored the main view, while
+  the loading video remained black. This is user feedback, not confirmation
+  across NVIDIA hardware and drivers. A working second window alone does not
+  confirm the main view.
   [Graphics modes and current status](graphics.md).
+- **Fenix installation:** 0.2.3 addresses the reproduced ICU install-hook
+  failure and waits for detached installer children. The official install hook
+  passes in an isolated prefix. The generic warning in the reported screenshot
+  does not establish that user's exact cause. Retry through **Mods → Fenix →
+  Start installer** and close its windows when finished.
+  [Correction and validation](native-ui.md#fenix-install-hook-warning).
 - **Cloud saves:** repeated sync errors remain reported after the 0.1.8 timeout
   corrections. Recovery and local-play options are described in the
   [cloud-save guide](cloud-saves.md). Local play does not confirm a successful

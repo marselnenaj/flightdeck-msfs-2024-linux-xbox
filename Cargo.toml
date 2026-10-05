@@ -1,12 +1,12 @@
 [package]
 name = "flightdeck-linux"
-version = "0.2.2"
+version = "0.2.3"
 edition = "2024"
 rust-version = "1.98"
 license = "MIT"
 description = "Local MSFS launcher for Linux"
 publish = false
-include = ["Cargo.toml", "Cargo.lock", "LICENSE", "native/**", "tests/*.rs", "tests/fixtures/**", "examples/**", "ui/*.js", "ui/*.css", "ui/*.html", "ui/*.svg", "ui/*.png", "ui/*.woff2", "scripts/runtime/*", "compat/*.json", "compat/fenix/*.json"]
+include = ["Cargo.toml", "Cargo.lock", "LICENSE", "native/**", "tests/*.rs", "tests/fixtures/**", "examples/**", "ui/*.svg", "ui/*.png", "ui/*.woff2", "scripts/runtime/*", "compat/*.json", "compat/fenix/*.json"]
 
 [lib]
 name = "flightdeck"
@@ -17,6 +17,7 @@ name = "flightdeck-rust"
 path = "native/main.rs"
 
 [dependencies]
+flightdeck-ui = { path = "native/ui" }
 tar = "0.4"
 flate2 = "1"
 xz2 = "0.1"
@@ -44,6 +45,11 @@ tempfile = "3.27.0"
 lto = "thin"
 codegen-units = 1
 strip = "debuginfo"
+
+[workspace]
+members = ["native/ui"]
+exclude = ["examples/native-ui"]
+resolver = "3"
 
 [lints.rust]
 unsafe_code = "deny"

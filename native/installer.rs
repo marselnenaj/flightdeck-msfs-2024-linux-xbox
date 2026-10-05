@@ -887,7 +887,7 @@ pub fn managed(root: &Path, arguments: &[std::ffi::OsString]) -> Result<()> {
         args.insert(0, "--desktop".into());
     }
     // Saved installation language belongs to management messages. Only an
-    // explicit launch option may override the browser's own saved preference.
+    // explicit launch option may override the native interface's saved preference.
     if explicit
         && (native
             || read(&selected.join("flightdeck/__main__.py"), MAX_FILE)?

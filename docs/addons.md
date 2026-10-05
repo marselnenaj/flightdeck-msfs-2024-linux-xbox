@@ -117,6 +117,12 @@ pin has been reviewed and updated. No FSDT or Microsoft binaries are bundled.
 
 ### Fenix A320
 
+The 0.2.3 source branch also addresses the **"application install hook failed"**
+warning for the known FenixApp ICU failure. It applies .NET settings inside the
+Wine profile automatically and waits for installer children before checking the
+result. Run the official EXE through Flightdeck's Fenix installer action, then
+close its windows. [Verification and limits](native-ui.md#fenix-install-hook-warning).
+
 Open **Mods → Fenix A320** to use the optional compatibility installer in
 Flightdeck **0.1.4**. Update older launchers using the [full package](install.md).
 The same patch is also available through the

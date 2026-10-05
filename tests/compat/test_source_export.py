@@ -80,6 +80,17 @@ class SourceExport(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Unrecognized"):
             source_check.inspect()
 
+    def test_neural_sources_and_license_export_without_native_binaries(self):
+        directory = self.root / "compat/neural-rdna2"
+        directory.mkdir(parents=True)
+        (directory / "test_wave.hip").write_text("// synthetic HIP source\n")
+        (directory / "UPSTREAM-LICENSE").write_text("MIT License\n")
+        self.assertIn("compat/neural-rdna2/test_wave.hip", source_check.inspect()["files"])
+        self.assertIn("compat/neural-rdna2/UPSTREAM-LICENSE", source_check.inspect()["files"])
+        (directory / "test_wave.hip").write_bytes(b"\x7fELFsynthetic binary")
+        with self.assertRaisesRegex(ValueError, "Binary"):
+            source_check.inspect()
+
     def test_symlink_and_personal_path_rejected(self):
         link = self.root / "scripts/link.py"; link.symlink_to(self.root / "scripts/example.py")
         with self.assertRaisesRegex(ValueError, "symlinks"):

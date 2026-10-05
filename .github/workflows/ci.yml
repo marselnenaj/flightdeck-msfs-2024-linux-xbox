@@ -15,35 +15,31 @@ concurrency:
 
 jobs:
   rust-launcher:
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      RUSTUP_TOOLCHAIN: 1.98.0
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - name: Install pinned Rust toolchain
         run: rustup toolchain install 1.98.0 --profile minimal --component rustfmt --component clippy --component rust-docs
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: '24'
+      - name: Native desktop build dependencies
+        run: sudo apt-get update && sudo apt-get install -y woff2 libxkbcommon-dev libwayland-dev libx11-dev libxrandr-dev libxi-dev pkg-config
       - name: Format and lint
         run: |
           cargo +1.98.0 fmt --all -- --check
-          cargo +1.98.0 clippy --locked --all-targets -- -D warnings
-      - name: Type-check shared UI coordination
-        run: |
-          npm --prefix ui ci --ignore-scripts --no-audit --no-fund
-          npm --prefix ui run typecheck
+          cargo +1.98.0 clippy --locked --workspace --all-targets -- -D warnings
       - name: Native format, filesystem and concurrency tests
-        run: cargo +1.98.0 test --locked
+        run: cargo +1.98.0 test --locked --workspace
       - name: Native HTTP contract and developer probes
         run: |
           cargo +1.98.0 build --locked --bin flightdeck-rust --example runtime-lab
           python3 scripts/check-rust-http.py --binary target/debug/flightdeck-rust
-      - name: Browser contract against the native service
+      - name: Native desktop rendering in both languages and window sizes
         run: |
-          export CHROME_BIN="$(command -v google-chrome || command -v chromium)"
-          FLIGHTDECK_TEST_BINARY=target/debug/flightdeck-rust node ui/tests/browser-test.mjs
+          ICED_TEST_BACKEND=tiny-skia cargo +1.98.0 test --locked -p flightdeck-ui capture_all_native_screens -- --ignored
       - name: Build native launcher and source artifacts
         run: |
           python3 scripts/build-native.py --toolchain 1.98.0
@@ -58,9 +54,10 @@ jobs:
           path: |
             build/native-launcher-package/*
             build/flightdeck-source.tar.gz
+            build/native-ui/*.png
           if-no-files-found: error
           retention-days: 14
-  tooling-and-ui:
+  tooling-and-reference-contracts:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
@@ -79,7 +76,10 @@ jobs:
           node-version: '24'
       - name: Build tooling and compatibility boundary tests
         run: python -m unittest discover -s tests/compat -p 'test_*.py' -v
-      - name: UI state tests
-        run: node --test ui/tests/*.test.mjs
+      - name: Frozen previous UI contracts
+        run: |
+          npm --prefix tests/reference-web ci --ignore-scripts --no-audit --no-fund
+          npm --prefix tests/reference-web run typecheck
+          node --test tests/reference-web/tests/*.test.mjs
       - name: Source-release boundary
         run: python scripts/check-source-export.py

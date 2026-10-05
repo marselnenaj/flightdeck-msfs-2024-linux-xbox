@@ -12,6 +12,7 @@ import importlib.util
 import io
 import json
 from pathlib import Path
+import re
 import subprocess
 import tarfile
 import tomllib
@@ -40,22 +41,40 @@ def digest(data):
 
 
 def notices(metadata):
-    graph = components.read_json(components.read_regular(metadata, 32 * 1024 * 1024), "Cargo graph")
+    graph = components.read_json(components.read_regular(metadata, 32 * 1024 * 1024), "Cargo graph", maximum=32 * 1024 * 1024)
+    # Metadata unifies test features and includes the GPU test renderer. Ask
+    # Cargo for the real normal/build graph, so the inventory describes the
+    # shipped software renderer instead of unrelated test-only dependencies.
+    tree = subprocess.run(["cargo", "tree", "--offline", "--locked", "--package", "flightdeck-linux",
+                           "--edges", "normal,build", "--target", "x86_64-unknown-linux-gnu",
+                           "--prefix", "none", "--format", "{p}"], cwd=ROOT,
+                          check=True, capture_output=True, timeout=60).stdout.decode()
+    wanted = set()
+    for line in tree.splitlines():
+        match = re.match(r"^(\S+) v(\S+)(?: |$)", line)
+        if not match:
+            raise ValueError("Unexpected Cargo production dependency graph")
+        wanted.add(match.groups())
     locked = tomllib.loads((ROOT / "Cargo.lock").read_text())["package"]
     expected = {(p["name"], p["version"]): p for p in locked}
+    supplements = components.read_json(components.read_regular(ROOT / "compat/rust-licenses.lock.json", 1024 * 1024), "Rust license sources")["packages"]
     inventory, texts, seen = [], [], set()
     for package in sorted(graph["packages"], key=lambda p: (p["name"], p["version"])):
         name, version = package["name"], package["version"]
+        if (name, version) not in wanted:
+            continue
         if (name, version) not in expected or (name, version) in seen:
             raise ValueError("Cargo metadata does not match the locked dependency graph")
         seen.add((name, version))
         if package["source"] != expected[(name, version)].get("source"):
             raise ValueError("Cargo dependency source does not match Cargo.lock")
         folder = Path(package["manifest_path"]).parent
+        license_root, provenance = folder, None
         if package["source"] is None:
-            if name != "flightdeck-linux" or folder.resolve() != ROOT:
+            local_packages = {"flightdeck-linux": ROOT, "flightdeck-ui": ROOT / "native/ui"}
+            if name not in local_packages or folder.resolve() != local_packages[name] or version != VERSION:
                 raise ValueError("Unexpected local package in Cargo metadata")
-            paths = [ROOT / "LICENSE"]
+            paths = [folder / "LICENSE"]
         else:
             paths = sorted(p for p in folder.rglob("*") if p.is_file() and not p.is_symlink() and p.name.lower().startswith(("license", "licence", "copying", "notice", "copyright")))
         if package.get("license_file"):
@@ -65,16 +84,28 @@ def notices(metadata):
             if extra not in paths:
                 paths.append(extra)
         if not paths:
-            raise ValueError("Missing dependency license text: " + name)
+            # Some monorepo crates omit the repository license from crates.io.
+            # Use only the pinned upstream text for this exact crate revision.
+            provenance = supplements.get(name + "@" + version)
+            if not provenance or provenance["spdx"] != package["license"]:
+                raise ValueError("Missing dependency license text: " + name)
+            vcs = components.read_json(components.read_regular(folder / ".cargo_vcs_info.json", 16384), "Crate revision")
+            path = ROOT / provenance["path"]
+            if (vcs["git"]["sha1"] != provenance["revision"]
+                    or not path.resolve().is_relative_to(ROOT / "compat/LICENSES/rust")
+                    or digest(components.read_regular(path, 1024 * 1024)) != provenance["sha256"]):
+                raise ValueError("Pinned dependency license differs: " + name)
+            paths, license_root = [path], ROOT
         included = []
         for path in paths:
             data = components.read_regular(path, 4 * 1024 * 1024)
-            relative = str(path.relative_to(folder))
+            relative = str(path.relative_to(license_root))
             texts.append(f"\n{'=' * 72}\n{name} {version} / {relative}\n{'=' * 72}\n" + data.decode())
             included.append({"name": relative, "sha256": digest(data)})
-        inventory.append({"name": name, "version": version, "source": package["source"], "license": package["license"], "repository": package["repository"], "notices": included})
-    if not seen or ("flightdeck-linux", VERSION) not in seen:
-        raise ValueError("Missing Flightdeck in Cargo metadata")
+        inventory.append({"name": name, "version": version, "source": package["source"], "license": package["license"], "repository": package["repository"], "notices": included,
+                          **({"upstream_license": provenance} if provenance else {})})
+    if seen != wanted or ("flightdeck-linux", VERSION) not in seen:
+        raise ValueError("Cargo metadata omits a production dependency")
     texts.append("\nManrope / SIL Open Font License\n" + (ROOT / "ui/OFL-Manrope.txt").read_text())
     header = (f"Flightdeck {VERSION} Rust launcher\n\nLauncher/UI: MIT. Dependency license texts follow.\n"
               "Bundled compatibility and graphics components retain their own licenses;\n"
@@ -85,10 +116,19 @@ def notices(metadata):
     return (header + "".join(texts)).encode(), inventory
 
 
+def validate_abi(binary):
+    symbols = subprocess.run(["readelf", "--dyn-syms", "--wide", str(binary.resolve())],
+                             check=True, capture_output=True, timeout=10).stdout.decode()
+    versions = {tuple(map(int, value.split("."))) for value in re.findall(r"@GLIBC_([0-9.]+)", symbols)}
+    if not versions or max(versions) > (2, 39):
+        raise ValueError("Build on the glibc 2.39 baseline: this executable needs a newer or unknown glibc ABI")
+
+
 def payload(binary, metadata, rust_notices, native=None, graphics=None):
     raw = components.read_regular(binary, 128 * 1024 * 1024)
     if len(raw) < 64 or raw[:6] != b"\x7fELF\x02\x01" or raw[18:20] != b"\x3e\x00":
         raise ValueError("Expected a Linux x86-64 release binary")
+    validate_abi(binary)
     reported = subprocess.run([str(binary.resolve()), "--version"], check=True, capture_output=True, timeout=10).stdout.decode().strip()
     if reported != "flightdeck " + VERSION:
         raise ValueError("Binary version differs from Cargo.toml")

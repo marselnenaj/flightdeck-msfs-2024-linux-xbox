@@ -367,6 +367,7 @@ pub fn install(ctx: &Context, payload: &Path) -> Result<()> {
             },
             |message| ctx.progress(message),
         )?;
+        crate::fenix_installer::prepare(&wine.wine)?;
         if upgrade.is_none() {
             ctx.progress("Preparing fonts, graphics dependencies and Fenix settings …");
             setup::graphics_fonts(&wine)?;
@@ -588,6 +589,7 @@ fn windows_app(ctx: &Context, operation: &str, data: &Value) -> Result<()> {
         &ctx.cancel,
     )?;
     setup::ui_fonts(&wine)?;
+    crate::fenix_installer::prepare(&wine)?;
     wine.reg(
         r"HKCU\Software\Wine\Explorer",
         "ShowSystray",
@@ -602,7 +604,9 @@ fn windows_app(ctx: &Context, operation: &str, data: &Value) -> Result<()> {
         app.parent()
             .ok_or(Error::Invalid("Invalid Fenix executable path."))?,
     );
+    let log_offset = wine.log.metadata()?.len();
     let mut child = process::spawn(&mut c, None)?;
+    let mut handoff = crate::fenix_installer::Handoff::default();
     let result = (|| {
         loop {
             if ctx.pause.load(Ordering::Relaxed) || ctx.cancel.load(Ordering::Relaxed) {
@@ -612,12 +616,25 @@ fn windows_app(ctx: &Context, operation: &str, data: &Value) -> Result<()> {
                 return ctx.interrupted();
             }
             if let Some(code) = child.try_wait()? {
-                ctx.update(json!({"app_exited":true}));
-                wine_processes::stop(root, wine_processes::FENIX)?;
-                return require(
+                require(
                     code.success(),
                     "Fenix wurde unerwartet beendet. Details stehen im lokalen Fenix-Protokoll.",
-                );
+                )?;
+                if ["installer", "manager"].contains(&operation) {
+                    let running = wine_processes::Processes::new(&prefix)?.applications_running();
+                    if !handoff.complete(std::time::Instant::now(), true, running) {
+                        std::thread::sleep(Duration::from_secs(1));
+                        continue;
+                    }
+                    crate::fenix_installer::check_log(
+                        &root.join("private/fenix-app.log"),
+                        &wine.log,
+                        log_offset,
+                    )?;
+                }
+                ctx.update(json!({"app_exited":true}));
+                wine_processes::stop(root, wine_processes::FENIX)?;
+                return Ok(());
             }
             std::thread::sleep(Duration::from_millis(100));
         }
@@ -683,7 +700,8 @@ pub fn snapshot(app: &Launcher) -> Value {
             let (fenix_running, game_running) = wine_processes::status(&prefix);
             let interactive = job["state"] == "running"
                 && job["app_exited"] != true
-                && ["open", "manager"].contains(&job["operation"].as_str().unwrap_or(""));
+                && ["installer", "open", "manager"]
+                    .contains(&job["operation"].as_str().unwrap_or(""));
             value["idle"] = json!(idle);
             value["fenix_running"] = json!(fenix_running);
             value["can_stop"] = json!(
@@ -726,7 +744,8 @@ pub fn start(app: &Arc<Launcher>, operation: &str, data: &Value) -> Result<Value
         if s.active.as_ref().is_some_and(|a| a.kind == "fenix")
             && s.jobs.get("fenix").is_some_and(|j| {
                 j["state"] == "running"
-                    && ["open", "manager"].contains(&j["operation"].as_str().unwrap_or(""))
+                    && ["installer", "open", "manager"]
+                        .contains(&j["operation"].as_str().unwrap_or(""))
             })
         {
             if let Some(active) = &s.active {

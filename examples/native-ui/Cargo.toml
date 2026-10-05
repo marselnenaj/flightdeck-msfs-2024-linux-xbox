@@ -1,0 +1,19 @@
+[package]
+name = "flightdeck-native-ui-preview"
+version = "0.2.3"
+edition = "2024"
+rust-version = "1.98"
+publish = false
+license = "MIT"
+description = "Production native UI with an isolated synthetic service fixture"
+
+[dependencies]
+flightdeck-ui = { path = "../../native/ui" }
+iced = { version = "=0.14.0", default-features = false, features = ["tiny-skia", "x11", "wayland", "tokio", "advanced", "svg", "image-without-codecs"] }
+serde_json = "1"
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+unwrap_used = "deny"

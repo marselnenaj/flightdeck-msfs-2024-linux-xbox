@@ -30,6 +30,17 @@ pub fn get(app: &Arc<Launcher>, path: &str) -> Option<Result<Value>> {
 }
 pub fn post(app: &Arc<Launcher>, path: &str, data: &Value, locale: &str) -> Option<Result<Value>> {
     Some(match path {
+        "/api/preferences" => {
+            let language = string(data, "language");
+            language.and_then(|language| {
+                crate::error::require(["de", "en"].contains(&language), "Ungültige Sprache.")?;
+                crate::files::atomic_json(
+                    &app.state_dir.join("ui-preferences.json"),
+                    &json!({"language":language}),
+                )?;
+                Ok(json!({"ok":true}))
+            })
+        }
         "/api/launch" => crate::cloud_auto::launch(app),
         "/api/updates/check-startup" => crate::startup_updates::check(app),
         "/api/launcher-update/check" => crate::launcher_update::start(app, "check", None),

@@ -22,25 +22,27 @@ Flightdeck installiert und startet deine **gekaufte Xbox-PC-/Microsoft-Store-
 Version von MSFS 2024 oder 2020** unter Linux mit Wine/Proton. Mit dem Microsoft-Konto
 anmelden, das Spiel herunterladen und im Launcher starten.
 
-**Aktuelle Version: [Flightdeck 0.2.2](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.2.2).**
-Aktualisiere von 0.2.1 über **Updates → Flightdeck** oder verwende den vollständigen Installer.
-Backend, Installer, Updater und Runtime-Helfer verwenden Rust und benötigen kein
+**Aktuelle Version: [Flightdeck 0.2.3](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.2.3).**
+Aktualisiere von 0.2.1 oder 0.2.2 über **Updates → Flightdeck** oder verwende den vollständigen Installer.
+Oberfläche, Backend, Installer, Updater und Runtime-Helfer verwenden Rust und benötigen kein
 Python. **0.1.22** findet diese Version im vorhandenen Updater. Ältere Launcher
 erhalten **zuerst 0.1.22**: installieren, Flightdeck neu starten und anschließend
-erneut nach Updates suchen, um **0.2.2** zu erhalten. GitHubs Latest-Eintrag bleibt
+erneut nach Updates suchen, um **0.2.3** zu erhalten. GitHubs Latest-Eintrag bleibt
 absichtlich beim Zwischenupdate. Die frühere Vorabversion `0.2.0-dev.1` wurde
 von der stabilen Update-Suche ausgeschlossen. In dieser Vorabversion und der
 zurückgezogenen 0.2.0 ist die native Update-Suche fehlerhaft; hier einmal den
-vollständigen 0.2.2-Installer verwenden. Die bestehende Installation bleibt erhalten.
+vollständigen 0.2.3-Installer verwenden. Die bestehende Installation bleibt erhalten.
 [Update-Reihenfolge](rust-transition.md).
 
-Version 0.2.2 schließt die Umstellung des Quellcodes ab: Der alte Python-Launcher
-und Installer sind entfernt, Fenix installiert keinen ungenutzten Python-Displayhelfer
-mehr. Start, Einrichtung und Runtime-Verwaltung laufen in Rust. Enthalten bleiben
-automatisches `-FastLaunch`, die DLL-Ladekorrektur für den
-Standard-Runner, der Abgleich gespeicherter NVIDIA-Einstellungen und weniger
-Arbeit der Oberfläche im Leerlauf. Die schwarze NVIDIA-Hauptansicht ist noch
-nicht als behoben bestätigt. [Status](rust-migration.md) · [Build-Anleitung](../BUILDING.md).
+Version **0.2.3** stellt alle sechs Seiten auf eine native Rust-Oberfläche um:
+Übersicht, Einrichtung, Updates, Spielstände, Mods und Diagnose. Gestaltung,
+Schrift und deutsche/englische Texte bleiben erhalten. Das Fenster läuft unter
+Wayland/X11 und benötigt keinen Browser oder JavaScript zur Laufzeit.
+Fenix erhält seine .NET-Kompatibilitätseinstellungen automatisch im Wine-Profil.
+Flightdeck wartet auf Installer-Unterprozesse und erkennt fehlgeschlagene
+Installationsschritte. Der bekannte ICU-Fehler wurde mit dem offiziellen
+Fenix-Installationshook isoliert geprüft; das gemeldete Bild beweist die genaue
+Ursache beim Nutzer nicht. [Prüfumfang](native-ui.md) · [Build-Anleitung](../BUILDING.md).
 **Neu in 0.1.20:** Proton-Wechsel mit erhaltenen Add-ons und passenden Fenix-Patches für Experimental und CachyOS. [Änderungen](changelog.md#0120--3-october-2026).
 
 **0.1.18** ergänzt die optionale VR-Einrichtung für WiVRn, SteamVR und Monado,
@@ -109,7 +111,7 @@ Wine geprüft; GSX im Simulator ist noch unbestätigt.
 **1. Flightdeck installieren**
 
 **Flightdeck-Linux-x86_64.tar.gz** auf der
-[Release-Seite](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases)
+[0.2.3-Release-Seite](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.2.3)
 herunterladen, entpacken und **Install Flightdeck.desktop** doppelklicken. Der
 Dateimanager kann verlangen, diesen lokalen Starter als vertrauenswürdig zu
 markieren.
@@ -119,8 +121,8 @@ markieren.
 **MSFS installieren** und 2024 oder 2020 wählen, den Zielordner prüfen und mit dem Microsoft-Konto
 anmelden, das die PC-Version besitzt. Flightdeck bereitet die Wine-Umgebung vor,
 lädt das lizenzierte Spiel über Xodus und verbindet die fertige Installation.
-Die Microsoft-Anmeldung öffnet ein eigenes GTK/WebKitGTK-Fenster. Der Browser
-für die Flightdeck-Oberfläche steuert dieses Anmeldefenster nicht.
+Die Microsoft-Anmeldung öffnet ein eigenes GTK/WebKitGTK-Fenster, getrennt von
+der nativen Flightdeck-Oberfläche.
 
 **3. Über das Anwendungsmenü starten**
 
@@ -145,13 +147,13 @@ müssen vorhanden sein. Für die Erstinstallation mindestens **100 GiB freien
 Speicher** vorsehen; Updates und Reparaturen behalten zusätzlich das bisherige
 Spielpaket.
 Das Zwischenupdate 0.1.22 benötigt zusätzlich Python 3.10.12+;
-die native Version 0.2.2 benötigt keinen Python-Interpreter.
+die native Version 0.2.3 benötigt keinen Python-Interpreter.
 Sein optionaler grafischer Installer verwendet Zenity oder KDialog.
 
 Getestet wurde Arch Linux. Andere Distributionen benötigen kompatible
 Bibliotheken und sind noch nicht bestätigt. Die Einrichtung zeigt fehlende
-Voraussetzungen an. Chromium stellt, sofern verfügbar, das Anwendungsfenster;
-sonst öffnet sich der Standardbrowser.
+Voraussetzungen an. Das native Fenster benötigt libxkbcommon sowie die
+Bibliotheken für Wayland oder X11.
 Fehlende Systempakete über die Softwareverwaltung deiner Distribution installieren.
 
 - [Installationsdetails](install.md)
@@ -254,10 +256,11 @@ Dateien, aber keine Aktivierung oder funktionierenden Cockpit-Systeme.
 
 ## Lokale Daten
 
-Flightdeck 0.2.2 verwendet Rust. Der aktuelle Quellstand enthält keinen alten
+Flightdeck 0.2.3 verwendet Rust. Der aktuelle Quellstand enthält keinen alten
 Python-Launcher mehr; Python-Skripte dienen nur noch dem Paketbau und Tests.
-Der Launcher verwendet lokale HTML-, CSS- und JavaScript-Dateien und lauscht nur auf Loopback. Herkunftsprüfungen und
-ein Sitzungstoken schützen Aktionen. Der Launcher enthält keine Telemetrie und
+Die native Oberfläche verbindet sich mit dem privaten lokalen Dienst. Dieser
+lauscht nur auf Loopback; Herkunftsprüfungen und ein Sitzungstoken schützen
+Aktionen. Der Launcher enthält keine Telemetrie und
 braucht kein CDN. Microsoft-Anmeldung, Downloads und Online-Inhalte des Spiels
 verwenden weiterhin ihre jeweiligen Netzwerkdienste.
 

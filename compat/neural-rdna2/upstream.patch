@@ -1,0 +1,243 @@
+--- a/hip/include/dlss5_common.hpp
++++ b/hip/include/dlss5_common.hpp
+@@ -72,7 +72,11 @@
+ }
+ __host__ __device__ inline float F_hw(float v) {
+ #if defined(__HIP_DEVICE_COMPILE__)
++    #ifdef FLIGHTDECK_GFX1030
++    return flightdeck_rdna2::decode(flightdeck_rdna2::encode(v));
++#else
+     return float(__hip_fp8_e4m3(v));
++#endif
+ #else
+     return F_sw(v);
+ #endif
+--- a/hip/include/dlss5_linalg.hpp
++++ b/hip/include/dlss5_linalg.hpp
+@@ -2,24 +2,30 @@
+ // gfx1201 native WMMA is 16x16x16 FP8; one D3D12 MMA is two gfx12 ops along K.
+ #pragma once
+ #include "dlss5_common.hpp"
++#ifdef FLIGHTDECK_GFX1030
++#include "wave.hpp"
++namespace flightdeck_matrix = flightdeck_rdna2;
++#else
+ #include <rocwmma/rocwmma.hpp>
++namespace flightdeck_matrix = rocwmma;
++#endif
+ 
+ namespace dlss5 {
+ namespace linalg {
+ 
+-using rocwmma::col_major;
+-using rocwmma::matrix_a;
+-using rocwmma::matrix_b;
+-using rocwmma::accumulator;
+-using rocwmma::row_major;
+-using rocwmma::float8_t;
+-using f16 = rocwmma::hfloat16_t;
++using flightdeck_matrix::col_major;
++using flightdeck_matrix::matrix_a;
++using flightdeck_matrix::matrix_b;
++using flightdeck_matrix::accumulator;
++using flightdeck_matrix::row_major;
++using flightdeck_matrix::float8_t;
++using f16 = flightdeck_matrix::hfloat16_t;
+ 
+ template <typename DataT, typename Layout>
+-using FragA = rocwmma::fragment<matrix_a, 16, 16, 16, DataT, Layout>;
++using FragA = flightdeck_matrix::fragment<matrix_a, 16, 16, 16, DataT, Layout>;
+ template <typename DataT, typename Layout>
+-using FragB = rocwmma::fragment<matrix_b, 16, 16, 16, DataT, Layout>;
+-using FragC = rocwmma::fragment<accumulator, 16, 16, 16, float>;
++using FragB = flightdeck_matrix::fragment<matrix_b, 16, 16, 16, DataT, Layout>;
++using FragC = flightdeck_matrix::fragment<accumulator, 16, 16, 16, float>;
+ 
+ // gfx12 f32 accumulator layout (GPUOpen RDNA 4): 8 elems/thread,
+ // column = lane%16, rows = (lane>=16 ? 8 : 0) + i.
+@@ -37,8 +43,8 @@
+             reinterpret_cast<const char*>(buf) + byte_off);
+         uint ldm = stride_bytes / uint(sizeof(DataT));
+         MatrixA a;
+-        rocwmma::load_matrix_sync(a.k0, p, ldm);
+-        rocwmma::load_matrix_sync(a.k1, p + 16, ldm);
++        flightdeck_matrix::load_matrix_sync(a.k0, p, ldm);
++        flightdeck_matrix::load_matrix_sync(a.k1, p + 16, ldm);
+         return a;
+     }
+ };
+@@ -55,8 +61,8 @@
+         uint ldm = stride_bytes / uint(sizeof(DataT));
+         MatrixB b;
+         b.row = true;
+-        rocwmma::load_matrix_sync(b.k0r, p, ldm);
+-        rocwmma::load_matrix_sync(b.k1r, p + 16 * ldm, ldm);
++        flightdeck_matrix::load_matrix_sync(b.k0r, p, ldm);
++        flightdeck_matrix::load_matrix_sync(b.k1r, p + 16 * ldm, ldm);
+         return b;
+     }
+     // 512-byte B-tile packed [N=16][K=32] row-major (pack_tiled_e4m3). Lane l
+@@ -110,8 +116,8 @@
+         uint ldm = stride_bytes / uint(sizeof(DataT));
+         MatrixB b;
+         b.row = false;
+-        rocwmma::load_matrix_sync(b.k0c, p, ldm);
+-        rocwmma::load_matrix_sync(b.k1c, p + 16, ldm);
++        flightdeck_matrix::load_matrix_sync(b.k0c, p, ldm);
++        flightdeck_matrix::load_matrix_sync(b.k1c, p + 16, ldm);
+         return b;
+     }
+ };
+@@ -120,7 +126,7 @@
+     FragC acc{};
+     __device__ static MatrixC Splat(float v) {
+         MatrixC c;
+-        rocwmma::fill_fragment(c.acc, v);
++        flightdeck_matrix::fill_fragment(c.acc, v);
+         return c;
+     }
+     __device__ uint Length() const { return FragC::num_elements; }
+@@ -131,18 +137,18 @@
+     template <typename DataT>
+     __device__ void MultiplyAccumulate(const MatrixA<DataT>& a, const MatrixB<DataT>& b) {
+         if (b.row) {
+-            rocwmma::mma_sync(acc, a.k0, b.k0r, acc);
+-            rocwmma::mma_sync(acc, a.k1, b.k1r, acc);
++            flightdeck_matrix::mma_sync(acc, a.k0, b.k0r, acc);
++            flightdeck_matrix::mma_sync(acc, a.k1, b.k1r, acc);
+         } else {
+-            rocwmma::mma_sync(acc, a.k0, b.k0c, acc);
+-            rocwmma::mma_sync(acc, a.k1, b.k1c, acc);
++            flightdeck_matrix::mma_sync(acc, a.k0, b.k0c, acc);
++            flightdeck_matrix::mma_sync(acc, a.k1, b.k1c, acc);
+         }
+     }
+ 
+     template <typename Ptr>
+     __device__ void StoreF32(Ptr buf, uint byte_off, uint stride_bytes) const {
+         float* p = reinterpret_cast<float*>(reinterpret_cast<char*>(buf) + byte_off);
+-        rocwmma::store_matrix_sync(p, acc, stride_bytes / 4u, rocwmma::mem_row_major);
++        flightdeck_matrix::store_matrix_sync(p, acc, stride_bytes / 4u, flightdeck_matrix::mem_row_major);
+     }
+ 
+     // Element-wise stores: gfx12 accumulator Cast<> is not a rocWMMA store type.
+@@ -170,7 +176,7 @@
+         const float* p = reinterpret_cast<const float*>(
+             reinterpret_cast<const char*>(buf) + byte_off);
+         MatrixC c;
+-        rocwmma::load_matrix_sync(c.acc, p, stride_bytes / 4u, rocwmma::mem_row_major);
++        flightdeck_matrix::load_matrix_sync(c.acc, p, stride_bytes / 4u, flightdeck_matrix::mem_row_major);
+         return c;
+     }
+ };
+--- a/hip/kernels/stage.hip
++++ b/hip/kernels/stage.hip
+@@ -268,7 +268,7 @@
+     constexpr uint kExBytes = 16u * 33u * 2u;
+     constexpr uint kPrefix = 512u + kExBytes;
+     constexpr uint kPstride = 32u;
+-    __shared__ alignas(16) u8 smem[kPrefix + 16u * kPstride + 16u * 4u];
++    alignas(16) __shared__ u8 smem[kPrefix + 16u * kPstride + 16u * 4u];
+     u8* tile = smem;
+     uint16_t* ex = reinterpret_cast<uint16_t*>(smem + 512u);
+     u8* ptile = smem + kPrefix;
+--- a/hip/kernels/mh_prod1.hip
++++ b/hip/kernels/mh_prod1.hip
+@@ -85,7 +85,7 @@
+ DEV uint window_of_pixel(uint p,uint width){return (p/width/8)*(width/8)+(p%width)/8;}
+ DEV uint token_of_pixel(uint p,uint width){return ((p/width)%8)*8+(p%width)%8;}
+ 
+-#if defined(__HIP_DEVICE_COMPILE__) && !__has_builtin(__builtin_amdgcn_wmma_f32_16x16x16_fp8_fp8_w32_gfx12)
++#if defined(__HIP_DEVICE_COMPILE__) && !defined(FLIGHTDECK_GFX1030) && !__has_builtin(__builtin_amdgcn_wmma_f32_16x16x16_fp8_fp8_w32_gfx12)
+ #error "gfx12 FP8 WMMA compiler required; no scalar fallback"
+ #endif
+ using i2=int __attribute__((ext_vector_type(2)));
+--- a/hip/src/network.hip
++++ b/hip/src/network.hip
+@@ -14,6 +14,14 @@
+ namespace dlss5 {
+ namespace {
+ constexpr uint W=1920,Ht=1152,N=W*Ht;
++// Only the fused path consumes/publishes the compact FP8 raster. Split/prod
++// kernels publish FP16; forwarding s.f8 there reads unrelated scratch bytes.
++bool c32_byte_chain(int next_id) {
++ const char* split=std::getenv("DLSS5_C32_SPLIT");
++ const char* prod=std::getenv("DLSS5_C32_PROD");
++ return !(split&&std::string(split)=="1") && !(prod&&std::string(prod)=="1") &&
++        (next_id==2||next_id==3||next_id==4||next_id==67||next_id==68||next_id==69);
++}
+ DeviceBuf floats(const float* p,size_t n){DeviceBuf d(n*4);d.upload(p,n*4);return d;}
+ // No catch-all fallback: an existing corrupt f32 is always an error.
+ std::vector<float> load(const std::string& dir,const std::string& name,size_t count){
+@@ -389,7 +397,7 @@
+       const bool keep_win=write_f32||(b.c==32&&j+1==num[g]);
+       const bool rf16=!(b.c==32&&j+1==num[g]);
+       const int nid=first[g]+j+1;
+-      const bool c32_out8=b.c==32&&rf16&&(nid==2||nid==3||nid==4||nid==67||nid==68||nid==69);
++      const bool c32_out8=b.c==32&&rf16&&c32_byte_chain(nid);
+       b.run(src,write_f32?dst:nullptr,s,in_f8,emit_f8,in_h,emit_h,keep_win,false,rf16,c32_in8,c32_out8);std::swap(src,dst);mark(id,src,w*h*c);in_f8=emit_f8?s.out8.as<u8>():nullptr;in_h=emit_h?(c32_out8?reinterpret_cast<const __half*>(s.f8.p):s.out16.as<__half>()):nullptr;c32_in8=c32_out8;}
+     // Kernel copy instead of hipMemcpyAsync: bit-identical (pure byte move),
+     // keeps the skip path on the same launch stream/queue as the kernels and
+@@ -429,7 +437,7 @@
+       const bool keep_win=write_f32||(b.c==32&&j+1==decnum[g]);
+       const bool rf16=!(b.c==32&&j+1==decnum[g]);
+       const int nid=decfirst[g]+j+1;
+-      const bool c32_out8=b.c==32&&rf16&&(nid==2||nid==3||nid==4||nid==67||nid==68||nid==69);
++      const bool c32_out8=b.c==32&&rf16&&c32_byte_chain(nid);
+       b.run(src,write_f32?dst:nullptr,s,in_f8,emit_f8,in_h,emit_h,keep_win,false,rf16,c32_in8,c32_out8);std::swap(src,dst);mark(id,src,b.w*b.h*b.c);in_f8=emit_f8?s.out8.as<u8>():nullptr;in_h=emit_h?(c32_out8?reinterpret_cast<const __half*>(s.f8.p):s.out16.as<__half>()):nullptr;c32_in8=c32_out8;}}
+    // post_merge reads the f16 window siblings directly: low = block 69's s.ah,
+    // pre = block 0's skip byte copy. Both are f16-exact (the e4m3 re-quantize
+--- a/hip/src/kernels.hip
++++ b/hip/src/kernels.hip
+@@ -379,7 +379,8 @@
+                                               uint rsw, uint rpx, uint rpy) {
+     if (!m || !n || !k || n % 16 || k % 32 || mode < 0 || mode > 5 || (residual_h && !scales) ||
+         ordered < 0 || ordered > 2 || (ordered == 2 && k % 128) || !out_h || !out_h_raster ||
+-        rsw % 8 || rw + rpx > rsw || rh + rpy > rsw)
++        !rsw || rsw % 8 || m % rsw || rpx > rsw || rw > rsw - rpx ||
++        rpy > m / rsw || rh > m / rsw - rpy)
+         throw std::runtime_error("linear raster f16 extent/alias");
+     launch_linear_fat_ord<true, false, true, true, false, false, true, 4>(
+         nullptr, in, w, nullptr, nullptr, m, n, k, reinterpret_cast<const float*>(residual_h),
+--- a/hip/kernels/ops.hip
++++ b/hip/kernels/ops.hip
+@@ -81,9 +81,16 @@
+     for (uint i = 0; i < acc.Length(); ++i) {
+         uint2 rc = acc.GetCoordinate(i);
+         float v = acc.Get(i);
+-        if (mode == 4 && residual && first + rc.x < m && col < n)
+-            v += (HRID ? __half2float(residual_h[(first + rc.x) * n + col + rc.y])
+-                       : residual[(first + rc.x) * n + col + rc.y]) * scale_c;
++        if (mode == 4 && residual && first + rc.x < m && col < n) {
++            const float rv = HRID ? __half2float(residual_h[(first + rc.x) * n + col + rc.y])
++                                  : residual[(first + rc.x) * n + col + rc.y];
++#ifdef FLIGHTDECK_GFX1030
++            if constexpr (HRID && HOUT)
++                v = flightdeck_rdna2::residual_half(rv, scale_c, v);
++            else
++#endif
++                v += rv * scale_c;
++        }
+         u8 qout = 0;
+         if (mode == 2) {
+             u8 q = e4m3_byte(ActivatePoly(v));
+@@ -221,9 +228,16 @@
+             uint2 rc = acc[s].GetCoordinate(i);
+             const uint row = first + s * 16u + rc.x;
+             float v = acc[s].Get(i);
+-            if (mode == 4 && residual && row < m && col < n)
+-                v += (HRID ? __half2float(residual_h[row * n + col + rc.y])
+-                           : residual[row * n + col + rc.y]) * scale_c;
++            if (mode == 4 && residual && row < m && col < n) {
++                const float rv = HRID ? __half2float(residual_h[row * n + col + rc.y])
++                                      : residual[row * n + col + rc.y];
++#ifdef FLIGHTDECK_GFX1030
++                if constexpr (HRID && HOUT)
++                    v = flightdeck_rdna2::residual_half(rv, scale_c, v);
++                else
++#endif
++                    v += rv * scale_c;
++            }
+             u8 qout = 0;
+             if (mode == 2) {
+                 u8 q = e4m3_byte(ActivatePoly(v));

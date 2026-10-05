@@ -33,11 +33,11 @@ an unavailable response must not be converted into an empty successful query.
    relevant numeric status or API result rather than a full authenticated log.
 2. Change the smallest component responsible for the behavior. Preserve license
    notices and use public documentation or freely licensed interface sources.
-3. Run the affected checks from [BUILDING.md](../BUILDING.md). For browser
-   changes, run `node --test ui/tests/*.test.mjs` and
-   `FLIGHTDECK_TEST_BINARY=target/debug/flightdeck-rust node ui/tests/browser-test.mjs`
-   (Chromium required), then inspect both
-   languages and narrow layouts using synthetic data.
+3. Run the affected checks from [BUILDING.md](../BUILDING.md). For desktop
+   changes, run `cargo test --locked --workspace`, the native software-rendered
+   screenshot suite and the real-service UI client test. Inspect both languages,
+   the minimum window size, both simulator editions and confirmation states.
+   The old web state tests remain under `tests/reference-web/` for comparison.
 4. When changing a compatibility patch, stage it from the pinned upstream commit
    into a new directory. Update the patch checksum and source-delta hashes, and
    build that staged source rather than an unrelated development worktree.

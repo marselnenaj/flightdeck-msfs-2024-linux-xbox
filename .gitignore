@@ -12,6 +12,7 @@ __pycache__/
 *.egg-info/
 .pytest_cache/
 ui/tests/artifacts/
+/tests/reference-web/tests/artifacts/
 *.log
 *.exe
 *.dll

@@ -1,5 +1,57 @@
 # Rust and Python launcher performance
 
+## Native desktop candidate 0.2.3 — 5 October 2026
+
+The final glibc-2.39-compatible **0.2.3 candidate** was compared with the
+unchanged Python **0.1.21** source at
+`005194e2d071447637f48e74c406f410c4fe5284`. All 49 exported source files and
+48 installed Python modules were checked against that revision. These results
+measure the **background service**, with the graphical interface closed.
+
+| Installed launcher measurement, median | Python 0.1.21 | Rust 0.2.3 |
+| --- | ---: | ---: |
+| Process start to first valid status response | 148.48 ms | 87.40 ms |
+| Resident service memory after requests | 35.18 MiB | 14.38 MiB |
+| Status API | 1.660 ms | 0.335 ms |
+| Setup status API | 28.668 ms | 0.278 ms |
+| Cloud-save status API | 0.488 ms | 0.199 ms |
+| Launcher-update status API | 0.633 ms | 0.209 ms |
+
+In this run the installed Rust service takes **41% less startup time** and
+**59% less resident memory**. Direct invocation, without installed-wrapper
+verification, takes 71.67 ms in Python and 19.38 ms in Rust; resident service
+memory is 30.70 MiB and 10.81 MiB respectively. The setup endpoint difference
+also includes avoiding repeated component hashing during status polling; it
+is not a language-only comparison. Component installation still verifies files.
+
+The same deterministic save workloads produce identical canonical/content
+hashes and container/blob/byte counts:
+
+| Workload | Python process time | Rust process time | Python/Rust ratio |
+| --- | ---: | ---: | ---: |
+| 128 KiB, 32 blobs | 25.98 ms | 2.54 ms | 10.2× |
+| 1 MiB, 4,096 small blobs | 40.07 ms | 8.42 ms | 4.8× |
+| 32 MiB, 32 blobs | 143.76 ms | 115.40 ms | 1.2× |
+
+Each implementation runs seven fresh processes per mode/workload, alternating
+order after one discarded warm-up. API figures include 350 requests per endpoint
+and implementation, after five warm-up requests in each process. The filesystem
+cache stays warm. This run used the same i9-13900K, 32 logical CPUs, Linux
+`7.2.5-3-omarchy`, Python 3.14.7 and Rust 1.98.0 as the historical comparison
+below. No other Flightdeck builds or test suites ran during this measurement.
+HOME, XDG and launcher state were isolated; no game, account, Wine or cloud
+operations ran. Save process times include startup and I/O, not just the codec.
+
+[The complete 0.2.3 measurements](performance-native-ui-results.json) include
+the measured binary SHA-256, ranges and sample counts. Use the reproduction
+command below with the baseline-built 0.2.3 binary and installed package. These
+are warm-cache observations on one workstation, not a cross-machine guarantee.
+They do not measure GUI startup, GUI memory, frame rate, flight loading or MSFS
+performance. Separate native rendering tests and real X11/Wayland window checks
+are described in [native desktop verification](native-ui.md#verification).
+
+## Historical service comparison: 0.2.0-dev.1
+
 The native **0.2.0-dev.1** release build was compared with Python **0.1.21**
 at commit `005194e2d071447637f48e74c406f410c4fe5284`.
 On this workstation the installed Rust launcher starts in **72 ms instead of
@@ -7,7 +59,7 @@ On this workstation the installed Rust launcher starts in **72 ms instead of
 measurements; no simulator FPS, flight loading time or cloud-transfer speed was
 measured.
 
-## Installed packages
+### Installed packages
 
 Both full packages were installed into separate test directories and started
 through their installed commands. Times below are medians; lower is better.
@@ -37,7 +89,7 @@ code and dependency/standard-library notices increase download size despite the
 lower service memory requirement. This size comparison excludes companion
 source archives, which are supplied separately in both releases.
 
-## Identical save workloads
+### Identical save workloads
 
 Each fresh process reads an XDLOCAL1 file, validates/decodes it, re-encodes it,
 and computes canonical and logical content hashes. Both implementations must
@@ -94,7 +146,7 @@ output path must be new. The script cleans up only its own temporary services
 and data. It does not flush the workstation's filesystem cache or change CPU
 settings.
 
-## UI idle work
+## Historical web UI idle work (before the native desktop)
 
 A separate Chromium comparison uses the JavaScript UI from commit
 `4ef1fc7105a68118221c7846b01f460281aede22` and the optimized native-preview UI.
@@ -114,7 +166,7 @@ measures actual HTTP requests and DOM mutation records, not CPU usage, browser
 memory or simulator performance. It is one observation per view, not a latency
 or throughput benchmark.
 
-One shared timer now polls idle views every ten seconds. Active jobs keep
+In that historical web implementation, one shared timer polls idle views every ten seconds. Active jobs keep
 1.5–3 second intervals, reads do not overlap, and scheduled polling stops while
 the document is hidden. Focus/visibility return and explicit refresh revalidate
 immediately. Service-side jobs continue independently of the browser. Job
@@ -130,7 +182,7 @@ both runs. Reproduce using the Chromium fixture (no real backend/game calls):
 mkdir -p build/ui-before
 git archive 4ef1fc7105a68118221c7846b01f460281aede22 ui | tar -xf - -C build/ui-before
 FLIGHTDECK_UI_SOURCE=build/ui-before/ui FLIGHTDECK_UI_BENCHMARK=1 \
-  FLIGHTDECK_UI_ARTIFACTS=build/ui-measure-before node ui/tests/browser-test.mjs
+  FLIGHTDECK_UI_ARTIFACTS=build/ui-measure-before node tests/reference-web/tests/browser-test.mjs
 FLIGHTDECK_UI_BENCHMARK=1 FLIGHTDECK_UI_ARTIFACTS=build/ui-measure-after \
-  node ui/tests/browser-test.mjs
+  node tests/reference-web/tests/browser-test.mjs
 ```

@@ -59,6 +59,7 @@ def main(args):
     output = args.output.resolve()
     output.mkdir(parents=True, exist_ok=False, mode=0o700)
     environment = dict(os.environ)
+    environment.update(HOME=str(output), DISPLAY="", WAYLAND_DISPLAY="")
     for name in ("CONFIG", "CACHE", "DATA", "STATE"):
         environment["XDG_" + name + "_HOME"] = str(output / name.lower())
     environment.update(HTTPS_PROXY="http://127.0.0.1:1", HTTP_PROXY="http://127.0.0.1:1", NO_PROXY="127.0.0.1,localhost")
@@ -102,7 +103,7 @@ def main(args):
             record = record_at(state)
             if record["token"] == previous["token"]:
                 return None
-            assert record["port"] == previous["port"], "Handoff must preserve the browser origin"
+            assert record["port"] == previous["port"], "Handoff must preserve the local service endpoint"
             assert record["pid"] != previous["pid"]
             if expected:
                 assert record["release"] == expected
@@ -135,14 +136,12 @@ def main(args):
             assert status["pending_restart"] and status["can_restart"]
             request(before, "/api/launcher-update/restart", {})
             current = changed(root / "state", before, digest)
-            run([str(root / "bin/flightdeck"), "--state-dir", str(root / "state")])
-            wait_for(lambda: browser_log.exists())
-            assert "?lang=" not in browser_log.read_text(), "Normal launch must retain the browser language"
-            browser_log.unlink()
-            run([str(root / "bin/flightdeck"), "--state-dir", str(root / "state"), "--language", "de"])
-            wait_for(lambda: browser_log.exists())
-            assert "?lang=de" in browser_log.read_text()
-            results["explicit_language_and_browser_preference"] = "PASS"
+            request(current, "/api/preferences", {"language": "en"})
+            assert json.loads((root / "state/ui-preferences.json").read_text())["language"] == "en"
+            request(current, "/api/preferences", {"language": "de"})
+            assert json.loads((root / "state/ui-preferences.json").read_text())["language"] == "de"
+            assert not browser_log.exists(), "The native UI must not launch Chromium"
+            results["native_language_preferences"] = "PASS"
             reverted = rollback(current, root / "state")
             assert reverted["release"] == previous_digest
             assert request(reverted, "/api/launcher-update")["can_rollback"]
@@ -173,7 +172,7 @@ def main(args):
                 child.send_signal(signal.SIGINT)
             child.wait(timeout=30)
     report = {"status": "PASS", "native_binary_sha256": digest, "checks": results,
-              "native_install_without_python": True, "same_browser_origin": True,
+              "native_install_without_python": True, "same_service_endpoint": True, "native_window": "covered separately; this test is headless",
               "game_or_account_calls": False}
     (output / "result.json").write_text(json.dumps(report, indent=2) + "\n")
     print(json.dumps(report))

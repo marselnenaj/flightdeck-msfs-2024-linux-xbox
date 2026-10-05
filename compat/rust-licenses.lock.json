@@ -1,0 +1,101 @@
+{
+  "packages": {
+    "iced_core@0.14.0": {
+      "path": "compat/LICENSES/rust/iced-3997291f318a-MIT.txt",
+      "revision": "3997291f318a8bc06fa522f5579836fb3feb94df",
+      "selected_license": "MIT",
+      "sha256": "fc9086ba4eba4b77e4c603906362742bc3715ffa2c7810c6074fe7780d3a0398",
+      "spdx": "MIT",
+      "url": "https://raw.githubusercontent.com/iced-rs/iced/3997291f318a8bc06fa522f5579836fb3feb94df/LICENSE"
+    },
+    "iced_debug@0.14.0": {
+      "path": "compat/LICENSES/rust/iced-3997291f318a-MIT.txt",
+      "revision": "3997291f318a8bc06fa522f5579836fb3feb94df",
+      "selected_license": "MIT",
+      "sha256": "fc9086ba4eba4b77e4c603906362742bc3715ffa2c7810c6074fe7780d3a0398",
+      "spdx": "MIT",
+      "url": "https://raw.githubusercontent.com/iced-rs/iced/3997291f318a8bc06fa522f5579836fb3feb94df/LICENSE"
+    },
+    "iced_futures@0.14.0": {
+      "path": "compat/LICENSES/rust/iced-3997291f318a-MIT.txt",
+      "revision": "3997291f318a8bc06fa522f5579836fb3feb94df",
+      "selected_license": "MIT",
+      "sha256": "fc9086ba4eba4b77e4c603906362742bc3715ffa2c7810c6074fe7780d3a0398",
+      "spdx": "MIT",
+      "url": "https://raw.githubusercontent.com/iced-rs/iced/3997291f318a8bc06fa522f5579836fb3feb94df/LICENSE"
+    },
+    "iced_graphics@0.14.0": {
+      "path": "compat/LICENSES/rust/iced-3997291f318a-MIT.txt",
+      "revision": "3997291f318a8bc06fa522f5579836fb3feb94df",
+      "selected_license": "MIT",
+      "sha256": "fc9086ba4eba4b77e4c603906362742bc3715ffa2c7810c6074fe7780d3a0398",
+      "spdx": "MIT",
+      "url": "https://raw.githubusercontent.com/iced-rs/iced/3997291f318a8bc06fa522f5579836fb3feb94df/LICENSE"
+    },
+    "iced_program@0.14.0": {
+      "path": "compat/LICENSES/rust/iced-3997291f318a-MIT.txt",
+      "revision": "3997291f318a8bc06fa522f5579836fb3feb94df",
+      "selected_license": "MIT",
+      "sha256": "fc9086ba4eba4b77e4c603906362742bc3715ffa2c7810c6074fe7780d3a0398",
+      "spdx": "MIT",
+      "url": "https://raw.githubusercontent.com/iced-rs/iced/3997291f318a8bc06fa522f5579836fb3feb94df/LICENSE"
+    },
+    "iced_renderer@0.14.0": {
+      "path": "compat/LICENSES/rust/iced-3997291f318a-MIT.txt",
+      "revision": "3997291f318a8bc06fa522f5579836fb3feb94df",
+      "selected_license": "MIT",
+      "sha256": "fc9086ba4eba4b77e4c603906362742bc3715ffa2c7810c6074fe7780d3a0398",
+      "spdx": "MIT",
+      "url": "https://raw.githubusercontent.com/iced-rs/iced/3997291f318a8bc06fa522f5579836fb3feb94df/LICENSE"
+    },
+    "iced_runtime@0.14.0": {
+      "path": "compat/LICENSES/rust/iced-3997291f318a-MIT.txt",
+      "revision": "3997291f318a8bc06fa522f5579836fb3feb94df",
+      "selected_license": "MIT",
+      "sha256": "fc9086ba4eba4b77e4c603906362742bc3715ffa2c7810c6074fe7780d3a0398",
+      "spdx": "MIT",
+      "url": "https://raw.githubusercontent.com/iced-rs/iced/3997291f318a8bc06fa522f5579836fb3feb94df/LICENSE"
+    },
+    "iced_tiny_skia@0.14.1": {
+      "path": "compat/LICENSES/rust/iced-0ecf60664df7-MIT.txt",
+      "revision": "0ecf60664df7b8ac7d7aef5f7279d5323027f693",
+      "selected_license": "MIT",
+      "sha256": "fc9086ba4eba4b77e4c603906362742bc3715ffa2c7810c6074fe7780d3a0398",
+      "spdx": "MIT",
+      "url": "https://raw.githubusercontent.com/iced-rs/iced/0ecf60664df7b8ac7d7aef5f7279d5323027f693/LICENSE"
+    },
+    "iced_widget@0.14.2": {
+      "path": "compat/LICENSES/rust/iced-54abf81d13fe-MIT.txt",
+      "revision": "54abf81d13fec06d4d9ac754b03ce2c3313e8a1f",
+      "selected_license": "MIT",
+      "sha256": "fc9086ba4eba4b77e4c603906362742bc3715ffa2c7810c6074fe7780d3a0398",
+      "spdx": "MIT",
+      "url": "https://raw.githubusercontent.com/iced-rs/iced/54abf81d13fec06d4d9ac754b03ce2c3313e8a1f/LICENSE"
+    },
+    "iced_winit@0.14.1": {
+      "path": "compat/LICENSES/rust/iced-38237dd294da-MIT.txt",
+      "revision": "38237dd294da3256c2ac4d3f8288fc73956c91e0",
+      "selected_license": "MIT",
+      "sha256": "fc9086ba4eba4b77e4c603906362742bc3715ffa2c7810c6074fe7780d3a0398",
+      "spdx": "MIT",
+      "url": "https://raw.githubusercontent.com/iced-rs/iced/38237dd294da3256c2ac4d3f8288fc73956c91e0/LICENSE"
+    },
+    "zune-core@0.4.12": {
+      "path": "compat/LICENSES/rust/zune-f8fbb123d5ed-Zlib.txt",
+      "revision": "f8fbb123d5ed04441e8324a555bfcda0cb1bd28f",
+      "selected_license": "Zlib",
+      "sha256": "7fa429541e55b1509909e058f2d21a37467e4958ec713b357f6e0cf9dc4ee352",
+      "spdx": "MIT OR Apache-2.0 OR Zlib",
+      "url": "https://raw.githubusercontent.com/etemesi254/zune-image/f8fbb123d5ed04441e8324a555bfcda0cb1bd28f/LICENSE-ZLIB"
+    },
+    "zune-jpeg@0.4.21": {
+      "path": "compat/LICENSES/rust/zune-fa2c767a01d7-Zlib.txt",
+      "revision": "fa2c767a01d7d9373911d0bf63e0588553d67e0e",
+      "selected_license": "Zlib",
+      "sha256": "7fa429541e55b1509909e058f2d21a37467e4958ec713b357f6e0cf9dc4ee352",
+      "spdx": "MIT OR Apache-2.0 OR Zlib",
+      "url": "https://raw.githubusercontent.com/etemesi254/zune-image/fa2c767a01d7d9373911d0bf63e0588553d67e0e/LICENSE-ZLIB"
+    }
+  },
+  "schema": 1
+}

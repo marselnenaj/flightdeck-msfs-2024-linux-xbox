@@ -18,6 +18,9 @@ use std::{
     time::Duration,
 };
 use subtle::ConstantTimeEq;
+// Serialize request admission so a context-checked POST cannot race another
+// window selecting an installation before the backend reserves its job.
+static MUTATIONS: std::sync::Mutex<()> = std::sync::Mutex::new(());
 #[derive(Clone)]
 pub struct Service {
     pub launcher: Arc<Launcher>,
@@ -104,6 +107,36 @@ async fn handle(State(service): State<Service>, request: Request<Body>) -> Respo
     let path = request.uri().path().to_string();
     let is_get = request.method() == axum::http::Method::GET;
     let is_post = request.method() == axum::http::Method::POST;
+    let contexts = headers
+        .get_all("X-Flightdeck-Context")
+        .iter()
+        .collect::<Vec<_>>();
+    let context = if contexts.is_empty() {
+        None
+    } else if contexts.len() == 1 {
+        match contexts[0]
+            .to_str()
+            .ok()
+            .filter(|v| v.len() <= 16384)
+            .and_then(|v| serde_json::from_str::<String>(v).ok())
+            .filter(|v| v.len() <= 4096)
+        {
+            Some(value) => Some(value),
+            None => {
+                return error(
+                    StatusCode::BAD_REQUEST,
+                    "Ungültiger Installationskontext.",
+                    locale,
+                );
+            }
+        }
+    } else {
+        return error(
+            StatusCode::BAD_REQUEST,
+            "Ungültiger Installationskontext.",
+            locale,
+        );
+    };
     if !is_get && !is_post {
         return error(StatusCode::METHOD_NOT_ALLOWED, "Nicht gefunden.", locale);
     }
@@ -189,26 +222,11 @@ async fn handle(State(service): State<Service>, request: Request<Body>) -> Respo
         };
     }
     if is_get && !path.starts_with("/api/") {
-        let name = if path == "/" {
-            "index.html"
-        } else {
-            path.trim_start_matches('/')
-        };
-        if !name.contains('/')
-            && let Some(data) = resources::asset(&format!("ui/{name}"))
-        {
-            let content = match name.rsplit('.').next().unwrap_or("") {
-                "html" => "text/html; charset=utf-8",
-                "js" => "text/javascript; charset=utf-8",
-                "css" => "text/css; charset=utf-8",
-                "svg" => "image/svg+xml",
-                "png" => "image/png",
-                "woff2" => "font/woff2",
-                _ => return error(StatusCode::NOT_FOUND, "Nicht gefunden.", locale),
-            };
-            return reply(StatusCode::OK, Bytes::from_static(data), content);
-        }
-        return error(StatusCode::NOT_FOUND, "Nicht gefunden.", locale);
+        return error(
+            StatusCode::NOT_FOUND,
+            "Die Oberfläche ist jetzt ein natives Fenster. Starte Flightdeck über das Anwendungsmenü.",
+            locale,
+        );
     }
     if is_post && path == "/api/desktop/refresh" {
         if !service.desktop {
@@ -233,6 +251,21 @@ async fn handle(State(service): State<Service>, request: Request<Body>) -> Respo
         if is_get {
             api::get(&app, &target)
         } else {
+            let _admission = MUTATIONS.lock().unwrap_or_else(|e| e.into_inner());
+            if let Some(expected) = context {
+                let state = app.lock();
+                if state
+                    .runtime
+                    .as_deref()
+                    .and_then(|p| p.to_str())
+                    .unwrap_or("")
+                    != expected
+                {
+                    return Some(Err(Error::Invalid(
+                        "Die ausgewählte Installation hat sich geändert. Bitte den Status neu laden.",
+                    )));
+                }
+            }
             if let Err(e) = Launcher::open(&app.lock()) {
                 return Some(Err(e));
             }

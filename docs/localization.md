@@ -7,36 +7,36 @@ does not change the simulator's language, account or Store country.
 
 ## Selection
 
-The interface chooses the first available language from:
+The native interface chooses the first available language from:
 
-1. An explicit `?lang=de` or `?lang=en` URL parameter, including URLs opened by
-   `flightdeck --language …`.
-2. The preference saved by the language selector in this browser.
-3. The browser language (`de` selects German; other languages fall back to English).
+1. An explicit `flightdeck --language de` or `--language en`.
+2. The selector preference in private `ui-preferences.json` in the launcher state directory.
+3. `LC_ALL`, then `LC_MESSAGES`, then `LANG`; German locales select German and
+   other locales fall back to English.
 
-The selected language is saved locally; no account or remote service is involved.
-If browser storage is unavailable, the app can still select a language for that
-session. Dates, numbers and count labels follow the selected UI language.
+The preference is local; no account or remote service is involved. Changing the
+language preserves the current view and form values. During a submitted command,
+changes are deferred by disabling the selector until its response arrives.
+The native window does not read preferences from a browser profile. An existing
+0.2.2 browser preference stays in that browser for a possible rollback.
 
-The CLI and installer accept `--language de|en`. Terminal language detection
-uses `LC_ALL`, then `LC_MESSAGES`, then `LANG`; German locales select German,
-with English as fallback. An explicit flag wins. The installer keeps its chosen language for later management actions. Normal
-app launches preserve the browser preference; only an explicit launch flag
-overrides it.
+The CLI and installer also accept `--language de|en`. Their saved management
+language is separate from the desktop preference. Only an explicit launch flag
+overrides the desktop's saved choice.
 
 ## Implementation
 
-- `ui/i18n.js` owns the UI catalog and selection. Interpolated values are inserted
-  as text, never as translated HTML. Language changes preserve the current view,
-  form values and any ongoing setup job.
-- Requests carry `Accept-Language`. `native/i18n.rs` and `native/catalog.json` translate known
-  display fields at the response boundary. API keys, enums, IDs, paths, hashes,
-  saved settings and authorization tokens retain their values.
-- Asynchronous setup messages retain their source template and explicit
-  parameters. Each client can read the same job in its chosen language; there
-  is no global mutable language shared between HTTP threads.
-- The installer and launcher CLI keep their terminal copy next to their code,
-  without requiring gettext tools or downloaded language packs at runtime.
+- `native/ui/catalog.json` and native `tr` selections own interface text.
+  Rendered values remain plain text. The previous web implementation's catalog
+  stays with the frozen test reference in `tests/reference-web/`.
+- Requests carry `Accept-Language`. `native/i18n.rs` and `native/catalog.json`
+  translate known display fields at the response boundary. API keys, enums,
+  IDs, paths, hashes, saved settings and authorization tokens retain their values.
+- Asynchronous setup messages retain their source template and parameters.
+  Each client reads the same job in its chosen language; HTTP threads have no
+  shared mutable display language.
+- The installer and CLI keep their terminal copy next to their code, without
+  requiring gettext tools or downloaded language packs.
 
 ## Adding translations
 
@@ -46,7 +46,8 @@ languages from paths or rewrite arbitrary strings to translate error messages.
 When adding a supported language, update selection validation, all catalogs,
 CLI/installer choices and documentation together.
 
-Run `cargo test --locked`, the HTTP checks and `node --test ui/tests/*.test.mjs`, then exercise the
-browser suite. Check long labels at desktop and mobile sizes, persisted language
-choice, switching during setup, failed requests and safe diagnostic exports.
-Technical filenames and product names are intentionally not translated.
+Run `cargo test --locked --workspace` and the HTTP checks. Use the native
+`capture_all_native_screens` rendering test for long labels in both supported
+window sizes. Check persisted language, switching during jobs, failed requests
+and sanitized exports. Technical filenames and product names are intentionally
+not translated.

@@ -119,6 +119,8 @@ def main(args):
     with tempfile.TemporaryDirectory(prefix="flightdeck-benchmark-") as temporary:
         root = Path(temporary)
         environment = dict(os.environ)
+        (root / "home").mkdir()
+        environment["HOME"] = str(root / "home")
         for key in ("CONFIG", "DATA", "CACHE", "STATE"):
             environment[f"XDG_{key}_HOME"] = str(root / key.lower())
         environment["PYTHONPATH"] = str(python_source)
@@ -154,7 +156,7 @@ def main(args):
             workloads[label] = saves(binary, python_source, path, environment, args.repeats)
         cpu = next((line.partition(":")[2].strip() for line in Path('/proc/cpuinfo').read_text().splitlines() if line.startswith('model name')), "unknown")
         output = {"schema": 1, "method": "alternating fresh processes after one discarded warm-up; warm filesystem cache; no game, account, cloud network or Wine",
-            "scope": "launcher only; no simulator FPS measurement", "python": sys.version.split()[0],
+            "scope": "launcher service only; no GUI, simulator FPS or flight-loading measurement", "python": sys.version.split()[0],
             "python_source_commit": args.python_commit, "rust_binary_sha256": hashlib.sha256(binary.read_bytes()).hexdigest(),
             "machine": {"cpu": cpu, "kernel": os.uname().release, "logical_cpus": os.cpu_count()},
             "services": results, "saves": workloads}

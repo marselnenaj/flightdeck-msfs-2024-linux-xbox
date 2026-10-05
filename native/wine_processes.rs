@@ -177,6 +177,11 @@ impl Processes {
             .values()
             .any(|v| alive(&v.fd) && names.is_none_or(|names| names.contains(&v.name.as_str())))
     }
+    pub fn applications_running(&self) -> bool {
+        self.handles
+            .values()
+            .any(|v| alive(&v.fd) && !INFRASTRUCTURE.contains(&v.name.as_str()))
+    }
     pub fn check_game(&self) -> Result<()> {
         require(
             !self.any(Some(GAMES)),

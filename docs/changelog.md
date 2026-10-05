@@ -1,5 +1,38 @@
 # Changes and release status
 
+## 0.2.3 — 5 October 2026
+
+Update from 0.2.1 or 0.2.2 through **Updates → Flightdeck**, or use the
+[full 0.2.3 installer](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.2.3).
+Older Python launchers still receive 0.1.22 first, then 0.2.3. GitHub Latest
+remains on the unchanged bridge.
+
+Replace the browser interface with a native Rust/iced desktop for all six views.
+Keep the existing artwork, font, icons, DE/EN navigation and backend operations.
+Persist native language preferences, verify service reconnections and bind
+mutations to their selected installation and reviewed job/plan. Closing the
+window leaves managed game and installation work with the existing service.
+Narrow tiling below the requested minimum uses an icon rail and stacked cards;
+setup edition selection is separate from the active game. The previous web
+implementation remains only as a migration test reference.
+
+Prepare Fenix's .NET compatibility settings in its Wine registry as well as the
+launch environment. Wait for detached installer children and check new log output
+for failed or unfinished Velopack hooks. The official FenixApp 1.0.286 install
+hook passes in a new account-free prefix with the Unix .NET variables removed.
+This reproduces and fixes the known ICU case; the reported screenshot alone does
+not prove the remote user's exact cause. [Details](native-ui.md).
+
+Keep the release ABI at glibc 2.39 with a pinned Ubuntu build image and a package
+check for imported symbol versions. Native rendering/action tests, real service
+client checks and isolated installer/update checks replace the production
+browser contract suite.
+
+The installed background service starts in 87.40 ms versus 148.48 ms for
+Python 0.1.21, with 14.38 MiB versus 35.18 MiB resident memory in this workstation
+run. These medians do not measure GUI performance or MSFS frame rate.
+[Method and results](performance.md).
+
 ## 0.2.2 — 4 October 2026
 
 Update from 0.2.1 through **Updates → Flightdeck**, or use the

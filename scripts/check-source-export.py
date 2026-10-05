@@ -16,9 +16,9 @@ RETIRED = ("flightdeck", "pyproject.toml", "build_support.py", "MANIFEST.in",
            "scripts/install-python.sh", "scripts/transition-release.py", "scripts/full-installer-release.py")
 SKIP = {"__pycache__", "node_modules", "build", "dist", "target", "artifacts", "coverage", ".git", ".venv", ".pytest_cache"}
 EXTENSIONS = {".py", ".sh", ".md", ".txt", ".json", ".toml", ".lock", ".patch",
-              ".c", ".h", ".cpp", ".hpp", ".inc", ".idl", ".spec", ".def", ".rs",
+              ".c", ".h", ".cpp", ".hpp", ".hip", ".inc", ".idl", ".spec", ".def", ".rs",
               ".css", ".js", ".mjs", ".html", ".svg", ".example", ".yml", ".yaml"}
-NAMES = {"LICENSE", "COPYING", "COPYING.LIB", ".gitignore", "Makefile", "xodus-wine-launch"}
+NAMES = {"LICENSE", "UPSTREAM-LICENSE", "COPYING", "COPYING.LIB", ".gitignore", "Makefile", "xodus-wine-launch", "native-build.Dockerfile"}
 # Permit only individually reviewed binary assets, never arbitrary local files.
 ASSETS = {
     "docs/images/launcher-overview.png": "092c0ea836b6450470346cd397d42e045a06d2f48c0e15c4940b2f05415e308c",

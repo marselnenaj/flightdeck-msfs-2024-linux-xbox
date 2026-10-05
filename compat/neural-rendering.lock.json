@@ -1,0 +1,44 @@
+{
+  "schema": 1,
+  "version": "0.2.6.1",
+  "source": "https://github.com/guentra/dlss5-amd-hip-linux",
+  "revision": "3c7740e62610d4bca3fd82669002288b4293a8b4",
+  "archive_sha256": "ed2e6f7c321b57b18ee2e16449970011fc0b370551bcf6ef22e314174541d0f5",
+  "rdna2": {
+    "version": "0.2.6.1-flightdeck.gfx1030.4",
+    "architecture": "gfx1030",
+    "source_archive_sha256": "e74022396b86ccd776ac8e7aa666a91e3cc74136d428a3eb470f1ac9a05d7ed4",
+    "bytes": 16303528,
+    "sha256": "0841f0206917740c294ff2ed2a1ea37b0ea6be71db7238ec1777eb185a8e65e7"
+  },
+  "files": {
+    "bin/libdlss5_hip.so": {
+      "bytes": 9183040,
+      "sha256": "a40988d9ba646d48ef4ff2839b60b3676925d9905c7bb7fdd5433c2bf485287d"
+    },
+    "bin/dlss5_hip.dll": {
+      "bytes": 54784,
+      "sha256": "110a997600ce45aab3d8dd9842839469a1b4fd2f3addb03a57ca05a0b04f27ee"
+    },
+    "bin/dlss5-amd.addon64": {
+      "bytes": 13939624,
+      "sha256": "a04702dc5878cbdae8f087b0e169e46854b6b73c643cc5ddd1d83752cf11aa43"
+    },
+    "bin/ReShade64.dll": {
+      "bytes": 5592064,
+      "sha256": "0cee63f9c9f13f3ac909c5b4903f4dbb4b719a7ab3b4f13b0deaf83c814b94f7"
+    },
+    "bin/dlss5-d3d12.dll": {
+      "bytes": 438272,
+      "sha256": "4a0d089be28ba857f16a7a20f09926544081b1f421df35d0fe6f6c01ce74a010"
+    },
+    "bin/d3d12core.dll": {
+      "bytes": 6492160,
+      "sha256": "90f04094bb06c8130fe6141f66985a9e3d3bf1e3ae70188125f5f26b2babb335"
+    },
+    "flags/native-game-flags.txt": {
+      "bytes": 2871,
+      "sha256": "f3c4e8f11f82a9dea76137f487542efa6292f0b3ca7c74253e589e251776d7d5"
+    }
+  }
+}

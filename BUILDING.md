@@ -1,37 +1,48 @@
 # Build Flightdeck and the compatibility components
 
-## Rust launcher
+## Rust application and native desktop
 
-The launcher, installer, updater and runtime helpers use Rust.
-The web interface and Wine/Store ABI components remain in their existing
-languages. The native package needs no Python interpreter; Python 3.11+ is
-used only by maintainer packaging and integration-test tools. Build with Rust/Cargo
-1.98 or newer:
+The launcher, all six desktop screens, installer, updater and runtime helpers
+use Rust. The desktop is an iced 0.14 window with a software renderer, Wayland
+and X11 support. It embeds the existing artwork, Manrope font and icons. It does
+not need Chromium, JavaScript, Node or Python. Wine/Store ABI components retain
+their C/C++ implementation. Python 3.11+ is maintainer build and test tooling.
+
+Build with Rust/Cargo 1.98 and `woff2_decompress` (Debian/Ubuntu package `woff2`).
+Linux development packages include `libxkbcommon-dev`, `libwayland-dev`,
+`libx11-dev`, `libxrandr-dev`, `libxi-dev` and `pkg-config`:
 
 ```sh
 cargo build --locked
-cargo test --locked
+cargo test --locked --workspace
 cargo fmt --all -- --check
-cargo clippy --locked --all-targets -- -D warnings
+cargo clippy --locked --workspace --all-targets -- -D warnings
 python3 scripts/check-rust-http.py --binary target/debug/flightdeck-rust
-npm --prefix ui ci --ignore-scripts --no-audit --no-fund
-npm --prefix ui run typecheck
-node --test ui/tests/*.test.mjs
-FLIGHTDECK_TEST_BINARY=target/debug/flightdeck-rust node ui/tests/browser-test.mjs
-target/debug/flightdeck-rust --no-browser
+ICED_TEST_BACKEND=tiny-skia cargo test --locked -p flightdeck-ui capture_all_native_screens -- --ignored
+target/debug/flightdeck-rust
 ```
 
-The Rust migration fixtures, HTTP checks and browser checks use isolated synthetic
-data. The browser suite needs Chromium. See [native status](docs/rust-migration.md)
-for scope and live validation limits. Packaging and compatibility-tool tests run with
-`python3 -m unittest discover -s tests/compat -p 'test_*.py'`. There is no Python
-application, pip package or Python launcher test suite in the current source tree.
+Native UI event/rendering tests and the real local-service integration test use
+isolated synthetic data. Screenshot capture works without a desktop or GPU and
+writes `build/native-ui/`. See [native desktop](docs/native-ui.md) for the
+interface contract and [native status](docs/rust-migration.md) for live validation
+limits. `--no-browser` retains its historical spelling and starts only the local
+API service; there is no web UI at its URL.
 
-TypeScript is a pinned development tool, not a runtime dependency. It checks
-the JSDoc contracts in the shared polling, reservation, check-list and formatting
-modules with strict checking and no emitted code. The application continues to
-serve ordinary ES modules. Existing controller behavior is covered by the
-Node and Chromium suites; those controllers are not yet fully type-checked.
+The previous web implementation lives only in `tests/reference-web/` as a frozen
+migration reference. It is never embedded, served or included in installed
+packages. Its state contracts can still be compared with:
+
+```sh
+npm --prefix tests/reference-web ci --ignore-scripts --no-audit --no-fund
+npm --prefix tests/reference-web run typecheck
+node --test tests/reference-web/tests/*.test.mjs
+python3 -m unittest discover -s tests/compat -p 'test_*.py'
+```
+
+There is no Python application or pip package in the current source tree.
+The Store sign-in and purchase windows are separate Xodus compatibility
+components; their own webview tests below remain relevant.
 
 ### Native packages
 
@@ -48,7 +59,7 @@ python3 scripts/native-release.py \
   --native build/flightdeck-compat-0.1.16-linux-x86_64.tar.gz \
   --graphics build/graphics \
   --output build/native-package
-python3 scripts/source-release.py --output build/native-package/flightdeck-source-0.2.2.tar.gz
+python3 scripts/source-release.py --output build/native-package/flightdeck-source-0.2.3.tar.gz
 ```
 
 Install the toolchain's `rust-docs` component if its standard-library notices
@@ -57,7 +68,9 @@ The full package requires the exact component archive in
 `compat/bootstrap.lock.json` and the seven files from the pinned graphics
 bundle. Hashes, binary architecture/version, dependency licenses and payload
 limits are checked before packaging. The result contains deterministic tar/ZIP
-archives, a dependency inventory and notices. Update `SHA256SUMS` when adding
+archives, a production dependency inventory and notices. Crates that omit their
+monorepo license use the exact upstream revisions and hashes recorded in
+`compat/rust-licenses.lock.json`; the checked license texts ship with the notices. Update `SHA256SUMS` when adding
 companion files after packaging.
 
 Distribute the complete corresponding-source archives alongside a full package:
@@ -76,6 +89,31 @@ with `ldd`/`readelf` on the intended build image. The validated build requires
 glibc 2.39 or later. [Performance checks](docs/performance.md) describe the
 isolated comparison with the Python release.
 The Rust executable also links to the host's `liblzma.so.5` and `libgcc_s.so.1`.
+The UI loads libxkbcommon and the selected Wayland/X11 libraries at runtime.
+
+Release packaging rejects binaries importing glibc symbols newer than 2.39.
+Building on a newer host can otherwise raise this requirement through GUI math
+dependencies. CI therefore uses Ubuntu 24.04. On another distribution, use the
+pinned baseline image with the installed Rust toolchain and Cargo registry:
+
+```sh
+docker build -t flightdeck-native-build:ubuntu24.04 -f scripts/native-build.Dockerfile scripts
+mkdir -p build/native-baseline
+flightdeck_rust_root="$(rustc --print sysroot)"
+flightdeck_registry="${CARGO_HOME:-$HOME/.cargo}/registry"
+docker run --rm --network none --read-only --user "$(id -u):$(id -g)" \
+  --tmpfs /tmp:rw,mode=1777 --tmpfs /cargo:rw,mode=1777 \
+  --mount "type=bind,src=$PWD,dst=/src,readonly" \
+  --mount "type=bind,src=$PWD/build/native-baseline,dst=/build" \
+  --mount "type=bind,src=$flightdeck_rust_root,dst=/opt/rust,readonly" \
+  --mount "type=bind,src=$flightdeck_registry,dst=/cargo/registry,readonly" \
+  flightdeck-native-build:ubuntu24.04 python3 scripts/build-native.py --offline
+```
+
+Populate the Cargo registry on the host first with `cargo fetch --locked`.
+Package `build/native-baseline/target/release/flightdeck-rust` in place of the
+host release binary. The build mounts source, toolchain and registry read-only,
+runs without network and writes only to the explicit build output.
 
 ### Python transition package (0.1.22)
 
@@ -311,8 +349,8 @@ programs or activated profiles belong in the source or installer archives.
 
 ```sh
 cargo test --locked --test native_addons --test native_framework --test native_supervisor
-node --test ui/tests/gsx.test.mjs
-node ui/tests/browser-test.mjs
+cargo test --locked -p flightdeck-ui
+node --test tests/reference-web/tests/gsx.test.mjs
 ```
 
 Runtime cleanup and direct-launch interruption checks also live in
@@ -336,7 +374,7 @@ and manifests with:
 ```sh
 python3 scripts/sync-fenix.py /absolute/path/to/fenix-a320-linux-patch
 cargo test --locked --test native_addons --test native_framework --test native_proton
-node --test ui/tests/fenix.test.mjs
+node --test tests/reference-web/tests/fenix.test.mjs
 ```
 
 Review the matching Rust implementation, `compat/fenix/bundle.json` and

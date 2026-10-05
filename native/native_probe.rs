@@ -44,6 +44,48 @@ struct DeviceId {
     valid: u32,
 }
 #[repr(C)]
+struct PciBusInfo {
+    kind: u32,
+    next: *mut c_void,
+    domain: u32,
+    bus: u32,
+    device: u32,
+    function: u32,
+}
+#[repr(C)]
+#[derive(Clone, Copy)]
+struct VkExtension {
+    name: [u8; 256],
+    version: u32,
+}
+type VkDeviceExtensionsFn =
+    unsafe extern "C" fn(Handle, *const c_char, *mut u32, *mut VkExtension) -> i32;
+
+unsafe fn has_pci_info(enumerate: Option<VkDeviceExtensionsFn>, device: Handle) -> bool {
+    let Some(call) = enumerate else { return false };
+    let mut count = 0;
+    // Optional metadata must not break basic graphics discovery on older drivers.
+    if unsafe { call(device, ptr::null(), &mut count, ptr::null_mut()) } != 0
+        || !(1..=1024).contains(&count)
+    {
+        return false;
+    }
+    let capacity = count;
+    let mut extensions = vec![
+        VkExtension {
+            name: [0; 256],
+            version: 0
+        };
+        count as usize
+    ];
+    (unsafe { call(device, ptr::null(), &mut count, extensions.as_mut_ptr()) }) == 0
+        && count <= capacity
+        && extensions
+            .iter()
+            .take(count as usize)
+            .any(|v| v.name.starts_with(b"VK_EXT_pci_bus_info\0"))
+}
+#[repr(C)]
 struct VkProperties {
     kind: u32,
     next: *mut c_void,
@@ -121,6 +163,8 @@ pub fn graphics() -> Result<Value> {
             symbol(&vk, b"vkGetPhysicalDeviceProperties\0")?;
         let properties2: Option<VkPropertiesFn> =
             symbol(&vk, b"vkGetPhysicalDeviceProperties2\0").ok();
+        let extensions: Option<VkDeviceExtensionsFn> =
+            symbol(&vk, b"vkEnumerateDeviceExtensionProperties\0").ok();
         let mut app = vk_app((1 << 22) | (1 << 12));
         let mut instance = ptr::null_mut();
         if create(&vk_info(&app, &[]), ptr::null(), &mut instance) != 0 {
@@ -145,6 +189,17 @@ pub fn graphics() -> Result<Value> {
             let mut result = Vec::new();
             for device in devices.into_iter().take(count as usize) {
                 let mut id = device_id();
+                let mut pci = PciBusInfo {
+                    kind: 1000212000,
+                    next: ptr::null_mut(),
+                    domain: u32::MAX,
+                    bus: u32::MAX,
+                    device: u32::MAX,
+                    function: u32::MAX,
+                };
+                if has_pci_info(extensions, device) {
+                    id.next = (&mut pci as *mut PciBusInfo).cast();
+                }
                 let mut props = VkProperties {
                     kind: 1000059001,
                     next: (&mut id as *mut DeviceId).cast(),
@@ -157,7 +212,7 @@ pub fn graphics() -> Result<Value> {
                 } else {
                     properties(device, props.data.as_mut_ptr().cast());
                 }
-                let [api, driver, vendor, _, kind] = numbers(&props.data);
+                let [api, driver, vendor, product, kind] = numbers(&props.data);
                 let bytes = props
                     .data
                     .iter()
@@ -186,9 +241,19 @@ pub fn graphics() -> Result<Value> {
                         driver & 4095
                     )
                 };
-                let mut value = json!({"name":name,"vendor_id":vendor,"type":kind,"api_version":format!("{}.{}.{}",(api>>22)&127,(api>>12)&1023,api&4095),"driver_version":version});
+                let mut value = json!({"name":name,"vendor_id":vendor,"device_id":product,"type":kind,"api_version":format!("{}.{}.{}",(api>>22)&127,(api>>12)&1023,api&4095),"driver_version":version});
                 if id.uuid.iter().any(|v| *v != 0) {
                     value["device_uuid"] = json!(hex::encode(id.uuid));
+                }
+                if pci.domain <= 0xffff
+                    && pci.bus <= 0xff
+                    && pci.device <= 0x1f
+                    && pci.function <= 7
+                {
+                    value["pci_bus_id"] = json!(format!(
+                        "{:04x}:{:02x}:{:02x}.{}",
+                        pci.domain, pci.bus, pci.device, pci.function
+                    ));
                 }
                 result.push(value);
             }

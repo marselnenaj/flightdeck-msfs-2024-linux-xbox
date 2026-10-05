@@ -1,0 +1,91 @@
+{
+  "schema": 1,
+  "rocm": "7.1.1",
+  "purpose": "Isolated build and GPU research; not a system installer or runtime download policy",
+  "packages": [
+    {
+      "name": "comgr",
+      "version": "3.0.0.70101-38~24.04",
+      "url": "https://repo.radeon.com/rocm/apt/7.1.1/pool/main/c/comgr/comgr_3.0.0.70101-38~24.04_amd64.deb",
+      "bytes": 59925506,
+      "sha256": "0bf2d4ba3c0ff7a1a1818916f05ee164acb1151ea8685ae11e2c2aae7710eaf7"
+    },
+    {
+      "name": "hip-dev",
+      "version": "7.1.52802.70101-38~24.04",
+      "url": "https://repo.radeon.com/rocm/apt/7.1.1/pool/main/h/hip-dev/hip-dev_7.1.52802.70101-38~24.04_amd64.deb",
+      "bytes": 369254,
+      "sha256": "736acec734396969e11e8813a55742de536c53324fab3a836d75aa3dbf0d9651"
+    },
+    {
+      "name": "hip-runtime-amd",
+      "version": "7.1.52802.70101-38~24.04",
+      "url": "https://repo.radeon.com/rocm/apt/7.1.1/pool/main/h/hip-runtime-amd/hip-runtime-amd_7.1.52802.70101-38~24.04_amd64.deb",
+      "bytes": 13126900,
+      "sha256": "b5d86645329574b89d57a8cc836153ec4bf3488a7b12df25e70117404c1da451"
+    },
+    {
+      "name": "hipcc",
+      "version": "1.1.1.70101-38~24.04",
+      "url": "https://repo.radeon.com/rocm/apt/7.1.1/pool/main/h/hipcc/hipcc_1.1.1.70101-38~24.04_amd64.deb",
+      "bytes": 215038,
+      "sha256": "4716496386b8d77fff676b397926c9553d94c3de0dc6cee7728101da95b28cc8"
+    },
+    {
+      "name": "hsa-rocr",
+      "version": "1.18.0.70101-38~24.04",
+      "url": "https://repo.radeon.com/rocm/apt/7.1.1/pool/main/h/hsa-rocr/hsa-rocr_1.18.0.70101-38~24.04_amd64.deb",
+      "bytes": 1481338,
+      "sha256": "0c2cc838d3cef73fa405a02e72c2bad1f24ef041a7d46bafa19d7dc0620230d8"
+    },
+    {
+      "name": "hsa-rocr-dev",
+      "version": "1.18.0.70101-38~24.04",
+      "url": "https://repo.radeon.com/rocm/apt/7.1.1/pool/main/h/hsa-rocr-dev/hsa-rocr-dev_1.18.0.70101-38~24.04_amd64.deb",
+      "bytes": 139254,
+      "sha256": "e5a23a8ad94614a5178943b4e26c49a2bf5c70cd9a66d653f6ec17910157948f"
+    },
+    {
+      "name": "rocm-core",
+      "version": "7.1.1.70101-38~24.04",
+      "url": "https://repo.radeon.com/rocm/apt/7.1.1/pool/main/r/rocm-core/rocm-core_7.1.1.70101-38~24.04_amd64.deb",
+      "bytes": 14274,
+      "sha256": "4098bbfea0e37c23d593d626a6472d6b9d5484bf6c87bc47b4f33d7939cc3161"
+    },
+    {
+      "name": "rocm-device-libs",
+      "version": "1.0.0.70101-38~24.04",
+      "url": "https://repo.radeon.com/rocm/apt/7.1.1/pool/main/r/rocm-device-libs/rocm-device-libs_1.0.0.70101-38~24.04_amd64.deb",
+      "bytes": 727502,
+      "sha256": "d5e97c155473486e8ba7b2ba6b49c666301cd7accfe30f8afba6bf3aa8fb0083"
+    },
+    {
+      "name": "rocm-llvm",
+      "version": "20.0.0.25444.70101-38~24.04",
+      "url": "https://repo.radeon.com/rocm/apt/7.1.1/pool/main/r/rocm-llvm/rocm-llvm_20.0.0.25444.70101-38~24.04_amd64.deb",
+      "bytes": 531126512,
+      "sha256": "16cda1ee9626e050e52275fced1e9d76a24897b966c33afbd45ed1ebaa42d7c1"
+    },
+    {
+      "name": "rocminfo",
+      "version": "1.0.0.70101-38~24.04",
+      "url": "https://repo.radeon.com/rocm/apt/7.1.1/pool/main/r/rocminfo/rocminfo_1.0.0.70101-38~24.04_amd64.deb",
+      "bytes": 28478,
+      "sha256": "3c5d9f908c0c3b03cec68b71feb40c27bf06161b06e9d0cbbca10836a806322e"
+    },
+    {
+      "name": "rocprofiler-register",
+      "version": "0.6.0.70101-38~24.04",
+      "url": "https://repo.radeon.com/rocm/apt/7.1.1/pool/main/r/rocprofiler-register/rocprofiler-register_0.6.0.70101-38~24.04_amd64.deb",
+      "bytes": 242884,
+      "sha256": "dd1078b96457d92c0e81eccfe4ed61e341f3334ba39b3f468cfb1337fd52ab3f"
+    },
+    {
+      "name": "rocwmma-dev",
+      "version": "2.1.0.70101-38~24.04",
+      "url": "https://repo.radeon.com/rocm/apt/7.1.1/pool/main/r/rocwmma-dev/rocwmma-dev_2.1.0.70101-38~24.04_amd64.deb",
+      "bytes": 101104,
+      "sha256": "13c5ffc6ec6bb2009958a1073245e8eaf8f711f19c95f004fb5b81f94a14c353"
+    }
+  ]
+}

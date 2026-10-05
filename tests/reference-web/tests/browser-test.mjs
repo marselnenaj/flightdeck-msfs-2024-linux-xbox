@@ -265,7 +265,7 @@ const server = createServer(async (req,res) => {
   const name = url.pathname === '/' ? 'index.html' : url.pathname.slice(1);
   if (!files.has(name)) {res.writeHead(404);res.end();return;}
   const type = {html:'text/html',css:'text/css',js:'text/javascript',svg:'image/svg+xml',png:'image/png',woff2:'font/woff2'}[name.split('.').pop()];
-  res.setHeader('Content-Type',type);res.end(await readFile(join(assetBase,name)));
+  res.setHeader('Content-Type',type);res.end(await readFile(join(assetBase,name)).catch(error => { if (!['flight-panorama.png','flight-panorama-2020.png','manrope-variable.woff2','mark.svg'].includes(name)) throw error; return readFile(join(assetBase,'../../ui',name)); }));
 });
 await new Promise((resolve,reject) => {server.once('error',reject);server.listen(0,'127.0.0.1',resolve);});
 const origin = `http://127.0.0.1:${server.address().port}`;

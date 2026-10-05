@@ -40,8 +40,8 @@ def reject_constant(_value):
     raise ValueError("Non-finite JSON number")
 
 
-def read_json(data, label):
-    if len(data) > JSON_MAX:
+def read_json(data, label, *, maximum=None):
+    if len(data) > (JSON_MAX if maximum is None else maximum):
         raise ValueError(label + " exceeds the JSON size limit")
     try:
         value = json.loads(data, object_pairs_hook=unique_object,

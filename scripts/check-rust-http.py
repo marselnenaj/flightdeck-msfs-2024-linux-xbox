@@ -78,12 +78,10 @@ def main():
             assert request("/private/config.json")[0] == 404
             assert request("/../Cargo.toml")[0] == 404
             checks += 8
-            for name in ("index.html", "app.js", "polling.js", "reservations.js", "checks.js", "formatters.js", "styles.css", "manrope-variable.woff2", "flight-panorama.png", "flight-panorama-2020.png"):
-                code, headers, content = request("/" + name)
-                assert code == 200 and content == (Path(__file__).resolve().parents[1] / "ui" / name).read_bytes()
-                assert int(headers["content-length"]) == len(content)
-                assert "frame-ancestors 'none'" in headers["content-security-policy"]
-                checks += 2
+            # The production service exposes API data, never executable web UI.
+            for name in ("index.html", "app.js", "styles.css", "i18n.js"):
+                assert request("/" + name)[0] == 404
+                checks += 1
             runtime = work / "runtime with spaces"
             for relative in ("private", "tools", "games/MSFS2024", "local/msfs-prefix/drive_c/windows/system32"):
                 (runtime / relative).mkdir(parents=True, mode=0o700)

@@ -308,13 +308,17 @@ pub fn run(root: &Path, arguments: &[OsString]) -> Result<u8> {
     {
         game_arguments.insert(0, "-FastLaunch".into());
     }
+    // Keep the optional compute preload out of the supervisor, broker and
+    // companion helpers. Only the game's Wine command receives this overlay.
+    let mut game_env = env.clone();
+    let _neural_preload = crate::neural_rendering::prepare(&root, &view.path, &mut game_env)?;
     // Install signal handlers before the game starts. Helpers never inherit any
     // licensed image descriptors; only the game process gets that explicit set.
     tokio::runtime::Builder::new_current_thread().enable_all().build()?.block_on(async{
         let mut term=tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())?;let mut interrupt=tokio::signal::unix::signal(tokio::signal::unix::SignalKind::interrupt())?;
         let mut guard=None;let guard_path=prefix.join("drive_c/windows/system32/FenixWindowGuard.exe");if std::env::var("WINE_FENIX_WINDOW_GUARD").is_ok_and(|v|v=="1")&&guard_path.is_file(){let mut c=Command::new(&wine);c.arg(&guard_path).env_clear().envs(&env).env_remove("WINE_DLL_FILE_MAP").stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null());guard=Some(OwnedChild(process::spawn(&mut c,None)?));}
         let mut refresh=None;if std::env::var("WINE_FENIX_DISPLAY_REFRESH").is_ok_and(|v|v=="1")&&prefix.join("drive_c/windows/system32/FenixMCDURefresh.exe").is_file(){let mut c=Command::new(std::env::current_exe()?);c.args(["display-refresh","--runtime"]).arg(&root).env_clear().envs(&env).env_remove("WINE_DLL_FILE_MAP").stdin(Stdio::null());refresh=Some(OwnedRefresh(process::spawn(&mut c,None)?));}
-        let mut command=Command::new(&wine);command.arg(&stub).args(&game_arguments).env_clear().envs(&env).current_dir(&view.path);let descriptors:Vec<_>=mapped.iter().map(|m|&m.file).collect();let mut game=OwnedChild(process::spawn_files(&mut command,&descriptors)?);let started=Instant::now();
+        let mut command=Command::new(&wine);command.arg(&stub).args(&game_arguments).env_clear().envs(&game_env).current_dir(&view.path);let descriptors:Vec<_>=mapped.iter().map(|m|&m.file).collect();let mut game=OwnedChild(process::spawn_files(&mut command,&descriptors)?);let started=Instant::now();
         let status=loop{if let Some(code)=game.0.try_wait()?{break code;}let signal=tokio::select!{_ = term.recv()=>Some(rustix::process::Signal::TERM),_ = interrupt.recv()=>Some(rustix::process::Signal::INT),_ = tokio::time::sleep(std::time::Duration::from_millis(25))=>None};if let Some(signal)=signal&&let Some(pid)=rustix::process::Pid::from_raw(game.0.id() as i32){let _=rustix::process::kill_process(pid,signal);}};
         let code=status.code().unwrap_or_else(||128+status.signal().unwrap_or(1));eprintln!("xodus-wine-launch: wine_pid={} exit_code={code} elapsed_seconds={:.3}",game.0.id(),started.elapsed().as_secs_f64());drop(refresh);drop(guard);Ok(code.clamp(0,255) as u8)
     })

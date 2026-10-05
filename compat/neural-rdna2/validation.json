@@ -1,0 +1,1137 @@
+{
+  "schema": 3,
+  "date": "2026-10-05T13:33:19.272Z",
+  "base_commit": "cbda989648da2749c5b7029c7b48d92bd2abf31e",
+  "scope": "Experimental gfx1030 actual-model compute, Rust coefficient import, Wine transport and D3D12 same-list texture submission; MSFS interception and NVIDIA equivalence unverified",
+  "gpu": {
+    "name": "AMD Radeon RX 6900 XT",
+    "arch": "gfx1030",
+    "kernel": "7.2.5-3-omarchy"
+  },
+  "backend": {
+    "version": "0.2.6.1-flightdeck.gfx1030.4",
+    "architecture": "gfx1030",
+    "source_archive_sha256": "e74022396b86ccd776ac8e7aa666a91e3cc74136d428a3eb470f1ac9a05d7ed4",
+    "bytes": 16303528,
+    "sha256": "0841f0206917740c294ff2ed2a1ea37b0ea6be71db7238ec1777eb185a8e65e7",
+    "source_revision": "3c7740e62610d4bca3fd82669002288b4293a8b4",
+    "compiler": "ROCm 7.1.1 HIP 7.1.52802-26aae437f6; AMD clang 20.0.0git 27682a16360e33e37c4f3cc6adf9a620733f8fe1",
+    "identical_rebuild_in_different_directory": true
+  },
+  "checks": {
+    "rust": {
+      "passed": 152,
+      "failed": 0,
+      "ignored": 6,
+      "log_sha256": "10eec26a7afcde63a95c8c1bf9f88432fc07af638b804fb8a8a2a7c3f2accc8c"
+    },
+    "clippy_all_targets": {
+      "result": "passed with warnings denied",
+      "log_sha256": "a22190b964f63e69ca2b8a783bf82177591441d2acce490b7e05a9abff4b5d3a"
+    },
+    "fmt": "passed",
+    "release_build": {
+      "result": "passed",
+      "public_version": "0.2.2",
+      "published": false,
+      "binary_sha256": "b339d4b72346ea2d94f5aa1f2bae29c8b7b0d8447bd2f8249a0329e6c2d59bf2"
+    },
+    "gpu": [
+      {
+        "name": "test_wave",
+        "result": "passed",
+        "log_sha256": "6684348fcaf77242002fd096750ddacfdd18d2ec21f461dad7689a4ab7a33583"
+      },
+      {
+        "name": "test_wmma",
+        "result": "passed",
+        "log_sha256": "749daf79bf46480cfcac8977cfab51450659037ce421ad04b455443988862c96"
+      },
+      {
+        "name": "test_quantize",
+        "result": "passed",
+        "log_sha256": "f7b49ffe7d6216468b44e0ab3b805bed8842c9e88ca5f4da3592d7ae1e2f086d"
+      },
+      {
+        "name": "test_stages",
+        "result": "passed",
+        "log_sha256": "6efd653d69495a2ce0c7ba2a26c0f7228e7f9b288e12b49970970b6a0927b912"
+      },
+      {
+        "name": "test_attention",
+        "result": "passed",
+        "log_sha256": "823823d41043a6e797cc9d34f2581fe330735ee392a6bf65ca1c7f2f66d5ae61"
+      },
+      {
+        "name": "test_residual",
+        "result": "passed",
+        "log_sha256": "de86cefac0d07f5a706c4ba215dcd4650c1b594bcb8594c4164877dede7d1729"
+      },
+      {
+        "name": "test_linear",
+        "result": "passed",
+        "log_sha256": "6aacb9f6f8afbe9d9aef97fdf974d071af6a8692d3f9b681ad04fdbf39027ce0"
+      },
+      {
+        "name": "test_logical_ops",
+        "result": "passed",
+        "log_sha256": "cf2a3190597f1d9a6b81c709bcc0fd43a8db91f0cf746aa3de45adfddb9e1bb2"
+      },
+      {
+        "name": "test_ffn_f32",
+        "result": "passed",
+        "log_sha256": "7b72d896834b2347a7df49a8dfda0643a529ac446c1a8048e2b9f9d85a20baaf"
+      },
+      {
+        "name": "test_graph_ops",
+        "result": "passed",
+        "log_sha256": "12c5e38a71ff07a51f28f51785ff45d894a564fb1602e87b1b00a72900e382f3"
+      },
+      {
+        "name": "test_graph_blocks",
+        "result": "passed",
+        "log_sha256": "a6d2105826aca596ea121c9e027cf1efb7f827d754b97669332718d32a56f54e"
+      },
+      {
+        "name": "test_graph_vit",
+        "result": "passed",
+        "log_sha256": "071869a776744bb8ccacd9965fb92749cf1eca3adb42b72aa6728c02b95930ed"
+      },
+      {
+        "name": "test_c32_chain",
+        "result": "passed",
+        "log_sha256": "a886dc3ae6e778ac39b6792038e02eb9b3b41896ee4ba25b8d7de6469cd41c2b"
+      },
+      {
+        "name": "test_network",
+        "result": "passed",
+        "log_sha256": "7fa40d976e109e71c9e6151d26865fc3ec6695aa0f14f284bf7ca7dd2c233553"
+      }
+    ],
+    "fp8_conversion_cases": 66552,
+    "matrix_outputs_checked": 184320,
+    "matrix_mismatches": 0,
+    "primitive_uses_production_compiler_flags": true,
+    "c32_residual_epilogue": {
+      "outputs_checked": 12288,
+      "mismatches": 0,
+      "oracle": "Independent double-to-half, includes two observed real-model halfway cases"
+    },
+    "c32_chain": {
+      "outputs_checked": 32768,
+      "mismatches": 0,
+      "weights": "dense deterministic random",
+      "paths": [
+        "fused",
+        "split"
+      ],
+      "groups": [
+        "encoder",
+        "decoder"
+      ],
+      "shifts": [
+        0,
+        3,
+        1,
+        2
+      ]
+    },
+    "launcher_hip_vulkan_probe": {
+      "gpu": {
+        "arch": "gfx1030",
+        "index": 0,
+        "memory_roundtrip": true,
+        "name": "AMD Radeon RX 6900 XT",
+        "pci_bus_id": "0000:03:00.0",
+        "supported": true,
+        "vulkan_uuid": "00000000030000000000000000000000"
+      },
+      "msfs_rendering_verified": false,
+      "state": "prerequisites_checked"
+    },
+    "rdna4_bundle_rejected_on_gfx1030": true,
+    "probe_runtime_profile_mode": "off",
+    "fp8_decode_paths": [
+      "FP32",
+      "direct FP16"
+    ],
+    "signed_nan_and_zero_checked": true,
+    "vulkan_discovery": {
+      "devices": [
+        {
+          "api_version": "1.4.354",
+          "device_id": 29631,
+          "device_uuid": "00000000030000000000000000000000",
+          "driver_version": "26.2.2",
+          "name": "AMD Radeon RX 6900 XT (RADV NAVI21)",
+          "pci_bus_id": "0000:03:00.0",
+          "type": 2,
+          "vendor_id": 4098
+        },
+        {
+          "api_version": "1.4.354",
+          "device_id": 42880,
+          "device_uuid": "868080a7040000000002000000000000",
+          "driver_version": "26.2.2",
+          "name": "Intel(R) Graphics (RPL-S)",
+          "pci_bus_id": "0000:00:02.0",
+          "type": 1,
+          "vendor_id": 32902
+        }
+      ],
+      "status": "ready"
+    },
+    "pci_driver_fixture": {
+      "result": "passed",
+      "cases": 33,
+      "coverage": [
+        "advertised PCI identity",
+        "optional enumeration absent/failing/oversized/changing",
+        "properties2 absent",
+        "unfilled or invalid PCI fields",
+        "Vulkan 1.0 fallback"
+      ],
+      "log_sha256": "e289cd6e36464ce8467a4c7e7f14d8f1c0f7bdb807ccd3380d826aa1a52ac6da"
+    },
+    "source_export": {
+      "result": "passed",
+      "source_files": 351,
+      "boundary_tests": 18,
+      "log_sha256": "44d443cb8422f1fdb3d05ba6f7ef4c66b640d63fc2df14e37146e289992ac823",
+      "includes": [
+        "HIP source tests",
+        "upstream MIT license"
+      ],
+      "contains_model_or_native_binaries": false
+    }
+  },
+  "synthetic_network": {
+    "weights": "Synthetic fixture, not the NR model",
+    "input_width": 1920,
+    "input_height": 1080,
+    "configuration": {
+      "DLSS5_MH_PROD": "1",
+      "DLSS5_C32_SPLIT": "1"
+    },
+    "blocks_checked": 71,
+    "output_mismatches": 0,
+    "normal_gpu_ms": 228.258,
+    "model_allocation_delta_bytes": 4607442944,
+    "seed_history_reset_and_reinitialization": "passed"
+  },
+  "model_import": {
+    "source_kind": "weights-ht",
+    "source_sha256": "836f445d06ecd2e59bb9f17b84b91c143396fd76ccda1c9dc7fe81d5edd548f4",
+    "archive_bytes": 147695410,
+    "archive_sha256": "836f445d06ecd2e59bb9f17b84b91c143396fd76ccda1c9dc7fe81d5edd548f4",
+    "archive_records": 153,
+    "mapping_commit": "15799b1600d57b849597a44be53ac892b7a2faea",
+    "tables": 223,
+    "identical_table_bytes": 629178920,
+    "independent_reference": "Pinned upstream Python decoder run separately for research; no Python used by Flightdeck import or launch",
+    "reference_decoder_revision": "3c7740e62610d4bca3fd82669002288b4293a8b4",
+    "reference_decoder_sha256": "026cfd878c32596b28411bd724f1e62135543989e963ce1cab0b30470cb78311",
+    "reference_archive_wrapper_sha256": "14b8b699fe80e1266af8e11086fdb7ed6a34f146871d3b781a1fc8801b3ca32e",
+    "table_lock_sha256": "3c3e516309ea334e0d26e6785aed88ef6d95df1968417291d23c078cb16bd58b",
+    "imported_manifest_sha256": "8a854e1a7990897aadfcd57de3fdf5b59cddcdc11e497c0e976fae748f9500d0",
+    "existing_cache_preserved": true,
+    "tamper_with_self_updated_manifest_rejected": true,
+    "real_archive_test_log_sha256": "8a9976465cdf5d8014467ba896d5a06a1b63056a0320c3f742791188c94a0a9d",
+    "research_container": {
+      "repository": "Bandukids/DLSS-Runtimes",
+      "revision": "93ca8dc71342592e6d17546da7d59ff3d3c63864",
+      "file": "nvngx_dlssnr.dll",
+      "sha256": "8270b350cd82de5ce89806872cdd6b6a9249b80836b91bbeb3573470744cc206",
+      "resource_offset": "0x114a160",
+      "executed": false,
+      "installed": false,
+      "redistributed": false,
+      "original_dll_provenance_claimed": false
+    },
+    "nvidia_equivalence": false
+  },
+  "performance_comparisons": {
+    "real": {
+      "scope": "1080p gradient; seed 7; actual NR weights imported by Rust; not game FPS or NVIDIA image quality",
+      "order": [
+        "baseline",
+        "optimized",
+        "optimized",
+        "baseline"
+      ],
+      "warm_up_frames_discarded_per_run": 1,
+      "runs": [
+        {
+          "implementation": "baseline",
+          "log_sha256": "91cf9c54141d9f82fe9ac70d511517e5f24abd67326b3455f4df685d9a257963",
+          "output_sha256": "239d67893a7dad244d7c27de641052b47af02c4293608d3ce4febdc0501a96a1"
+        },
+        {
+          "implementation": "optimized",
+          "log_sha256": "5a558776a25cfe70fe87c908b5993cbfd9e696a72647f78908c06b515b429635",
+          "output_sha256": "239d67893a7dad244d7c27de641052b47af02c4293608d3ce4febdc0501a96a1"
+        },
+        {
+          "implementation": "optimized",
+          "log_sha256": "f03cc280f3fe016c3ed0af77d61361fc16089caa68ed96f4e6779eb9f7057a2c",
+          "output_sha256": "239d67893a7dad244d7c27de641052b47af02c4293608d3ce4febdc0501a96a1"
+        },
+        {
+          "implementation": "baseline",
+          "log_sha256": "3352f9924c37629edf5604f31d530526d16ebc299022c4ebffb6397e30b4190c",
+          "output_sha256": "239d67893a7dad244d7c27de641052b47af02c4293608d3ce4febdc0501a96a1"
+        }
+      ],
+      "baseline": {
+        "version": "0.2.6.1-flightdeck.gfx1030.1",
+        "sha256": "15fa855e4965923723754fed80c3d5aa64a98342b31d341bc6dc7e750869899b",
+        "configuration": {
+          "DLSS5_MH_PROD": "1",
+          "DLSS5_C32_SPLIT": "0"
+        },
+        "warm_gpu_samples_ms": [
+          860.952,
+          867.826,
+          864.115,
+          866.068,
+          864.314,
+          864.559,
+          863.405,
+          865.697,
+          867.675,
+          869.053,
+          869.183,
+          867.506,
+          868.009,
+          866.077
+        ],
+        "count": 14,
+        "min_ms": 860.952,
+        "median_ms": 866.0725,
+        "max_ms": 869.183,
+        "mean_ms": 866.0313571428571
+      },
+      "optimized": {
+        "version": "0.2.6.1-flightdeck.gfx1030.4",
+        "sha256": "0841f0206917740c294ff2ed2a1ea37b0ea6be71db7238ec1777eb185a8e65e7",
+        "configuration": {
+          "DLSS5_MH_PROD": "1",
+          "DLSS5_C32_SPLIT": "1"
+        },
+        "warm_gpu_samples_ms": [
+          234.245,
+          233.367,
+          233.547,
+          232.943,
+          233.627,
+          233.594,
+          234.348,
+          233.436,
+          233.974,
+          233.826,
+          234.151,
+          233.394,
+          233.944,
+          233.975
+        ],
+        "count": 14,
+        "min_ms": 232.943,
+        "median_ms": 233.7265,
+        "max_ms": 234.348,
+        "mean_ms": 233.74078571428572
+      },
+      "identical_output_bytes": 24883200,
+      "speedup": 3.7054955257533915,
+      "gpu_time_reduction_percent": 73.0130560663224
+    },
+    "synthetic": {
+      "scope": "1080p gradient; seed 7; synthetic fixture; not game FPS or NVIDIA image quality",
+      "order": [
+        "baseline",
+        "optimized",
+        "optimized",
+        "baseline"
+      ],
+      "warm_up_frames_discarded_per_run": 1,
+      "runs": [
+        {
+          "implementation": "baseline",
+          "log_sha256": "2a751f2bc859937432ac795ac722abc966c6d7492c9ddb70eab20c0a67f771e8",
+          "output_sha256": "f369dc731c3588c04ed450f15053f2e2a0d41d32cdeb4f5a05669fdf9ac3df81"
+        },
+        {
+          "implementation": "optimized",
+          "log_sha256": "511c3965323ea864ab6b92adc59ec510b6d15569bccfee4456be3038e713b9c2",
+          "output_sha256": "f369dc731c3588c04ed450f15053f2e2a0d41d32cdeb4f5a05669fdf9ac3df81"
+        },
+        {
+          "implementation": "optimized",
+          "log_sha256": "869837c80bd7b27e39b8fa73b9acc12f30f70b4c74e42154f837d8f62954a458",
+          "output_sha256": "f369dc731c3588c04ed450f15053f2e2a0d41d32cdeb4f5a05669fdf9ac3df81"
+        },
+        {
+          "implementation": "baseline",
+          "log_sha256": "04d59a17748bb1e15bc879220ebf66aa8771e695dc1512eefebe570d9c7fddd7",
+          "output_sha256": "f369dc731c3588c04ed450f15053f2e2a0d41d32cdeb4f5a05669fdf9ac3df81"
+        }
+      ],
+      "baseline": {
+        "version": "0.2.6.1-flightdeck.gfx1030.1",
+        "sha256": "15fa855e4965923723754fed80c3d5aa64a98342b31d341bc6dc7e750869899b",
+        "configuration": {
+          "DLSS5_MH_PROD": "1",
+          "DLSS5_C32_SPLIT": "0"
+        },
+        "warm_gpu_samples_ms": [
+          866.964,
+          870.781,
+          861.958,
+          860.505,
+          861.419,
+          864.968,
+          861.457,
+          860.231,
+          863.411,
+          859.374,
+          860.391,
+          861.131,
+          862.133,
+          860.892
+        ],
+        "count": 14,
+        "min_ms": 859.374,
+        "median_ms": 861.438,
+        "max_ms": 870.781,
+        "mean_ms": 862.5439285714285
+      },
+      "optimized": {
+        "version": "0.2.6.1-flightdeck.gfx1030.4",
+        "sha256": "0841f0206917740c294ff2ed2a1ea37b0ea6be71db7238ec1777eb185a8e65e7",
+        "configuration": {
+          "DLSS5_MH_PROD": "1",
+          "DLSS5_C32_SPLIT": "1"
+        },
+        "warm_gpu_samples_ms": [
+          226.824,
+          225.225,
+          226.679,
+          226.381,
+          226.866,
+          225.99,
+          226.264,
+          226.599,
+          227.054,
+          226.905,
+          226.536,
+          226.721,
+          227.127,
+          227.3
+        ],
+        "count": 14,
+        "min_ms": 225.225,
+        "median_ms": 226.7,
+        "max_ms": 227.3,
+        "mean_ms": 226.60507142857142
+      },
+      "identical_output_bytes": 24883200,
+      "speedup": 3.7999029554477284,
+      "gpu_time_reduction_percent": 73.68353845546632
+    },
+    "incremental": {
+      "scope": "1080p gradient; seed 7; actual NR weights imported by Rust; not game FPS or NVIDIA image quality",
+      "order": [
+        "baseline",
+        "optimized",
+        "optimized",
+        "baseline"
+      ],
+      "warm_up_frames_discarded_per_run": 1,
+      "runs": [
+        {
+          "implementation": "baseline",
+          "log_sha256": "d5da7953037a931e4f784f58eb4f0aa27af73bb106bb38b010700ded2d8eca86",
+          "output_sha256": "239d67893a7dad244d7c27de641052b47af02c4293608d3ce4febdc0501a96a1"
+        },
+        {
+          "implementation": "optimized",
+          "log_sha256": "e904dd999860498a0a3bac299c9e4ee10f8380fe44d177f1ee30668ac04b439f",
+          "output_sha256": "239d67893a7dad244d7c27de641052b47af02c4293608d3ce4febdc0501a96a1"
+        },
+        {
+          "implementation": "optimized",
+          "log_sha256": "7daae87b4f27f722c79d9ac86430e14184401a3819b58086c16ac275d0b8a008",
+          "output_sha256": "239d67893a7dad244d7c27de641052b47af02c4293608d3ce4febdc0501a96a1"
+        },
+        {
+          "implementation": "baseline",
+          "log_sha256": "8d1990e9324f0e45008b820969a0e6001712513a55346b15a8ba01e569d0f00c",
+          "output_sha256": "239d67893a7dad244d7c27de641052b47af02c4293608d3ce4febdc0501a96a1"
+        }
+      ],
+      "baseline": {
+        "version": "0.2.6.1-flightdeck.gfx1030.3",
+        "sha256": "b03031108486cce27fa93e694a47f154fd96cb6dcecb1fbc60420b455a3f9637",
+        "configuration": {
+          "DLSS5_MH_PROD": "1",
+          "DLSS5_C32_SPLIT": "1"
+        },
+        "warm_gpu_samples_ms": [
+          249.023,
+          249.483,
+          248.592,
+          248.505,
+          248.89,
+          246.953,
+          248.313,
+          248.103,
+          248.416,
+          248.327,
+          248.913,
+          248.717,
+          249.164,
+          248.083
+        ],
+        "count": 14,
+        "min_ms": 246.953,
+        "median_ms": 248.5485,
+        "max_ms": 249.483,
+        "mean_ms": 248.5344285714286
+      },
+      "optimized": {
+        "version": "0.2.6.1-flightdeck.gfx1030.4",
+        "sha256": "0841f0206917740c294ff2ed2a1ea37b0ea6be71db7238ec1777eb185a8e65e7",
+        "configuration": {
+          "DLSS5_MH_PROD": "1",
+          "DLSS5_C32_SPLIT": "1"
+        },
+        "warm_gpu_samples_ms": [
+          234.328,
+          233.558,
+          235.023,
+          234.799,
+          234.698,
+          235.011,
+          235.865,
+          233.198,
+          235.015,
+          235.053,
+          235.218,
+          235.355,
+          234.513,
+          235.368
+        ],
+        "count": 14,
+        "min_ms": 233.198,
+        "median_ms": 235.01299999999998,
+        "max_ms": 235.865,
+        "mean_ms": 234.7858571428571
+      },
+      "identical_output_bytes": 24883200,
+      "speedup": 1.057594686251399,
+      "gpu_time_reduction_percent": 5.445818421756721
+    }
+  },
+  "additional_inputs": {
+    "scope": "Diverse static public evaluation images; exact numerical comparison, not game frames or NVIDIA image quality",
+    "source_revision": "d3c44c4ea314d03ea7540cfc9ac4411f9dcfba28",
+    "source_repository": "taowen/dlss5-onnx",
+    "preprocessing": "ImageMagick Lanczos cover-resize then center-crop to 1920x1080; RGB8 / 255, alpha=1; no linearization",
+    "scenes": [
+      {
+        "name": "blue_marble",
+        "source_png_sha256": "a8fa954ad00d9d972356685241e1d4814358f17471320a3301a7c58acf133fbb",
+        "input_sha256": "180019c9dbec7608e2b7bf29a78afe2167232d7ed099df8ef05f6380dd986d64",
+        "input_bytes": 33177600,
+        "runs": [
+          {
+            "variant": "baseline",
+            "output_sha256": "febf0dcf57357066c6db19f01894547d7bd43ad0e04d4b4ef456767a495627c7",
+            "log_sha256": "da4e4325e637f1f4685078fcef998d6b3d1f809eb22924c92eb425ec913c085b",
+            "frames": 2,
+            "all_blocks": 71,
+            "finite": true,
+            "replay": true
+          },
+          {
+            "variant": "optimized",
+            "output_sha256": "febf0dcf57357066c6db19f01894547d7bd43ad0e04d4b4ef456767a495627c7",
+            "log_sha256": "766083e35f762731616e3433b59c38f7830f438b86712cea8765838ff43c49f1",
+            "frames": 2,
+            "all_blocks": 71,
+            "finite": true,
+            "replay": true
+          }
+        ],
+        "identical_output_bytes": 24883200
+      },
+      {
+        "name": "portrait_cc0",
+        "source_png_sha256": "3186cba4948f4087fa40b29fd85cb049298890d149ea5c7de760e9ecac6ee267",
+        "input_sha256": "d06b2627d12f043d9989d61794402da55002a19149b6003fe27a3ed67657f039",
+        "input_bytes": 33177600,
+        "runs": [
+          {
+            "variant": "baseline",
+            "output_sha256": "b63351c540ed3b402c441b7c572950b363ac7187755a00851b05e961b140dc26",
+            "log_sha256": "69d9cc0749086ad87b03b3495e0fee2f28290ca80f1de476bd978dba7c46f108",
+            "frames": 2,
+            "all_blocks": 71,
+            "finite": true,
+            "replay": true
+          },
+          {
+            "variant": "optimized",
+            "output_sha256": "b63351c540ed3b402c441b7c572950b363ac7187755a00851b05e961b140dc26",
+            "log_sha256": "dcb4df5d396cd8745516d996b1959fb7dc743f3d2f46aa8c780aef675b588087",
+            "frames": 2,
+            "all_blocks": 71,
+            "finite": true,
+            "replay": true
+          }
+        ],
+        "identical_output_bytes": 24883200
+      },
+      {
+        "name": "scenic_landscape",
+        "source_png_sha256": "1fff3863e062c9809f3c970ad329dd056ff55465e4d63d9b3129b3cfa35186cd",
+        "input_sha256": "16fa285113fff918a998fc91a9a59ec1f2944d54e9e766e6e2563506172b9dcf",
+        "input_bytes": 33177600,
+        "runs": [
+          {
+            "variant": "baseline",
+            "output_sha256": "91441c4c1b6cf1e5c146b8d145a4b67b2954d24f1eca623364c04915eb9e5eee",
+            "log_sha256": "d5e54888cc58c49df837742f388dd1fb37327fcdf56fe77b16b2b3768a996888",
+            "frames": 2,
+            "all_blocks": 71,
+            "finite": true,
+            "replay": true
+          },
+          {
+            "variant": "optimized",
+            "output_sha256": "91441c4c1b6cf1e5c146b8d145a4b67b2954d24f1eca623364c04915eb9e5eee",
+            "log_sha256": "eeb7fbe83ad7208460a78c98d36b1e3b1c87d734c693e26b62bfd4046a55c9e4",
+            "frames": 2,
+            "all_blocks": 71,
+            "finite": true,
+            "replay": true
+          }
+        ],
+        "identical_output_bytes": 24883200
+      },
+      {
+        "name": "stone_texture",
+        "source_png_sha256": "705026f71bf7a8887b6b41b265efb0a6a10ee62951407b5c7668befcd6dfec16",
+        "input_sha256": "2525d4a5289696cd31c9c0973a5a4a97547fb7c5a907e42e0056ebd37e329bf0",
+        "input_bytes": 33177600,
+        "runs": [
+          {
+            "variant": "baseline",
+            "output_sha256": "844ef8426d2e17d00a3cbc3d1b720cdbf7b081daeaa6e84d29d37a0ad6a2feb0",
+            "log_sha256": "7826a896439fe9be4438d9cc7099a16dbce56535884ba00111ff01e72952c3d6",
+            "frames": 2,
+            "all_blocks": 71,
+            "finite": true,
+            "replay": true
+          },
+          {
+            "variant": "optimized",
+            "output_sha256": "844ef8426d2e17d00a3cbc3d1b720cdbf7b081daeaa6e84d29d37a0ad6a2feb0",
+            "log_sha256": "e72a67d98e75dd8d4bc382a1559edb36656b55411625e93f1e966624f935a7a6",
+            "frames": 2,
+            "all_blocks": 71,
+            "finite": true,
+            "replay": true
+          }
+        ],
+        "identical_output_bytes": 24883200
+      }
+    ]
+  },
+  "wine": [
+    {
+      "name": "default",
+      "version": "1786134211 xodus-bleeding-edge-11.0-20260803-3-g7c0b4354",
+      "wine_sha256": "041dd0e1ff3f799c4cc155edabf0286ea6fbe53668ab4d6ae57eff3dd7406ae6",
+      "log_sha256": "3280fd9e38b612ca6c1049b6f2e111df442cd42b271fb0b435862350a73f43d7",
+      "scope": "Disposable Wine prefixes: PE-to-native computation, actual ReShade add-on load, D3D12 texture submission and same-list consumption; no MSFS FFX hook",
+      "result": "passed",
+      "modes": [
+        {
+          "weights": "real-model",
+          "floating_frames": [
+            {
+              "repeat": 0,
+              "host_ms": 270.998,
+              "mismatches": 0
+            },
+            {
+              "repeat": 1,
+              "host_ms": 243.149,
+              "mismatches": 0
+            }
+          ],
+          "oracle": "Every RGB float compared with native gfx1030.1 baseline",
+          "packed_bytes_checked": 8294400,
+          "packed_mismatches": 0,
+          "packed_changed_color_channels": 5255656,
+          "alpha_preserved": true,
+          "packed_oracle": "Separate V2 float-frame output converted to BGRA8"
+        },
+        {
+          "weights": "synthetic",
+          "floating_frames": [
+            {
+              "repeat": 0,
+              "host_ms": 271.787,
+              "mismatches": 0
+            },
+            {
+              "repeat": 1,
+              "host_ms": 238.075,
+              "mismatches": 0
+            }
+          ],
+          "oracle": "Independent closed-form synthetic oracle",
+          "packed_bytes_checked": 8294400,
+          "packed_mismatches": 0,
+          "packed_changed_color_channels": 5790889,
+          "alpha_preserved": true,
+          "packed_oracle": "Separate V2 float-frame output converted to BGRA8"
+        }
+      ],
+      "d3d12_texture": {
+        "result": "passed",
+        "format": "RGBA8",
+        "width": 1920,
+        "height": 1080,
+        "seed": 7,
+        "actual_addon_registered": true,
+        "pinned_upstream_live_header": true,
+        "same_command_list_consumer": true,
+        "alpha_exact": true,
+        "replay_exact": true,
+        "fence_completion_checked": true,
+        "device_health_checked": true,
+        "oracle": "Direct packed HIP output for identical source pixels/seed; upstream NativeHipLive submission marker replaces the texture before the same-list consumer",
+        "frames": [
+          {
+            "run": 0,
+            "changed_rgb_channels": 5048403,
+            "identical_reference_bytes": 8294400,
+            "wall_ms": 257.711
+          },
+          {
+            "run": 1,
+            "changed_rgb_channels": 5048403,
+            "identical_reference_bytes": 8294400,
+            "wall_ms": 235.089
+          },
+          {
+            "run": 2,
+            "changed_rgb_channels": 5048403,
+            "identical_reference_bytes": 8294400,
+            "wall_ms": 234.281
+          }
+        ],
+        "runner_dependencies": {
+          "libvkd3d-1.dll": "afe84b48515287837391a0e4af71e56d3597e59a9e656e903cdc1e572858f3e0",
+          "libvkd3d-shader-1.dll": "3e05b4702ce40b837a93dd3a7ad87a77135ab6185401a0cce29550cecf2c67c3",
+          "libvkd3d-utils-1.dll": "4e53051121480f362c3183c17173a878f7ad7ab08ba98092478f254b959ad905"
+        }
+      }
+    },
+    {
+      "name": "experimental",
+      "version": "1790839227 experimental-11.0-20261001-x86_64",
+      "wine_sha256": "7a6de49c00d8ed2ba55c6967d3643c5ef729f5e562fb51e47e4f41c6cdb5c92a",
+      "log_sha256": "87f06ec01f42353825bf67bb33897bbc51dee7f966893a3997ab885a696b3efe",
+      "scope": "Disposable Wine prefixes: PE-to-native computation, actual ReShade add-on load, D3D12 texture submission and same-list consumption; no MSFS FFX hook",
+      "result": "passed",
+      "modes": [
+        {
+          "weights": "real-model",
+          "floating_frames": [
+            {
+              "repeat": 0,
+              "host_ms": 268.649,
+              "mismatches": 0
+            },
+            {
+              "repeat": 1,
+              "host_ms": 244.547,
+              "mismatches": 0
+            }
+          ],
+          "oracle": "Every RGB float compared with native gfx1030.1 baseline",
+          "packed_bytes_checked": 8294400,
+          "packed_mismatches": 0,
+          "packed_changed_color_channels": 5255656,
+          "alpha_preserved": true,
+          "packed_oracle": "Separate V2 float-frame output converted to BGRA8"
+        },
+        {
+          "weights": "synthetic",
+          "floating_frames": [
+            {
+              "repeat": 0,
+              "host_ms": 275.033,
+              "mismatches": 0
+            },
+            {
+              "repeat": 1,
+              "host_ms": 238.994,
+              "mismatches": 0
+            }
+          ],
+          "oracle": "Independent closed-form synthetic oracle",
+          "packed_bytes_checked": 8294400,
+          "packed_mismatches": 0,
+          "packed_changed_color_channels": 5790889,
+          "alpha_preserved": true,
+          "packed_oracle": "Separate V2 float-frame output converted to BGRA8"
+        }
+      ],
+      "d3d12_texture": {
+        "result": "passed",
+        "format": "RGBA8",
+        "width": 1920,
+        "height": 1080,
+        "seed": 7,
+        "actual_addon_registered": true,
+        "pinned_upstream_live_header": true,
+        "same_command_list_consumer": true,
+        "alpha_exact": true,
+        "replay_exact": true,
+        "fence_completion_checked": true,
+        "device_health_checked": true,
+        "oracle": "Direct packed HIP output for identical source pixels/seed; upstream NativeHipLive submission marker replaces the texture before the same-list consumer",
+        "frames": [
+          {
+            "run": 0,
+            "changed_rgb_channels": 5048403,
+            "identical_reference_bytes": 8294400,
+            "wall_ms": 258.015
+          },
+          {
+            "run": 1,
+            "changed_rgb_channels": 5048403,
+            "identical_reference_bytes": 8294400,
+            "wall_ms": 235.111
+          },
+          {
+            "run": 2,
+            "changed_rgb_channels": 5048403,
+            "identical_reference_bytes": 8294400,
+            "wall_ms": 234.775
+          }
+        ],
+        "runner_dependencies": {
+          "libvkd3d-1.dll": "451af60db275263f4382195a12771622f215fcdd222a1c0fa05db9daac58b8f2",
+          "libvkd3d-shader-1.dll": "c895e3bbc20b6960323c65fa1c290c2f03b083a692945b2d1e93ae8a8e80f9b3",
+          "libvkd3d-utils-1.dll": "a58ae1bf50afc79c3df05328e93c4fc698ccb3cf53714c98a6494331cb109300"
+        }
+      }
+    },
+    {
+      "name": "cachyos",
+      "version": "1781706447 cachyos-10.0-sunset-slr",
+      "wine_sha256": "d98a8ea517867ed9d45cc67f7adb6827f16ca6bdf7b44c6ea70ab0d4f894e936",
+      "log_sha256": "d69199c93f04c5e0ee01c97f06a22aa193b9c5660c69af9cad430e400679bfa4",
+      "scope": "Disposable Wine prefixes: PE-to-native computation, actual ReShade add-on load, D3D12 texture submission and same-list consumption; no MSFS FFX hook",
+      "result": "passed",
+      "modes": [
+        {
+          "weights": "real-model",
+          "floating_frames": [
+            {
+              "repeat": 0,
+              "host_ms": 267.927,
+              "mismatches": 0
+            },
+            {
+              "repeat": 1,
+              "host_ms": 245.063,
+              "mismatches": 0
+            }
+          ],
+          "oracle": "Every RGB float compared with native gfx1030.1 baseline",
+          "packed_bytes_checked": 8294400,
+          "packed_mismatches": 0,
+          "packed_changed_color_channels": 5255656,
+          "alpha_preserved": true,
+          "packed_oracle": "Separate V2 float-frame output converted to BGRA8"
+        },
+        {
+          "weights": "synthetic",
+          "floating_frames": [
+            {
+              "repeat": 0,
+              "host_ms": 265.969,
+              "mismatches": 0
+            },
+            {
+              "repeat": 1,
+              "host_ms": 237.976,
+              "mismatches": 0
+            }
+          ],
+          "oracle": "Independent closed-form synthetic oracle",
+          "packed_bytes_checked": 8294400,
+          "packed_mismatches": 0,
+          "packed_changed_color_channels": 5790889,
+          "alpha_preserved": true,
+          "packed_oracle": "Separate V2 float-frame output converted to BGRA8"
+        }
+      ],
+      "d3d12_texture": {
+        "result": "passed",
+        "format": "RGBA8",
+        "width": 1920,
+        "height": 1080,
+        "seed": 7,
+        "actual_addon_registered": true,
+        "pinned_upstream_live_header": true,
+        "same_command_list_consumer": true,
+        "alpha_exact": true,
+        "replay_exact": true,
+        "fence_completion_checked": true,
+        "device_health_checked": true,
+        "oracle": "Direct packed HIP output for identical source pixels/seed; upstream NativeHipLive submission marker replaces the texture before the same-list consumer",
+        "frames": [
+          {
+            "run": 0,
+            "changed_rgb_channels": 5048403,
+            "identical_reference_bytes": 8294400,
+            "wall_ms": 260.443
+          },
+          {
+            "run": 1,
+            "changed_rgb_channels": 5048403,
+            "identical_reference_bytes": 8294400,
+            "wall_ms": 234.908
+          },
+          {
+            "run": 2,
+            "changed_rgb_channels": 5048403,
+            "identical_reference_bytes": 8294400,
+            "wall_ms": 235.783
+          }
+        ],
+        "runner_dependencies": {
+          "libvkd3d-1.dll": "b791a76ab277e70c4aa4a818e6e428cbc61f9bf4c42055ae97efa43d9e504906",
+          "libvkd3d-shader-1.dll": "ae3e28532ac10a2e0f3e33476bb5c421b9d97e13e5b1a88470e7c66cedee17bc",
+          "libvkd3d-utils-1.dll": "4929c04be2baffb28dd449918f938a4014d716bd46608ece6609e139aea94858"
+        }
+      }
+    }
+  ],
+  "superseded_results": {
+    "gfx1030_2": {
+      "problem": "Test disabled FP contraction while production allowed dot2 contraction, changing ordered FP32 rounding",
+      "production_matrix_mismatches": 22500,
+      "log_sha256": "e280267db75d4a834102f1aab39e4e5a5a3c3744cbe37a75ffa75d9e805d23ea",
+      "correction": "Locally prohibit contraction in matrix primitive; test now uses production flags"
+    },
+    "intermediate_gfx1030_3": {
+      "problem": "Split C32 projection rounded through FP32 instead of the fused reference single FP16 epilogue",
+      "correction": "Explicit gfx1030 v_fma_mixlo_f16 epilogue, validated with independent oracle and actual model"
+    }
+  },
+  "limitations": [
+    "About 234 ms GPU/frame with actual model weights; unsuitable for real-time MSFS gameplay",
+    "Agreement with reconstructed AMD-consumer reference does not establish NVIDIA equivalence or image quality",
+    "MSFS capture/interception, HDR, VR, cockpit legibility and live temporal quality remain unverified",
+    "Upstream synchronous readback/upload and incomplete live temporal history remain",
+    "No public release, default enablement, model redistribution or system driver changes",
+    "Separate NVIDIA black loading-video issue is unaffected",
+    "D3D12 tests exercise the actual texture transport and submission marker, but not MSFS FFX dispatch or live game frames"
+  ],
+  "source_sha256": {
+    "README.md": "852a687bf0d14d64109b208a389779c1480e49a8e3698e20b050c5817a1076d9",
+    "compat/neural-rdna2/README.md": "b5c51461f1cf17805475d310d28662cb7d61a478d63aa19b4afae623d3e6f57d",
+    "compat/neural-rdna2/UPSTREAM-LICENSE": "e289f704a22be5bb836eca345831b81e383ff9ffab443ecd1e436347515bf111",
+    "compat/neural-rdna2/benchmark.sh": "c698f918bc26302b5aee6edf6197d09d8a8e137596a07b4fb26f500ff7602234",
+    "compat/neural-rdna2/build.sh": "499f4bc0a52aefd51b389b4b6a3a521793443d6d84858ce7f34fbf7703af849e",
+    "compat/neural-rdna2/test.sh": "a658e019c3d2a70ebca4af7a3b04cd443f47e903b2d5373f14b4d62ccfc519d9",
+    "compat/neural-rdna2/test_c32_chain.hip": "a3fbeebd2e9033519b75fb824fa6d67f451aa65c782ed98a246bb6141b39a23e",
+    "compat/neural-rdna2/test_wave.hip": "960630be567a7d94ab19f5705c2ae5b382972a9b7fe3d29a62983042d95dde02",
+    "compat/neural-rdna2/toolchain.lock.json": "ea699205a68390edea3db5cde78a7de8b1f10a595e347149e98ae7db667e91dc",
+    "compat/neural-rdna2/upstream.patch": "44b15e5604b079efb51d259acc8072e1c40267da91afc6ae1be814f5f5ebfa06",
+    "compat/neural-rdna2/wave.hpp": "f47e882b90499cac468dabfc98dc65cad453bef1591d4dcd00cd1488a78ae310",
+    "compat/neural-rendering.lock.json": "7ca9e9433e70f16e5a40628e0b8e5c9f3c5f062570f08bd73d0c46979109e8a7",
+    "compat/neural-weights.lock.json": "3c3e516309ea334e0d26e6785aed88ef6d95df1968417291d23c078cb16bd58b",
+    "docs/neural-rendering.md": "00a4f7ec1e4aac41d56026859e19854542264e45361cd87325923c90664346a0",
+    "native/hip_probe.rs": "74fd0cf2e55476b1c0068113fdd120dfeeeff438501aee0f187e9647548e608d",
+    "native/lib.rs": "07a8b63140c3bc56c56fc47da3246555ee15820b5cf8393c7bf05835c5b49ae7",
+    "native/loader.rs": "44e66401f04a6fea2879fc28189ebfe4946b6de5abbadcbeaeaf2da8a0f1a0ea",
+    "native/main.rs": "aa5e8aca4200817ff754df26a7f7977c85dcb74f28a298d961df82877004dab1",
+    "native/native_probe.rs": "c8cbbd9f321018d550cde75ae028fef23efbcddbf7102003bb0624ab0dc560a2",
+    "native/neural_assets.rs": "8cf8705ea4978b9074604420ac8c20ebc658cc2ba639609793ed09919c3c8824",
+    "native/neural_decode.rs": "2ac935c599a761639470e6794d44cfcb36e9e0846f61ca0bec3571a44b4dcd04",
+    "native/neural_rendering.rs": "001241f8f01dfde64afb761af69cd901ffdb6dee2d65fb08b83a19be68a433cd",
+    "native/neural_tests.rs": "97cedb7db61648c3d06d242888149a6a30cc950aa3d446218caa3838e2c00161",
+    "native/neural_weights.rs": "8a7e1908644dd7e5653b236dd081776659496b66d75e8bb80027ef439a2ced1a",
+    "native/neural_weights_tests.rs": "1e736a2d17da2bed2fd4537407fac240cc82a37e19274aaf008e5d70fbeb2547",
+    "scripts/check-source-export.py": "bd0d1f4b6751d26df86b4116b7e29d048e02d85169ab941d1b818deb3c01d612",
+    "tests/compat/test_source_export.py": "6267a8910ad097953939f5a8e09eb2df3a3f67f2c960db4edeba0c3b4e3edc8b",
+    "tests/fixtures/vulkan-pci.c": "b83d9e0aac40857adaee95269afbf47589d4156d3b3f6a7bece647855dc7b0af",
+    "tests/graphics/neural-bridge.c": "edb18f926adcc26fd0b76fbb00f260bfcf60689c803dd9578bd32163eabb1364",
+    "tests/graphics/neural-texture.cpp": "b5f01662fecf09f4be746949205bc0c0e2fc85b8c2a46dde5a8c5419b49af480",
+    "tests/native_neural.rs": "bca57085c250dfe265e9eb75cc4ada6bf5833d860fd6cb6a564a670da681089a"
+  },
+  "gpu_selection_fix": {
+    "failure": "HIP product-name filter excluded the same device under the Wine/RADV adapter description",
+    "correction": "Match HIP and Vulkan by PCI address, require unique Vulkan UUID, filter DXVK by UUID, normalize selected adapter description for the exact-name HIP client",
+    "physical_ids_preserved": true,
+    "unrelated_dxvk_options_preserved": true,
+    "ambiguous_matches_rejected": true,
+    "old_failure_log_sha256": "eb28e3e4466391cb51415c20ef2009c527334f134252789861b6293e04dea3c9",
+    "fixture_covers_legacy_driver_discovery": true
+  },
+  "msfs_prerequisites": {
+    "scope": "Read-only local game DLL inspection; no game launch or FFX dispatch test",
+    "module": "amd_fidelityfx_dx12.dll",
+    "version": "1.0.1.41314",
+    "bytes": 6675664,
+    "sha256": "12a5081257ec95b0b53ad51b4a87fb3c03f97fe0bbb59f9496968f8d50ef93a6",
+    "exports_present": [
+      "ffxCreateContext",
+      "ffxDestroyContext",
+      "ffxDispatch"
+    ],
+    "loader_version_recognized_by_pinned_upstream": true,
+    "game_rendering_verified": false
+  },
+  "vit_tuning": {
+    "backend": "0.2.6.1-flightdeck.gfx1030.3",
+    "scope": "Earlier gfx1030.3 candidate, fixed actual-model gradient; defaults retained",
+    "keys": [
+      "DLSS5_VIT_QKV_SPLIT",
+      "DLSS5_VIT_FFN_LDS",
+      "DLSS5_VIT_ATTN_SPLIT"
+    ],
+    "cases": [
+      {
+        "values": [
+          "0",
+          "0",
+          "0"
+        ],
+        "warm_gpu_samples_ms": [
+          245.712,
+          246.87,
+          246.515
+        ],
+        "median_ms": 246.515,
+        "exact": true,
+        "log_sha256": "fa0730c6dc1c6302d7d1617e5651033c8587ad588d981b56e8d3773e2bd77bc3"
+      },
+      {
+        "values": [
+          "1",
+          "0",
+          "0"
+        ],
+        "warm_gpu_samples_ms": [
+          248.727,
+          248.813,
+          249.232
+        ],
+        "median_ms": 248.813,
+        "exact": true,
+        "log_sha256": "7a8fd7925ee0095ab14f7df2d24b841d90188ce9f67849caba71a71e0da31b95"
+      },
+      {
+        "values": [
+          "0",
+          "1",
+          "0"
+        ],
+        "warm_gpu_samples_ms": [
+          250.792,
+          250.436,
+          251.324
+        ],
+        "median_ms": 250.792,
+        "exact": true,
+        "log_sha256": "b74b3bfdf5209b8ce43c41cc042def97ff3df3e841c7a0d7a883fb0fa28ad408"
+      },
+      {
+        "values": [
+          "0",
+          "0",
+          "1"
+        ],
+        "warm_gpu_samples_ms": [
+          251.644,
+          252.205,
+          251.533
+        ],
+        "median_ms": 251.644,
+        "exact": true,
+        "log_sha256": "99fa5a015093d85c404aa60879a26a4ac2e22e1edc0aae0b55b1d7578f47511a"
+      },
+      {
+        "values": [
+          "1",
+          "1",
+          "0"
+        ],
+        "warm_gpu_samples_ms": [
+          254.628,
+          254.764,
+          254.443
+        ],
+        "median_ms": 254.628,
+        "exact": true,
+        "log_sha256": "7b79f8253415d4e3eb4587caba48eb1d3e785201cfd63c4e368b216b3d77b89c"
+      },
+      {
+        "values": [
+          "1",
+          "0",
+          "1"
+        ],
+        "warm_gpu_samples_ms": [
+          254.421,
+          252.198,
+          253.313
+        ],
+        "median_ms": 253.313,
+        "exact": true,
+        "log_sha256": "d1456f8c5b0e6d0771a3bb52b323112218f942350c595d59d89a00eee96f1980"
+      },
+      {
+        "values": [
+          "0",
+          "1",
+          "1"
+        ],
+        "warm_gpu_samples_ms": [
+          257.488,
+          258.332,
+          259.191
+        ],
+        "median_ms": 258.332,
+        "exact": true,
+        "log_sha256": "f60f9eb5370f86fcba8afe51ca5bdc7716bed670b2e46d1a73ed9f4150b38b37"
+      },
+      {
+        "values": [
+          "1",
+          "1",
+          "1"
+        ],
+        "warm_gpu_samples_ms": [
+          260.108,
+          260.952,
+          259.461
+        ],
+        "median_ms": 260.108,
+        "exact": true,
+        "log_sha256": "e439f79e1da074183c685111f454b352214f4bdefeeaa3735db05d8245b48318"
+      }
+    ]
+  },
+  "validation_generator_sha256": "63b0c59ce3b2208591f9fa84d9b03deb7a95e5ebe9892f7e0e5ee4be4aa00101"
+}
