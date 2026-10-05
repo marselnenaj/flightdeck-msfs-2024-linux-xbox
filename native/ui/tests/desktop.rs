@@ -1,11 +1,168 @@
-use flightdeck_ui::{Action, App, Edition, Language, Message, Page, settings, theme};
+use flightdeck_ui::{Action, App, Disclosure, Edition, Language, Message, Page, settings, theme};
 use iced::{Size, Task};
 use serde_json::json;
 use std::time::Duration;
 
 mod common;
 use common::fixture;
+// iced's stock pick-list menu does not expose text through widget operations.
+// Select through real pointer events using the located control's row geometry.
+fn choose(
+    ui: &mut iced_test::Simulator<'_, Message>,
+    field: &str,
+    index: usize,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let bounds = ui
+        .click(iced_test::selector::id(field.to_string()))?
+        .bounds();
+    let point = iced::Point::new(
+        bounds.center_x(),
+        bounds.y + bounds.height * (index as f32 + 1.5),
+    );
+    ui.point_at(point);
+    ui.simulate([iced::Event::Mouse(iced::mouse::Event::CursorMoved {
+        position: point,
+    })]);
+    ui.simulate(iced_test::simulator::click());
+    Ok(())
+}
 
+#[test]
+fn legacy_fenix_is_presented_as_an_existing_installation() -> Result<(), Box<dyn std::error::Error>>
+{
+    for language in [Language::De, Language::En] {
+        let mut app = fixture();
+        app.page = Page::Mods;
+        app.language = language;
+        app.snapshot.insert("fenix",json!({"state":"legacy","runtime_path":"/synthetic/msfs2024","installed":false,"fenix_installed":true,"settings_ready":true,"configured":false,"manager_installed":true,"idle":true,"can_change":true}));
+        let mut ui =
+            iced_test::Simulator::with_size(settings(), Size::new(960.0, 1600.0), app.view());
+        ui.find(if language == Language::De {
+            "Vorhandene Fenix-Einrichtung"
+        } else {
+            "Existing Fenix setup"
+        })?;
+        ui.click("Fenix A320")?;
+        let _ = app.update(ui.into_messages().next().expect("open Fenix"));
+        let mut ui =
+            iced_test::Simulator::with_size(settings(), Size::new(960.0, 1600.0), app.view());
+        assert!(
+            ui.find(if language == Language::De {
+                "Patch einrichten"
+            } else {
+                "Set up patch"
+            })
+            .is_err()
+        );
+        ui.click(if language == Language::De {
+            "Fenix öffnen"
+        } else {
+            "Open Fenix"
+        })?;
+        assert!(matches!(
+            ui.into_messages().next(),
+            Some(Message::Action(Action::Fenix("open")))
+        ));
+        assert!(app.request(&Action::Fenix("install")).is_none());
+        assert!(app.request(&Action::Fenix("manager")).is_some());
+    }
+    Ok(())
+}
+#[test]
+fn managed_fenix_readiness_requires_the_patch_and_configuration()
+-> Result<(), Box<dyn std::error::Error>> {
+    let mut app = fixture();
+    app.page = Page::Mods;
+    app.language = Language::En;
+    let mut ui = iced_test::Simulator::with_size(settings(), Size::new(960.0, 900.0), app.view());
+    ui.find("Fenix is ready to fly")?;
+    drop(ui);
+    app.snapshot.get_mut("fenix").expect("fenix")["configured"] = json!(false);
+    let _ = app.update(Message::Toggle(Disclosure::Fenix));
+    let mut ui = iced_test::Simulator::with_size(settings(), Size::new(960.0, 3000.0), app.view());
+    ui.find("Setup is not complete yet")?;
+    assert!(ui.find("Fenix is ready to fly").is_err());
+    ui.click("Finish setup")?;
+    assert!(matches!(
+        ui.into_messages().next(),
+        Some(Message::Action(Action::Fenix("configure")))
+    ));
+    Ok(())
+}
+#[test]
+fn proton_discovery_selects_the_active_runner_and_preserves_unapplied_choices() {
+    let mut app = fixture();
+    let mut snapshot = app.snapshot.clone();
+    snapshot.get_mut("proton").expect("proton")["experimental"] = json!(true);
+    snapshot.get_mut("proton").expect("proton")["selected"] = json!("cachyos-10.0-sunset");
+    snapshot.get_mut("proton").expect("proton")["selected_path"] =
+        json!("/synthetic/Steam/proton-cachyos");
+    snapshot.get_mut("proton").expect("proton")["can_restore"] = json!(true);
+    let _ = app.update(Message::Loaded(0, Ok(snapshot.clone())));
+    assert_eq!(app.forms.get("proton"), "/synthetic/Steam/proton-cachyos");
+    let _ = app.update(Message::Field("proton", "custom".into()));
+    let _ = app.update(Message::Field(
+        "proton_path",
+        "/synthetic/other Proton".into(),
+    ));
+    let _ = app.update(Message::Loaded(0, Ok(snapshot)));
+    assert_eq!(app.forms.get("proton"), "custom");
+    assert_eq!(
+        app.request(&Action::Proton).expect("custom").body["path"],
+        "/synthetic/other Proton"
+    );
+    let mut changed = fixture().snapshot;
+    changed.get_mut("status").expect("status")["runtime"]["path"] = json!("/synthetic/msfs2020");
+    changed.get_mut("proton").expect("proton")["runtime_path"] = json!("/synthetic/msfs2020");
+    let _ = app.update(Message::Loaded(0, Ok(changed)));
+    assert_eq!(app.forms.get("proton"), "default");
+    assert_eq!(app.forms.get("proton_path"), "");
+    assert!(app.discoveries.is_empty());
+}
+#[test]
+fn proton_fenix_compatibility_and_cloud_jobs_guard_runner_switches() {
+    let mut app = fixture();
+    app.snapshot.get_mut("proton").expect("proton")["fenix"] = json!(true);
+    let _ = app.update(Message::Field(
+        "proton",
+        "/synthetic/Steam/Proton - Experimental".into(),
+    ));
+    assert_eq!(app.forms.get("proton"), "default");
+    // Even an injected selection cannot bypass the action guard.
+    app.forms
+        .text
+        .insert("proton", "/synthetic/Steam/Proton - Experimental".into());
+    assert!(app.request(&Action::Proton).is_none());
+    let _ = app.update(Message::Field(
+        "proton",
+        "/synthetic/Steam/proton-cachyos".into(),
+    ));
+    assert!(app.request(&Action::Proton).is_some());
+    app.snapshot.get_mut("proton").expect("proton")["can_restore"] = json!(true);
+    app.snapshot.get_mut("status").expect("status")["cloud"]["state"] = json!("syncing");
+    assert!(app.request(&Action::Proton).is_none());
+    assert!(app.request(&Action::ProtonDefault).is_none());
+}
+#[test]
+fn proton_menu_contains_default_experimental_and_cachyos_without_manual_search()
+-> Result<(), Box<dyn std::error::Error>> {
+    let mut app = fixture();
+    app.page = Page::Setup;
+    app.language = Language::En;
+    let _ = app.update(Message::Toggle(Disclosure::Proton));
+    let mut ui = iced_test::Simulator::with_size(settings(), Size::new(1280.0, 1500.0), app.view());
+    ui.find("Flightdeck (Xodus)")?;
+    assert!(ui.find("Proton folder").is_err());
+    choose(&mut ui, "proton", 1)?;
+    let _ = app.update(ui.into_messages().next().expect("Proton selection"));
+    assert_eq!(
+        app.request(&Action::Proton).expect("switch runner").body["path"],
+        "/synthetic/Steam/Proton - Experimental"
+    );
+    let _ = app.update(Message::Toggle(Disclosure::Vr));
+    assert!(!app.expanded.contains(&Disclosure::Proton));
+    Ok(())
+}
 #[test]
 fn stopped_online_launches_but_unknown_external_or_disconnected_never_do() {
     let mut app = fixture();
@@ -130,10 +287,13 @@ fn setup_edition_buttons_change_the_form_in_both_directions()
     app.forms
         .text
         .insert("destination_path", "/synthetic/custom-msfs2024".into());
-    for (name, id) in [("MSFS 2020", "msfs2020"), ("MSFS 2024", "msfs2024")] {
+    for (_name, id) in [
+        ("Microsoft Flight Simulator 2020", "msfs2020"),
+        ("Microsoft Flight Simulator 2024", "msfs2024"),
+    ] {
         let mut ui =
-            iced_test::Simulator::with_size(settings(), Size::new(750.0, 900.0), app.view());
-        ui.click(name)?;
+            iced_test::Simulator::with_size(settings(), Size::new(1280.0, 2200.0), app.view());
+        choose(&mut ui, "game_id", if id == "msfs2020" { 1 } else { 0 })?;
         let message = ui.into_messages().next().expect("form selection");
         assert!(matches!(&message, Message::Field("game_id", selected) if selected == id));
         let _ = app.update(message);
@@ -295,9 +455,13 @@ fn every_screen_is_a_real_native_view_in_both_languages() -> Result<(), Box<dyn 
     for language in [Language::De, Language::En] {
         for (page, de, en) in [
             (Page::Overview, "Simulator starten", "Start simulator"),
-            (Page::Setup, "Simulator einrichten", "Set up simulator"),
-            (Page::Updates, "Simulator-Updates", "Simulator updates"),
-            (Page::Saves, "Cloud-Spielstände", "Cloud saves"),
+            (Page::Setup, "MSFS installieren", "Install MSFS"),
+            (
+                Page::Updates,
+                "Flightdeck · GitHub-Releases",
+                "Flightdeck · GitHub releases",
+            ),
+            (Page::Saves, "Deine Spielstände", "Your saves"),
             (Page::Mods, "Fenix A320", "Fenix A320"),
             (Page::Diagnostics, "Problem melden", "Report a problem"),
         ] {
@@ -371,6 +535,11 @@ fn capture_all_native_screens() -> Result<(), Box<dyn std::error::Error>> {
         ("confirmation", Language::En, 1.0),
         ("overview-hidpi", Language::En, 2.0),
         ("unconfigured", Language::En, 1.0),
+        ("fenix-legacy", Language::En, 1.0),
+        ("fenix-ready", Language::En, 1.0),
+        ("proton-choices", Language::En, 1.0),
+        ("mod-removal", Language::De, 1.0),
+        ("mod-link-removal", Language::En, 1.0),
     ] {
         let application =
             iced::application(
@@ -386,6 +555,29 @@ fn capture_all_native_screens() -> Result<(), Box<dyn std::error::Error>> {
                             app.snapshot.get_mut("status").expect("status")["runtime"]["checks"]
                                 [0]["detail"] =
                                 json!("MSFS 2020 und MicrosoftGame.Config vorhanden.");
+                        }
+                        "fenix-legacy" | "fenix-ready" => {
+                            app.page = Page::Mods;
+                            if name == "fenix-legacy" {
+                                app.snapshot.get_mut("fenix").expect("fenix")["state"] =
+                                    json!("legacy");
+                                app.snapshot.get_mut("fenix").expect("fenix")["installed"] =
+                                    json!(false);
+                                app.snapshot.get_mut("fenix").expect("fenix")["configured"] =
+                                    json!(false);
+                            }
+                            let _ = app.update(Message::Toggle(Disclosure::Fenix));
+                        }
+                        "mod-removal" | "mod-link-removal" => {
+                            app.page=Page::Mods;
+                            app.snapshot.get_mut("mods").expect("mods")["count"]=json!(1);
+                            app.snapshot.get_mut("mods").expect("mods")["mods"]=json!([{"id":"synthetic-aircraft","name":"Synthetic aircraft","version":"1.0"}]);
+                            app.snapshot.get_mut("status").expect("status")["setup"]["busy"]=json!(true);
+                            app.snapshot.get_mut("mods").expect("mods")["job"]=json!({"id":"reviewed-mod","runtime_path":"/synthetic/msfs2024","operation":"remove","state":"ready","addon_id":"synthetic-aircraft","entry_path":"/synthetic/Community/synthetic-aircraft","bytes":1024,"is_link":name=="mod-link-removal"});
+                        }
+                        "proton-choices" => {
+                            app.page = Page::Setup;
+                            let _ = app.update(Message::Toggle(Disclosure::Proton));
                         }
                         "confirmation" => {
                             let _ = app.update(Message::Action(Action::Cloud("import")));
@@ -422,6 +614,157 @@ fn capture_all_native_screens() -> Result<(), Box<dyn std::error::Error>> {
             (900.0 * scale) as u32,
             image::ColorType::Rgba8,
         )?;
+    }
+    Ok(())
+}
+
+#[test]
+#[ignore = "Explicit comparison with the historical web UI's synthetic API fixture"]
+fn capture_parity_screens() -> Result<(), Box<dyn std::error::Error>> {
+    let directory =
+        std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../build/ui-parity");
+    std::fs::create_dir_all(&directory)?;
+    for (page, name, expanded) in [
+        (Page::Overview, "overview", None),
+        (Page::Setup, "setup", None),
+        (Page::Mods, "mods", None),
+        (Page::Updates, "updates", None),
+        (Page::Saves, "saves", None),
+        (Page::Diagnostics, "diagnostics", None),
+        (Page::Setup, "proton-card", Some(Disclosure::Proton)),
+        (Page::Mods, "fenix-card", Some(Disclosure::Fenix)),
+    ] {
+        let application = iced::application(
+            move || {
+                let values: serde_json::Value =
+                    serde_json::from_str(include_str!("fixtures/web-0.2.2.json"))
+                        .expect("historical synthetic status");
+                let mut app = App::default();
+                app.startup_checked = true;
+                app.page = page;
+                let mut snapshot = flightdeck_ui::Snapshot::new();
+                for key in [
+                    "status",
+                    "setup",
+                    "setup/discover",
+                    "proton",
+                    "proton/discover",
+                    "maintenance",
+                    "fenix",
+                    "gsx",
+                    "mods",
+                    "launcher-update",
+                    "game-update",
+                    "cloud-saves",
+                    "diagnostics",
+                    "store-check",
+                    "problem-reports",
+                ] {
+                    snapshot.insert(key, values[key].clone());
+                }
+                let _ = app.update(Message::Loaded(0, Ok(snapshot)));
+                if let Some(section) = expanded {
+                    let _ = app.update(Message::Toggle(section));
+                }
+                app
+            },
+            |_: &mut App, _: Message| Task::none(),
+            App::view,
+        )
+        .settings(settings())
+        .theme(|_: &App| theme());
+        let screenshot = iced_test::screenshot(
+            &application,
+            &theme(),
+            Size::new(1536.0, 1024.0),
+            1.0,
+            Duration::from_millis(80),
+        );
+        image::save_buffer(
+            directory.join(format!("native-{name}.png")),
+            &screenshot.rgba,
+            1536,
+            1024,
+            image::ColorType::Rgba8,
+        )?;
+    }
+    Ok(())
+}
+
+#[test]
+fn setup_guide_layout_is_visible_at_desktop_width() -> Result<(), Box<dyn std::error::Error>> {
+    let mut app = fixture();
+    app.page = Page::Setup;
+    let values: serde_json::Value =
+        serde_json::from_str(include_str!("fixtures/web-0.2.2.json")).expect("fixture");
+    for key in ["status", "setup"] {
+        app.snapshot.insert(key, values[key].clone());
+    }
+    app.forms.text.insert("mode", "existing".into());
+    let mut ui = iced_test::Simulator::with_size(settings(), Size::new(1536.0, 1024.0), app.view());
+    for text in [
+        "In drei Schritten",
+        "Deine Installation vorbereiten",
+        "Verbinden",
+    ] {
+        let target = ui.find(text)?;
+        assert!(target.bounds().width > 10.0);
+        assert!(target.visible_bounds().is_some());
+    }
+    Ok(())
+}
+
+#[test]
+fn mod_uninstall_reviews_the_exact_entry_and_rejects_changed_confirmation()
+-> Result<(), Box<dyn std::error::Error>> {
+    for language in [Language::De, Language::En] {
+        let mut app = fixture();
+        app.language = language;
+        app.page = Page::Mods;
+        app.snapshot.get_mut("mods").expect("mods")["mods"] =
+            json!([{"id":"synthetic-aircraft","name":"Synthetic aircraft","version":"1.0"}]);
+        let mut ui =
+            iced_test::Simulator::with_size(settings(), Size::new(1200.0, 1700.0), app.view());
+        ui.click(if language == Language::De {
+            "Deinstallation prüfen"
+        } else {
+            "Review uninstallation"
+        })?;
+        let Some(Message::Action(action)) = ui.into_messages().next() else {
+            panic!("review action");
+        };
+        let request = app.request(&action).expect("review available");
+        assert_eq!(request.path, "mods/preview-remove");
+        assert_eq!(request.body["addon_id"], "synthetic-aircraft");
+        app.snapshot.get_mut("mods").expect("mods")["job"] = json!({"id":"reviewed-mod","runtime_path":"/synthetic/msfs2024","operation":"remove","state":"ready","addon_id":"synthetic-aircraft","entry_path":"/synthetic/Community/synthetic-aircraft","bytes":1024,"is_link":false});
+        app.snapshot.get_mut("status").expect("status")["setup"]["busy"] = json!(true);
+        assert!(app.request(&Action::Launch).is_none());
+        assert!(
+            app.request(&Action::ModsPreview("synthetic-aircraft".into()))
+                .is_none()
+        );
+        assert!(app.request(&Action::ModsDiscard).is_some());
+        let mut ui =
+            iced_test::Simulator::with_size(settings(), Size::new(1200.0, 1700.0), app.view());
+        ui.click(if language == Language::De {
+            "Deinstallieren"
+        } else {
+            "Uninstall"
+        })?;
+        let _ = app.update(ui.into_messages().next().expect("remove action"));
+        assert!(app.confirmation.is_some());
+        let mut ui =
+            iced_test::Simulator::with_size(settings(), Size::new(1200.0, 1700.0), app.view());
+        ui.find("/synthetic/Community/synthetic-aircraft")?;
+        drop(ui);
+        app.snapshot.get_mut("mods").expect("mods")["job"]["id"] = json!("replacement-review");
+        let _ = app.update(Message::Confirm);
+        assert!(!app.pending);
+        assert!(app.confirmation.is_none());
+        assert!(app.notice.is_some());
+        app.snapshot.get_mut("mods").expect("mods")["job"]["runtime_path"] =
+            json!("/synthetic/another-runtime");
+        assert!(app.request(&Action::ModsRemove).is_none());
     }
     Ok(())
 }

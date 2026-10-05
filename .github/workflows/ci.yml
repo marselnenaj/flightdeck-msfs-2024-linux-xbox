@@ -39,7 +39,7 @@ jobs:
           python3 scripts/check-rust-http.py --binary target/debug/flightdeck-rust
       - name: Native desktop rendering in both languages and window sizes
         run: |
-          ICED_TEST_BACKEND=tiny-skia cargo +1.98.0 test --locked -p flightdeck-ui capture_all_native_screens -- --ignored
+          ICED_TEST_BACKEND=tiny-skia cargo +1.98.0 test --locked -p flightdeck-ui capture_ -- --ignored
       - name: Build native launcher and source artifacts
         run: |
           python3 scripts/build-native.py --toolchain 1.98.0
@@ -55,9 +55,10 @@ jobs:
             build/native-launcher-package/*
             build/flightdeck-source.tar.gz
             build/native-ui/*.png
+            build/ui-parity/*.png
           if-no-files-found: error
           retention-days: 14
-  tooling-and-reference-contracts:
+  maintainer-tooling:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
@@ -71,15 +72,7 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: ${{ matrix.python }}
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: '24'
       - name: Build tooling and compatibility boundary tests
         run: python -m unittest discover -s tests/compat -p 'test_*.py' -v
-      - name: Frozen previous UI contracts
-        run: |
-          npm --prefix tests/reference-web ci --ignore-scripts --no-audit --no-fund
-          npm --prefix tests/reference-web run typecheck
-          node --test tests/reference-web/tests/*.test.mjs
       - name: Source-release boundary
         run: python scripts/check-source-export.py

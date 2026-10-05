@@ -149,7 +149,7 @@ impl Client {
         let mut result = Snapshot::from([("status", status)]);
         let mut tasks = tokio::task::JoinSet::new();
         for key in keys {
-            if !RESOURCES.contains(&key) {
+            if !RESOURCES.contains(&key) && !["proton/discover", "setup/discover"].contains(&key) {
                 return Err("Unknown local resource".into());
             }
             let client = self.clone();

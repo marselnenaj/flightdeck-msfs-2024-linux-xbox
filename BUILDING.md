@@ -18,7 +18,7 @@ cargo test --locked --workspace
 cargo fmt --all -- --check
 cargo clippy --locked --workspace --all-targets -- -D warnings
 python3 scripts/check-rust-http.py --binary target/debug/flightdeck-rust
-ICED_TEST_BACKEND=tiny-skia cargo test --locked -p flightdeck-ui capture_all_native_screens -- --ignored
+ICED_TEST_BACKEND=tiny-skia cargo test --locked -p flightdeck-ui capture_ -- --ignored
 target/debug/flightdeck-rust
 ```
 
@@ -29,14 +29,12 @@ interface contract and [native status](docs/rust-migration.md) for live validati
 limits. `--no-browser` retains its historical spelling and starts only the local
 API service; there is no web UI at its URL.
 
-The previous web implementation lives only in `tests/reference-web/` as a frozen
-migration reference. It is never embedded, served or included in installed
-packages. Its state contracts can still be compared with:
+The retired web interface is available in Git history (`v0.2.2:ui/`). It is no
+longer kept as a second implementation in the source tree. Native controller,
+interaction and rendering tests cover the migrated workflows; the historical
+synthetic response fixture in `native/ui/tests/fixtures/` supports comparisons.
 
 ```sh
-npm --prefix tests/reference-web ci --ignore-scripts --no-audit --no-fund
-npm --prefix tests/reference-web run typecheck
-node --test tests/reference-web/tests/*.test.mjs
 python3 -m unittest discover -s tests/compat -p 'test_*.py'
 ```
 
@@ -59,7 +57,7 @@ python3 scripts/native-release.py \
   --native build/flightdeck-compat-0.1.16-linux-x86_64.tar.gz \
   --graphics build/graphics \
   --output build/native-package
-python3 scripts/source-release.py --output build/native-package/flightdeck-source-0.2.3.tar.gz
+python3 scripts/source-release.py --output build/native-package/flightdeck-source-0.2.4.tar.gz
 ```
 
 Install the toolchain's `rust-docs` component if its standard-library notices
@@ -350,7 +348,7 @@ programs or activated profiles belong in the source or installer archives.
 ```sh
 cargo test --locked --test native_addons --test native_framework --test native_supervisor
 cargo test --locked -p flightdeck-ui
-node --test tests/reference-web/tests/gsx.test.mjs
+cargo test --locked -p flightdeck-ui
 ```
 
 Runtime cleanup and direct-launch interruption checks also live in
@@ -374,7 +372,7 @@ and manifests with:
 ```sh
 python3 scripts/sync-fenix.py /absolute/path/to/fenix-a320-linux-patch
 cargo test --locked --test native_addons --test native_framework --test native_proton
-node --test tests/reference-web/tests/fenix.test.mjs
+cargo test --locked -p flightdeck-ui fenix
 ```
 
 Review the matching Rust implementation, `compat/fenix/bundle.json` and

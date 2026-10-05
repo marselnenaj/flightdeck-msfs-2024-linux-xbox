@@ -2,7 +2,7 @@
 
 [Deutsch](known-issues.de.md)
 
-Status: Flightdeck 0.2.3, 5 October 2026.
+Status: Flightdeck 0.2.4, 5 October 2026.
 
 **VR:** Optional OpenXR setup is available for WiVRn, SteamVR and Monado.
 D3D11/D3D12 stereo frames pass on AMD with a simulated Monado headset. Physical

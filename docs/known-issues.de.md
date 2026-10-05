@@ -2,7 +2,7 @@
 
 [English](known-issues.md)
 
-Stand: Flightdeck 0.2.3, 5. Oktober 2026.
+Stand: Flightdeck 0.2.4, 5. Oktober 2026.
 
 **VR:** Die optionale OpenXR-Einrichtung für WiVRn, SteamVR und Monado ist
 verfügbar. DirectX-11-/DirectX-12-Stereo-Frames bestehen den Test auf AMD mit

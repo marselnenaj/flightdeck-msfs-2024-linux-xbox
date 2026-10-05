@@ -16,10 +16,10 @@ Tests and screenshots live with the production crate:
 
 ```sh
 cargo test --locked -p flightdeck-ui
-ICED_TEST_BACKEND=tiny-skia cargo test --locked -p flightdeck-ui capture_all_native_screens -- --ignored
+ICED_TEST_BACKEND=tiny-skia cargo test --locked -p flightdeck-ui capture_ -- --ignored
 ```
 
-Captures are written to `build/native-ui`. The historical browser UI is retained
-only in `tests/reference-web` for migration comparisons. Its synthetic screenshot
-harness can still be run with `node examples/native-ui/capture-reference.mjs`.
-It is not embedded, served, or executed by the launcher.
+Captures are written to `build/native-ui`. The old browser implementation is
+available in Git history at `v0.2.2:ui/`; it is no longer maintained in parallel.
+`capture_parity_screens` renders the native UI with the historical synthetic
+status fixture at 1536 × 1024 for side-by-side comparison.

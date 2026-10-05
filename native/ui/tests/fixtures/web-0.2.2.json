@@ -1,0 +1,350 @@
+{
+  "status": {
+    "app": {
+      "name": "Flightdeck",
+      "version": "0.2.3"
+    },
+    "cloud": {
+      "enabled": true,
+      "state": "idle",
+      "phase": null,
+      "message": "",
+      "error_code": null,
+      "can_retry": false,
+      "can_play_local": false,
+      "can_cancel": false,
+      "request_id": null,
+      "last_synced_at": null,
+      "conflict": false,
+      "summary": null
+    },
+    "runtime": {
+      "configured": true,
+      "path": "/opt/flightdeck-fixture/MSFS2024",
+      "game_id": "msfs2024",
+      "game_name": "Microsoft Flight Simulator 2024",
+      "ready": true,
+      "checks": [
+        {
+          "id": "game",
+          "label": "Spielinstallation",
+          "ok": true,
+          "detail": "MSFS 2024 und MicrosoftGame.Config vorhanden."
+        },
+        {
+          "id": "runner",
+          "label": "Kompatibilitäts-Runtime",
+          "ok": true,
+          "detail": "Wine-Runner und Xbox-Dienst sind verfügbar."
+        },
+        {
+          "id": "saves",
+          "label": "Lokaler Spielstandspeicher",
+          "ok": true,
+          "detail": "Lokaler Speicher für Cloud-Abgleich und Sicherungen aktiviert."
+        }
+      ]
+    },
+    "versions": {
+      "msfs2024": {
+        "path": "/opt/flightdeck-fixture/MSFS2024",
+        "installed": true,
+        "ready": true
+      },
+      "msfs2020": {
+        "path": "/opt/flightdeck-fixture/MSFS2020",
+        "installed": true,
+        "ready": true
+      }
+    },
+    "game": {
+      "state": "stopped",
+      "managed": false,
+      "can_start": true,
+      "can_stop": false,
+      "started_at": null,
+      "exit_code": null
+    },
+    "saves": {
+      "mode": "local",
+      "available": true,
+      "bytes": 24576,
+      "files": 3,
+      "backups": 1,
+      "can_backup": true,
+      "last_backup": {
+        "name": "save-backup-test.zip",
+        "created_at": "2026-09-17T16:00:00Z"
+      }
+    },
+    "support": {
+      "level": "experimental",
+      "cloud_saves": false
+    }
+  },
+  "setup": {
+    "available": true,
+    "install_available": false,
+    "prepare_available": true,
+    "state": "idle",
+    "job": null,
+    "defaults": {
+      "mode": "existing",
+      "runtime_path": "/opt/flightdeck-fixture/MSFS2024",
+      "market": "AT",
+      "local_saves": true,
+      "destination_path": "/synthetic/new-msfs"
+    }
+  },
+  "setup/discover": {
+    "ok": true,
+    "runtimes": [
+      {
+        "name": "Microsoft Flight Simulator 2024",
+        "path": "/synthetic/path with spaces",
+        "ready": true,
+        "configured": false,
+        "checks": [
+          {
+            "id": "game",
+            "label": "Spielinstallation",
+            "ok": true,
+            "detail": "MSFS 2024 und MicrosoftGame.Config vorhanden."
+          },
+          {
+            "id": "runner",
+            "label": "Kompatibilitäts-Runtime",
+            "ok": true,
+            "detail": "Wine-Runner und Xbox-Dienst sind verfügbar."
+          },
+          {
+            "id": "saves",
+            "label": "Lokaler Spielstandspeicher",
+            "ok": true,
+            "detail": "Lokaler Speicher für Cloud-Abgleich und Sicherungen aktiviert."
+          }
+        ]
+      }
+    ],
+    "checked_count": 1,
+    "limited": false
+  },
+  "proton": {
+    "selected": "Flightdeck (Xodus)",
+    "experimental": false,
+    "can_restore": false,
+    "error": "",
+    "fenix": false,
+    "job": null,
+    "runtime_path": "/opt/flightdeck-fixture/MSFS2024"
+  },
+  "proton/discover": {
+    "choices": [
+      {
+        "path": "/fixture/Proton Experimental",
+        "label": "Proton Experimental",
+        "version": "experimental-11",
+        "fenix": true
+      },
+      {
+        "path": "/fixture/Other Proton",
+        "label": "Other Proton",
+        "version": "unknown",
+        "fenix": false
+      }
+    ]
+  },
+  "maintenance": {
+    "job": null,
+    "can_restore": false
+  },
+  "fenix": {
+    "state": "available",
+    "installed": false,
+    "configured": false,
+    "settings_ready": false,
+    "idle": true,
+    "fenix_installed": false,
+    "manager_installed": false,
+    "can_restore": false,
+    "can_change": true,
+    "fenix_running": false,
+    "can_stop": false,
+    "job": null,
+    "runtime_path": "/opt/flightdeck-fixture/MSFS2024",
+    "busy": false
+  },
+  "gsx": {
+    "state": "available",
+    "prepared": false,
+    "package_installed": false,
+    "startup_found": false,
+    "configured": false,
+    "idle": true,
+    "can_change": true,
+    "can_stop": false,
+    "manager_running": false,
+    "can_recover": false,
+    "verified_in_simulator": false,
+    "job": null,
+    "runtime_path": "/opt/flightdeck-fixture/MSFS2024"
+  },
+  "mods": {
+    "state": "ready",
+    "message": "",
+    "folder_path": "/synthetic/Community",
+    "can_open": true,
+    "mods": [],
+    "count": 0,
+    "scanned_count": 0,
+    "limited": false
+  },
+  "launcher-update": {
+    "managed": true,
+    "installed_version": "0.1.0",
+    "latest_version": null,
+    "update_available": null,
+    "check_id": null,
+    "checked_at": null,
+    "notes": "",
+    "unavailable_reason": "",
+    "pending_restart": false,
+    "can_check": true,
+    "can_install": false,
+    "can_restart": false,
+    "can_rollback": false,
+    "busy": false,
+    "job": null
+  },
+  "game-update": {
+    "integrity": {
+      "available": true,
+      "can_check": true,
+      "result": null
+    },
+    "can_repair": true,
+    "available": true,
+    "installed_version": "1.8.16.0",
+    "latest_version": null,
+    "update_available": null,
+    "can_check": true,
+    "can_start": false,
+    "can_rollback": false,
+    "auth_required": false,
+    "job": null
+  },
+  "cloud-saves": {
+    "available": true,
+    "mode": "download_and_import",
+    "sync_supported": false,
+    "can_check": true,
+    "can_download": true,
+    "can_prepare_import": true,
+    "can_import": false,
+    "can_cancel": false,
+    "plan": null,
+    "job": null,
+    "automatic": {
+      "enabled": true,
+      "state": "idle",
+      "phase": null,
+      "message": "",
+      "error_code": null,
+      "can_retry": false,
+      "can_play_local": false,
+      "can_cancel": false,
+      "request_id": null,
+      "last_synced_at": null,
+      "conflict": false,
+      "summary": null
+    }
+  },
+  "diagnostics": {
+    "summary": {
+      "Runtime": "Bereit",
+      "Speichermodus": "Lokal",
+      "Experimentell": true,
+      "store_calls": [
+        {
+          "method": "XStoreShowPurchaseUIAsync",
+          "hresult": "80004001"
+        }
+      ],
+      "store_catalog": [
+        {
+          "stage": "inventory-mapping",
+          "hresult": "80004001"
+        }
+      ],
+      "store_session": {
+        "components_at_launch": null,
+        "events": [
+          {
+            "time_ms": 1790540000000,
+            "phase": "checkout_ready",
+            "outcome": "passed"
+          },
+          {
+            "time_ms": 1790540001000,
+            "phase": "complete",
+            "outcome": "cancelled"
+          }
+        ],
+        "partial": true
+      },
+      "store_check": null,
+      "cloud_sync": {
+        "state": "attention",
+        "phase": "after_exit",
+        "error_code": "transport",
+        "error_details": {
+          "http_status": 503
+        }
+      },
+      "graphics": {
+        "status": "ready",
+        "session": "wayland",
+        "devices": [
+          {
+            "name": "NVIDIA GeForce RTX 4060",
+            "vendor_id": 4318,
+            "type": 2,
+            "api_version": "1.3.280",
+            "driver_version": "580.126.9.0"
+          }
+        ]
+      }
+    },
+    "checks": [
+      {
+        "id": "game",
+        "label": "Spielinstallation",
+        "ok": true,
+        "detail": "MSFS 2024 und MicrosoftGame.Config vorhanden."
+      },
+      {
+        "id": "runner",
+        "label": "Kompatibilitäts-Runtime",
+        "ok": true,
+        "detail": "Wine-Runner und Xbox-Dienst sind verfügbar."
+      },
+      {
+        "id": "saves",
+        "label": "Lokaler Spielstandspeicher",
+        "ok": true,
+        "detail": "Lokaler Speicher für Cloud-Abgleich und Sicherungen aktiviert."
+      }
+    ],
+    "generated_at": "2026-09-17T17:00:00Z",
+    "csrf_token": "fixture-CSRF-MUST-NOT-APPEAR-IN-DOM-OR-EXPORT",
+    "private_log": "MUST-NOT-EXPORT"
+  },
+  "store-check": {
+    "job": null
+  },
+  "problem-reports": {
+    "recipient": "contact@flightdeck-app.com",
+    "draft": null,
+    "unreadable": false
+  }
+}

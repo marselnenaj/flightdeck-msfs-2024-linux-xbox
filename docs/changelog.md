@@ -1,5 +1,24 @@
 # Changes and release status
 
+## 0.2.4 — 5 October 2026
+
+- Restore automatic Proton discovery, readable runner labels and the current
+  runner selection. Keep Flightdeck, installed Experimental/CachyOS and a custom
+  path option; enforce Fenix compatibility when switching.
+- Recognize legacy Fenix installs as existing setups and show managed setup
+  steps according to their actual dependencies.
+- Bring native pages and controls closer to the historical interface, restore
+  missing region/help/status content and fix clipped or invisible software-rendered text.
+- Add confirmed Community add-on uninstallation with path/size preview, exclusive
+  reservation, changed-entry checks and retained external link targets. Fenix/GSX
+  companion programs use their official installers.
+- Remove the retired web implementation and Node build checks from the source
+  tree. Keep artwork and synthetic migration fixtures; Python remains maintainer
+  build/test tooling only. Remove fully merged development/release branches.
+
+Existing native versions update directly. Older Python launchers still receive
+0.1.22 first; GitHub Latest remains on that unchanged transition release.
+
 ## 0.2.3 — 5 October 2026
 
 Update from 0.2.1 or 0.2.2 through **Updates → Flightdeck**, or use the

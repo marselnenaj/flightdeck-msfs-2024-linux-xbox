@@ -220,7 +220,7 @@ pub fn discover(home: &Path) -> Vec<Value> {
             .iter()
             .all(|p| folder.join(p).is_file())
             {
-                choices.insert(root.clone(),json!({"path":root,"label":entry.file_name(),"version":version(&root),"fenix":bundle::runner_variant(&root,false).is_ok()}));
+                choices.insert(root.clone(),json!({"path":root,"label":entry.file_name().to_string_lossy(),"version":version(&root),"fenix":bundle::runner_variant(&root,false).is_ok()}));
             }
         }
     }
@@ -614,6 +614,7 @@ pub fn snapshot(app: &Launcher) -> Value {
         match selection(&root) {
             Ok(Some(selected)) => {
                 result["selected"] = selected["version"].clone();
+                result["selected_path"] = selected["source"].clone();
                 result["experimental"] = json!(true);
                 result["can_restore"] = json!(true);
             }

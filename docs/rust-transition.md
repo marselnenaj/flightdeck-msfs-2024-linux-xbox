@@ -4,25 +4,25 @@
 installations receive the Rust launcher through their current update interface:
 
 ```text
-0.1.21 → 0.1.22 → 0.2.3
+0.1.21 → 0.1.22 → 0.2.4
            Python       Rust
 ```
 
 Each step uses **Updates → Flightdeck → Download & install**, followed by
 **Restart Flightdeck now**. The bridge preserves settings and game files,
 verifies the native package before executing its installer, and starts the
-native service at the existing local endpoint and opens the native window. The native release **0.2.3**
+native service at the existing local endpoint and opens the native window. The native release **0.2.4**
 is offered by 0.1.22 after restarting and checking for updates. The earlier
 `0.2.0-dev.1` preview is excluded because stable clients reject both prerelease
-flags and prerelease version tags. The 0.2.3 tag, package manifest and executable
+flags and prerelease version tags. The 0.2.4 tag, package manifest and executable
 all carry the matching stable version. Direct installation remains available.
-Existing 0.2.1 and 0.2.2 installations update directly to 0.2.3 without going through the
+Existing 0.2.1, 0.2.2 and 0.2.3 installations update directly to 0.2.4 without going through the
 Python bridge again.
 
 The briefly published 0.2.0 was withdrawn after a public check exposed a native
 HTTP body-read panic, also present in 0.2.0-dev.1. Users of either native version
-need the complete 0.2.3 installer once; their affected updater cannot fetch its
-own repair. Python 0.1.22 discovers and installs 0.2.3 normally. The repair
+need the complete 0.2.4 installer once; their affected updater cannot fetch its
+own repair. Python 0.1.22 discovers and installs 0.2.4 normally. The repair
 introduced in 0.2.1 uses blocking HTTP timeouts and includes streamed/stalled-body
 regression tests.
 
@@ -37,7 +37,7 @@ archives and cannot skip the bridge. Version 0.1.22 and the updated native
 launcher instead read `/releases?per_page=50` and select the highest stable
 version containing `Flightdeck-Linux-x86_64.tar.gz`.
 
-An older launcher continues to receive **0.1.22 first**, even after 0.2.3 or a
+An older launcher continues to receive **0.1.22 first**, even after 0.2.4 or a
 later stable native release exists. Installing 0.1.22 and restarting loads the
 new updater, which can then offer the native release. Versions before the
 in-app updater was introduced in 0.1.4 need the full installer.

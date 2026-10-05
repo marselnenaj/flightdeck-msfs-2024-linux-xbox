@@ -98,6 +98,9 @@ pub enum Action {
     MaintenanceStart,
     MaintenanceDiscard,
     ModsOpen,
+    ModsPreview(String),
+    ModsRemove,
+    ModsDiscard,
     Store(&'static str),
     Report,
     ReportDiscard,
@@ -491,13 +494,27 @@ impl App {
                     "proton/select",
                     self.fresh("proton")
                         && s(data, "runtime_path") == root
+                        && configured
                         && idle
+                        && !active(&data["job"])
                         && (if default {
                             yes(data, "can_restore")
+                                && !["syncing", "playing"].contains(&s(&status["cloud"], "state"))
                         } else {
                             !self.automatic_busy()
                                 && path.starts_with('/')
                                 && data["error"].as_str().is_none_or(str::is_empty)
+                                && (!yes(data, "fenix")
+                                    || self.forms.get("proton") == "custom"
+                                    || self
+                                        .discoveries
+                                        .get("proton/discover")
+                                        .and_then(|v| v["choices"].as_array())
+                                        .is_some_and(|items| {
+                                            items.iter().any(|item| {
+                                                s(item, "path") == path && yes(item, "fenix")
+                                            })
+                                        }))
                         }),
                 )
             }
@@ -652,6 +669,50 @@ impl App {
                                     == Some(self.forms.flag("delete_packages"))))
                         && (*action == MaintenanceDiscard || (idle && !self.automatic_busy())),
                 )
+            }
+            ModsPreview(id) => {
+                let data = self.data("mods");
+                body = json!({"runtime_path":root,"addon_id":id});
+                (
+                    "mods/preview-remove",
+                    safe_idle
+                        && self.fresh("mods")
+                        && s(data, "runtime_path") == root
+                        && yes(data, "can_remove")
+                        && data["mods"]
+                            .as_array()
+                            .is_some_and(|items| items.iter().any(|item| s(item, "id") == id)),
+                )
+            }
+            ModsRemove | ModsDiscard => {
+                let data = self.data("mods");
+                let job = &data["job"];
+                body = json!({"runtime_path":root,"job_id":job["id"]});
+                let current = self.fresh("mods")
+                    && s(data, "runtime_path") == root
+                    && s(job, "runtime_path") == root
+                    && !s(job, "id").is_empty();
+                if *action == ModsRemove {
+                    confirmation = Some(if yes(job, "is_link") {
+                        "Nur diese Community-Verknüpfung entfernen? Die Originaldateien bleiben erhalten."
+                    } else {
+                        "Dieses Add-on dauerhaft aus dem Community-Ordner entfernen? Enthaltene Einstellungen werden ebenfalls gelöscht."
+                    });
+                    (
+                        "mods/remove",
+                        current
+                            && self.stopped()
+                            && !self.automatic_busy()
+                            && job["state"] == "ready",
+                    )
+                } else {
+                    (
+                        "mods/discard-remove",
+                        current
+                            && (job["state"] == "ready"
+                                || (job["state"] == "running" && job["phase"] == "checking")),
+                    )
+                }
             }
             ModsOpen => (
                 "mods/open-folder",

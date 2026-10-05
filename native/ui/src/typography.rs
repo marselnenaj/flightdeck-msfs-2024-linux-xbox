@@ -141,6 +141,14 @@ impl<Message> Widget<Message, Theme, Renderer> for Label<'_> {
                 );
                 buffer.shape_until_scroll(system.raw(), false);
                 state.measured = graphics_text::measure(&buffer).0;
+                // Raw text needs finite bounds. An unbounded height makes the
+                // software renderer apply an unrelated preceding text mask.
+                buffer.set_size(
+                    system.raw(),
+                    Some(limits.max().width),
+                    Some(state.measured.height),
+                );
+                buffer.shape_until_scroll(system.raw(), false);
                 state.buffer = Some(Arc::new(buffer));
                 state.key = Some(key);
             }
@@ -160,11 +168,14 @@ impl<Message> Widget<Message, Theme, Renderer> for Label<'_> {
         if let Some(buffer) = &tree.state.downcast_ref::<State>().buffer
             && let Some(clip_bounds) = layout.bounds().intersection(viewport)
         {
-            renderer.fill_raw(graphics_text::Raw {
-                buffer: Arc::downgrade(buffer),
-                position: layout.bounds().position(),
-                color: self.color,
-                clip_bounds,
+            use iced::advanced::Renderer as _;
+            renderer.with_layer(clip_bounds, |renderer| {
+                renderer.fill_raw(graphics_text::Raw {
+                    buffer: Arc::downgrade(buffer),
+                    position: layout.bounds().position(),
+                    color: self.color,
+                    clip_bounds,
+                })
             });
         }
     }

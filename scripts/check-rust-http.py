@@ -123,6 +123,33 @@ def main():
             assert job["state"] == "complete", job
             assert not request("/api/status")[2]["setup"]["busy"]
             checks += 8
+            community = work / "Community"
+            addon = community / "synthetic-addon"
+            addon.mkdir(parents=True, mode=0o700)
+            (addon / "manifest.json").write_text(json.dumps({"title": "Synthetic add-on", "package_version": "1.0"}))
+            (runtime / "private/runtime.json").write_text(json.dumps({"game_id": "msfs2024", "community_path": str(community)}))
+            for operation in ("preview-remove", "remove", "discard-remove"):
+                assert request("/api/mods/" + operation, {})[0] == 403
+                assert request("/api/mods/" + operation, {"runtime_path": str(runtime), "job_id": "stale", "addon_id": "../outside"}, safe)[0] == 409
+                checks += 2
+            result = request("/api/mods/preview-remove", {"runtime_path": str(runtime), "addon_id": addon.name}, safe)
+            assert result[0] == 200, result
+            def wait_mod(state):
+                deadline = time.monotonic() + 5
+                while time.monotonic() < deadline:
+                    job = request("/api/mods")[2]["job"]
+                    if job["state"] == state:
+                        return job
+                    assert job["state"] != "failed", job
+                    time.sleep(.02)
+                raise AssertionError(job)
+            reviewed = wait_mod("ready")
+            assert addon.exists() and reviewed["entry_path"] == str(addon)
+            assert request("/api/mods/remove", {"job_id": "different-review"}, safe)[0] == 409
+            assert request("/api/mods/remove", {"job_id": reviewed["id"]}, safe)[0] == 200
+            wait_mod("complete")
+            assert not addon.exists() and community.is_dir()
+            checks += 5
             saves = runtime / "private/local-saves/title"
             saves.mkdir(parents=True, mode=0o700)
             (runtime / "private/local-saves.enabled").touch()

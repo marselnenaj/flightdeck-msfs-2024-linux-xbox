@@ -76,6 +76,9 @@ pub fn post(app: &Arc<Launcher>, path: &str, data: &Value, locale: &str) -> Opti
         "/api/proton/select" => crate::proton::start(app, data),
         "/api/proton/cancel" => string(data, "job_id").and_then(|id| app.cancel("proton", id)),
         "/api/mods/open-folder" => crate::mods::open_folder(app, data),
+        "/api/mods/preview-remove" => crate::mods::preview_remove(app, data),
+        "/api/mods/remove" => crate::mods::remove(app, data),
+        "/api/mods/discard-remove" => crate::mods::discard_remove(app, data),
         "/api/game-update/check" | "/api/game-update/repair/check" | "/api/game-update/verify" => {
             crate::setup::check(
                 app,

@@ -37,6 +37,7 @@ pub struct State {
     pub cloud_data: crate::cloud_sync::State,
     pub graphics_report: Value,
     pub maintenance: Option<crate::maintenance::Plan>,
+    pub mod_removal: Option<crate::mods::Removal>,
     pub launcher_updates: crate::launcher_update::State,
     pub startup_updates: crate::startup_updates::State,
 }
@@ -162,6 +163,7 @@ impl Launcher {
                 cloud_data: crate::cloud_sync::State::default(),
                 graphics_report: Value::Null,
                 maintenance: None,
+                mod_removal: None,
                 launcher_updates: crate::launcher_update::State::default(),
                 startup_updates: crate::startup_updates::State::default(),
             }),
@@ -527,7 +529,10 @@ impl Launcher {
         let mut s = self.lock();
         require(
             !s.jobs.get(kind).is_some_and(|v| {
-                v["id"] == id && (v["phase"] == "switch_update" || v["phase"] == "publish_runtime")
+                v["id"] == id
+                    && (v["phase"] == "switch_update"
+                        || v["phase"] == "publish_runtime"
+                        || v["phase"] == "removing")
             }),
             "Der atomare Spielwechsel wird gerade abgeschlossen. Bitte kurz warten.",
         )?;

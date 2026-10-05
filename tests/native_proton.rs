@@ -63,6 +63,35 @@ fn fixture(base: &Path) -> (PathBuf, std::sync::Arc<Launcher>) {
     (root, app)
 }
 #[test]
+fn discovery_returns_displayable_labels_for_steam_and_custom_runners() {
+    let temp = tempfile::tempdir().unwrap();
+    let common = temp.path().join(".local/share/Steam/steamapps/common");
+    let custom = temp.path().join(".local/share/Steam/compatibilitytools.d");
+    runner(
+        &common.join("Proton - Experimental"),
+        "experimental-11.0-test",
+    );
+    runner(
+        &custom.join("proton-cachyos-10.0-sunset"),
+        "cachyos-10.0-sunset",
+    );
+    runner(&custom.join("Proton für Tests"), "synthetic-unicode");
+    let choices = proton::discover(temp.path());
+    for name in [
+        "Proton - Experimental",
+        "proton-cachyos-10.0-sunset",
+        "Proton für Tests",
+    ] {
+        let item = choices
+            .iter()
+            .find(|item| item["label"] == name)
+            .expect("runner label is a JSON string");
+        assert!(item["path"].as_str().unwrap().ends_with(name));
+        assert!(item["version"].is_string());
+        assert!(item["fenix"].is_boolean());
+    }
+}
+#[test]
 fn repeated_switch_and_default_restore_carry_forward_new_addons() {
     let temp = tempfile::tempdir().unwrap();
     let (root, app) = fixture(temp.path());
@@ -89,6 +118,7 @@ fn repeated_switch_and_default_restore_carry_forward_new_addons() {
     let backup = root.join(selected["base_prefix"].as_str().unwrap());
     assert!(backup.join("system.reg").is_file());
     assert!(proton::selection(&root).unwrap().is_some());
+    assert_eq!(proton::snapshot(&app)["selected_path"], json!(candidate));
     let addon = "local/msfs-prefix/drive_c/Program Files/SyntheticAddon/after-switch.dat";
     write(&root.join(addon), b"user add-on after first switch");
     let ctx = app.reserve("proton", "select", true).unwrap();

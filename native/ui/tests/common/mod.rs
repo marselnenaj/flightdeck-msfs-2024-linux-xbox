@@ -28,6 +28,12 @@ pub fn fixture() -> App {
         app.snapshot.insert(key, json!({}));
     }
     app.snapshot.insert("setup",json!({"available":true,"install_available":true,"prepare_available":true,"directory_picker":true,"job":null}));
+    app.snapshot.insert("proton",json!({"runtime_path":"/synthetic/msfs2024","selected":"Flightdeck (Xodus)","experimental":false,"can_restore":false,"error":"","fenix":false,"job":null}));
+    app.discoveries.insert("proton/discover",json!({"choices":[
+        {"path":"/synthetic/Steam/Proton - Experimental","label":"Proton - Experimental","version":"experimental-11.0-test","fenix":false},
+        {"path":"/synthetic/Steam/proton-cachyos","label":"proton-cachyos","version":"cachyos-10.0-sunset","fenix":true}
+    ]}));
+    app.snapshot.insert("mods",json!({"state":"ready","runtime_path":"/synthetic/msfs2024","can_open":true,"can_remove":true,"folder_path":"/synthetic/Community","message":"Der Community-Ordner wurde gefunden.","count":0,"mods":[]}));
     app.snapshot.insert("fenix",json!({"state":"installed","runtime_path":"/synthetic/msfs2024","can_change":true,"installed":true,"fenix_installed":true,"settings_ready":true,"manager_installed":true,"configured":true,"can_restore":true}));
     app.snapshot.insert("gsx",json!({"state":"available","runtime_path":"/synthetic/msfs2024","can_change":true,"prepared":true,"package_installed":true,"startup_found":true,"configured":true}));
     app.snapshot.insert("launcher-update",json!({"managed":true,"installed_version":"0.2.2","can_check":true,"can_install":true,"check_id":"checked-launcher","latest_version":"0.2.3","notes":"Synthetic release notes"}));
@@ -40,6 +46,8 @@ pub fn localized_fixture(language: Language) -> App {
     let mut app = fixture();
     app.language = language;
     if language == Language::En {
+        app.snapshot.get_mut("mods").expect("mods")["message"] =
+            json!("The Community folder was found.");
         app.snapshot.get_mut("status").expect("status")["runtime"]["checks"] = json!([
             {"label":"Game installation", "detail":"MSFS 2024 and MicrosoftGame.Config are present.", "ok":true},
             {"label":"Compatibility runtime", "detail":"Wine runner and Xbox service are available.", "ok":true},

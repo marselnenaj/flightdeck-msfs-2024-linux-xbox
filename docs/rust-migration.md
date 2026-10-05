@@ -1,19 +1,18 @@
 # Native launcher status
 
-The **[0.2.3 release](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.2.3)** runs the Flightdeck desktop, backend,
+The **[0.2.4 release](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.2.4)** runs the Flightdeck desktop, backend,
 installer, updater and runtime helpers in Rust. It retains the established
 C/C++ Wine/Store ABI components. Version 0.1.22 is the Python transition release
-and offers 0.2.3 through its normal updater.
-Older launchers receive 0.1.22 first, then 0.2.3 after restarting and checking
+and offers 0.2.4 through its normal updater.
+Older launchers receive 0.1.22 first, then 0.2.4 after restarting and checking
 again. Direct installation of the full native package also works. The superseded
 0.2.0-dev.1 preview and withdrawn 0.2.0 release entries have been removed;
-0.2.3 is the current native release; 0.2.1 and 0.2.2 update through their existing updater.
+0.2.4 is the current native release; 0.2.1, 0.2.2 and 0.2.3 update through their existing updater.
 The previous stable release remains available for reproducibility and rollback.
 
-Version **0.2.3** completes the desktop migration with a native Rust
+Version **0.2.3** introduced the desktop migration with a native Rust
 interface for all six views. It uses the same artwork and font, real local API
-commands, existing installation records and update handoff. The old web UI is a
-frozen test reference only; it is no longer embedded or served. This release also
+commands, existing installation records and update handoff. The old web UI is retained in Git history, not in the source or installed package. This release also
 persists Fenix .NET compatibility settings in the Wine profile, waits for detached
 installer children and checks install-hook failures. See [native desktop and
 Fenix verification](native-ui.md).
@@ -25,7 +24,7 @@ Fenix verification](native-ui.md).
 | Desktop and API | Loopback HTTP service, origin/session checks, native iced UI, persisted language selection, service reuse and update handoff |
 | Setup | Prerequisite checks, pinned component downloads, official Microsoft sign-in through Xodus, installation/import, progress, pause and resume |
 | Runtime | Exclusive leases, owned process supervision, component refresh, portable licensed game loader, graphics and VR setup |
-| Add-ons | Community discovery, Fenix setup/restore/repair, display helpers, GSX/FSDT preparation and Proton switching with retained profiles |
+| Add-ons | Community discovery and reviewed per-package uninstallation, Fenix setup/restore/repair, display helpers, GSX/FSDT preparation and Proton switching with retained profiles |
 | .NET | Both registry views and CLR architectures, managed compiler probes during repair, staged automatic repair before Fenix/MSFS startup, transaction recovery |
 | Saves | Exact XDLOCAL1 interchange, bounded connected-storage protocol, account-bound cloud operations, backups, conflict decisions and uncertain-upload recovery |
 | Maintenance | Game update/repair/rollback, launcher update/rollback/uninstall, inventory-bound previews and recoverable filesystem transactions |
@@ -38,7 +37,7 @@ An explicit rollback to an older Python release still needs that release's
 Python runtime; normal native operation does not.
 The Python **0.1.22 transition update** accepts native packages and
 hands the existing local service endpoint to the native launcher. The in-app path is
-**0.1.21 → 0.1.22 → 0.2.3**. Older updaters only accept the
+**0.1.21 → 0.1.22 → 0.2.4**. Older updaters only accept the
 Python source layout, so the [staged release procedure](rust-transition.md)
 keeps their discovery endpoint on the bridge. Direct installation with the new
 full package also works. Native-to-native updates use the Rust updater. Update
@@ -65,7 +64,7 @@ not roll back game files, account state or saves.
 Validation includes native filesystem/concurrency/transaction tests, frozen
 legacy save/.NET/settings/diagnostic contracts, HTTP contract checks, native UI
 event/rendering tests and the Rust client running against the real local service.
-The old web state tests remain a separate migration oracle. The installer is exercised with Python absent from
+The historical web API fixture is retained for native comparison captures. The installer is exercised with Python absent from
 PATH. Separate account-free Wine checks cover:
 
 - Fresh .NET installation, repair after removing the x86 CLR, restored file

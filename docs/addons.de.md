@@ -38,6 +38,20 @@ Die allgemeine Mod-Liste zeigt den Bestand und öffnet den Ordner.
 Für Fenix und die experimentelle GSX-Pro-Integration gibt es eigene Abläufe,
 derzeit nur für MSFS 2024.
 
+## Community-Mod deinstallieren
+
+Beende den Simulator und laufende Einrichtungen. Wähle in **Mods** beim gewünschten
+Paket **Deinstallation prüfen**. Kontrolliere Ordner und Größe, wähle
+**Deinstallieren** und bestätige. Ein echter Paketordner wird dauerhaft mit allen
+darin gespeicherten Einstellungen gelöscht. Bei einer Verknüpfung entfernt
+Flightdeck nur den Community-Eintrag; die Originaldateien bleiben erhalten.
+**Abbrechen** lässt das Paket unverändert. Hat sich der Ordner seit der Vorschau
+geändert, verlangt Flightdeck eine neue Prüfung.
+
+Fenix und GSX vollständig über ihren offiziellen Installer/Manager im jeweiligen
+Add-on-Bereich entfernen. Die Community-Deinstallation entfernt keine zugehörigen
+Windows-Begleitprogramme.
+
 ## FlyByWire A32NX
 
 1. Den **Linux-Installer** von [FlyByWire](https://flybywiresim.com/downloads/)

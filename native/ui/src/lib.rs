@@ -1,8 +1,11 @@
 //! Native Flightdeck desktop interface, backed by the verified local service.
+mod addons;
 mod client;
 mod controller;
 mod model;
 mod pages;
+mod presentation;
+mod setup_page;
 pub use client::{Client, Request, Snapshot};
 use iced::{Subscription, Task};
 pub use model::Action;
@@ -100,11 +103,63 @@ pub enum Page {
     Diagnostics,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Disclosure {
+    Graphics,
+    Vr,
+    Proton,
+    Maintenance,
+    Removal,
+    AdvancedSetup,
+    Fenix,
+    FenixAdvanced,
+    Gsx,
+    Cloud,
+    Report,
+    Diagnostics,
+    LauncherRollback,
+}
+impl Disclosure {
+    fn group(self) -> Option<u8> {
+        match self {
+            Self::Graphics | Self::Vr | Self::Proton | Self::Maintenance => Some(0),
+            Self::Fenix | Self::Gsx => Some(1),
+            _ => None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum HelpLink {
+    FenixInstaller,
+    FenixProject,
+    Gsx,
+    Vr,
+    Install,
+}
+impl HelpLink {
+    fn url(self) -> &'static str {
+        match self {
+            Self::FenixInstaller => "https://fenixsim.com/dashboard/",
+            Self::FenixProject => "https://github.com/marselnenaj/fenix-a320-linux-patch",
+            Self::Gsx => "https://www.fsdreamteam.com/products_gsxpro.html",
+            Self::Vr => {
+                "https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/blob/main/docs/vr.md"
+            }
+            Self::Install => {
+                "https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/blob/main/docs/install.md"
+            }
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum Message {
     Select(Edition),
     Language(Language),
     Navigate(Page),
+    Toggle(Disclosure),
+    OpenHelp(HelpLink),
     Action(Action),
     Tick,
     Refresh,
@@ -147,6 +202,8 @@ pub struct App {
     pub startup_checked: bool,
     pub restarting: bool,
     pub discoveries: std::collections::BTreeMap<&'static str, Value>,
+    pub expanded: std::collections::BTreeSet<Disclosure>,
+    proton_active: Option<(bool, String, String)>,
     connect_after_check: Option<String>,
     report_dirty: bool,
     description: iced::widget::text_editor::Content,
@@ -180,6 +237,8 @@ impl App {
             startup_checked: false,
             restarting: false,
             discoveries: Default::default(),
+            expanded: Default::default(),
+            proton_active: None,
             connect_after_check: None,
             report_dirty: false,
             description: iced::widget::text_editor::Content::new(),
@@ -259,7 +318,6 @@ impl App {
                 .push(self.hero(content_width, compact, hero_height))
                 .push(Space::new().height(20))
                 .push(self.overview_details(content_width, compact))
-                .push(self.automatic_saves())
                 .push(Space::new().height(20));
         } else {
             main = main.push(self.page_view());
@@ -615,8 +673,7 @@ impl App {
                 ]
                 .spacing(10),
             )
-            .max_width(560)
-            .width(Length::Fill);
+            .width(560.0_f32.min((size.width - 36.0).max(0.0)));
             let title = label(
                 self.tr("Simulator auswählen", "Select simulator"),
                 14.0,

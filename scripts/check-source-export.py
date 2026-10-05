@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DIRECTORIES = ("compat", "scripts", "docs", "tests", "examples", "native", "ui", ".github")
 TOP_LEVEL = ("README.md", "BUILDING.md", "LICENSE", ".gitignore",
              "install.sh", "Install Flightdeck.desktop", "Cargo.toml", "Cargo.lock")
-RETIRED = ("flightdeck", "pyproject.toml", "build_support.py", "MANIFEST.in",
+RETIRED = ("tests/reference-web", "examples/native-ui/capture-reference.mjs", "ui/package.json", "flightdeck", "pyproject.toml", "build_support.py", "MANIFEST.in",
            "scripts/native-runtime", "scripts/install-launcher.py", "scripts/install-launcher-gui.py",
            "scripts/install-python.sh", "scripts/transition-release.py", "scripts/full-installer-release.py")
 SKIP = {"__pycache__", "node_modules", "build", "dist", "target", "artifacts", "coverage", ".git", ".venv", ".pytest_cache"}

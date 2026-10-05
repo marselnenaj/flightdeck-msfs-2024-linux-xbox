@@ -27,6 +27,9 @@ fn main() {
         "drive",
         "check",
         "arrow",
+        "refresh",
+        "gamepad",
+        "database",
     ] {
         let tag = format!("<symbol id=\"i-{name}\" viewBox=\"0 0 24 24\">");
         let body = symbols

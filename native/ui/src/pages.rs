@@ -19,24 +19,43 @@ impl std::fmt::Display for Choice {
 }
 
 impl App {
-    fn t<'a>(&self, text: &'a str) -> &'a str {
+    pub(crate) fn help_link<'a>(&self, title: &str, link: HelpLink) -> Element<'a, Message> {
+        button(label(
+            format!("{} ↗", self.t(title)),
+            14.0,
+            Weight::Semibold,
+            self.edition.accent(),
+        ))
+        .padding([6, 0])
+        .on_press_maybe((!self.exporting).then_some(Message::OpenHelp(link)))
+        .style(button::text)
+        .into()
+    }
+    pub(crate) fn t<'a>(&self, text: &'a str) -> &'a str {
         if self.language == Language::En {
             TRANSLATIONS.get(text).map(String::as_str).unwrap_or(text)
         } else {
             text
         }
     }
-    fn paragraph<'a>(&self, text: impl Into<std::borrow::Cow<'a, str>>) -> Element<'a, Message> {
-        label(text, 14.0, Weight::Normal, MUTED)
-            .line_height(1.6)
+    pub(crate) fn paragraph<'a>(
+        &self,
+        text: impl Into<std::borrow::Cow<'a, str>>,
+    ) -> Element<'a, Message> {
+        label(text, 16.0, Weight::Normal, MUTED)
+            .line_height(1.5)
             .into()
     }
-    fn heading<'a>(&self, text: impl Into<std::borrow::Cow<'a, str>>) -> Element<'a, Message> {
-        label(text, 25.0, Weight::Semibold, INK)
+    pub(crate) fn heading<'a>(
+        &self,
+        text: impl Into<std::borrow::Cow<'a, str>>,
+    ) -> Element<'a, Message> {
+        label(text, 26.0, Weight::Semibold, INK)
+            .weight(650)
             .tracking(-0.7)
             .into()
     }
-    fn card<'a>(
+    pub(crate) fn card<'a>(
         &self,
         title: &str,
         content: impl Into<Element<'a, Message>>,
@@ -47,31 +66,165 @@ impl App {
             .style(card_style)
             .into()
     }
-    fn action<'a>(&self, title: &str, action: Action) -> Element<'a, Message> {
-        let allowed = self.request(&action).is_some();
+    pub(crate) fn disclosure<'a>(
+        &self,
+        section: Disclosure,
+        title: &str,
+        summary: &str,
+        content: impl Into<Element<'a, Message>>,
+    ) -> Element<'a, Message> {
+        let expanded = self.expanded.contains(&section);
+        let mut title_row =
+            row![label(self.t(title).to_string(), 20.0, Weight::Semibold, INK).tracking(-0.4)]
+                .spacing(12)
+                .align_y(alignment::Vertical::Center);
+        let badge = match section {
+            Disclosure::Fenix => Some("Community-Vorschau"),
+            Disclosure::Gsx => Some("Experimentell"),
+            _ => None,
+        };
+        if let Some(badge) = badge {
+            title_row = title_row.push(
+                container(label(
+                    self.t(badge).to_string(),
+                    11.0,
+                    Weight::Semibold,
+                    self.edition.accent(),
+                ))
+                .padding([4, 9])
+                .style(|_| {
+                    container::Style::default()
+                        .background(iced::color!(0x19343e))
+                        .border(Border {
+                            color: LINE,
+                            width: 1.0,
+                            radius: 20.0.into(),
+                        })
+                }),
+            );
+        }
+        let mut heading = column![title_row.wrap()].spacing(5);
+        if !summary.is_empty() {
+            heading = heading.push(label(
+                self.t(summary).to_string(),
+                13.0,
+                Weight::Normal,
+                MUTED,
+            ));
+        }
+        let toggle = button(
+            row![
+                heading.width(Length::Fill),
+                svg(svg::Handle::from_memory(format!(r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="{}" fill="none" stroke="#a6b8c9" stroke-width="2"/></svg>"##,if expanded { "m5 15 7-7 7 7" } else { "m5 9 7 7 7-7" }).into_bytes())).width(20).height(20)
+            ]
+            .spacing(18)
+            .align_y(alignment::Vertical::Center),
+        )
+        .width(Length::Fill)
+        .padding([21, 24])
+        .on_press(Message::Toggle(section))
+        .style(|_, status| button::Style {
+            background: matches!(status, button::Status::Hovered)
+                .then_some(iced::color!(0x17303e).into()),
+            text_color: INK,
+            border: Border {
+                radius: 14.0.into(),
+                ..Default::default()
+            },
+            ..Default::default()
+        });
+        let mut body = column![toggle];
+        if expanded {
+            body = body
+                .push(separator())
+                .push(container(content.into()).padding(24).width(Length::Fill));
+        }
+        container(body).width(Length::Fill).style(card_style).into()
+    }
+    pub(crate) fn control<'a>(
+        &self,
+        title: &str,
+        message: Option<Message>,
+        primary: bool,
+    ) -> Element<'a, Message> {
+        let accent = self.edition.accent();
+        let enabled = message.is_some();
+        let color = if !enabled {
+            MUTED.scale_alpha(0.48)
+        } else if primary {
+            BG
+        } else {
+            INK
+        };
         button(label(
             self.t(title).to_string(),
             14.0,
             Weight::Semibold,
-            INK,
+            color,
         ))
         .padding([11, 16])
-        .on_press_maybe(allowed.then_some(Message::Action(action)))
+        .on_press_maybe(message)
+        .style(move |_, status| {
+            let background = if primary && enabled {
+                accent
+            } else if status == button::Status::Hovered {
+                iced::color!(0x19303e)
+            } else {
+                iced::color!(0x10212c)
+            };
+            button::Style {
+                background: Some(background.into()),
+                text_color: color,
+                border: Border {
+                    color: if primary && enabled { accent } else { LINE },
+                    width: 1.0,
+                    radius: 8.0.into(),
+                },
+                ..Default::default()
+            }
+        })
         .into()
     }
-    fn actions<'a>(&self, items: &[(&str, Action)]) -> Element<'a, Message> {
-        // Two controls per row keeps translations usable at the minimum width.
-        let mut rows = Column::new().spacing(10);
-        for pair in items.chunks(2) {
-            let mut line = iced::widget::Row::new().spacing(10);
-            for (title, action) in pair {
-                line = line.push(self.action(title, action.clone()));
-            }
-            rows = rows.push(line);
-        }
-        rows.into()
+    pub(crate) fn refresh_button<'a>(&self) -> Element<'a, Message> {
+        self.control(
+            "Status neu laden",
+            (!self.pending).then_some(Message::Refresh),
+            false,
+        )
     }
-    fn input<'a>(
+    pub(crate) fn action<'a>(&self, title: &str, action: Action) -> Element<'a, Message> {
+        let allowed = self.request(&action).is_some();
+        let primary = matches!(
+            action,
+            Launch
+                | Backup
+                | SetupCheck
+                | SetupStart
+                | ModsOpen
+                | ModsRemove
+                | Report
+                | Graphics
+                | VrSave
+                | Proton
+                | MaintenanceStart
+                | Launcher("install" | "restart")
+                | Game("start" | "sign-in")
+                | Fenix("install" | "configure")
+                | Gsx("prepare" | "configure")
+        );
+        self.control(title, allowed.then_some(Message::Action(action)), primary)
+    }
+    pub(crate) fn actions<'a>(&self, items: &[(&str, Action)]) -> Element<'a, Message> {
+        iced::widget::Row::with_children(
+            items
+                .iter()
+                .map(|(title, action)| self.action(title, action.clone())),
+        )
+        .spacing(10)
+        .wrap()
+        .into()
+    }
+    pub(crate) fn input<'a>(
         &'a self,
         title: &str,
         field: &'static str,
@@ -81,7 +234,17 @@ impl App {
         let mut input = text_input(placeholder, self.forms.get(field))
             .id(field)
             .padding(12)
-            .size(14);
+            .size(16)
+            .style(|theme, status| {
+                let mut style = text_input::default(theme, status);
+                style.background = BG.into();
+                style.border = Border {
+                    color: LINE,
+                    width: 1.0,
+                    radius: 8.0.into(),
+                };
+                style
+            });
         if self.can_edit_field(field) {
             input = input.on_input(move |v| Message::Field(field, v));
         }
@@ -105,7 +268,7 @@ impl App {
         .spacing(8)
         .into()
     }
-    fn choices<'a>(
+    pub(crate) fn choices<'a>(
         &self,
         title: &str,
         field: &'static str,
@@ -119,19 +282,45 @@ impl App {
             .iter()
             .find(|c| c.id == self.forms.get(field))
             .cloned();
-        column![
-            label(self.t(title).to_string(), 14.0, Weight::Semibold, INK),
-            pick_list(choices, selected, move |c: Choice| Message::Field(
-                field, c.id
-            ))
+        let control: Element<'a, Message> = if self.can_edit_field(field) {
+            pick_list(choices, selected, move |c: Choice| {
+                Message::Field(field, c.id)
+            })
+            .placeholder(self.tr("Bitte auswählen …", "Select …"))
             .width(Length::Fill)
             .padding(12)
-            .text_size(14)
+            .text_size(16)
+            .style(|theme, status| {
+                let mut style = iced::widget::pick_list::default(theme, status);
+                style.background = BG.into();
+                style.border = Border {
+                    color: LINE,
+                    width: 1.0,
+                    radius: 8.0.into(),
+                };
+                style
+            })
+            .into()
+        } else {
+            container(label(
+                selected.map(|c| c.label).unwrap_or_default(),
+                14.0,
+                Weight::Normal,
+                MUTED,
+            ))
+            .padding(12)
+            .width(Length::Fill)
+            .style(card_style)
+            .into()
+        };
+        column![
+            label(self.t(title).to_string(), 14.0, Weight::Semibold, INK),
+            container(control).id(field).width(Length::Fill)
         ]
         .spacing(8)
         .into()
     }
-    fn options<'a>(
+    pub(crate) fn options<'a>(
         &self,
         title: &str,
         field: &'static str,
@@ -145,39 +334,46 @@ impl App {
                 .map(|(id, label)| (id.to_string(), self.t(label).to_string())),
         )
     }
-    fn flag<'a>(&self, title: &str, field: &'static str) -> Element<'a, Message> {
+    pub(crate) fn flag<'a>(&self, title: &str, field: &'static str) -> Element<'a, Message> {
         let mut control = checkbox(self.forms.flag(field))
             .label(self.t(title).to_string())
             .size(18)
-            .text_size(14);
+            .text_size(16);
         if !self.pending {
             control = control.on_toggle(move |v| Message::Flag(field, v));
         }
         control.into()
     }
     fn checks<'a>(&self, checks: &Value) -> Element<'a, Message> {
-        let mut rows = Column::new().spacing(12);
+        let mut rows = Column::new().spacing(16);
         for check in checks.as_array().into_iter().flatten().take(100) {
             let (mark, color) = match check["ok"].as_bool() {
                 Some(true) => ("✓", self.edition.accent()),
                 Some(false) => ("!", iced::color!(0xff9199)),
                 None => ("·", MUTED),
             };
-            rows = rows.push(
-                row![
-                    label(mark, 20.0, Weight::Bold, color).width(24),
-                    column![
-                        label(s(check, "label").to_string(), 14.0, Weight::Semibold, INK),
-                        self.paragraph(s(check, "detail").to_string())
+            rows = rows
+                .push(
+                    row![
+                        if mark == "✓" {
+                            icon("check-circle", 32.0, color)
+                        } else {
+                            label(mark, 20.0, Weight::Bold, color).width(32).into()
+                        },
+                        column![
+                            label(s(check, "label").to_string(), 14.0, Weight::Semibold, INK),
+                            label(s(check, "detail").to_string(), 13.0, Weight::Normal, MUTED)
+                        ]
+                        .spacing(4)
                     ]
-                    .spacing(4)
-                ]
-                .spacing(12),
-            );
+                    .spacing(18)
+                    .align_y(alignment::Vertical::Center),
+                )
+                .push(separator());
         }
         rows.into()
     }
-    fn pairs<'a>(&self, data: &Value, fields: &[(&str, &str)]) -> Element<'a, Message> {
+    pub(crate) fn pairs<'a>(&self, data: &Value, fields: &[(&str, &str)]) -> Element<'a, Message> {
         let mut rows = Column::new().spacing(8);
         for (key, title) in fields {
             let v = &data[*key];
@@ -210,7 +406,7 @@ impl App {
         }
         rows.into()
     }
-    fn job<'a>(&self, key: &str) -> Element<'a, Message> {
+    pub(crate) fn job<'a>(&self, key: &str) -> Element<'a, Message> {
         let data = self.data(key);
         let job = &data["job"];
         let mut out = Column::new().spacing(12);
@@ -274,6 +470,17 @@ impl App {
                         .to_string()
                 ),
                 self.paragraph(request.runtime.clone()),
+                self.pairs(
+                    if request.path == "mods/remove" {
+                        &self.data("mods")["job"]
+                    } else {
+                        &Value::Null
+                    },
+                    &[
+                        ("addon_id", "Add-on"),
+                        ("entry_path", "Betroffener Eintrag")
+                    ]
+                ),
                 row![
                     button(self.tr("Bestätigen", "Confirm"))
                         .on_press(Message::Confirm)
@@ -301,7 +508,7 @@ impl App {
         let installation = self.card(
             "Installation",
             column![
-                self.paragraph(self.runtime()),
+                self.paragraph(self.edition.name()),
                 self.checks(&self.status()["runtime"]["checks"]),
                 self.link(
                     self.tr("Installationen verwalten", "Manage installations"),
@@ -318,6 +525,8 @@ impl App {
             "Lokale Spielstände",
             column![
                 self.save_summary(),
+                separator(),
+                self.automatic_saves(),
                 self.link(
                     self.tr("Spielstände verwalten", "Manage saves"),
                     Page::Saves
@@ -328,34 +537,60 @@ impl App {
         if width < 760.0 {
             column![installation, saves].spacing(20).into()
         } else {
-            row![installation, saves].spacing(20).into()
+            row![
+                container(installation).width(Length::FillPortion(11)),
+                container(saves).width(Length::FillPortion(10))
+            ]
+            .spacing(22)
+            .into()
         }
     }
     fn save_summary(&self) -> Element<'_, Message> {
         let saves = &self.status()["saves"];
-        column![
-            self.paragraph(if yes(saves, "available") {
-                self.tr("Lokaler Speicher aktiv", "Local storage active")
-            } else {
-                self.tr(
-                    "Lokaler Speicher nicht verfügbar",
-                    "Local storage unavailable",
+        row![
+            icon("drive", 30.0, MUTED),
+            column![
+                label(
+                    if yes(saves, "available") {
+                        self.tr("Lokaler Speicher aktiv", "Local storage active")
+                    } else {
+                        self.tr(
+                            "Lokaler Speicher nicht verfügbar",
+                            "Local storage unavailable",
+                        )
+                    },
+                    14.0,
+                    Weight::Semibold,
+                    INK
+                ),
+                label(
+                    format!(
+                        "{} · {} {} · {} {}",
+                        bytes(number(&saves["bytes"])),
+                        number(&saves["files"]),
+                        self.tr("Dateien", "files"),
+                        number(&saves["backups"]),
+                        self.tr(
+                            if saves["backups"] == 1 {
+                                "Backup"
+                            } else {
+                                "Backups"
+                            },
+                            if saves["backups"] == 1 {
+                                "backup"
+                            } else {
+                                "backups"
+                            }
+                        )
+                    ),
+                    13.0,
+                    Weight::Normal,
+                    MUTED
                 )
-            }),
-            self.paragraph(format!(
-                "{} · {} {} · {} {}",
-                bytes(number(&saves["bytes"])),
-                number(&saves["files"]),
-                self.tr("Dateien", "files"),
-                number(&saves["backups"]),
-                self.tr("Sicherungen", "backups")
-            )),
-            self.pairs(
-                &saves["last_backup"],
-                &[("created_at", "Letztes Backup"), ("name", "Datei")]
-            )
+            ]
+            .spacing(10)
         ]
-        .spacing(10)
+        .spacing(20)
         .into()
     }
     pub(crate) fn automatic_saves(&self) -> Element<'_, Message> {
@@ -363,11 +598,17 @@ impl App {
         if !yes(cloud, "enabled") {
             return Column::new().into();
         }
-        let mut content=column![self.paragraph(self.tr("Flightdeck gleicht deine Xbox-Spielstände vor dem Start und nach dem Beenden ab. Vor Änderungen bleibt eine lokale Sicherung erhalten.","Flightdeck syncs your Xbox saves before starting and after exiting. A local backup is kept before changes.")),self.paragraph(s(cloud,"message")),self.paragraph(s(cloud,"error"))].spacing(12);
+        let mut content=column![label(self.tr("Flightdeck gleicht deine Xbox-Spielstände vor dem Start und nach dem Beenden ab. Vor Änderungen bleibt eine lokale Sicherung erhalten.","Flightdeck syncs your Xbox saves before starting and after exiting. A local backup is kept before changes."),14.0,Weight::Normal,MUTED)].spacing(12);
+        for key in ["message", "error"] {
+            if !s(cloud, key).is_empty() {
+                content = content.push(self.paragraph(s(cloud, key)));
+            }
+        }
         if yes(cloud, "conflict") {
             content=content.push(self.paragraph(self.tr("Lokal und in der Cloud gibt es unterschiedliche Änderungen. Wähle den Stand, den du behalten möchtest.","Local and cloud saves have changed. Choose the version you want to keep."))).push(self.pairs(&cloud["summary"],&[("add_count","Neu"),("replace_count","Ersetzen"),("delete_count","Löschen"),("conflict_count","Konflikte")]))
         }
         let mut buttons = Column::new().spacing(10);
+        let mut has_buttons = false;
         for (title, op) in [
             ("Erneut versuchen", "retry"),
             ("Anmelden", "sign-in"),
@@ -379,301 +620,258 @@ impl App {
             let action = Automatic(op);
             if self.request(&action).is_some() {
                 buttons = buttons.push(self.action(title, action));
+                has_buttons = true;
             }
         }
-        content = content.push(buttons);
-        self.card("Automatischer Cloud-Abgleich", content)
-    }
-    fn setup_page(&self) -> Element<'_, Message> {
-        let mode = self.forms.get("mode");
-        let mut install = column![
-            self.edition_picker(),
-            self.options(
-                "Installation",
-                "mode",
-                &[
-                    ("install", "Neu installieren"),
-                    ("existing", "Vorhandene Installation verbinden"),
-                    ("prepare", "Erweiterte Einrichtung")
-                ]
-            )
-        ]
-        .spacing(16);
-        match mode {
-            "existing" => {
-                install = install
-                    .push(self.input(
-                        "Installationsordner",
-                        "runtime_path",
-                        "/…",
-                        Some(Pick("runtime_path")),
-                    ))
-                    .push(
-                        button(self.tr("Installationen suchen", "Find installations"))
-                            .on_press_maybe(
-                                (self.online && !self.pending)
-                                    .then_some(Message::Discover("setup/discover")),
-                            )
-                            .padding(12),
-                    );
-                if let Some(discovered) = self.discoveries.get("setup/discover") {
-                    for item in discovered["runtimes"]
-                        .as_array()
-                        .into_iter()
-                        .flatten()
-                        .take(40)
-                    {
-                        if let Some(path) = item["path"].as_str() {
-                            install = install.push(
-                                button(label(
-                                    format!("{} · {path}", s(item, "name")),
-                                    13.0,
-                                    Weight::Normal,
-                                    INK,
-                                ))
-                                .on_press(Message::Field("runtime_path", path.to_string()))
-                                .padding(10),
-                            );
-                        }
-                    }
-                    if yes(discovered, "limited") {
-                        install = install.push(self.paragraph(self.tr(
-                            "Die Suche wurde begrenzt. Du kannst den Pfad direkt eingeben.",
-                            "Search was limited. You can enter the path directly.",
-                        )));
-                    }
-                }
-            }
-            "prepare" => {
-                for (field, title) in [
-                    ("runtime_path", "Installationsordner"),
-                    ("artifacts_path", "Runtime-Komponenten"),
-                    ("game_path", "Spielordner"),
-                    ("runner_path", "Wine-Runner"),
-                    ("prefix_path", "Windows-Profil"),
-                    ("media_plugins_path", "Media-Plugins (optional)"),
-                ] {
-                    install = install.push(self.input(title, field, "/…", Some(Pick(field))));
-                }
-                install = install.push(self.input(
-                    "Store-Region (ISO-Code)",
-                    "market",
-                    "AT / DE / US",
-                    None,
-                ));
-            }
-            _ => {
-                install=install.push(self.input("Zielordner (optional)","destination_path",self.tr("Standardordner verwenden","Use default folder"),Some(Pick("destination_path")))).push(self.input("Store-Region (ISO-Code)","market","AT / DE / US",None)).push(self.paragraph(self.tr("Du benötigst die Xbox-PC-Version. Melde dich im Microsoft-Fenster mit dem Konto an, dem das Spiel gehört.","You need the Xbox PC version. Sign in in the Microsoft window using the account that owns the game.")));
-            }
+        if has_buttons {
+            content = content.push(buttons);
         }
-        install = install.push(self.job("setup")).push(self.actions(&[
-            (
-                if mode == "existing" {
-                    "Verbinden"
-                } else {
-                    "Angaben prüfen"
-                },
-                SetupCheck,
-            ),
-            ("Installation starten", SetupStart),
-            ("Download pausieren", SetupControl("pause")),
-            ("Fortsetzen", SetupControl("resume")),
-            ("Abbrechen", SetupControl("cancel")),
-        ]));
-        let graphics = self.card(
-            "Grafik",
-            column![
-                self.options(
-                    "NVIDIA-Modus",
-                    "graphics",
-                    &[
-                        ("auto", "Automatisch"),
-                        ("compatibility", "Kompatibilität"),
-                        ("features", "NVIDIA-Funktionen")
-                    ]
-                ),
-                self.paragraph(s(&self.status()["graphics"], "error")),
-                self.action("Speichern", Graphics)
-            ]
-            .spacing(14),
-        );
-        let vr = self.card(
-            "Virtual Reality",
-            column![
-                self.options(
-                    "VR-Modus",
-                    "vr",
-                    &[
-                        ("off", "Aus"),
-                        ("auto", "Automatisch"),
-                        ("wivrn", "WiVRn"),
-                        ("steamvr", "SteamVR"),
-                        ("monado", "Monado")
-                    ]
-                ),
-                self.paragraph(s(&self.status()["vr"], "message")),
-                self.paragraph(s(&self.status()["vr"], "error")),
-                self.paragraph(s(&self.status()["vr"]["check"], "message")),
-                self.actions(&[("Speichern", VrSave), ("Headset prüfen", VrCheck)])
-            ]
-            .spacing(14),
-        );
         column![
-            self.card("Simulator einrichten", install),
-            graphics,
-            vr,
-            self.proton_card(),
-            self.maintenance_card()
+            label(
+                self.t("Automatisch vor und nach dem Spielen").to_string(),
+                20.0,
+                Weight::Semibold,
+                INK
+            ),
+            content
         ]
-        .spacing(20)
+        .spacing(12)
         .into()
     }
-    fn proton_card(&self) -> Element<'_, Message> {
-        let mut choices = vec![("default".into(), "Flightdeck (Xodus, Standard)".into())];
-        if let Some(discovered) = self.discoveries.get("proton/discover") {
-            for item in discovered["choices"].as_array().into_iter().flatten() {
-                if let Some(path) = item["path"].as_str() {
-                    choices.push((
-                        path.into(),
-                        format!("{} {}", s(item, "label"), s(item, "version")),
-                    ));
-                }
-            }
-        }
-        choices.push((
-            "custom".into(),
-            self.t("Anderen Proton-Ordner wählen").into(),
-        ));
-        self.card("Proton-Version",column![self.paragraph(self.tr("Flightdeck bleibt die Standardumgebung. Andere installierte Proton-Versionen werden in einer eigenen Profilkopie vorbereitet.","Flightdeck remains the default runner. Other installed Proton versions are prepared in a separate profile copy.")),self.pairs(self.data("proton"),&[("label","Aktive Proton-Version:"),("version","Version")]),self.choices("Proton-Version","proton",choices),self.input("Proton-Ordner","proton_path","/…",Some(Pick("proton_path"))),button(self.tr("Proton-Versionen suchen","Find Proton versions")).on_press_maybe((self.online&&!self.pending).then_some(Message::Discover("proton/discover"))).padding(12),self.job("proton"),self.actions(&[("Auswahl übernehmen",Proton),("Flightdeck wiederherstellen",ProtonDefault),("Abbrechen",ProtonCancel)])].spacing(14))
-    }
-    fn maintenance_card(&self) -> Element<'_, Message> {
-        let job = &self.data("maintenance")["job"];
-        let mut content=column![self.paragraph(self.tr("Prüfe zuerst, welche Dateien betroffen sind. Änderungen beginnen erst nach deiner Bestätigung.","Review the affected files first. Changes begin only after your confirmation.")),self.flag("Spieldateien löschen","delete_packages"),self.flag("Spielstände und Add-ons behalten","keep_data"),self.actions(&[("Windows-Profil zurücksetzen",Maintenance("reset")),("Windows-Profil wiederherstellen",Maintenance("restore")),("Installation entfernen",Maintenance("uninstall"))]),self.job("maintenance")].spacing(14);
-        if job["state"] == "ready" {
-            content = content
-                .push(self.heading(self.t("Vorschau")))
-                .push(self.pairs(
-                    job,
-                    &[
-                        ("operation", "Vorgang"),
-                        ("runtime_path", "Installationsordner"),
-                        ("game_path", "Spielordner"),
-                        ("keep_data", "Spielstände und Add-ons behalten"),
-                        ("delete_packages", "Spieldateien löschen"),
-                        ("package_bytes", "Bytes"),
-                    ],
-                ));
-            let effect = match s(job, "operation") {
-                "uninstall" if yes(job, "keep_data") => {
-                    "Einstellungen, lokale Spielstände und die übrige Installation werden in einem Sicherungsordner behalten."
-                }
-                "uninstall" => {
-                    "Die gesamte ausgewählte Installation mit lokalen Spielständen und Einstellungen wird dauerhaft gelöscht."
-                }
-                "restore" => {
-                    "Die letzte gesicherte Umgebung wird wieder aktiviert. Die aktuelle Umgebung bleibt ebenfalls erhalten."
-                }
-                _ => {
-                    "Eine frische Windows-Umgebung ersetzt die bisherige. Die alte Umgebung wird gesichert. Basisspiel und lokale Spielstände bleiben erhalten; Zusatzprogramme müssen neu eingerichtet werden."
-                }
-            };
-            content = content.push(self.paragraph(self.t(effect).to_string()));
-            content = content.push(self.paragraph(self.t(if job["operation"] == "uninstall" && !yes(job, "delete_packages") {
-                "Die Spieldateien bleiben erhalten. Die Installation wird nur aus Flightdeck entfernt."
+    fn update_panel<'a>(
+        &self,
+        title: &str,
+        icon_name: &str,
+        status: &str,
+        data: &Value,
+        content: impl Into<Element<'a, Message>>,
+    ) -> Element<'a, Message> {
+        let version = |key, fallback| {
+            let value = s(data, key);
+            if value.is_empty() {
+                self.t(fallback).to_string()
             } else {
-                "Externe Add-ons, Runner, Anmeldedaten außerhalb des Installationsordners und Xbox-Cloud-Spielstände bleiben erhalten."
-            }).to_string()));
-            for key in ["effects", "retained", "packages"] {
-                for item in job[key].as_array().into_iter().flatten().take(100) {
-                    if let Some(text) = item.as_str() {
-                        content = content.push(self.paragraph(text.to_string()));
-                    } else {
-                        content = content.push(self.pairs(
-                            item,
-                            &[
-                                ("path", "Ordner"),
-                                ("total_bytes", "Bytes"),
-                                ("label", "Änderung"),
-                            ],
-                        ))
-                    }
-                }
+                value.to_string()
             }
-            content = content.push(self.actions(&[
-                ("Geprüfte Änderungen durchführen", MaintenanceStart),
-                ("Vorschau verwerfen", MaintenanceDiscard),
-            ]));
-        }
-        self.card("Wiederherstellen, zurücksetzen oder entfernen", content)
+        };
+        let metric = |title: &str, value: String| {
+            container(
+                column![
+                    label(self.t(title).to_string(), 13.0, Weight::Normal, MUTED),
+                    label(value, 22.0, Weight::Semibold, INK)
+                ]
+                .spacing(6),
+            )
+            .padding(18)
+            .width(Length::Fill)
+            .style(|_| {
+                container::Style::default().background(BG).border(Border {
+                    color: LINE,
+                    width: 1.0,
+                    radius: 10.0.into(),
+                })
+            })
+        };
+        container(
+            column![
+                row![
+                    icon(icon_name, 34.0, self.edition.accent()),
+                    column![
+                        label(title.to_string(), 13.0, Weight::Semibold, MUTED),
+                        label(status.to_string(), 26.0, Weight::Semibold, INK)
+                            .weight(650)
+                            .tracking(-0.6)
+                    ]
+                    .spacing(5)
+                ]
+                .spacing(18)
+                .align_y(alignment::Vertical::Center),
+                row![
+                    metric(
+                        "Installierte Version",
+                        version("installed_version", "Nicht bekannt")
+                    ),
+                    metric(
+                        "Verfügbare Version",
+                        version("latest_version", "Noch nicht geprüft")
+                    )
+                ]
+                .spacing(16),
+                content.into()
+            ]
+            .spacing(22),
+        )
+        .padding(26)
+        .width(Length::Fill)
+        .style(card_style)
+        .into()
     }
     fn updates_page(&self) -> Element<'_, Message> {
         let launcher = self.data("launcher-update");
         let game = self.data("game-update");
-        column![
-            self.card(
-                "Flightdeck",
-                column![
-                    self.pairs(
-                        launcher,
-                        &[
-                            ("installed_version", "Installiert"),
-                            ("latest_version", "Verfügbar"),
-                            ("checked_at", "Zuletzt geprüft"),
-                            ("pending_restart", "Neustart erforderlich")
-                        ]
-                    ),
-                    self.job("launcher-update"),
-                    self.actions(&[
-                        ("Nach Updates suchen", Launcher("check")),
-                        ("Update installieren", Launcher("install")),
-                        ("Flightdeck neu starten", Launcher("restart")),
-                        ("Abbrechen", Launcher("cancel")),
-                        ("Vorherige Version wiederherstellen", Launcher("rollback"))
-                    ]),
-                    self.paragraph(s(launcher, "notes"))
-                ]
-                .spacing(16)
+        let mut launcher_actions = vec![];
+        if !active(&launcher["job"]) && !yes(launcher, "pending_restart") {
+            launcher_actions.push(("Nach Updates suchen", Launcher("check")));
+        }
+        for (title, op, visible) in [
+            (
+                "Herunterladen & installieren",
+                "install",
+                yes(launcher, "can_install"),
             ),
-            self.card(
-                "Simulator-Updates",
+            (
+                "Flightdeck jetzt neu starten",
+                "restart",
+                yes(launcher, "pending_restart"),
+            ),
+            ("Abbrechen", "cancel", active(&launcher["job"])),
+        ] {
+            if visible {
+                launcher_actions.push((title, Launcher(op)));
+            }
+        }
+        let mut launcher_view=column![self.paragraph(self.t("Lade neue Flightdeck-Versionen direkt von GitHub. Deine Einstellungen bleiben erhalten.").to_string()),self.job("launcher-update"),self.actions(&launcher_actions)].spacing(16);
+        for key in ["unavailable_reason", "notes"] {
+            if !s(launcher, key).is_empty() {
+                launcher_view = launcher_view.push(self.paragraph(s(launcher, key)));
+            }
+        }
+        if yes(launcher, "can_rollback") {
+            launcher_view = launcher_view.push(self.disclosure(
+                Disclosure::LauncherRollback,
+                "Vorherige Launcher-Version",
+                "",
+                self.action("Vorherige Version wiederherstellen", Launcher("rollback")),
+            ));
+        }
+        let launcher_title = if yes(launcher, "update_available")
+            && !active(&launcher["job"])
+            && !yes(launcher, "pending_restart")
+            && launcher["job"]["state"] != "failed"
+        {
+            self.tr(
+                "Flightdeck {version} ist verfügbar",
+                "Flightdeck {version} is available",
+            )
+            .replace("{version}", s(launcher, "latest_version"))
+        } else {
+            self.t(presentation::launcher_update(launcher)).into()
+        };
+        let mut game_actions = vec![];
+        if !active(&game["job"]) {
+            game_actions.push(if yes(game, "auth_required") {
+                ("Mit Microsoft anmelden und prüfen", Game("sign-in"))
+            } else {
+                ("Nach Updates suchen", Game("check"))
+            });
+        }
+        if game["job"]["state"] == "ready" && yes(game, "can_start") {
+            game_actions.push(("Update herunterladen", Game("start")));
+        }
+        for (title, op) in [
+            ("Download pausieren", "pause"),
+            ("Download fortsetzen", "resume"),
+            ("Abbrechen", "cancel"),
+        ] {
+            if self.request(&SetupControl(op)).is_some() {
+                game_actions.push((title, SetupControl(op)));
+            }
+        }
+        let message = if game["available"] == false {
+            s(game, "unavailable_reason")
+        } else {
+            self.t("Die Prüfung lädt kein Update herunter. Du startest den Download anschließend selbst.")
+        };
+        let game_view = column![
+            self.paragraph(message),
+            self.job("game-update"),
+            row![self.actions(&game_actions), self.refresh_button()]
+                .spacing(10)
+                .wrap()
+        ]
+        .spacing(16);
+        let integrity = &game["integrity"];
+        let integrity_status = if integrity["available"] == false {
+            s(integrity, "unavailable_reason")
+        } else if integrity["result"].is_object() {
+            self.t(if yes(&integrity["result"], "healthy") {
+                "Keine Abweichungen gefunden."
+            } else {
+                "Die Dateiprüfung hat Abweichungen gefunden."
+            })
+        } else {
+            self.t("Noch keine Dateiprüfung durchgeführt.")
+        };
+        let integrity_view = column![
+            self.paragraph(integrity_status),
+            self.pairs(
+                &integrity["result"],
+                &[
+                    ("checked", "Geprüft"),
+                    ("missing", "Fehlend"),
+                    ("changed", "Verändert"),
+                    ("unreadable", "Nicht lesbar"),
+                    ("total", "Gesamt")
+                ]
+            ),
+            self.actions(&[
+                ("Dateien prüfen", Game("verify")),
+                ("Reparatur vorbereiten", Game("repair"))
+            ])
+        ]
+        .spacing(16);
+        let mut page = column![
+            self.heading(self.t("Alles auf dem neuesten Stand.").to_string()),
+            self.paragraph(
+                self.t("Aktualisiere Flightdeck und deinen Simulator direkt hier im Launcher.")
+                    .to_string()
+            ),
+            self.update_panel(
+                self.t("Flightdeck · GitHub-Releases"),
+                "refresh",
+                &launcher_title,
+                launcher,
+                launcher_view
+            ),
+            row![
                 column![
-                    self.paragraph(self.edition.name()),
-                    self.pairs(
-                        game,
-                        &[
-                            ("installed_version", "Installiert"),
-                            ("latest_version", "Verfügbar")
-                        ]
+                    label(
+                        self.t("Fenix Linux-Patch").to_string(),
+                        16.0,
+                        Weight::Semibold,
+                        INK
                     ),
-                    self.job("game-update"),
-                    self.actions(&[
-                        ("Nach Updates suchen", Game("check")),
-                        ("Anmelden und prüfen", Game("sign-in")),
-                        ("Update installieren", Game("start")),
-                        ("Download pausieren", SetupControl("pause")),
-                        ("Fortsetzen", SetupControl("resume")),
-                        ("Abbrechen", SetupControl("cancel")),
-                        ("Dateien prüfen", Game("verify")),
-                        ("Reparatur prüfen", Game("repair")),
-                        ("Vorherige Version wiederherstellen", Game("rollback"))
-                    ]),
-                    self.pairs(
-                        &game["integrity"]["result"],
-                        &[
-                            ("healthy", "Dateien intakt"),
-                            ("checked", "Geprüft"),
-                            ("missing", "Fehlend"),
-                            ("changed", "Verändert"),
-                            ("unreadable", "Nicht lesbar"),
-                            ("total", "Gesamt")
-                        ]
+                    self.paragraph(
+                        self.t(
+                            "Den passenden Patch lädt Flightdeck unter Mods automatisch von GitHub."
+                        )
+                        .to_string()
                     )
                 ]
-                .spacing(16)
-            )
+                .spacing(5)
+                .width(Length::Fill),
+                self.control(
+                    "Fenix-Patch verwalten",
+                    Some(Message::Navigate(Page::Mods)),
+                    false
+                )
+            ]
+            .spacing(20)
+            .align_y(alignment::Vertical::Center),
+            self.update_panel(
+                &self.edition.name(),
+                "download",
+                self.t(presentation::game_update(game)),
+                game,
+                game_view
+            ),
+            self.card("Spieldateien", integrity_view)
         ]
-        .spacing(20)
-        .into()
+        .spacing(20);
+        if yes(game, "can_rollback") {
+            page = page.push(self.action("Vorherige Version wiederherstellen", Game("rollback")));
+        }
+        page.into()
     }
     fn saves_page(&self) -> Element<'_, Message> {
         let cloud = self.data("cloud-saves");
@@ -738,81 +936,75 @@ impl App {
             ("Sicherung wiederherstellen", Cloud("restore")),
             ("Abbrechen", Cloud("cancel")),
         ]));
+        let saves = &self.status()["saves"];
+        let metric = |title, value| {
+            column![
+                label(self.t(title).to_string(), 14.0, Weight::Normal, MUTED),
+                label(value, 25.0, Weight::Normal, INK)
+            ]
+            .spacing(8)
+            .width(Length::Fill)
+        };
+        let metrics = container(
+            row![
+                metric("Speicherplatz", bytes(number(&saves["bytes"]))),
+                rule::vertical(1),
+                metric("Dateien", number(&saves["files"]).to_string()),
+                rule::vertical(1),
+                metric("Backups", number(&saves["backups"]).to_string())
+            ]
+            .spacing(28)
+            .height(64),
+        )
+        .padding(28)
+        .width(Length::Fill)
+        .style(card_style);
+        let backup = container(
+            row![
+                column![
+                    self.heading(self.t("Lokales Backup").to_string()),
+                    self.paragraph(
+                        self.t("Lege eine zusätzliche lokale Kopie deiner Spielstände an.")
+                            .to_string()
+                    ),
+                    label(
+                        self.t(if yes(saves, "can_backup") {
+                            "Du kannst jetzt ein Backup anlegen."
+                        } else {
+                            "Beende zuerst das Spiel und laufende Einrichtungsvorgänge."
+                        })
+                        .to_string(),
+                        14.0,
+                        Weight::Normal,
+                        MUTED
+                    )
+                ]
+                .spacing(8)
+                .width(Length::Fill),
+                self.action("Backup erstellen", Backup)
+            ]
+            .spacing(20)
+            .align_y(alignment::Vertical::Center),
+        )
+        .padding(28)
+        .width(Length::Fill)
+        .style(card_style);
         column![
-            self.automatic_saves(),
-            self.card(
-                "Lokale Spielstände",
-                column![self.save_summary(), self.action("Backup erstellen", Backup)].spacing(16)
-            ),
-            self.card("Cloud-Spielstände", manual)
+            self.heading(self.t("Deine Spielstände").to_string()),
+            self.paragraph(self.t("Deine Spielstände werden automatisch abgeglichen. Lokale Sicherungen bleiben auf diesem Rechner.").to_string()),
+            container(self.automatic_saves()).padding(26).width(Length::Fill).style(card_style),
+            metrics,backup,
+            self.pairs(&saves["last_backup"],&[("created_at","Letztes Backup"),("name","Datei")]),
+            self.card("Backups bleiben lokal.",self.paragraph(self.t("MSFS speichert während des Spiels lokal. Flightdeck gleicht vor dem Start und nach dem Beenden mit der Xbox-Cloud ab. Zusätzliche Backups bleiben auf diesem Rechner.").to_string())),
+            self.disclosure(
+                Disclosure::Cloud,
+                "Erweiterte Spielstandwerkzeuge",
+                "",
+                self.card("Xbox-Cloud-Spielstände", manual)
+            )
         ]
         .spacing(20)
         .into()
-    }
-    fn mods_page(&self) -> Element<'_, Message> {
-        let data = self.data("fenix");
-        let steps = [
-            yes(data, "installed"),
-            yes(data, "fenix_installed"),
-            yes(data, "settings_ready"),
-            yes(data, "configured"),
-        ];
-        let titles = [
-            self.tr("Linux-Patch", "Linux patch"),
-            self.tr("Flugzeug installieren", "Install aircraft"),
-            self.tr("Fenix anmelden", "Sign in to Fenix"),
-            self.tr("Einrichtung abschließen", "Finish setup"),
-        ];
-        let mut steps_view = Column::new().spacing(12);
-        for (i, done) in steps.into_iter().enumerate() {
-            steps_view = steps_view.push(label(
-                format!("{}  {}. {}", if done { "✓" } else { "○" }, i + 1, titles[i]),
-                16.0,
-                Weight::Semibold,
-                if done { self.edition.accent() } else { INK },
-            ));
-        }
-        let fenix=self.card("Fenix A320",column![steps_view,self.paragraph(self.tr("Installiere das Flugzeug mit dem offiziellen Fenix-Installer. Melde dich anschließend in Fenix an und schließe alle Fenix-Fenster, bevor du die Einrichtung abschließt.","Install the aircraft using the official Fenix installer. Sign in to Fenix, then close every Fenix window before finishing setup.")),self.input("Offizieller Fenix-Installer","installer_path","FenixInstaller.exe",Some(FenixPick("installer"))),self.input("Lokales Patch-Paket (optional)","bundle_path",self.tr("Automatisch herunterladen","Download automatically"),Some(FenixPick("bundle"))),self.job("fenix"),self.actions(&[(if yes(data,"can_retry"){"Einrichtung reparieren"}else if yes(data,"update_available"){"Patch aktualisieren"}else{"Patch einrichten"},Fenix("install")),("Installer starten",Fenix("installer")),("Fenix öffnen",Fenix("open")),("Einrichtung abschließen",Fenix("configure")),("Fenix Installer öffnen",Fenix("manager")),("Fenix beenden",Fenix("stop")),("Profil vor dem Patch wiederherstellen",Fenix("restore"))])].spacing(16));
-        let gsx=self.card("GSX · experimentell",column![self.paragraph(self.tr("1. FSDT vorbereiten. 2. GSX im offiziellen FSDT-Installer installieren und aktivieren. 3. Automatischen Start übernehmen. Der Flugbetrieb unter Linux ist noch nicht bestätigt.","1. Prepare FSDT. 2. Install and activate GSX in the official FSDT installer. 3. Configure automatic startup. In-flight operation on Linux is not yet confirmed.")),self.pairs(self.data("gsx"),&[("prepared","FSDT vorbereitet"),("package_installed","GSX installiert"),("configured","Automatischer Start eingerichtet")]),self.job("gsx"),self.actions(&[("FSDT vorbereiten",Gsx("prepare")),("FSDT öffnen",Gsx("open")),("Automatischen Start einrichten",Gsx("configure")),("Automatischen Start deaktivieren",Gsx("disable")),("FSDT beenden",Gsx("stop")),("Profil wiederherstellen",Gsx("recover"))])].spacing(16));
-        let mods = self.data("mods");
-        let mut inventory = column![
-            self.paragraph(s(mods, "folder_path")),
-            self.job("mods"),
-            self.action("Community-Ordner öffnen", ModsOpen)
-        ]
-        .spacing(14);
-        for item in mods["mods"].as_array().into_iter().flatten().take(500) {
-            inventory = inventory
-                .push(separator())
-                .push(label(
-                    if s(item, "name").is_empty() {
-                        s(item, "id")
-                    } else {
-                        s(item, "name")
-                    },
-                    16.0,
-                    Weight::Semibold,
-                    INK,
-                ))
-                .push(self.pairs(
-                    item,
-                    &[
-                        ("creator", "Ersteller"),
-                        ("version", "Version"),
-                        ("id", "Ordner"),
-                        ("status", "Status"),
-                    ],
-                ));
-        }
-        if yes(mods, "limited") {
-            inventory = inventory.push(self.paragraph(self.tr(
-                "Die Liste zeigt einen begrenzten Ausschnitt.",
-                "The list shows a limited selection.",
-            )));
-        }
-        column![fenix, gsx, self.card("Community-Ordner", inventory)]
-            .spacing(20)
-            .into()
     }
     fn diagnostic_summary<'a>(&self, summary: &Value) -> Element<'a, Message> {
         let mut out = Column::new().spacing(14);
@@ -848,16 +1040,50 @@ impl App {
     fn diagnostics_page(&self) -> Element<'_, Message> {
         let data = self.data("diagnostics");
         let store = self.data("store-check");
-        let diagnostics=self.card("Diagnose",column![self.paragraph(self.tr("Prüfungen beziehen sich auf die ausgewählte Installation. Der Export enthält die vom Dienst bereinigten Diagnosedaten.","Checks apply to the selected installation. Export contains diagnostics sanitized by the service.")),self.job("diagnostics"),self.checks(&data["checks"]),self.diagnostic_summary(&data["summary"]),row![button(self.tr("Aktualisieren","Refresh")).on_press_maybe((!self.pending).then_some(Message::Refresh)).padding(12),button(self.tr("Diagnose kopieren","Copy diagnostics")).on_press_maybe(self.diagnostics_text().is_some().then_some(Message::CopyDiagnostics)).padding(12),button(self.tr("Diagnose speichern","Save diagnostics")).on_press_maybe((!self.exporting && self.diagnostics_text().is_some()).then_some(Message::SaveDiagnostics)).padding(12)].spacing(12)].spacing(16));
-        let mut store_view = column![
-            self.job("store-check"),
-            self.actions(&[
-                ("Store prüfen", Store("start")),
-                ("Microsoft-Anmeldung erneuern", Store("sign-in")),
-                ("Abbrechen", Store("cancel"))
-            ])
+        let diagnostics = column![
+            row![
+                self.control(
+                    "Aktualisieren",
+                    (!self.pending).then_some(Message::Refresh),
+                    false
+                ),
+                self.control(
+                    "Diagnose kopieren",
+                    self.diagnostics_text()
+                        .is_some()
+                        .then_some(Message::CopyDiagnostics),
+                    false
+                ),
+                self.control(
+                    "Diagnose speichern",
+                    (!self.exporting && self.diagnostics_text().is_some())
+                        .then_some(Message::SaveDiagnostics),
+                    false
+                )
+            ]
+            .spacing(12)
+            .wrap(),
+            self.job("diagnostics"),
+            self.checks(&data["checks"]),
+            self.disclosure(
+                Disclosure::Diagnostics,
+                "Details anzeigen",
+                "",
+                self.diagnostic_summary(&data["summary"])
+            )
         ]
         .spacing(16);
+        let mut store_actions = vec![
+            ("Store-Prüfung starten", Store("start")),
+            ("Microsoft-Anmeldung erneuern", Store("sign-in")),
+        ];
+        if active(&store["job"]) {
+            store_actions.push(("Abbrechen", Store("cancel")));
+        }
+        let mut store_view=column![
+            self.paragraph(self.t("Prüft Anmeldung, Produktkatalog, Spiellizenz, Bibliothek und die Anzeige des Store-Fensters. Dabei wird keine Kaufseite geöffnet und kein Kauf ausgeführt.").to_string()),
+            self.paragraph(self.t("Abgelaufene Tickets werden automatisch erneuert. Falls Microsoft eine neue Anmeldung verlangt, beende den Simulator und melde dich hier erneut an.").to_string()),
+            self.actions(&store_actions),self.job("store-check")].spacing(16);
         for step in store["job"]["steps"]
             .as_array()
             .into_iter()
@@ -921,10 +1147,16 @@ impl App {
                 .push(self.action("Entwurf löschen", ReportDiscard))
                 .push(label(text, 12.0, Weight::Normal, MUTED));
         }
+        let mut report_card=column![self.paragraph(self.t("Beschreibe den Fehler. Flightdeck ergänzt bereinigte Diagnosedaten für einen E-Mail-Bericht. Du brauchst kein zusätzliches Konto.").to_string()),self.control("Fehlerbericht erstellen",Some(Message::Toggle(Disclosure::Report)),false)].spacing(16);
+        if self.expanded.contains(&Disclosure::Report) || self.report_text().is_some() {
+            report_card = report_card.push(report);
+        }
         column![
-            diagnostics,
-            self.card("Microsoft Store / Marketplace", store_view),
-            self.card("Problem melden", report)
+            self.heading(self.t("Einblick ohne private Rohlogs").to_string()),
+            self.paragraph(self.t("Dieser Bericht enthält die vom lokalen Dienst freigegebenen Status- und Prüfdaten. Er enthält keine Anmeldetokens oder privaten Spielprotokolle.").to_string()),
+            self.card("Problem melden",report_card),
+            self.card("Store prüfen", store_view),
+            diagnostics
         ]
         .spacing(20)
         .into()

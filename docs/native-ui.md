@@ -1,4 +1,4 @@
-# Native desktop and Fenix installer changes (0.2.3)
+# Native desktop and add-on management (0.2.4)
 
 All six Flightdeck views now use Rust and iced 0.14: overview, setup, updates,
 saves, mods and diagnostics. The previous artwork, Manrope font, icons, colors
@@ -18,14 +18,36 @@ The UI uses asynchronous requests and a CPU renderer, with no Vulkan context
 required for its own window. Core state refreshes every ten seconds while idle and every two seconds during
 work or reconnection. Window focus and explicit actions revalidate immediately.
 Expensive diagnostic and Community-folder scans run only on their page, at most
-every ten seconds unless explicitly refreshed. These checks do not measure
+every ten seconds unless explicitly refreshed or an add-on removal is active. These checks do not measure
 performance inside MSFS; that needs a separate simulator test.
 
 The executable embeds the production interface in `native/ui/`. `ui/` contains
-only shared artwork, font and icon assets. `tests/reference-web/` retains the
-previous implementation exclusively for visual and behavior comparisons; it is
-not shipped or served. Python remains only in maintainer build/test tools. The
+only shared artwork, font and icon assets. The old web implementation is available
+in Git history (`v0.2.2:ui/`); it is no longer duplicated in the working tree.
+Python remains only in maintainer build/test tools. The
 Windows add-ons themselves still require their own .NET/Wine components.
+
+## Native parity and add-on fixes in 0.2.4
+
+Setup automatically discovers installed Steam and custom Proton runners, including
+Experimental and CachyOS. The default Flightdeck runner remains selectable. Discovery
+returns string labels; current selection is bound to the exact source path and does
+not overwrite an unapplied custom choice. Fenix-incompatible runners are identified
+and blocked while Fenix is enabled.
+
+Persisted legacy Fenix installations are presented as existing setups. Managed
+installations follow dependent patch, aircraft, sign-in and configuration steps.
+The native layouts restore disclosure groups, help links, region choices, update
+status titles and save tools. Raw text uses finite bounds and explicit clipping so
+help text remains visible with the software renderer.
+
+Community entries can be reviewed and removed individually. The backend reserves
+the runtime, records the selected directory identity and inventory, and rechecks
+it before and after an atomic move into an owned staging directory. Links are
+unlinked without removing their targets. Changed entries, foreign trees and mounts
+are refused. A failed removal exposes any retained staging path. Official companion
+applications are uninstalled through their own installers; Community removal does
+not uninstall them. See [add-on instructions](addons.md).
 
 ## Fenix install-hook warning
 
@@ -86,11 +108,13 @@ service. Forced narrow tiling uses an icon rail and stacked cards; setup edition
 selection remains separate from the active game. Complete simulator and add-on
 workflows remain separate from these desktop and API checks.
 
-The final candidate passes 180 Rust tests (eight opt-in tests ignored by the
-default suite), the 40-image native capture and 33 maintainer packaging tests.
-The separately enabled official Fenix install-hook test also passes. Real-package
-tests cover native update/rollback and the unchanged Python bridge sequence
-0.1.21 → 0.1.22 → 0.2.3, rollback and repeat upgrade, with settings preserved.
-The final executable also starts in the Ubuntu 24.04 baseline container.
-[Performance measurements](performance.md#native-desktop-candidate-023--5-october-2026)
-compare the final background service with the old Python release.
+The 0.2.3 release passed 180 Rust tests, a 40-image capture, 33 maintainer tests,
+the official Fenix install-hook probe and isolated Wayland/X11, update and bridge
+checks. Its [service performance measurements](performance.md#native-desktop-candidate-023--5-october-2026)
+remain historical results, not a new 0.2.4 or simulator benchmark.
+
+The 0.2.4 checks additionally exercise native Proton discovery over HTTP, legacy
+Fenix presentation, dependent setup readiness and confirmed mod removal. Backend
+removal tests cover neighbours, external link targets, changed/replaced trees and
+cancelled previews. Native captures include the same historical synthetic fixture,
+both languages, small windows, Fenix legacy/ready states and mod removal previews.

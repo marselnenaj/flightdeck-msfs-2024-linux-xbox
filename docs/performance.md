@@ -179,10 +179,12 @@ each entire asset into a new buffer; no separate speedup is claimed for that cha
 both runs. Reproduce using the Chromium fixture (no real backend/game calls):
 
 ```sh
+mkdir -p build/web-reference
+git archive v0.2.2 ui | tar -x -C build/web-reference
 mkdir -p build/ui-before
 git archive 4ef1fc7105a68118221c7846b01f460281aede22 ui | tar -xf - -C build/ui-before
 FLIGHTDECK_UI_SOURCE=build/ui-before/ui FLIGHTDECK_UI_BENCHMARK=1 \
-  FLIGHTDECK_UI_ARTIFACTS=build/ui-measure-before node tests/reference-web/tests/browser-test.mjs
+  FLIGHTDECK_UI_ARTIFACTS=build/ui-measure-before node build/web-reference/ui/tests/browser-test.mjs
 FLIGHTDECK_UI_BENCHMARK=1 FLIGHTDECK_UI_ARTIFACTS=build/ui-measure-after \
-  node tests/reference-web/tests/browser-test.mjs
+  node build/web-reference/ui/tests/browser-test.mjs
 ```

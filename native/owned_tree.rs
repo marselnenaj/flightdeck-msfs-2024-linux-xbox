@@ -162,13 +162,21 @@ fn remove_contents(folder: &File, device: u64, count: &mut usize, depth: usize) 
 pub fn remove(root: &Path, expected: [u64; 2]) -> Result<()> {
     let parent = files::directory(root.parent().ok_or(Error::Invalid(FOREIGN))?, false)?;
     let name = root.file_name().ok_or(Error::Invalid(FOREIGN))?;
-    let folder = files::open_at(&parent, name, true, false)?;
+    remove_at(&parent, Path::new(name), expected)
+}
+/// Remove a reviewed entry from an already pinned, private quarantine directory.
+pub fn remove_at(parent: &File, name: &Path, expected: [u64; 2]) -> Result<()> {
+    require(
+        name.components().count() == 1 && name.file_name().is_some(),
+        FOREIGN,
+    )?;
+    let folder = files::open_at(parent, name, true, false)?;
     let info = folder.metadata()?;
     require([info.dev(), info.ino()] == expected, FOREIGN)?;
     remove_contents(&folder, info.dev(), &mut 0, 0)?;
-    let linked = fs::statat(&parent, name, AtFlags::SYMLINK_NOFOLLOW)?;
+    let linked = fs::statat(parent, name, AtFlags::SYMLINK_NOFOLLOW)?;
     require([linked.st_dev, linked.st_ino] == expected, FOREIGN)?;
-    fs::unlinkat(&parent, name, AtFlags::REMOVEDIR)?;
+    fs::unlinkat(parent, name, AtFlags::REMOVEDIR)?;
     parent.sync_all()?;
     Ok(())
 }

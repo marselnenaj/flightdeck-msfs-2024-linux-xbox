@@ -37,7 +37,7 @@ an unavailable response must not be converted into an empty successful query.
    changes, run `cargo test --locked --workspace`, the native software-rendered
    screenshot suite and the real-service UI client test. Inspect both languages,
    the minimum window size, both simulator editions and confirmation states.
-   The old web state tests remain under `tests/reference-web/` for comparison.
+   Native UI tests include automatic discovery, legacy add-on state and historical synthetic fixtures.
 4. When changing a compatibility patch, stage it from the pinned upstream commit
    into a new directory. Update the patch checksum and source-delta hashes, and
    build that staged source rather than an unrelated development worktree.

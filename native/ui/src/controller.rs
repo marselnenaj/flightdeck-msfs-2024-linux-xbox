@@ -67,12 +67,23 @@ impl App {
         let mut keys = vec!["setup", "launcher-update"];
         match self.page {
             Page::Overview => {}
-            Page::Setup => keys.extend(["proton", "maintenance"]),
+            Page::Setup => {
+                keys.extend(["proton", "maintenance"]);
+                for key in ["proton/discover", "setup/discover"] {
+                    if !self.discoveries.contains_key(key) {
+                        keys.push(key);
+                    }
+                }
+            }
             Page::Updates => keys.push("game-update"),
             Page::Saves => keys.push("cloud-saves"),
             Page::Mods => {
                 keys.extend(["fenix", "gsx"]);
-                if heavy || !self.snapshot.contains_key("mods") {
+                if heavy
+                    || !self.snapshot.contains_key("mods")
+                    || model::active(&self.data("mods")["job"])
+                    || self.data("mods")["job"]["state"] == "ready"
+                {
                     keys.push("mods");
                 }
             }
@@ -113,6 +124,7 @@ impl App {
                     | Message::Flag(..)
                     | Message::Select(_)
                     | Message::Navigate(_)
+                    | Message::Toggle(_)
                     | Message::Language(_)
             )
         {
@@ -147,6 +159,9 @@ impl App {
             Message::Tick => return self.refresh(),
             Message::Refresh => {
                 self.poll_count = 0;
+                if self.page == Page::Setup && !self.pending {
+                    self.discoveries.clear();
+                }
                 return self.refresh();
             }
             Message::Loaded(generation, result) => {
@@ -155,7 +170,7 @@ impl App {
                 }
                 self.polling = false;
                 match result {
-                    Ok(snapshot) => {
+                    Ok(mut snapshot) => {
                         let old_root = self.runtime().to_string();
                         let first = !self.snapshot.contains_key("status");
                         let new_root = snapshot
@@ -166,11 +181,16 @@ impl App {
                             self.snapshot.clear();
                             self.poll_count = 0;
                         }
+                        let discovered = ["proton/discover", "setup/discover"]
+                            .map(|key| (key, snapshot.remove(key)));
                         self.snapshot.extend(snapshot);
                         self.online = true;
                         if old_root != self.runtime() || first {
                             self.confirmation = None;
                             self.discoveries.clear();
+                            self.proton_active = None;
+                            self.forms.text.insert("proton", String::new());
+                            self.forms.text.remove("proton_path");
                             if yes(&self.status()["runtime"], "configured") {
                                 self.edition = if self.status()["runtime"]["game_id"] == "msfs2020"
                                 {
@@ -211,6 +231,12 @@ impl App {
                                 self.forms.text.insert("mode", "existing".into());
                             }
                         }
+                        for (key, value) in discovered {
+                            if let Some(value) = value {
+                                self.discoveries.insert(key, value);
+                            }
+                        }
+                        self.sync_proton_selection();
                         if let Some(id) = &self.connect_after_check {
                             let job = &self.data("setup")["job"];
                             if s(job, "id") != id
@@ -227,6 +253,11 @@ impl App {
                         {
                             self.startup_checked = true;
                             return self.submit(Action::Startup, request);
+                        }
+                        if self.page == Page::Setup
+                            && !self.discoveries.contains_key("proton/discover")
+                        {
+                            return self.refresh();
                         }
                     }
                     Err(error) => {
@@ -368,6 +399,14 @@ impl App {
                 }
                 return self.refresh();
             }
+            Message::Toggle(section) => {
+                if !self.expanded.remove(&section) {
+                    if let Some(group) = section.group() {
+                        self.expanded.retain(|item| item.group() != Some(group));
+                    }
+                    self.expanded.insert(section);
+                }
+            }
             Message::EditDescription(action) => {
                 if self.pending || self.confirmation.is_some() {
                     return Task::none();
@@ -385,6 +424,20 @@ impl App {
             }
             Message::Field(field, value) => {
                 if !self.can_edit_field(field) {
+                    return Task::none();
+                }
+                if field == "proton"
+                    && yes(self.data("proton"), "fenix")
+                    && self
+                        .discoveries
+                        .get("proton/discover")
+                        .and_then(|v| v["choices"].as_array())
+                        .is_some_and(|items| {
+                            items
+                                .iter()
+                                .any(|item| s(item, "path") == value && !yes(item, "fenix"))
+                        })
+                {
                     return Task::none();
                 }
                 self.confirmation = None;
@@ -433,6 +486,7 @@ impl App {
                 if !["setup/discover", "proton/discover"].contains(&path)
                     || self.pending
                     || !self.online
+                    || (path == "proton/discover" && !self.can_edit_field("proton"))
                 {
                     return Task::none();
                 }
@@ -456,8 +510,12 @@ impl App {
                 match result {
                     Ok(value) => {
                         self.discoveries.insert(path, value);
+                        self.sync_proton_selection();
                     }
-                    Err(error) => self.notice = Some(error),
+                    Err(error) => {
+                        self.discoveries.insert(path, json!({"_error":error}));
+                        self.notice = Some(error);
+                    }
                 }
                 return self.refresh();
             }
@@ -469,6 +527,12 @@ impl App {
                     self.exporting = true;
                     self.notice=Some(self.tr("Der E-Mail-Entwurf wird geöffnet. Prüfe ihn im Mailprogramm vor dem Senden.","Opening an email draft. Review it in your mail application before sending.").into());
                     return Task::perform(open_draft(uri), Message::Exported);
+                }
+            }
+            Message::OpenHelp(link) => {
+                if !self.exporting {
+                    self.exporting = true;
+                    return Task::perform(open_help(link), Message::Exported);
                 }
             }
             Message::CopyReport => {
@@ -518,6 +582,13 @@ impl App {
         if self.pending {
             return false;
         }
+        if ["proton", "proton_path"].contains(&field) {
+            return self.idle()
+                && self.fresh("proton")
+                && s(self.data("proton"), "runtime_path") == self.runtime()
+                && !model::active(&self.data("proton")["job"])
+                && !["syncing", "playing"].contains(&s(&self.status()["cloud"], "state"));
+        }
         if [
             "mode",
             "game_id",
@@ -538,6 +609,48 @@ impl App {
                     && job["mode"] != "update");
         }
         true
+    }
+    fn sync_proton_selection(&mut self) {
+        let data = self.data("proton");
+        if !self.fresh("proton") || s(data, "runtime_path") != self.runtime() {
+            return;
+        }
+        let active = (
+            yes(data, "experimental"),
+            s(data, "selected").to_string(),
+            s(data, "selected_path").to_string(),
+        );
+        let choices = &self
+            .discoveries
+            .get("proton/discover")
+            .unwrap_or(&Value::Null)["choices"];
+        let valid = ["default", "custom"].contains(&self.forms.get("proton"))
+            || choices
+                .as_array()
+                .into_iter()
+                .flatten()
+                .any(|item| s(item, "path") == self.forms.get("proton"));
+        if self.proton_active.as_ref() != Some(&active) || !valid {
+            let selection = if active.0 {
+                choices
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .find(|item| {
+                        if active.2.is_empty() {
+                            s(item, "version") == active.1
+                        } else {
+                            s(item, "path") == active.2
+                        }
+                    })
+                    .map(|item| s(item, "path"))
+                    .unwrap_or("")
+            } else {
+                "default"
+            };
+            self.forms.text.insert("proton", selection.to_string());
+        }
+        self.proton_active = Some(active);
     }
     pub fn launch_label(&self) -> &str {
         if yes(&self.status()["game"], "can_stop") {
@@ -731,5 +844,27 @@ async fn open_draft(uri: String) -> Result<Option<String>, String> {
         Ok(None)
     } else {
         Err("Das Mailprogramm konnte nicht geöffnet werden. Bitte den Bericht kopieren.".into())
+    }
+}
+
+async fn open_help(link: HelpLink) -> Result<Option<String>, String> {
+    use std::process::Stdio;
+    let status = tokio::time::timeout(
+        Duration::from_secs(30),
+        tokio::process::Command::new("xdg-open")
+            .arg(link.url())
+            .kill_on_drop(true)
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status(),
+    )
+    .await
+    .map_err(|_| "Browser did not respond".to_string())?
+    .map_err(|e| e.to_string())?;
+    if status.success() {
+        Ok(None)
+    } else {
+        Err("Could not open the browser".into())
     }
 }

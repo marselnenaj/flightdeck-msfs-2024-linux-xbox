@@ -28,7 +28,7 @@ overrides the desktop's saved choice.
 
 - `native/ui/catalog.json` and native `tr` selections own interface text.
   Rendered values remain plain text. The previous web implementation's catalog
-  stays with the frozen test reference in `tests/reference-web/`.
+  is available in Git history (`v0.2.2:ui/i18n.js`).
 - Requests carry `Accept-Language`. `native/i18n.rs` and `native/catalog.json`
   translate known display fields at the response boundary. API keys, enums,
   IDs, paths, hashes, saved settings and authorization tokens retain their values.

@@ -37,6 +37,19 @@ settings and liveries before replacing a package. The general Community inventor
 Fenix and the experimental GSX Pro integration have separate setup workflows
 below, currently for MSFS 2024 only.
 
+## Uninstall a Community add-on
+
+Close the simulator and other setup tasks. In **Mods**, choose **Review
+uninstallation** beside the package. Check the exact folder and size, then choose
+**Uninstall** and confirm. Removing a real folder permanently removes the package
+and any settings stored inside it. Removing a link only removes its Community
+entry; its original files stay in place. Cancel leaves the package unchanged.
+Flightdeck refuses an outdated review if the folder or contents changed.
+
+For a full Fenix or GSX uninstall, open the official installer/manager in its
+add-on section. Removing its Community package does not uninstall its Windows
+companion applications.
+
 ## Aircraft with companion applications
 
 ### FlyByWire A32NX and SimBridge
