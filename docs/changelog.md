@@ -12,7 +12,9 @@
 - Decode each panorama once and avoid unnecessary text clipping masks. Document
   the measured native UI improvement over 0.2.4 in [performance results](performance.md).
 
-The unchanged 0.1.22 transition still precedes native updates for old launchers.
+Mark 0.2.5 as GitHub Latest. Users still on 0.1.21 or earlier need the full
+installer once, or an explicit 0.1.22 bridge install. Existing 0.1.22 and native
+0.2.1–0.2.4 launchers update normally.
 
 ## 0.2.4 — 5 October 2026
 

@@ -157,8 +157,8 @@ fn open(url: &str) -> Result<reqwest::blocking::Response> {
     )?;
     Ok(response)
 }
-/// The legacy /latest endpoint stays on the Python transition release. Prepared
-/// launchers choose the highest stable full release from the bounded feed.
+/// Prepared launchers choose the highest stable full release from the bounded
+/// feed, independently of GitHub's manually selected Latest badge.
 pub fn stable_release(raw: &Value) -> Result<Value> {
     let releases = raw.as_array().ok_or(Error::Invalid(INVALID))?;
     require(releases.len() <= 50, INVALID)?;

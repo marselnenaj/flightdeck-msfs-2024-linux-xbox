@@ -23,11 +23,13 @@ of MSFS 2024 or 2020** on your Linux computer through Wine/Proton. Sign in with 
 Microsoft account, download the game and start it from one application.
 
 **Current release: [Flightdeck 0.2.5](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.2.5).**
-Update from 0.2.1, 0.2.2 or 0.2.3 through **Updates → Flightdeck** or use the full installer.
+Update from 0.2.1–0.2.4 through **Updates → Flightdeck** or use the full installer.
 The desktop, backend, installer, updater and runtime helpers use Rust and need no Python.
-Version **0.1.22** discovers this release through its existing updater. Older
-launchers receive **0.1.22 first**; install it, restart Flightdeck, then check
-again for **0.2.5**. GitHub's Latest badge deliberately remains on the bridge.
+Version **0.1.22** also discovers this release through its existing updater.
+**0.2.5 is GitHub Latest.** Users still on 0.1.21 or earlier should run the full
+0.2.5 installer once; those old in-app updaters only accept Python packages.
+The [0.1.22 bridge](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.22)
+remains available for an explicit two-step migration.
 The earlier `0.2.0-dev.1` preview was excluded from stable update checks.
 The preview and withdrawn 0.2.0 have a native update-check defect; users of
 those versions need the full 0.2.5 installer once. It preserves the installation.
