@@ -1,5 +1,19 @@
 # Changes and release status
 
+## 0.2.5 — 5 October 2026
+
+- Keep existing MSFS editions selectable when they need repair. Apply pending
+  bundled component updates when selecting an inactive edition, fixing MSFS 2020
+  incorrectly opening the new-installation flow after a launcher update.
+- Acknowledge Start immediately and show cloud synchronization and final-save
+  progress on the main button. Keep a running simulator's state visible.
+- Switch pages using cached state while refreshing in the background. Cancel
+  superseded reads and retain context and confirmation checks for mutations.
+- Decode each panorama once and avoid unnecessary text clipping masks. Document
+  the measured native UI improvement over 0.2.4 in [performance results](performance.md).
+
+The unchanged 0.1.22 transition still precedes native updates for old launchers.
+
 ## 0.2.4 — 5 October 2026
 
 - Restore automatic Proton discovery, readable runner labels and the current

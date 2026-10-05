@@ -487,6 +487,61 @@ fn native_launch_button_emits_the_real_action() -> Result<(), Box<dyn std::error
     Ok(())
 }
 #[test]
+fn launch_acknowledges_immediately_and_keeps_feedback_until_status_arrives() {
+    let mut app = fixture();
+    app.language = Language::En;
+    app.client = Some(
+        flightdeck_ui::Client::new(1, "synthetic-session-0000000000000000".into()).expect("client"),
+    );
+    let _request = app.update(Message::Action(Action::Launch));
+    assert!(app.pending);
+    assert_eq!(app.launch_label(), "Preparing launch …");
+    assert_eq!(app.launch_state(), "Preparing launch …");
+    assert!(app.launch_note().contains("Launch requested"));
+    assert!(app.launch_message().is_none());
+    let _refresh = app.update(Message::Completed(
+        1,
+        Action::Launch,
+        Ok(json!({"ok":true})),
+    ));
+    assert_eq!(app.launch_label(), "Preparing launch …");
+    let mut snapshot = fixture().snapshot;
+    snapshot.get_mut("status").expect("status")["cloud"] = json!({"enabled":true,"state":"syncing","phase":"before_start","message":"Comparing your saves. The simulator will start automatically."});
+    let _ = app.update(Message::Loaded(1, Ok(snapshot.clone())));
+    assert_eq!(app.launch_label(), "Syncing saves …");
+    assert!(app.launch_note().contains("start automatically"));
+    assert!(app.launch_message().is_none());
+    snapshot.get_mut("status").expect("status")["cloud"]["state"] = json!("playing");
+    snapshot.get_mut("status").expect("status")["game"] =
+        json!({"state":"running","managed":true,"can_start":false,"can_stop":true});
+    let _ = app.update(Message::Loaded(1, Ok(snapshot)));
+    assert_eq!(app.launch_state(), "Simulator is running");
+    assert_eq!(app.launch_label(), "Stop simulator");
+}
+#[test]
+fn tabs_keep_cached_data_and_connectivity_while_refreshing() {
+    let mut app = fixture();
+    for page in [Page::Mods, Page::Setup, Page::Overview] {
+        let _ = app.update(Message::Navigate(page));
+        assert_eq!(app.page, page);
+        assert!(app.online);
+        assert!(app.fresh("fenix"));
+        assert!(app.request(&Action::Launch).is_some());
+    }
+}
+#[test]
+fn existing_unready_edition_is_selected_instead_of_opening_a_new_installation() {
+    let mut app = fixture();
+    app.client = Some(
+        flightdeck_ui::Client::new(1, "synthetic-session-0000000000000000".into()).expect("client"),
+    );
+    app.snapshot.get_mut("status").expect("status")["versions"]["msfs2020"] =
+        json!({"installed":true,"ready":false,"path":"/synthetic/msfs2020"});
+    let _request = app.update(Message::Select(Edition::Msfs2020));
+    assert!(app.pending);
+    assert_eq!(app.page, Page::Overview);
+}
+#[test]
 #[ignore = "Explicit native screenshot capture into build/native-ui"]
 fn capture_all_native_screens() -> Result<(), Box<dyn std::error::Error>> {
     let directory =

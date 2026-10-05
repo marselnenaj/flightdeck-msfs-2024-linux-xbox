@@ -281,12 +281,23 @@ impl Launcher {
         let versions = runtime::versions(s.runtime.as_deref(), &s.known);
         let item = &versions[game.id()];
         require(
-            item["ready"] == true,
-            "Diese MSFS-Version ist noch nicht startbereit. Bitte zuerst einrichten.",
+            item["installed"] == true,
+            "Diese MSFS-Version ist noch nicht installiert. Bitte zuerst einrichten.",
         )?;
         let path = string(item, "path")?.to_string();
         drop(s);
-        self.configure(&path)
+        self.configure(&path)?;
+        // Readiness is a launch guard, not an installation-discovery guard.
+        // An inactive edition can still need the bundled component migration
+        // after a launcher update. Select it before applying that migration;
+        // other failed checks must remain visible and repairable in the UI.
+        if matches!(
+            crate::components::state(Some(Path::new(&path))),
+            "pending" | "interrupted"
+        ) {
+            crate::components::refresh(self)?;
+        }
+        Ok(json!({"ok":true}))
     }
     pub fn status(&self) -> Value {
         let mut s = self.lock();

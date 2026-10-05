@@ -1,0 +1,3458 @@
+{
+  "scope": "synthetic offline page switching at 1280x900; layout plus full CPU rasterization and pixel readback; not compositor latency or simulator performance",
+  "baseline_commit": "b9918d977b78e414bf93eeffa599fb23dc328415",
+  "profile": "release",
+  "rust": "1.98.0",
+  "system": "Linux-7.2.5-3-omarchy-x86_64-with-glibc2.44",
+  "runs": 3,
+  "warmup_rounds_per_run": 1,
+  "rounds_per_run": 7,
+  "versions": {
+    "0.2.4": {
+      "test_binary_sha256": "0d09aa85cf12a148f4dffc49c04136de0e1e919d3f82a2ec6b7bb3807e53d775",
+      "results": [
+        {
+          "scale": 1,
+          "page": "Overview",
+          "samples": 21,
+          "layout_ms": {
+            "median": 12.34,
+            "min": 12.1,
+            "p95": 16.152,
+            "max": 19.486
+          },
+          "frame_ms": {
+            "median": 25.839,
+            "min": 25.53,
+            "p95": 34.465,
+            "max": 41.652
+          }
+        },
+        {
+          "scale": 1,
+          "page": "Setup",
+          "samples": 21,
+          "layout_ms": {
+            "median": 1.093,
+            "min": 1.042,
+            "p95": 1.448,
+            "max": 1.709
+          },
+          "frame_ms": {
+            "median": 6.621,
+            "min": 6.494,
+            "p95": 7.195,
+            "max": 8.6
+          }
+        },
+        {
+          "scale": 1,
+          "page": "Updates",
+          "samples": 21,
+          "layout_ms": {
+            "median": 0.403,
+            "min": 0.363,
+            "p95": 0.43,
+            "max": 0.445
+          },
+          "frame_ms": {
+            "median": 6.617,
+            "min": 6.516,
+            "p95": 6.686,
+            "max": 6.908
+          }
+        },
+        {
+          "scale": 1,
+          "page": "Saves",
+          "samples": 21,
+          "layout_ms": {
+            "median": 0.242,
+            "min": 0.223,
+            "p95": 0.29,
+            "max": 0.305
+          },
+          "frame_ms": {
+            "median": 5.902,
+            "min": 5.837,
+            "p95": 9.453,
+            "max": 9.705
+          }
+        },
+        {
+          "scale": 1,
+          "page": "Mods",
+          "samples": 21,
+          "layout_ms": {
+            "median": 0.256,
+            "min": 0.229,
+            "p95": 0.278,
+            "max": 0.406
+          },
+          "frame_ms": {
+            "median": 4.369,
+            "min": 4.321,
+            "p95": 4.416,
+            "max": 4.706
+          }
+        },
+        {
+          "scale": 1,
+          "page": "Diagnostics",
+          "samples": 21,
+          "layout_ms": {
+            "median": 0.228,
+            "min": 0.215,
+            "p95": 0.272,
+            "max": 0.272
+          },
+          "frame_ms": {
+            "median": 5.713,
+            "min": 5.641,
+            "p95": 5.948,
+            "max": 6.101
+          }
+        },
+        {
+          "scale": 2,
+          "page": "Overview",
+          "samples": 21,
+          "layout_ms": {
+            "median": 12.399,
+            "min": 12.238,
+            "p95": 12.878,
+            "max": 14.106
+          },
+          "frame_ms": {
+            "median": 67.922,
+            "min": 67.234,
+            "p95": 72.173,
+            "max": 74.41
+          }
+        },
+        {
+          "scale": 2,
+          "page": "Setup",
+          "samples": 21,
+          "layout_ms": {
+            "median": 1.134,
+            "min": 1.103,
+            "p95": 1.179,
+            "max": 1.695
+          },
+          "frame_ms": {
+            "median": 22.745,
+            "min": 22.214,
+            "p95": 24.302,
+            "max": 26.571
+          }
+        },
+        {
+          "scale": 2,
+          "page": "Updates",
+          "samples": 21,
+          "layout_ms": {
+            "median": 0.487,
+            "min": 0.469,
+            "p95": 0.603,
+            "max": 1.106
+          },
+          "frame_ms": {
+            "median": 26.548,
+            "min": 26.125,
+            "p95": 28.645,
+            "max": 35.257
+          }
+        },
+        {
+          "scale": 2,
+          "page": "Saves",
+          "samples": 21,
+          "layout_ms": {
+            "median": 0.322,
+            "min": 0.301,
+            "p95": 0.335,
+            "max": 0.34
+          },
+          "frame_ms": {
+            "median": 24.179,
+            "min": 23.933,
+            "p95": 24.683,
+            "max": 27.316
+          }
+        },
+        {
+          "scale": 2,
+          "page": "Mods",
+          "samples": 21,
+          "layout_ms": {
+            "median": 0.311,
+            "min": 0.294,
+            "p95": 0.341,
+            "max": 0.372
+          },
+          "frame_ms": {
+            "median": 17.953,
+            "min": 17.82,
+            "p95": 18.896,
+            "max": 19.311
+          }
+        },
+        {
+          "scale": 2,
+          "page": "Diagnostics",
+          "samples": 21,
+          "layout_ms": {
+            "median": 0.299,
+            "min": 0.285,
+            "p95": 0.323,
+            "max": 0.471
+          },
+          "frame_ms": {
+            "median": 23.106,
+            "min": 22.731,
+            "p95": 23.689,
+            "max": 24.112
+          }
+        }
+      ],
+      "raw": [
+        {
+          "frame_ms": 26.041128999999998,
+          "layout_ms": 12.495052,
+          "page": "Overview",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 6.74233,
+          "layout_ms": 1.106866,
+          "page": "Setup",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 6.633768,
+          "layout_ms": 0.384281,
+          "page": "Updates",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.93029,
+          "layout_ms": 0.243207,
+          "page": "Saves",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 4.343461,
+          "layout_ms": 0.24607500000000002,
+          "page": "Mods",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.706944,
+          "layout_ms": 0.243679,
+          "page": "Diagnostics",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 26.130508,
+          "layout_ms": 12.432705,
+          "page": "Overview",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 6.798159,
+          "layout_ms": 1.116671,
+          "page": "Setup",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 6.599526,
+          "layout_ms": 0.409712,
+          "page": "Updates",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.915409,
+          "layout_ms": 0.263937,
+          "page": "Saves",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 4.333115,
+          "layout_ms": 0.247025,
+          "page": "Mods",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.752764,
+          "layout_ms": 0.225245,
+          "page": "Diagnostics",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 25.685311,
+          "layout_ms": 12.251727,
+          "page": "Overview",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 6.608547000000001,
+          "layout_ms": 1.086956,
+          "page": "Setup",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 6.686229999999999,
+          "layout_ms": 0.41205,
+          "page": "Updates",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.871107,
+          "layout_ms": 0.242273,
+          "page": "Saves",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 4.416441,
+          "layout_ms": 0.27117899999999995,
+          "page": "Mods",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 6.101152,
+          "layout_ms": 0.239633,
+          "page": "Diagnostics",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 25.915884,
+          "layout_ms": 12.354752999999999,
+          "page": "Overview",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 6.715243,
+          "layout_ms": 1.102482,
+          "page": "Setup",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 6.582693,
+          "layout_ms": 0.397107,
+          "page": "Updates",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.977257,
+          "layout_ms": 0.27490400000000004,
+          "page": "Saves",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 4.369184,
+          "layout_ms": 0.266035,
+          "page": "Mods",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.741175999999999,
+          "layout_ms": 0.22844099999999998,
+          "page": "Diagnostics",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 26.041906,
+          "layout_ms": 12.420123,
+          "page": "Overview",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 6.583287,
+          "layout_ms": 1.157222,
+          "page": "Setup",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 6.676354,
+          "layout_ms": 0.363393,
+          "page": "Updates",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.900129,
+          "layout_ms": 0.23523000000000002,
+          "page": "Saves",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 4.399235,
+          "layout_ms": 0.277979,
+          "page": "Mods",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.748982,
+          "layout_ms": 0.232531,
+          "page": "Diagnostics",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 25.655195,
+          "layout_ms": 12.213175,
+          "page": "Overview",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 6.621988,
+          "layout_ms": 1.086808,
+          "page": "Setup",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 6.669823,
+          "layout_ms": 0.40546,
+          "page": "Updates",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.850956,
+          "layout_ms": 0.239011,
+          "page": "Saves",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 4.369269999999999,
+          "layout_ms": 0.233427,
+          "page": "Mods",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.706107,
+          "layout_ms": 0.229096,
+          "page": "Diagnostics",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 27.911578,
+          "layout_ms": 12.399952,
+          "page": "Overview",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 8.600122,
+          "layout_ms": 1.708556,
+          "page": "Setup",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 6.679341,
+          "layout_ms": 0.406426,
+          "page": "Updates",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.950254999999999,
+          "layout_ms": 0.25394300000000003,
+          "page": "Saves",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 4.355878,
+          "layout_ms": 0.25115,
+          "page": "Mods",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.829657,
+          "layout_ms": 0.254962,
+          "page": "Diagnostics",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 70.076983,
+          "layout_ms": 12.832389,
+          "page": "Overview",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 22.885888,
+          "layout_ms": 1.124564,
+          "page": "Setup",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 26.441073999999997,
+          "layout_ms": 0.48746,
+          "page": "Updates",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 24.251237,
+          "layout_ms": 0.329793,
+          "page": "Saves",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 17.953971,
+          "layout_ms": 0.321107,
+          "page": "Mods",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 22.965755,
+          "layout_ms": 0.28828000000000004,
+          "page": "Diagnostics",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 67.61012199999999,
+          "layout_ms": 12.317765,
+          "page": "Overview",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 22.723855,
+          "layout_ms": 1.133389,
+          "page": "Setup",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 26.234112,
+          "layout_ms": 0.503703,
+          "page": "Updates",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 24.160929,
+          "layout_ms": 0.31835199999999997,
+          "page": "Saves",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 17.842486,
+          "layout_ms": 0.332338,
+          "page": "Mods",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 23.004415,
+          "layout_ms": 0.290072,
+          "page": "Diagnostics",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 70.346295,
+          "layout_ms": 12.390052,
+          "page": "Overview",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 22.929201,
+          "layout_ms": 1.152273,
+          "page": "Setup",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 26.547784,
+          "layout_ms": 0.470176,
+          "page": "Updates",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 24.067693000000002,
+          "layout_ms": 0.31343899999999997,
+          "page": "Saves",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 18.22485,
+          "layout_ms": 0.29389299999999996,
+          "page": "Mods",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 23.689319,
+          "layout_ms": 0.31058600000000003,
+          "page": "Diagnostics",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 71.977473,
+          "layout_ms": 14.106386,
+          "page": "Overview",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 23.390146,
+          "layout_ms": 1.130229,
+          "page": "Setup",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 27.491235,
+          "layout_ms": 0.518597,
+          "page": "Updates",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 27.316093,
+          "layout_ms": 0.327135,
+          "page": "Saves",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 18.156219,
+          "layout_ms": 0.312658,
+          "page": "Mods",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 23.654054000000002,
+          "layout_ms": 0.297164,
+          "page": "Diagnostics",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 74.40961999999999,
+          "layout_ms": 12.867211999999999,
+          "page": "Overview",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 24.094535,
+          "layout_ms": 1.178988,
+          "page": "Setup",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 26.596929,
+          "layout_ms": 0.474703,
+          "page": "Updates",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 24.300777,
+          "layout_ms": 0.308862,
+          "page": "Saves",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 18.801044,
+          "layout_ms": 0.30559499999999995,
+          "page": "Mods",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 23.553817000000002,
+          "layout_ms": 0.314093,
+          "page": "Diagnostics",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 68.05663200000001,
+          "layout_ms": 12.537011000000001,
+          "page": "Overview",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 22.539490999999998,
+          "layout_ms": 1.134987,
+          "page": "Setup",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 27.509204,
+          "layout_ms": 0.478847,
+          "page": "Updates",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 24.660429,
+          "layout_ms": 0.326976,
+          "page": "Saves",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 19.311167,
+          "layout_ms": 0.372286,
+          "page": "Mods",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 23.427387,
+          "layout_ms": 0.315275,
+          "page": "Diagnostics",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 72.172535,
+          "layout_ms": 12.762262,
+          "page": "Overview",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 26.570760999999997,
+          "layout_ms": 1.694883,
+          "page": "Setup",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 35.256838,
+          "layout_ms": 0.603107,
+          "page": "Updates",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 24.622812,
+          "layout_ms": 0.32958,
+          "page": "Saves",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 18.896086999999998,
+          "layout_ms": 0.341165,
+          "page": "Mods",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 23.613636,
+          "layout_ms": 0.30361899999999997,
+          "page": "Diagnostics",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 41.651719,
+          "layout_ms": 19.485691,
+          "page": "Overview",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 7.194697,
+          "layout_ms": 1.125483,
+          "page": "Setup",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 6.9081660000000005,
+          "layout_ms": 0.444781,
+          "page": "Updates",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 9.705464000000001,
+          "layout_ms": 0.290098,
+          "page": "Saves",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 4.705686,
+          "layout_ms": 0.405724,
+          "page": "Mods",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.948233,
+          "layout_ms": 0.271698,
+          "page": "Diagnostics",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 26.854398000000003,
+          "layout_ms": 13.210642,
+          "page": "Overview",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 6.661379,
+          "layout_ms": 1.125961,
+          "page": "Setup",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 6.635294,
+          "layout_ms": 0.395819,
+          "page": "Updates",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.912176,
+          "layout_ms": 0.242809,
+          "page": "Saves",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 4.375376999999999,
+          "layout_ms": 0.274435,
+          "page": "Mods",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.752542999999999,
+          "layout_ms": 0.234045,
+          "page": "Diagnostics",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 26.133566000000002,
+          "layout_ms": 12.301974,
+          "page": "Overview",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 6.696805,
+          "layout_ms": 1.136686,
+          "page": "Setup",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 6.615478,
+          "layout_ms": 0.392351,
+          "page": "Updates",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.938344,
+          "layout_ms": 0.256671,
+          "page": "Saves",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 4.384837,
+          "layout_ms": 0.274987,
+          "page": "Mods",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.713133,
+          "layout_ms": 0.223583,
+          "page": "Diagnostics",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 25.673524,
+          "layout_ms": 12.251140000000001,
+          "page": "Overview",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 6.627652,
+          "layout_ms": 1.0780340000000002,
+          "page": "Setup",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 6.617231,
+          "layout_ms": 0.43012900000000004,
+          "page": "Updates",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.862479,
+          "layout_ms": 0.22342299999999998,
+          "page": "Saves",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 4.333031,
+          "layout_ms": 0.22923,
+          "page": "Mods",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.6852409999999995,
+          "layout_ms": 0.23152,
+          "page": "Diagnostics",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 25.680625,
+          "layout_ms": 12.26921,
+          "page": "Overview",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 6.5258840000000005,
+          "layout_ms": 1.08868,
+          "page": "Setup",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 6.582565000000001,
+          "layout_ms": 0.396436,
+          "page": "Updates",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.901527,
+          "layout_ms": 0.244167,
+          "page": "Saves",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 4.376309,
+          "layout_ms": 0.274302,
+          "page": "Mods",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.640776,
+          "layout_ms": 0.21764199999999997,
+          "page": "Diagnostics",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 25.574262,
+          "layout_ms": 12.180418,
+          "page": "Overview",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 6.561486,
+          "layout_ms": 1.080606,
+          "page": "Setup",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 6.522421,
+          "layout_ms": 0.382088,
+          "page": "Updates",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.8443380000000005,
+          "layout_ms": 0.230209,
+          "page": "Saves",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 4.4007689999999995,
+          "layout_ms": 0.267379,
+          "page": "Mods",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.713457,
+          "layout_ms": 0.231936,
+          "page": "Diagnostics",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 25.751803,
+          "layout_ms": 12.196126999999999,
+          "page": "Overview",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 6.603757,
+          "layout_ms": 1.111866,
+          "page": "Setup",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 6.6191949999999995,
+          "layout_ms": 0.430042,
+          "page": "Updates",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.868178,
+          "layout_ms": 0.23829299999999998,
+          "page": "Saves",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 4.324528,
+          "layout_ms": 0.24030100000000001,
+          "page": "Mods",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.666893999999999,
+          "layout_ms": 0.22211799999999998,
+          "page": "Diagnostics",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 67.62233300000001,
+          "layout_ms": 12.238433,
+          "page": "Overview",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 22.214164,
+          "layout_ms": 1.1031039999999999,
+          "page": "Setup",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 26.479124,
+          "layout_ms": 0.5090239999999999,
+          "page": "Updates",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 24.451778,
+          "layout_ms": 0.31965200000000005,
+          "page": "Saves",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 18.023933,
+          "layout_ms": 0.30834,
+          "page": "Mods",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 22.960059,
+          "layout_ms": 0.300539,
+          "page": "Diagnostics",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 70.016392,
+          "layout_ms": 12.878179999999999,
+          "page": "Overview",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 23.741795,
+          "layout_ms": 1.159387,
+          "page": "Setup",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 26.561766000000002,
+          "layout_ms": 0.5112639999999999,
+          "page": "Updates",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 24.093581999999998,
+          "layout_ms": 0.31278300000000003,
+          "page": "Saves",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 17.920589,
+          "layout_ms": 0.304012,
+          "page": "Mods",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 23.353808,
+          "layout_ms": 0.314761,
+          "page": "Diagnostics",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 67.92247499999999,
+          "layout_ms": 12.256458,
+          "page": "Overview",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 23.035610000000002,
+          "layout_ms": 1.127189,
+          "page": "Setup",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 26.571838,
+          "layout_ms": 0.480298,
+          "page": "Updates",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 24.373546,
+          "layout_ms": 0.321381,
+          "page": "Saves",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 18.17198,
+          "layout_ms": 0.305174,
+          "page": "Mods",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 23.125745,
+          "layout_ms": 0.293615,
+          "page": "Diagnostics",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 69.422889,
+          "layout_ms": 12.584966,
+          "page": "Overview",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 24.302363,
+          "layout_ms": 1.176313,
+          "page": "Setup",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 27.262418,
+          "layout_ms": 0.51059,
+          "page": "Updates",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 24.394679,
+          "layout_ms": 0.327264,
+          "page": "Saves",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 17.90853,
+          "layout_ms": 0.30963799999999997,
+          "page": "Mods",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 23.073397999999997,
+          "layout_ms": 0.29762700000000003,
+          "page": "Diagnostics",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 67.565742,
+          "layout_ms": 12.314305,
+          "page": "Overview",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 22.413912,
+          "layout_ms": 1.1275009999999999,
+          "page": "Setup",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 26.264654,
+          "layout_ms": 0.484325,
+          "page": "Updates",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 24.179482,
+          "layout_ms": 0.307564,
+          "page": "Saves",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 17.910562000000002,
+          "layout_ms": 0.311243,
+          "page": "Mods",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 22.786196,
+          "layout_ms": 0.284952,
+          "page": "Diagnostics",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 67.88826200000001,
+          "layout_ms": 12.39069,
+          "page": "Overview",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 23.206897,
+          "layout_ms": 1.149824,
+          "page": "Setup",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 27.012298,
+          "layout_ms": 0.5014839999999999,
+          "page": "Updates",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 24.107485,
+          "layout_ms": 0.32226200000000005,
+          "page": "Saves",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 17.953433,
+          "layout_ms": 0.30054000000000003,
+          "page": "Mods",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 23.105837,
+          "layout_ms": 0.291531,
+          "page": "Diagnostics",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 68.621975,
+          "layout_ms": 12.547355,
+          "page": "Overview",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 22.595951,
+          "layout_ms": 1.145932,
+          "page": "Setup",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 26.440845,
+          "layout_ms": 0.47619,
+          "page": "Updates",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 24.106292,
+          "layout_ms": 0.323496,
+          "page": "Saves",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 17.94828,
+          "layout_ms": 0.30341599999999996,
+          "page": "Mods",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 23.042248,
+          "layout_ms": 0.312984,
+          "page": "Diagnostics",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 25.783765,
+          "layout_ms": 12.447332,
+          "page": "Overview",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 6.591121,
+          "layout_ms": 1.042092,
+          "page": "Setup",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 6.645364,
+          "layout_ms": 0.381316,
+          "page": "Updates",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 6.101338,
+          "layout_ms": 0.30541,
+          "page": "Saves",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 4.402317999999999,
+          "layout_ms": 0.265635,
+          "page": "Mods",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.751907,
+          "layout_ms": 0.27156199999999997,
+          "page": "Diagnostics",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 25.838926,
+          "layout_ms": 12.34048,
+          "page": "Overview",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 6.502525,
+          "layout_ms": 1.090819,
+          "page": "Setup",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 6.546889999999999,
+          "layout_ms": 0.41475,
+          "page": "Updates",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.874062,
+          "layout_ms": 0.239019,
+          "page": "Saves",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 4.335584,
+          "layout_ms": 0.24352,
+          "page": "Mods",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.6877189999999995,
+          "layout_ms": 0.22359199999999999,
+          "page": "Diagnostics",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 25.935574,
+          "layout_ms": 12.446282,
+          "page": "Overview",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 6.585369,
+          "layout_ms": 1.0930549999999999,
+          "page": "Setup",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 6.548056,
+          "layout_ms": 0.402845,
+          "page": "Updates",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 9.453441999999999,
+          "layout_ms": 0.22309500000000002,
+          "page": "Saves",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 4.37082,
+          "layout_ms": 0.256582,
+          "page": "Mods",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.719017,
+          "layout_ms": 0.223929,
+          "page": "Diagnostics",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 34.465096,
+          "layout_ms": 16.151886,
+          "page": "Overview",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 7.0613150000000005,
+          "layout_ms": 1.447952,
+          "page": "Setup",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 6.654243,
+          "layout_ms": 0.425769,
+          "page": "Updates",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.918086000000001,
+          "layout_ms": 0.250388,
+          "page": "Saves",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 4.358651,
+          "layout_ms": 0.255972,
+          "page": "Mods",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.697286,
+          "layout_ms": 0.226622,
+          "page": "Diagnostics",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 25.659787,
+          "layout_ms": 12.276178,
+          "page": "Overview",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 6.529494000000001,
+          "layout_ms": 1.0759509999999999,
+          "page": "Setup",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 6.522734,
+          "layout_ms": 0.392103,
+          "page": "Updates",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.839359,
+          "layout_ms": 0.230628,
+          "page": "Saves",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 4.330219,
+          "layout_ms": 0.24335500000000002,
+          "page": "Mods",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.683084,
+          "layout_ms": 0.223292,
+          "page": "Diagnostics",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 25.530118,
+          "layout_ms": 12.10011,
+          "page": "Overview",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 6.493816000000001,
+          "layout_ms": 1.072034,
+          "page": "Setup",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 6.515981,
+          "layout_ms": 0.37472,
+          "page": "Updates",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.855268000000001,
+          "layout_ms": 0.222797,
+          "page": "Saves",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 4.328136,
+          "layout_ms": 0.242857,
+          "page": "Mods",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.6911890000000005,
+          "layout_ms": 0.21504900000000002,
+          "page": "Diagnostics",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 25.672193999999998,
+          "layout_ms": 12.155901,
+          "page": "Overview",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 6.620547,
+          "layout_ms": 1.084221,
+          "page": "Setup",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 6.586522,
+          "layout_ms": 0.42863,
+          "page": "Updates",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.836645,
+          "layout_ms": 0.227355,
+          "page": "Saves",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 4.320860000000001,
+          "layout_ms": 0.241143,
+          "page": "Mods",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.659091,
+          "layout_ms": 0.215945,
+          "page": "Diagnostics",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 67.55944099999999,
+          "layout_ms": 12.399208999999999,
+          "page": "Overview",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 22.744733,
+          "layout_ms": 1.118613,
+          "page": "Setup",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 26.547632,
+          "layout_ms": 0.471859,
+          "page": "Updates",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 23.932814999999998,
+          "layout_ms": 0.327292,
+          "page": "Saves",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 17.948733,
+          "layout_ms": 0.324497,
+          "page": "Mods",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 23.005596999999998,
+          "layout_ms": 0.322804,
+          "page": "Diagnostics",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 67.297622,
+          "layout_ms": 12.344618,
+          "page": "Overview",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 22.361404,
+          "layout_ms": 1.127686,
+          "page": "Setup",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 26.125335999999997,
+          "layout_ms": 0.46885,
+          "page": "Updates",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 23.991054000000002,
+          "layout_ms": 0.300807,
+          "page": "Saves",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 17.851537,
+          "layout_ms": 0.314118,
+          "page": "Mods",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 23.224669,
+          "layout_ms": 0.305662,
+          "page": "Diagnostics",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 67.548581,
+          "layout_ms": 12.268009999999999,
+          "page": "Overview",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 22.933901,
+          "layout_ms": 1.124553,
+          "page": "Setup",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 28.64474,
+          "layout_ms": 1.106055,
+          "page": "Updates",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 24.682917,
+          "layout_ms": 0.33541000000000004,
+          "page": "Saves",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 17.998705,
+          "layout_ms": 0.314389,
+          "page": "Mods",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 23.276939,
+          "layout_ms": 0.294201,
+          "page": "Diagnostics",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 67.660815,
+          "layout_ms": 12.522042,
+          "page": "Overview",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 22.395581,
+          "layout_ms": 1.133711,
+          "page": "Setup",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 26.323936,
+          "layout_ms": 0.472424,
+          "page": "Updates",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 24.457144,
+          "layout_ms": 0.327705,
+          "page": "Saves",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 17.820145999999998,
+          "layout_ms": 0.30912399999999995,
+          "page": "Mods",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 23.002558999999998,
+          "layout_ms": 0.29069,
+          "page": "Diagnostics",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 67.47631,
+          "layout_ms": 12.372209,
+          "page": "Overview",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 22.486694,
+          "layout_ms": 1.1500270000000001,
+          "page": "Setup",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 26.255653,
+          "layout_ms": 0.49936,
+          "page": "Updates",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 24.100233,
+          "layout_ms": 0.33964500000000003,
+          "page": "Saves",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 17.884980000000002,
+          "layout_ms": 0.312523,
+          "page": "Mods",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 22.731486,
+          "layout_ms": 0.298531,
+          "page": "Diagnostics",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 67.23352200000001,
+          "layout_ms": 12.374744,
+          "page": "Overview",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 22.290519000000003,
+          "layout_ms": 1.1344910000000001,
+          "page": "Setup",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 26.383502,
+          "layout_ms": 0.5535530000000001,
+          "page": "Updates",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 24.048677,
+          "layout_ms": 0.316456,
+          "page": "Saves",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 18.331622999999997,
+          "layout_ms": 0.303931,
+          "page": "Mods",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 24.11176,
+          "layout_ms": 0.47145,
+          "page": "Diagnostics",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 68.986767,
+          "layout_ms": 12.642971,
+          "page": "Overview",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 22.403148,
+          "layout_ms": 1.1354600000000001,
+          "page": "Setup",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 26.161315000000002,
+          "layout_ms": 0.475308,
+          "page": "Updates",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 23.964121000000002,
+          "layout_ms": 0.319849,
+          "page": "Saves",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 17.946279,
+          "layout_ms": 0.321162,
+          "page": "Mods",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 23.068382,
+          "layout_ms": 0.29051,
+          "page": "Diagnostics",
+          "scale": 2.0
+        }
+      ]
+    },
+    "0.2.5": {
+      "test_binary_sha256": "bd67e32228b36361ad6a64a578a704d53369f77d7990d1249bbad5e9fb508299",
+      "results": [
+        {
+          "scale": 1,
+          "page": "Overview",
+          "samples": 21,
+          "layout_ms": {
+            "median": 1.238,
+            "min": 1.199,
+            "p95": 1.523,
+            "max": 1.529
+          },
+          "frame_ms": {
+            "median": 14.594,
+            "min": 14.398,
+            "p95": 15.372,
+            "max": 15.429
+          }
+        },
+        {
+          "scale": 1,
+          "page": "Setup",
+          "samples": 21,
+          "layout_ms": {
+            "median": 1.114,
+            "min": 1.08,
+            "p95": 1.153,
+            "max": 1.169
+          },
+          "frame_ms": {
+            "median": 5.87,
+            "min": 5.795,
+            "p95": 6.033,
+            "max": 6.178
+          }
+        },
+        {
+          "scale": 1,
+          "page": "Updates",
+          "samples": 21,
+          "layout_ms": {
+            "median": 0.408,
+            "min": 0.376,
+            "p95": 0.442,
+            "max": 0.566
+          },
+          "frame_ms": {
+            "median": 6.509,
+            "min": 6.381,
+            "p95": 6.653,
+            "max": 7.257
+          }
+        },
+        {
+          "scale": 1,
+          "page": "Saves",
+          "samples": 21,
+          "layout_ms": {
+            "median": 0.271,
+            "min": 0.252,
+            "p95": 0.307,
+            "max": 0.308
+          },
+          "frame_ms": {
+            "median": 5.464,
+            "min": 5.423,
+            "p95": 5.608,
+            "max": 6.113
+          }
+        },
+        {
+          "scale": 1,
+          "page": "Mods",
+          "samples": 21,
+          "layout_ms": {
+            "median": 0.284,
+            "min": 0.268,
+            "p95": 0.327,
+            "max": 0.35
+          },
+          "frame_ms": {
+            "median": 3.929,
+            "min": 3.867,
+            "p95": 4.046,
+            "max": 4.267
+          }
+        },
+        {
+          "scale": 1,
+          "page": "Diagnostics",
+          "samples": 21,
+          "layout_ms": {
+            "median": 0.233,
+            "min": 0.224,
+            "p95": 0.266,
+            "max": 0.28
+          },
+          "frame_ms": {
+            "median": 5.264,
+            "min": 5.226,
+            "p95": 5.414,
+            "max": 5.492
+          }
+        },
+        {
+          "scale": 2,
+          "page": "Overview",
+          "samples": 21,
+          "layout_ms": {
+            "median": 1.695,
+            "min": 1.663,
+            "p95": 1.797,
+            "max": 2.016
+          },
+          "frame_ms": {
+            "median": 54.076,
+            "min": 52.933,
+            "p95": 65.765,
+            "max": 72.399
+          }
+        },
+        {
+          "scale": 2,
+          "page": "Setup",
+          "samples": 21,
+          "layout_ms": {
+            "median": 1.163,
+            "min": 1.142,
+            "p95": 1.209,
+            "max": 1.217
+          },
+          "frame_ms": {
+            "median": 19.626,
+            "min": 19.0,
+            "p95": 21.858,
+            "max": 23.493
+          }
+        },
+        {
+          "scale": 2,
+          "page": "Updates",
+          "samples": 21,
+          "layout_ms": {
+            "median": 0.493,
+            "min": 0.458,
+            "p95": 0.513,
+            "max": 0.533
+          },
+          "frame_ms": {
+            "median": 24.594,
+            "min": 23.678,
+            "p95": 26.103,
+            "max": 26.483
+          }
+        },
+        {
+          "scale": 2,
+          "page": "Saves",
+          "samples": 21,
+          "layout_ms": {
+            "median": 0.338,
+            "min": 0.311,
+            "p95": 0.346,
+            "max": 0.347
+          },
+          "frame_ms": {
+            "median": 21.716,
+            "min": 21.341,
+            "p95": 23.113,
+            "max": 24.42
+          }
+        },
+        {
+          "scale": 2,
+          "page": "Mods",
+          "samples": 21,
+          "layout_ms": {
+            "median": 0.358,
+            "min": 0.345,
+            "p95": 0.375,
+            "max": 0.377
+          },
+          "frame_ms": {
+            "median": 15.5,
+            "min": 15.043,
+            "p95": 16.867,
+            "max": 17.352
+          }
+        },
+        {
+          "scale": 2,
+          "page": "Diagnostics",
+          "samples": 21,
+          "layout_ms": {
+            "median": 0.311,
+            "min": 0.299,
+            "p95": 0.324,
+            "max": 0.344
+          },
+          "frame_ms": {
+            "median": 20.95,
+            "min": 20.43,
+            "p95": 22.185,
+            "max": 22.251
+          }
+        }
+      ],
+      "raw": [
+        {
+          "frame_ms": 15.034832999999999,
+          "layout_ms": 1.23831,
+          "page": "Overview",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.927733999999999,
+          "layout_ms": 1.122728,
+          "page": "Setup",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 6.651941,
+          "layout_ms": 0.413877,
+          "page": "Updates",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.502174999999999,
+          "layout_ms": 0.285938,
+          "page": "Saves",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 3.960024,
+          "layout_ms": 0.286645,
+          "page": "Mods",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.263959000000001,
+          "layout_ms": 0.232661,
+          "page": "Diagnostics",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 14.765703,
+          "layout_ms": 1.32098,
+          "page": "Overview",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.983399,
+          "layout_ms": 1.137434,
+          "page": "Setup",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 6.629457,
+          "layout_ms": 0.439585,
+          "page": "Updates",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 6.113477,
+          "layout_ms": 0.308315,
+          "page": "Saves",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 4.267075999999999,
+          "layout_ms": 0.35023200000000004,
+          "page": "Mods",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.492304,
+          "layout_ms": 0.280187,
+          "page": "Diagnostics",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 15.372091,
+          "layout_ms": 1.52257,
+          "page": "Overview",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 6.177537,
+          "layout_ms": 1.169103,
+          "page": "Setup",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 7.257402,
+          "layout_ms": 0.566017,
+          "page": "Updates",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.607689,
+          "layout_ms": 0.292439,
+          "page": "Saves",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 4.045853999999999,
+          "layout_ms": 0.326668,
+          "page": "Mods",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.414388,
+          "layout_ms": 0.26609499999999997,
+          "page": "Diagnostics",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 14.738415,
+          "layout_ms": 1.315584,
+          "page": "Overview",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.8897960000000005,
+          "layout_ms": 1.118592,
+          "page": "Setup",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 6.525077,
+          "layout_ms": 0.41134800000000005,
+          "page": "Updates",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.489268,
+          "layout_ms": 0.25927300000000003,
+          "page": "Saves",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 3.9359629999999997,
+          "layout_ms": 0.298763,
+          "page": "Mods",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.247221,
+          "layout_ms": 0.242407,
+          "page": "Diagnostics",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 14.578536,
+          "layout_ms": 1.267782,
+          "page": "Overview",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.869542999999999,
+          "layout_ms": 1.111625,
+          "page": "Setup",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 6.440607,
+          "layout_ms": 0.38668600000000003,
+          "page": "Updates",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.444712,
+          "layout_ms": 0.263196,
+          "page": "Saves",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 3.9063470000000002,
+          "layout_ms": 0.277567,
+          "page": "Mods",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.232272,
+          "layout_ms": 0.228249,
+          "page": "Diagnostics",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 14.559284,
+          "layout_ms": 1.198955,
+          "page": "Overview",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.870763,
+          "layout_ms": 1.123401,
+          "page": "Setup",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 6.425822999999999,
+          "layout_ms": 0.405376,
+          "page": "Updates",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.427324,
+          "layout_ms": 0.252242,
+          "page": "Saves",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 3.915654,
+          "layout_ms": 0.271038,
+          "page": "Mods",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.305234,
+          "layout_ms": 0.226563,
+          "page": "Diagnostics",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 14.691238,
+          "layout_ms": 1.3086820000000001,
+          "page": "Overview",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.975255,
+          "layout_ms": 1.1531099999999999,
+          "page": "Setup",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 6.502274,
+          "layout_ms": 0.401835,
+          "page": "Updates",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.437803,
+          "layout_ms": 0.25656,
+          "page": "Saves",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 3.929361,
+          "layout_ms": 0.286917,
+          "page": "Mods",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.25113,
+          "layout_ms": 0.225992,
+          "page": "Diagnostics",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 54.42245,
+          "layout_ms": 1.744187,
+          "page": "Overview",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 20.459042,
+          "layout_ms": 1.151162,
+          "page": "Setup",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 25.23321,
+          "layout_ms": 0.501345,
+          "page": "Updates",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 21.869573,
+          "layout_ms": 0.340419,
+          "page": "Saves",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 15.628242,
+          "layout_ms": 0.35889899999999997,
+          "page": "Mods",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 20.97429,
+          "layout_ms": 0.304936,
+          "page": "Diagnostics",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 55.051924,
+          "layout_ms": 1.796787,
+          "page": "Overview",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 20.836865,
+          "layout_ms": 1.185586,
+          "page": "Setup",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 26.483333000000002,
+          "layout_ms": 0.504035,
+          "page": "Updates",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 22.336047,
+          "layout_ms": 0.338639,
+          "page": "Saves",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 15.548482,
+          "layout_ms": 0.36079900000000004,
+          "page": "Mods",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 20.854225,
+          "layout_ms": 0.320637,
+          "page": "Diagnostics",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 54.985784,
+          "layout_ms": 1.731975,
+          "page": "Overview",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 21.351786,
+          "layout_ms": 1.192861,
+          "page": "Setup",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 26.103482,
+          "layout_ms": 0.511979,
+          "page": "Updates",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 23.112524,
+          "layout_ms": 0.34646600000000005,
+          "page": "Saves",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 17.352124,
+          "layout_ms": 0.374592,
+          "page": "Mods",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 22.075117,
+          "layout_ms": 0.310726,
+          "page": "Diagnostics",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 72.399356,
+          "layout_ms": 1.755354,
+          "page": "Overview",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 23.49343,
+          "layout_ms": 1.2173150000000001,
+          "page": "Setup",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 25.257188,
+          "layout_ms": 0.533437,
+          "page": "Updates",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 23.077455,
+          "layout_ms": 0.34504,
+          "page": "Saves",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 16.321617,
+          "layout_ms": 0.35364,
+          "page": "Mods",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 21.455236,
+          "layout_ms": 0.314093,
+          "page": "Diagnostics",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 54.757699,
+          "layout_ms": 1.713445,
+          "page": "Overview",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 21.051099,
+          "layout_ms": 1.161643,
+          "page": "Setup",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 24.786452,
+          "layout_ms": 0.476607,
+          "page": "Updates",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 22.84092,
+          "layout_ms": 0.326461,
+          "page": "Saves",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 15.545554,
+          "layout_ms": 0.371371,
+          "page": "Mods",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 21.133761,
+          "layout_ms": 0.321333,
+          "page": "Diagnostics",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 54.714218,
+          "layout_ms": 1.7842019999999998,
+          "page": "Overview",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 19.625975,
+          "layout_ms": 1.159852,
+          "page": "Setup",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 24.593565,
+          "layout_ms": 0.488217,
+          "page": "Updates",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 21.577869999999997,
+          "layout_ms": 0.337746,
+          "page": "Saves",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 15.363892,
+          "layout_ms": 0.360137,
+          "page": "Mods",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 20.522869999999998,
+          "layout_ms": 0.307487,
+          "page": "Diagnostics",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 53.235567999999994,
+          "layout_ms": 1.6631610000000001,
+          "page": "Overview",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 19.147058,
+          "layout_ms": 1.164071,
+          "page": "Setup",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 24.812794999999998,
+          "layout_ms": 0.47228899999999996,
+          "page": "Updates",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 21.445573999999997,
+          "layout_ms": 0.32519200000000004,
+          "page": "Saves",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 15.150728,
+          "layout_ms": 0.346567,
+          "page": "Mods",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 20.429844,
+          "layout_ms": 0.300915,
+          "page": "Diagnostics",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 15.094038000000001,
+          "layout_ms": 1.288619,
+          "page": "Overview",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.918279999999999,
+          "layout_ms": 1.133748,
+          "page": "Setup",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 6.633569,
+          "layout_ms": 0.398395,
+          "page": "Updates",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.524775,
+          "layout_ms": 0.306651,
+          "page": "Saves",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 3.92011,
+          "layout_ms": 0.279784,
+          "page": "Mods",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.280456999999999,
+          "layout_ms": 0.236417,
+          "page": "Diagnostics",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 14.617258,
+          "layout_ms": 1.274053,
+          "page": "Overview",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.856983,
+          "layout_ms": 1.114219,
+          "page": "Setup",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 6.464042,
+          "layout_ms": 0.40364099999999997,
+          "page": "Updates",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.435762,
+          "layout_ms": 0.265163,
+          "page": "Saves",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 3.944156,
+          "layout_ms": 0.28534699999999996,
+          "page": "Mods",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.261839,
+          "layout_ms": 0.23519400000000001,
+          "page": "Diagnostics",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 14.473075,
+          "layout_ms": 1.204564,
+          "page": "Overview",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.805242000000001,
+          "layout_ms": 1.089175,
+          "page": "Setup",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 6.445178,
+          "layout_ms": 0.411804,
+          "page": "Updates",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.463889,
+          "layout_ms": 0.28371199999999996,
+          "page": "Saves",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 3.917642,
+          "layout_ms": 0.286058,
+          "page": "Mods",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.246703999999999,
+          "layout_ms": 0.229502,
+          "page": "Diagnostics",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 14.474665,
+          "layout_ms": 1.252092,
+          "page": "Overview",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.795479,
+          "layout_ms": 1.092175,
+          "page": "Setup",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 6.509326000000001,
+          "layout_ms": 0.408304,
+          "page": "Updates",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.474924,
+          "layout_ms": 0.275591,
+          "page": "Saves",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 3.9489520000000002,
+          "layout_ms": 0.28385699999999997,
+          "page": "Mods",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.2750200000000005,
+          "layout_ms": 0.239539,
+          "page": "Diagnostics",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 14.472864,
+          "layout_ms": 1.2124709999999999,
+          "page": "Overview",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.850613999999999,
+          "layout_ms": 1.1193659999999999,
+          "page": "Setup",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 6.437545,
+          "layout_ms": 0.385838,
+          "page": "Updates",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.485518,
+          "layout_ms": 0.274937,
+          "page": "Saves",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 3.8992139999999997,
+          "layout_ms": 0.26829600000000003,
+          "page": "Mods",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.272022000000001,
+          "layout_ms": 0.225805,
+          "page": "Diagnostics",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 14.533545,
+          "layout_ms": 1.2043819999999998,
+          "page": "Overview",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.932472000000001,
+          "layout_ms": 1.108117,
+          "page": "Setup",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 6.559031,
+          "layout_ms": 0.435153,
+          "page": "Updates",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.423494,
+          "layout_ms": 0.25325499999999995,
+          "page": "Saves",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 3.937157,
+          "layout_ms": 0.273319,
+          "page": "Mods",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.388909,
+          "layout_ms": 0.241394,
+          "page": "Diagnostics",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 15.339777,
+          "layout_ms": 1.429172,
+          "page": "Overview",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 6.032807,
+          "layout_ms": 1.147471,
+          "page": "Setup",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 6.608383,
+          "layout_ms": 0.43218,
+          "page": "Updates",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.520006,
+          "layout_ms": 0.279833,
+          "page": "Saves",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 3.969531,
+          "layout_ms": 0.293537,
+          "page": "Mods",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.333056,
+          "layout_ms": 0.249792,
+          "page": "Diagnostics",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 65.765082,
+          "layout_ms": 1.783314,
+          "page": "Overview",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 20.723461,
+          "layout_ms": 1.208822,
+          "page": "Setup",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 25.109925,
+          "layout_ms": 0.507548,
+          "page": "Updates",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 24.419937,
+          "layout_ms": 0.341619,
+          "page": "Saves",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 16.062789000000002,
+          "layout_ms": 0.36502399999999996,
+          "page": "Mods",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 21.450482,
+          "layout_ms": 0.322041,
+          "page": "Diagnostics",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 58.305067,
+          "layout_ms": 1.692327,
+          "page": "Overview",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 20.109241,
+          "layout_ms": 1.172249,
+          "page": "Setup",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 24.301218,
+          "layout_ms": 0.493023,
+          "page": "Updates",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 21.948608,
+          "layout_ms": 0.333211,
+          "page": "Saves",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 16.866776,
+          "layout_ms": 0.356622,
+          "page": "Mods",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 20.949723,
+          "layout_ms": 0.29891999999999996,
+          "page": "Diagnostics",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 54.076357,
+          "layout_ms": 1.67533,
+          "page": "Overview",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 21.857957000000003,
+          "layout_ms": 1.1522450000000002,
+          "page": "Setup",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 25.463052,
+          "layout_ms": 0.490035,
+          "page": "Updates",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 22.254254,
+          "layout_ms": 0.345516,
+          "page": "Saves",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 15.500244,
+          "layout_ms": 0.352644,
+          "page": "Mods",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 22.250521,
+          "layout_ms": 0.310406,
+          "page": "Diagnostics",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 55.995528,
+          "layout_ms": 2.015758,
+          "page": "Overview",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 19.511325,
+          "layout_ms": 1.162346,
+          "page": "Setup",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 25.283196,
+          "layout_ms": 0.503932,
+          "page": "Updates",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 22.359612000000002,
+          "layout_ms": 0.34654999999999997,
+          "page": "Saves",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 15.434565000000001,
+          "layout_ms": 0.366551,
+          "page": "Mods",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 20.523871,
+          "layout_ms": 0.30979599999999996,
+          "page": "Diagnostics",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 53.834106999999996,
+          "layout_ms": 1.6778570000000002,
+          "page": "Overview",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 19.554123,
+          "layout_ms": 1.162988,
+          "page": "Setup",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 23.951669,
+          "layout_ms": 0.504235,
+          "page": "Updates",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 21.437307999999998,
+          "layout_ms": 0.339344,
+          "page": "Saves",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 15.13816,
+          "layout_ms": 0.354286,
+          "page": "Mods",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 21.52308,
+          "layout_ms": 0.31241199999999997,
+          "page": "Diagnostics",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 53.832387000000004,
+          "layout_ms": 1.689835,
+          "page": "Overview",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 20.578544,
+          "layout_ms": 1.163126,
+          "page": "Setup",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 24.653149,
+          "layout_ms": 0.47984299999999996,
+          "page": "Updates",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 21.637427000000002,
+          "layout_ms": 0.33299799999999996,
+          "page": "Saves",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 15.666146999999999,
+          "layout_ms": 0.34959599999999996,
+          "page": "Mods",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 20.949537,
+          "layout_ms": 0.307148,
+          "page": "Diagnostics",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 54.220651000000004,
+          "layout_ms": 1.678302,
+          "page": "Overview",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 19.935001,
+          "layout_ms": 1.164396,
+          "page": "Setup",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 24.425972,
+          "layout_ms": 0.49219300000000005,
+          "page": "Updates",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 21.716416,
+          "layout_ms": 0.330384,
+          "page": "Saves",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 16.273022,
+          "layout_ms": 0.345149,
+          "page": "Mods",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 21.738456,
+          "layout_ms": 0.32433,
+          "page": "Diagnostics",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 14.837301,
+          "layout_ms": 1.216715,
+          "page": "Overview",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.797936,
+          "layout_ms": 1.0798100000000002,
+          "page": "Setup",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 6.525217,
+          "layout_ms": 0.384741,
+          "page": "Updates",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.463159,
+          "layout_ms": 0.255201,
+          "page": "Saves",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 3.9131950000000004,
+          "layout_ms": 0.272736,
+          "page": "Mods",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.255291,
+          "layout_ms": 0.236173,
+          "page": "Diagnostics",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 14.520742,
+          "layout_ms": 1.205833,
+          "page": "Overview",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.852969000000001,
+          "layout_ms": 1.099456,
+          "page": "Setup",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 6.437869,
+          "layout_ms": 0.390708,
+          "page": "Updates",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.455355,
+          "layout_ms": 0.270573,
+          "page": "Saves",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 3.893944,
+          "layout_ms": 0.26787700000000003,
+          "page": "Mods",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.231745,
+          "layout_ms": 0.223907,
+          "page": "Diagnostics",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 14.594147,
+          "layout_ms": 1.208363,
+          "page": "Overview",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 6.010205,
+          "layout_ms": 1.150136,
+          "page": "Setup",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 6.575247999999999,
+          "layout_ms": 0.441848,
+          "page": "Updates",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.477812,
+          "layout_ms": 0.282154,
+          "page": "Saves",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 3.942559,
+          "layout_ms": 0.29491100000000003,
+          "page": "Mods",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.279357999999999,
+          "layout_ms": 0.24101999999999998,
+          "page": "Diagnostics",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 15.429367,
+          "layout_ms": 1.528794,
+          "page": "Overview",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.856113,
+          "layout_ms": 1.111881,
+          "page": "Setup",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 6.6530510000000005,
+          "layout_ms": 0.421066,
+          "page": "Updates",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.483735,
+          "layout_ms": 0.27576100000000003,
+          "page": "Saves",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 3.934677,
+          "layout_ms": 0.28314300000000003,
+          "page": "Mods",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.256514,
+          "layout_ms": 0.22802599999999998,
+          "page": "Diagnostics",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 14.496557000000001,
+          "layout_ms": 1.2207270000000001,
+          "page": "Overview",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.798867,
+          "layout_ms": 1.090104,
+          "page": "Setup",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 6.455979,
+          "layout_ms": 0.384154,
+          "page": "Updates",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.432557,
+          "layout_ms": 0.260111,
+          "page": "Saves",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 3.9049750000000003,
+          "layout_ms": 0.273618,
+          "page": "Mods",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.225879999999999,
+          "layout_ms": 0.22514299999999998,
+          "page": "Diagnostics",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 14.397557,
+          "layout_ms": 1.203142,
+          "page": "Overview",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.818986,
+          "layout_ms": 1.09969,
+          "page": "Setup",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 6.440323,
+          "layout_ms": 0.415427,
+          "page": "Updates",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.4473780000000005,
+          "layout_ms": 0.265063,
+          "page": "Saves",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 3.9175089999999995,
+          "layout_ms": 0.29177499999999995,
+          "page": "Mods",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.237886,
+          "layout_ms": 0.225298,
+          "page": "Diagnostics",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 14.420574,
+          "layout_ms": 1.217421,
+          "page": "Overview",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.801113,
+          "layout_ms": 1.101091,
+          "page": "Setup",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 6.3808620000000005,
+          "layout_ms": 0.375604,
+          "page": "Updates",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.422627,
+          "layout_ms": 0.26025499999999996,
+          "page": "Saves",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 3.866891,
+          "layout_ms": 0.27388599999999996,
+          "page": "Mods",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 5.266888,
+          "layout_ms": 0.228789,
+          "page": "Diagnostics",
+          "scale": 1.0
+        },
+        {
+          "frame_ms": 53.93114,
+          "layout_ms": 1.688116,
+          "page": "Overview",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 19.116773,
+          "layout_ms": 1.150112,
+          "page": "Setup",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 23.968477,
+          "layout_ms": 0.486351,
+          "page": "Updates",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 21.370031,
+          "layout_ms": 0.327083,
+          "page": "Saves",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 15.26464,
+          "layout_ms": 0.35051899999999997,
+          "page": "Mods",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 20.497245,
+          "layout_ms": 0.303592,
+          "page": "Diagnostics",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 53.022110999999995,
+          "layout_ms": 1.6950699999999999,
+          "page": "Overview",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 19.059765,
+          "layout_ms": 1.142253,
+          "page": "Setup",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 24.000504,
+          "layout_ms": 0.470102,
+          "page": "Updates",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 21.424754,
+          "layout_ms": 0.310894,
+          "page": "Saves",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 15.358996999999999,
+          "layout_ms": 0.354728,
+          "page": "Mods",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 20.569976999999998,
+          "layout_ms": 0.317575,
+          "page": "Diagnostics",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 53.070890000000006,
+          "layout_ms": 1.673941,
+          "page": "Overview",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 19.328347,
+          "layout_ms": 1.163169,
+          "page": "Setup",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 23.677699999999998,
+          "layout_ms": 0.511059,
+          "page": "Updates",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 21.537746,
+          "layout_ms": 0.33754199999999995,
+          "page": "Saves",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 15.663968,
+          "layout_ms": 0.355619,
+          "page": "Mods",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 22.184808,
+          "layout_ms": 0.343629,
+          "page": "Diagnostics",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 54.05276,
+          "layout_ms": 1.7041359999999999,
+          "page": "Overview",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 19.19426,
+          "layout_ms": 1.1445470000000002,
+          "page": "Setup",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 24.294222,
+          "layout_ms": 0.5131960000000001,
+          "page": "Updates",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 21.340999999999998,
+          "layout_ms": 0.337617,
+          "page": "Saves",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 15.284679,
+          "layout_ms": 0.377326,
+          "page": "Mods",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 20.516917,
+          "layout_ms": 0.298549,
+          "page": "Diagnostics",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 53.605803,
+          "layout_ms": 1.6785700000000001,
+          "page": "Overview",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 19.534366000000002,
+          "layout_ms": 1.169696,
+          "page": "Setup",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 24.210954,
+          "layout_ms": 0.5020330000000001,
+          "page": "Updates",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 21.779165,
+          "layout_ms": 0.329868,
+          "page": "Saves",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 15.283267,
+          "layout_ms": 0.360205,
+          "page": "Mods",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 20.708108,
+          "layout_ms": 0.31248099999999995,
+          "page": "Diagnostics",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 53.045072999999995,
+          "layout_ms": 1.702752,
+          "page": "Overview",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 19.000183,
+          "layout_ms": 1.155054,
+          "page": "Setup",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 23.929304,
+          "layout_ms": 0.45763899999999996,
+          "page": "Updates",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 21.49055,
+          "layout_ms": 0.321181,
+          "page": "Saves",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 15.257222,
+          "layout_ms": 0.361283,
+          "page": "Mods",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 20.639827999999998,
+          "layout_ms": 0.300373,
+          "page": "Diagnostics",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 52.932803,
+          "layout_ms": 1.6855310000000001,
+          "page": "Overview",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 19.063035,
+          "layout_ms": 1.1547770000000002,
+          "page": "Setup",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 24.016992000000002,
+          "layout_ms": 0.49157499999999993,
+          "page": "Updates",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 21.394033,
+          "layout_ms": 0.341984,
+          "page": "Saves",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 15.043028999999999,
+          "layout_ms": 0.358463,
+          "page": "Mods",
+          "scale": 2.0
+        },
+        {
+          "frame_ms": 20.558007999999997,
+          "layout_ms": 0.31783300000000003,
+          "page": "Diagnostics",
+          "scale": 2.0
+        }
+      ]
+    }
+  }
+}

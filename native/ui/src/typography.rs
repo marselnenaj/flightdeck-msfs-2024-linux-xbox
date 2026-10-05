@@ -145,7 +145,7 @@ impl<Message> Widget<Message, Theme, Renderer> for Label<'_> {
                 // software renderer apply an unrelated preceding text mask.
                 buffer.set_size(
                     system.raw(),
-                    Some(limits.max().width),
+                    Some(state.measured.width.ceil().min(limits.max().width)),
                     Some(state.measured.height),
                 );
                 buffer.shape_until_scroll(system.raw(), false);
@@ -169,14 +169,30 @@ impl<Message> Widget<Message, Theme, Renderer> for Label<'_> {
             && let Some(clip_bounds) = layout.bounds().intersection(viewport)
         {
             use iced::advanced::Renderer as _;
-            renderer.with_layer(clip_bounds, |renderer| {
+            let draw = |renderer: &mut Renderer| {
                 renderer.fill_raw(graphics_text::Raw {
                     buffer: Arc::downgrade(buffer),
                     position: layout.bounds().position(),
                     color: self.color,
                     clip_bounds,
-                })
-            });
+                });
+            };
+            let (width, height) = buffer.size();
+            let bounds = Rectangle::new(
+                layout.position(),
+                Size::new(
+                    width.unwrap_or(f32::INFINITY),
+                    height.unwrap_or(f32::INFINITY),
+                ),
+            );
+            // tiny-skia clears a framebuffer-sized mask for every layer.
+            // Fully visible text needs no mask; clipped text still gets its
+            // own layer to avoid reusing an unrelated preceding text mask.
+            if bounds.is_within(viewport) {
+                draw(renderer);
+            } else {
+                renderer.with_layer(clip_bounds, draw);
+            }
         }
     }
     fn operate(

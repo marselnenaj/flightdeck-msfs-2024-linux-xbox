@@ -97,6 +97,26 @@ def main():
             configured = request("/api/status")[2]
             assert configured["runtime"]["configured"] and configured["runtime"]["ready"]
             assert configured["versions"]["msfs2024"]["path"] == str(runtime)
+            # An installed edition with failed readiness checks must remain
+            # selectable for repair, never be treated as a new installation.
+            other = work / "msfs2020"
+            for name in ("tools", "private"):
+                (other / name).mkdir(parents=True, mode=0o700)
+            (other / "tools/play-msfs.sh").write_text("#!/bin/sh\nexit 99\n")
+            (other / "tools/play-msfs.sh").chmod(0o700)
+            (other / "private/runtime.json").write_text(json.dumps({"game_id": "msfs2020"}))
+            assert request("/api/config", {"runtime_path": str(other)}, safe)[0] == 200
+            assert request("/api/game/select", {"game_id": "msfs2024"}, safe)[0] == 200
+            assert request("/api/game/select", {"game_id": "msfs2020"}, safe)[0] == 200
+            selected = request("/api/status")[2]
+            assert selected["runtime"]["path"] == str(other)
+            assert selected["versions"]["msfs2020"]["installed"] is True
+            assert selected["runtime"]["ready"] is False
+            assert selected["game"]["can_start"] is False
+            assert request("/api/launch", {}, safe)[0] == 409
+            assert json.loads((work / "state/config.json").read_text())["runtime_path"] == str(other)
+            assert request("/api/game/select", {"game_id": "msfs2024"}, safe)[0] == 200
+            checks += 10
             assert request("/api/graphics", {"runtime_path": str(work), "nvidia_mode": "auto"}, safe)[0] == 409
             assert request("/api/vr/configure", {"runtime_path": str(runtime), "mode": "off"}, safe)[0] == 200
             setup = request("/api/setup")[2]

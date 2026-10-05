@@ -158,3 +158,30 @@ fn opening_setup_discovers_runners_and_selects_the_active_one_without_a_search_c
         );
     });
 }
+
+#[test]
+fn navigation_cancels_superseded_reads_without_waiting_for_http() {
+    let runtime = tokio::runtime::Runtime::new().expect("runtime");
+    runtime.block_on(async {
+        let mut app = common::fixture();
+        app.client =
+            Some(Client::new(1, "synthetic-session-0000000000000000".into()).expect("client"));
+        let old = app.update(Message::Navigate(Page::Diagnostics));
+        let _new = app.update(Message::Navigate(Page::Overview));
+        let mut old = iced_test::runtime::task::into_stream(old).expect("old read task");
+        assert!(
+            tokio::time::timeout(Duration::from_secs(1), old.next())
+                .await
+                .expect("cancelled read completes immediately")
+                .is_none()
+        );
+        assert!(app.online);
+        assert_eq!(app.page, Page::Overview);
+        let _launch = app.update(Message::Action(flightdeck_ui::Action::Launch));
+        let _ = app.update(Message::Navigate(Page::Mods));
+        assert!(
+            app.pending,
+            "navigation must never discard a submitted mutation"
+        );
+    });
+}

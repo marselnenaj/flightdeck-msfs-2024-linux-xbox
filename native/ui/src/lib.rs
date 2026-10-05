@@ -33,12 +33,18 @@ const MUTED: Color = iced::color!(0xa6b8c9);
 const LINE: Color = iced::color!(0x213b4b);
 const FONT: Font = Font::with_name("Manrope");
 const FONT_BYTES: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/manrope-variable.ttf"));
-static SCENE_2024: LazyLock<image::Handle> = LazyLock::new(|| {
-    image::Handle::from_bytes(include_bytes!("../../../ui/flight-panorama.png").as_slice())
-});
-static SCENE_2020: LazyLock<image::Handle> = LazyLock::new(|| {
-    image::Handle::from_bytes(include_bytes!("../../../ui/flight-panorama-2020.png").as_slice())
-});
+static SCENE_2024: LazyLock<image::Handle> =
+    LazyLock::new(|| scene(include_bytes!("../../../ui/flight-panorama.png")));
+static SCENE_2020: LazyLock<image::Handle> =
+    LazyLock::new(|| scene(include_bytes!("../../../ui/flight-panorama-2020.png")));
+fn scene(bytes: &'static [u8]) -> image::Handle {
+    // The renderer evicts hidden images. Keep decoded pixels so returning to
+    // Overview does not synchronously decompress the panorama on every visit.
+    let pixels = ::image::load_from_memory(bytes)
+        .expect("embedded panorama")
+        .into_rgba8();
+    image::Handle::from_rgba(pixels.width(), pixels.height(), pixels.into_raw())
+}
 static MARK: LazyLock<svg::Handle> =
     LazyLock::new(|| svg::Handle::from_memory(include_bytes!("../../../ui/mark.svg").as_slice()));
 
@@ -195,7 +201,9 @@ pub struct App {
     pub forms: Forms,
     pub online: bool,
     pub pending: bool,
+    pending_action: Option<Action>,
     polling: bool,
+    poll_task: Option<iced::task::Handle>,
     poll_count: u8,
     generation: u64,
     pub confirmation: Option<(Action, client::Request)>,
@@ -230,7 +238,9 @@ impl App {
             forms: Forms::default(),
             online: false,
             pending: false,
+            pending_action: None,
             polling: false,
+            poll_task: None,
             poll_count: 0,
             generation: 0,
             confirmation: None,
@@ -733,7 +743,9 @@ impl App {
                 label(format!("MSFS {}", edition.year()), 17.0, Weight::Bold, INK),
                 Space::new().width(Length::Fill),
                 label(
-                    if self.page == Page::Setup && active {
+                    if self.pending_action == Some(Action::Select(edition)) {
+                        self.tr("Wird vorbereitet …", "Preparing …")
+                    } else if self.page == Page::Setup && active {
                         self.tr("Ausgewählt", "Selected")
                     } else if self.page == Page::Setup {
                         self.tr("Auswählen", "Select")

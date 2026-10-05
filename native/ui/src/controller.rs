@@ -94,19 +94,24 @@ impl App {
                 }
             }
         }
-        Task::perform(
+        let (task, handle) = Task::perform(
             async move { client.poll(language, keys).await },
             move |result| Message::Loaded(generation, result),
         )
+        .abortable();
+        self.poll_task = Some(handle.abort_on_drop());
+        task
     }
     fn submit(&mut self, action: Action, request: client::Request) -> Task<Message> {
         let Some(client) = self.client.clone() else {
             return Task::none();
         };
         self.pending = true;
+        self.pending_action = Some(action.clone());
         self.confirmation = None;
         self.generation += 1;
         self.polling = false;
+        self.poll_task = None;
         let generation = self.generation;
         let language = self.language.code();
         Task::perform(
@@ -169,6 +174,8 @@ impl App {
                     return Task::none();
                 }
                 self.polling = false;
+                self.poll_task = None;
+                self.pending_action = None;
                 match result {
                     Ok(mut snapshot) => {
                         let old_root = self.runtime().to_string();
@@ -355,7 +362,10 @@ impl App {
                             _ => {}
                         }
                     }
-                    Err(error) => self.notice = Some(error),
+                    Err(error) => {
+                        self.pending_action = None;
+                        self.notice = Some(error);
+                    }
                 }
                 // A POST result is not a new status. Disable further actions
                 // until the complete post-mutation snapshot has arrived.
@@ -364,7 +374,9 @@ impl App {
             }
             Message::Select(edition) => {
                 if self.request(&Action::Select(edition)).is_some() {
-                    if yes(&self.status()["versions"][edition.id()], "ready") {
+                    if yes(&self.status()["versions"][edition.id()], "installed")
+                        || yes(&self.status()["versions"][edition.id()], "ready")
+                    {
                         return self.update(Message::Action(Action::Select(edition)));
                     }
                     self.forms.text.insert("game_id", edition.id().into());
@@ -395,7 +407,7 @@ impl App {
                 if !self.pending {
                     self.generation += 1;
                     self.polling = false;
-                    self.online = false;
+                    self.poll_task = None;
                 }
                 return self.refresh();
             }
@@ -653,7 +665,17 @@ impl App {
         self.proton_active = Some(active);
     }
     pub fn launch_label(&self) -> &str {
-        if yes(&self.status()["game"], "can_stop") {
+        if self.pending_action == Some(Action::Launch) {
+            self.tr("Start wird vorbereitet …", "Preparing launch …")
+        } else if self.pending_action == Some(Action::Stop) {
+            self.tr("Simulator wird beendet …", "Stopping simulator …")
+        } else if self.status()["cloud"]["state"] == "syncing" {
+            if self.status()["cloud"]["phase"] == "after_exit" {
+                self.tr("Spielstände sichern …", "Saving progress …")
+            } else {
+                self.tr("Spielstände abgleichen …", "Syncing saves …")
+            }
+        } else if yes(&self.status()["game"], "can_stop") {
             self.tr("Simulator beenden", "Stop simulator")
         } else if !yes(&self.status()["runtime"], "ready") {
             self.tr("Simulator einrichten", "Set up simulator")
@@ -673,7 +695,16 @@ impl App {
         }
     }
     pub fn launch_note(&self) -> &str {
-        if !self.online {
+        if self.pending_action == Some(Action::Launch) {
+            self.tr(
+                "Dein Start wurde angefordert. Flightdeck bereitet den Simulator vor.",
+                "Launch requested. Flightdeck is preparing the simulator.",
+            )
+        } else if ["syncing", "attention"].contains(&s(&self.status()["cloud"], "state"))
+            && !s(&self.status()["cloud"], "message").is_empty()
+        {
+            s(&self.status()["cloud"], "message")
+        } else if !self.online {
             self.tr(
                 "Warte auf den aktuellen Installationsstatus.",
                 "Waiting for the current installation status.",
@@ -696,10 +727,13 @@ impl App {
         }
     }
     pub fn launch_state(&self) -> &str {
+        if self.pending_action == Some(Action::Launch) {
+            return self.tr("Start wird vorbereitet …", "Preparing launch …");
+        }
         if !self.online {
             return self.tr("Verbindung wird hergestellt …", "Connecting …");
         }
-        if self.automatic_busy() {
+        if ["syncing", "attention"].contains(&s(&self.status()["cloud"], "state")) {
             return self.tr(
                 "Cloud-Abgleich · Status unten beachten",
                 "Cloud sync · check status below",

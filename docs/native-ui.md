@@ -1,4 +1,4 @@
-# Native desktop and add-on management (0.2.4)
+# Native desktop and add-on management (0.2.5)
 
 All six Flightdeck views now use Rust and iced 0.14: overview, setup, updates,
 saves, mods and diagnostics. The previous artwork, Manrope font, icons, colors
@@ -26,6 +26,33 @@ only shared artwork, font and icon assets. The old web implementation is availab
 in Git history (`v0.2.2:ui/`); it is no longer duplicated in the working tree.
 Python remains only in maintainer build/test tools. The
 Windows add-ons themselves still require their own .NET/Wine components.
+
+## Edition detection and responsiveness in 0.2.5
+
+Installed editions remain selectable when a readiness check fails. Previously,
+an inactive MSFS 2020 runtime with pending bundled components was sent to the
+new-installation flow: startup had refreshed only the selected MSFS 2024 runtime.
+Selecting an existing edition now applies a pending component update under the
+existing lease and recovery journal. Other failed checks remain visible and
+continue to block launching; they do not imply a missing installation.
+
+The launch button acknowledges a click before any HTTP response and keeps that
+feedback until fresh status arrives. Before-start cloud synchronization and
+after-exit saving have distinct labels and show the current cloud message near
+the button. A running simulator is no longer labelled as a pending cloud sync.
+
+Page navigation displays cached data immediately and refreshes in the background,
+without temporarily declaring the service disconnected. Superseded read tasks
+are cancelled; submitted mutations, runtime context checks and generation guards
+are retained. The panorama is decoded once per edition, and fully visible text
+avoids a separate framebuffer-sized clipping mask. Partially clipped text keeps
+the explicit mask needed by the software renderer.
+
+See the [measured 0.2.4/0.2.5 UI comparison](performance.md#native-page-switching-025).
+`scripts/check-edition-update.py` also exercises a real service against a
+synthetic inactive edition built with the historical package's pinned components;
+it verifies automatic migration, the new helper, repeat switching and retained
+synthetic saves without launching a game or accessing an account.
 
 ## Native parity and add-on fixes in 0.2.4
 

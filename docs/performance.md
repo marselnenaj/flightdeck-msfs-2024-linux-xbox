@@ -1,5 +1,49 @@
 # Rust and Python launcher performance
 
+## Native page switching 0.2.5
+
+The release-mode native interface was compared with 0.2.4 at
+`b9918d977b78e414bf93eeffa599fb23dc328415` on the same workstation. Synthetic
+pages are switched through the real controller and laid out with the same
+persisted widget cache and software renderer. Each frame includes complete CPU
+rasterization and pixel readback; these are not compositor presentation times.
+
+| Measurement, median | 0.2.4 | 0.2.5 |
+| --- | ---: | ---: |
+| Return to Overview, layout at 1280 × 900 | 12.340 ms | 1.238 ms |
+| Return to Overview, complete frame at 1× | 25.839 ms | 14.594 ms |
+| Return to Overview, complete frame at 2× | 67.922 ms | 54.076 ms |
+| Setup, complete frame at 2× | 22.745 ms | 19.626 ms |
+| Mods, complete frame at 2× | 17.953 ms | 15.500 ms |
+
+Decoded panorama pixels survive renderer cache eviction, eliminating repeated
+PNG decompression on returning to Overview. Fully visible text also avoids a
+separate clipping layer, while partially visible text retains explicit clipping.
+The full Overview frame takes about 44% less time at 1× and 20% less at 2× in
+this run. This does not establish 60 FPS at HiDPI or change simulator performance.
+
+Three alternating runs per version contain seven measured cycles after one
+discarded warm-up, giving 21 samples per page and scale. Both use Rust 1.98.0,
+release optimization, the same fixtures, 1280 × 900 logical pixels and scales
+1×/2×. No HTTP, game, account or cloud operations are part of the measurement.
+[Raw samples, ranges and binary hashes](native-ui-latency-results.json) are
+included. The baseline assertion verifies 0.2.4's original disconnected state
+on navigation; both builds must be rebuilt from their actual source trees when
+sharing a Cargo target directory.
+
+Reproduce the individual measurements with the same
+`native/ui/tests/performance.rs` harness in each checkout:
+
+```sh
+FLIGHTDECK_UI_BENCHMARK=/tmp/flightdeck-ui-latency.json \
+  cargo test --locked --release -p flightdeck-ui --test performance -- --ignored
+```
+
+Separately, launch acknowledgement is now a synchronous controller state
+change before HTTP is awaited. Page navigation keeps cached content and online
+status while fetching new data, and cancels superseded read requests. Neither
+change skips launch checks or cloud synchronization.
+
 ## Native desktop candidate 0.2.3 — 5 October 2026
 
 The final glibc-2.39-compatible **0.2.3 candidate** was compared with the
