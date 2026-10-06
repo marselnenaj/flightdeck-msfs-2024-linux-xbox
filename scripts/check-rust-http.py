@@ -34,11 +34,12 @@ def main():
             match = re.fullmatch(r"Flightdeck: http://127\.0\.0\.1:(\d+)\n", line)
             assert match, "Unexpected service startup output"
             port = int(match[1])
+            token = json.loads((work / "state/desktop-service.json").read_text())["token"]
             def request(path, payload=None, headers=None, raw=None, timeout=5):
                 connection = http.client.HTTPConnection("127.0.0.1", port, timeout=timeout)
                 try:
                     body = json.dumps(payload).encode() if payload is not None else raw
-                    supplied = {"Accept-Language": "en", **(headers or {})}
+                    supplied = {"Accept-Language": "en", **({"X-Flightdeck-Token": token} if payload is None and raw is None and headers is None else {}), **(headers or {})}
                     if body is not None:
                         supplied.setdefault("Content-Type", "application/json")
                     connection.request("POST" if body is not None else "GET", path, body=body, headers=supplied)
@@ -56,9 +57,30 @@ def main():
             assert code == 200 and initial["app"]["name"] == "Flightdeck"
             assert initial["runtime"]["configured"] is False and initial["game"]["can_start"] is False
             assert headers["cache-control"] == "no-store"
-            token = initial["csrf_token"]
+            assert initial["csrf_token"] == token
             safe = {"X-Flightdeck-Token": token}
             checks += 4
+            for path in ("/api/status", "/api/diagnostics", "/api/problem-reports", "/api/unknown"):
+                for supplied in ({}, {"X-Flightdeck-Token": "invalid"}):
+                    status, _, denied = request(path, headers=supplied)
+                    assert status == 403 and "csrf_token" not in denied
+                    checks += 1
+            # Duplicate credentials must fail even when both values are correct.
+            for method, path in (("GET", "/api/status"), ("POST", "/api/preferences")):
+                connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+                try:
+                    connection.putrequest(method, path)
+                    connection.putheader("X-Flightdeck-Token", token)
+                    connection.putheader("X-Flightdeck-Token", token)
+                    connection.putheader("Content-Type", "application/json")
+                    connection.putheader("Content-Length", "2")
+                    connection.endheaders(b"{}")
+                    response = connection.getresponse()
+                    assert response.status == 403
+                    response.read()
+                    checks += 1
+                finally:
+                    connection.close()
             for path in ("/api/cloud-saves", "/api/launcher-update", "/api/store-check", "/api/problem-reports", "/api/maintenance", "/api/proton", "/api/fenix", "/api/gsx", "/api/mods", "/api/game-update", "/api/diagnostics"):
                 code, _, value = request(path)
                 assert code == 200 and isinstance(value, dict), path

@@ -23,11 +23,11 @@ def summary(samples):
             "p95": ordered[min(len(ordered) - 1, int(len(ordered) * 0.95))], "max": ordered[-1]}
 
 
-def request(port, path):
+def request(port, path, token=None):
     connection = http.client.HTTPConnection("127.0.0.1", port, timeout=30)
     try:
         start = time.perf_counter_ns()
-        connection.request("GET", path, headers={"Accept-Language": "en"})
+        connection.request("GET", path, headers={"Accept-Language": "en", **({"X-Flightdeck-Token": token} if token else {})})
         response = connection.getresponse()
         raw = response.read()
         elapsed = (time.perf_counter_ns() - start) / 1_000_000
@@ -59,14 +59,16 @@ def service(command, directory, environment, samples):
         match = re.search(r"http://127\.0\.0\.1:(\d+)", line)
         assert match, line
         port = int(match[1])
-        _, state = request(port, "/api/status")
+        record = directory / "state/desktop-service.json"
+        token = json.loads(record.read_text())["token"] if record.exists() else None
+        _, state = request(port, "/api/status", token)
         assert not state["runtime"]["configured"] and not state["game"]["can_start"]
         startup = (time.perf_counter_ns() - started) / 1_000_000
         timings = {}
         for path in ["/api/status", "/api/setup", "/api/cloud-saves", "/api/launcher-update"]:
             for _ in range(5):
-                request(port, path)
-            timings[path] = [request(port, path)[0] for _ in range(samples)]
+                request(port, path, token)
+            timings[path] = [request(port, path, token)[0] for _ in range(samples)]
         return {"startup_ms": startup, "memory": process_memory(child.pid), "api_ms": timings}
     finally:
         os.killpg(child.pid, signal.SIGINT)

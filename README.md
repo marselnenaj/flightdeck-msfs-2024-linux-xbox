@@ -238,8 +238,12 @@ confirm activation or working aircraft systems.
 
 ## Local by design
 
-The launcher uses Rust and serves local HTML, CSS and JavaScript and listens only on loopback. Local-origin checks and a per-session token
-protect actions. There is no telemetry or CDN dependency in the launcher.
+The launcher uses Rust with a native desktop interface and a loopback-only API.
+Local-origin checks and a per-session token protect every API read and action.
+Desktop and headless clients obtain the token from the owner-private
+`desktop-service.json` in the selected state directory and send it in the
+`X-Flightdeck-Token` header; unauthenticated status requests cannot bootstrap a
+session. There is no telemetry or CDN dependency in the launcher.
 Microsoft sign-in, downloads and the simulator's online content still use their
 respective network services.
 

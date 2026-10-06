@@ -101,7 +101,11 @@ pub fn request(record: &Value, path: &str, data: Option<&Value>) -> Option<Value
             .send()
             .ok()?
     } else {
-        client.get(url).send().ok()?
+        client
+            .get(url)
+            .header("X-Flightdeck-Token", record["token"].as_str()?)
+            .send()
+            .ok()?
     };
     if response.status() != 200 {
         return None;

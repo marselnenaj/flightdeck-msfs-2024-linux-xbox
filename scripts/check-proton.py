@@ -40,14 +40,13 @@ class NativeLauncher:
         match = re.fullmatch(r'Flightdeck: http://127\.0\.0\.1:(\d+)\n', line)
         assert match, 'Unexpected native service output'
         self.port = int(match[1])
-        self.token = self.request('/api/status')['csrf_token']
+        self.token = json.loads((output / 'native-state/desktop-service.json').read_text())['token']
 
     def request(self, path, body=None):
         connection = http.client.HTTPConnection('127.0.0.1', self.port, timeout=15)
         try:
             headers = {'Content-Type': 'application/json'}
-            if body is not None:
-                headers['X-Flightdeck-Token'] = self.token
+            headers['X-Flightdeck-Token'] = self.token
             connection.request('POST' if body is not None else 'GET', path,
                                body=json.dumps(body) if body is not None else None, headers=headers)
             reply = connection.getresponse()

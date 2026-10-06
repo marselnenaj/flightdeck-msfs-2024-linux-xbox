@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-//! Loopback HTTP contract with strict origin, request-size and CSRF validation.
+//! Loopback HTTP contract with strict origin, request-size and session authentication.
 use crate::{Error, Result, api, backend::Launcher, i18n, resources};
 use axum::{
     Router,
@@ -141,7 +141,9 @@ async fn handle(State(service): State<Service>, request: Request<Body>) -> Respo
         return error(StatusCode::METHOD_NOT_ALLOWED, "Nicht gefunden.", locale);
     }
     let mut payload = json!({});
-    if is_post {
+    // Loopback TCP is reachable by other local users. Authenticate reads too;
+    // clients obtain this secret only from the owner-private service record.
+    if is_post || path.starts_with("/api/") {
         let tokens = headers
             .get_all("X-Flightdeck-Token")
             .iter()
@@ -159,6 +161,8 @@ async fn handle(State(service): State<Service>, request: Request<Body>) -> Respo
                 locale,
             );
         }
+    }
+    if is_post {
         if headers.contains_key(header::TRANSFER_ENCODING)
             || !headers
                 .get(header::CONTENT_TYPE)
@@ -332,9 +336,9 @@ pub async fn serve(
         "http://127.0.0.1:{port}{}",
         language.map(|s| format!("/?lang={s}")).unwrap_or_default()
     );
-    if desktop {
-        crate::desktop::write_record(&launcher.state_dir, &service)?;
-    }
+    // Headless tools need the same private bootstrap as the native desktop.
+    // Never publish the token in stdout, the URL, or an unauthenticated reply.
+    crate::desktop::write_record(&launcher.state_dir, &service)?;
     println!("Flightdeck: {url}");
     if !no_browser {
         crate::process::open_uri(&url)?;

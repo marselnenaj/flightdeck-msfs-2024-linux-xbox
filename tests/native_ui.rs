@@ -44,6 +44,34 @@ fn native_client_uses_authenticated_context_bound_service_and_persists_language(
         assert!(Instant::now() < deadline, "service readiness deadline");
         std::thread::sleep(Duration::from_millis(50));
     };
+    // A loopback connection is not an OS-user credential. Every API read and
+    // mutation must fail closed without exactly one valid private token.
+    let http = reqwest::blocking::Client::builder()
+        .no_proxy()
+        .build()
+        .expect("HTTP");
+    let origin = format!("http://127.0.0.1:{}", record["port"]);
+    let token = record["token"].as_str().expect("token");
+    for path in ["status", "diagnostics", "problem-reports", "missing"] {
+        for supplied in [vec![], vec!["invalid"], vec![token, token]] {
+            let mut request = http.get(format!("{origin}/api/{path}"));
+            for value in supplied {
+                request = request.header("X-Flightdeck-Token", value);
+            }
+            let reply = request.send().expect("response");
+            assert_eq!(reply.status(), 403, "{path}");
+            assert!(!reply.text().expect("body").contains(token));
+        }
+    }
+    for supplied in [vec![], vec!["invalid"], vec![token, token]] {
+        let mut request = http
+            .post(format!("{origin}/api/preferences"))
+            .json(&json!({"language":"de"}));
+        for value in supplied {
+            request = request.header("X-Flightdeck-Token", value);
+        }
+        assert_eq!(request.send().expect("response").status(), 403);
+    }
     let client = Client::new(
         record["port"].as_u64().expect("port") as u16,
         record["token"].as_str().expect("token").to_string(),
@@ -52,6 +80,11 @@ fn native_client_uses_authenticated_context_bound_service_and_persists_language(
     assert!(!format!("{client:?}").contains(record["token"].as_str().expect("token")));
     let rt = tokio::runtime::Runtime::new().expect("runtime");
     rt.block_on(async {
+        let discovery = client
+            .discover("setup/discover", "en")
+            .await
+            .expect("discovery");
+        assert!(discovery.is_object());
         let snapshot = client.snapshot("en", true).await.expect("native snapshot");
         assert_eq!(snapshot["status"]["runtime"]["configured"], false);
         for key in [
@@ -91,5 +124,6 @@ fn native_client_uses_authenticated_context_bound_service_and_persists_language(
         )
         .expect("test identity");
         assert!(impostor.snapshot("en", false).await.is_err());
+        assert!(impostor.discover("setup/discover", "en").await.is_err());
     });
 }

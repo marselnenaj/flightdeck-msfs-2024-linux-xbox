@@ -77,10 +77,11 @@ def main():
                     assert selector.select(20), "service startup"
                     port = int(child.stdout.readline().decode().strip().rsplit(":", 1)[1])
 
+                session_token = json.loads((state / "desktop-service.json").read_text())["token"]
                 def request(path, payload=None, token=None):
                     connection = http.client.HTTPConnection("127.0.0.1", port, timeout=30)
                     try:
-                        headers = {"Content-Type": "application/json"}
+                        headers = {"Content-Type": "application/json", "X-Flightdeck-Token": session_token}
                         if token:
                             headers["X-Flightdeck-Token"] = token
                         connection.request("GET" if payload is None else "POST", "/api/" + path, None if payload is None else json.dumps(payload), headers)

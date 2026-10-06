@@ -76,11 +76,11 @@ impl Client {
             self.http
                 .post(url)
                 .header("Origin", &self.origin)
-                .header("X-Flightdeck-Token", &self.token)
                 .json(body)
         } else {
             self.http.get(url)
-        };
+        }
+        .header("X-Flightdeck-Token", &self.token);
         if let Some(runtime) = runtime {
             // JSON encoding permits non-ASCII filesystem paths in a header.
             request = request.header("X-Flightdeck-Context", context_header(runtime)?);
