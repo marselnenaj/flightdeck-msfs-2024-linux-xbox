@@ -136,11 +136,12 @@ werden nicht mitgeliefert.
 ## Fenix A320 einrichten
 
 Nach dem Entpacken der FenixApp kann der offizielle Installer **„application
-install hook failed“** melden. Flightdeck 0.2.5 setzt den vorhandenen ICU-/.NET-Fix,
-wenn die EXE über **Mods → Fenix → Installer starten** ausgeführt wird. Vor einem
+install hook failed“** melden. Flightdeck setzt den vorhandenen ICU-/.NET-Fix,
+wenn die EXE über **Mods → Fenix → Installer starten** ausgeführt wird; dieser
+Workaround ist bereits in 0.2.5 enthalten. Vor einem
 erneuten Versuch alle Installer-Fenster schließen.
 
-**Für die nächste Version, nur im Quellcode:** Bei erkannter FenixApp führt
+**In 0.2.6:** Bei erkannter FenixApp führt
 **Fenix-App öffnen** direkt in den vorhandenen Manager. **Fenix-App reparieren**
 wiederholt bei gültigen Paketdaten den offiziellen Einrichtungsschritt, ohne das
 Profil zurückzusetzen. Anschließend den Manager öffnen und das Flugzeug

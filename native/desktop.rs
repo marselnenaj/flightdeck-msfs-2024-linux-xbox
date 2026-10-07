@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 //! Reuse a background service only after lock, process-birth and token checks.
-use crate::{Error, Result, error::require, files, process, resources, server::Service};
+use crate::{Error, Result, error::require, files, installer, process, resources, server::Service};
 use serde_json::{Value, json};
 use std::{
     fs,
     os::unix::{fs::MetadataExt, process::CommandExt},
     path::{Path, PathBuf},
     process::{Command, Stdio},
-    sync::Arc,
+    sync::{Arc, atomic::AtomicBool},
     thread,
     time::{Duration, Instant},
 };
@@ -148,6 +148,18 @@ pub fn verified(root: &Path) -> Result<Option<Value>> {
     Ok(Some(record))
 }
 pub fn ensure_service(root: &Path, runtime: Option<&str>, port: u16) -> Result<Value> {
+    let executable = std::env::current_exe()?;
+    ensure_service_with(root, runtime, port, resources::release_identity(), || {
+        Command::new(&executable)
+    })
+}
+fn ensure_service_with(
+    root: &Path,
+    runtime: Option<&str>,
+    port: u16,
+    identity: &str,
+    mut command: impl FnMut() -> Command,
+) -> Result<Value> {
     let deadline = Instant::now() + Duration::from_secs(60);
     let _start = loop {
         match files::Lease::acquire(&root.join("desktop-start.lock"), true) {
@@ -159,7 +171,7 @@ pub fn ensure_service(root: &Path, runtime: Option<&str>, port: u16) -> Result<V
     let old = read_record(root)?;
     let mut running = verified(root)?;
     if let Some(record) = &running
-        && record["release"] != resources::release_identity()
+        && record["release"] != identity
     {
         let result = request(record, "/api/desktop/refresh", Some(&json!({})));
         if result
@@ -204,7 +216,7 @@ pub fn ensure_service(root: &Path, runtime: Option<&str>, port: u16) -> Result<V
         vec![preferred]
     };
     for port in choices {
-        let mut command = Command::new(std::env::current_exe()?);
+        let mut command = command();
         command
             .args(["--desktop-service", "--state-dir"])
             .arg(root)
@@ -221,7 +233,7 @@ pub fn ensure_service(root: &Path, runtime: Option<&str>, port: u16) -> Result<V
         let until = Instant::now() + Duration::from_secs(60);
         while Instant::now() < until && child.try_wait()?.is_none() {
             if let Some(record) = verified(root)?
-                && record["release"] == resources::release_identity()
+                && record["release"] == identity
             {
                 thread::spawn(move || {
                     let _ = child.wait();
@@ -306,5 +318,91 @@ pub fn handoff(root: &Path, port: u16) -> Result<()> {
     std::thread::spawn(move || {
         let _ = child.wait();
     });
+    Ok(())
+}
+/// The running release owns the authenticated handoff, including a rollback to
+/// a release whose client predates authentication of service status reads.
+pub fn installed_handoff(
+    root: &Path,
+    port: u16,
+    installation: &Path,
+    expected: &str,
+) -> Result<()> {
+    let root = state_directory(root)?;
+    let installation = installer::absolute(installation)?;
+    installer::no_links(&installation)?;
+    files::directory(&installation, false)?;
+    // Keep the selected, verified release stable until its service is ready.
+    let _install = files::Lease::acquire(&installation.join(".install.lock"), true)?;
+    let state = installer::load(&installation)?.ok_or(Error::Invalid(UNVERIFIED))?;
+    require(
+        files::hex_digest(expected) && state["current"] == expected,
+        "Flightdeck wurde inzwischen geändert. Bitte den Launcher neu öffnen.",
+    )?;
+    let source = installer::verify_release(&installation, expected)?;
+    let native = source.join("bin/flightdeck").is_file();
+    // Installation IDs hash the complete package manifest. Service IDs instead
+    // identify the native executable or the legacy release's own code set.
+    let identity = if native {
+        files::digest(fs::File::open(source.join("bin/flightdeck"))?)?
+    } else {
+        let output = process::output(
+            Command::new("python3")
+                .args([
+                    "-B",
+                    "-c",
+                    "from flightdeck.desktop import release_identity; print(release_identity())",
+                ])
+                .current_dir(&source)
+                .env_remove("PYTHONHOME")
+                .env_remove("PYTHONPATH"),
+            Duration::from_secs(20),
+            128,
+            &AtomicBool::new(false),
+        )?;
+        let identity = std::str::from_utf8(&output)
+            .map_err(|_| Error::Invalid(UNVERIFIED))?
+            .trim()
+            .to_string();
+        require(files::hex_digest(&identity), UNVERIFIED)?;
+        identity
+    };
+    let selected_command = || {
+        let mut command = if native {
+            Command::new(source.join("bin/flightdeck"))
+        } else {
+            let mut command = Command::new("python3");
+            command
+                .args(["-B", "-m", "flightdeck"])
+                .env_remove("PYTHONHOME")
+                .env_remove("PYTHONPATH");
+            command
+        };
+        command.current_dir(&source);
+        command
+    };
+    let record = ensure_service_with(&root, None, port, &identity, selected_command)?;
+    require(
+        record["update_pending"] != true,
+        "Bitte beende Spiel und Einrichtung vor dem Launcher-Neustart.",
+    )?;
+    if native {
+        let mut child = process::spawn(
+            selected_command()
+                .arg("--desktop")
+                .arg("--state-dir")
+                .arg(&root)
+                .arg("--port")
+                .arg(record["port"].as_u64().unwrap_or(0).to_string())
+                .stdin(Stdio::null())
+                .stdout(Stdio::null())
+                .stderr(Stdio::null())
+                .process_group(0),
+            None,
+        )?;
+        thread::spawn(move || {
+            let _ = child.wait();
+        });
+    }
     Ok(())
 }

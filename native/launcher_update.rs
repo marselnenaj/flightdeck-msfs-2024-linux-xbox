@@ -625,21 +625,21 @@ pub fn restart(app: &Launcher, port: u16) -> Result<Value> {
         files::sha256(&files::read(path, 1024 * 1024)?) == string(entry, "sha256")?,
         "Der installierte Launcher wurde verändert. Bitte den Installer erneut ausführen.",
     )?;
-    let source = installer::verify_release(root, string(&state, "current")?)?;
-    let mut command = if source.join("bin/flightdeck").is_file() {
-        let mut cmd = Command::new(source.join("bin/flightdeck"));
-        cmd.arg("desktop-handoff")
-            .arg("--state-dir")
-            .arg(&app.state_dir)
-            .arg("--port")
-            .arg(port.to_string());
-        cmd
-    } else {
-        // Explicit rollback to an older Python release retains its own service.
-        let mut cmd = Command::new("python3");
-        cmd.args(["-B","-c","import sys;from pathlib import Path;sys.path.insert(0,sys.argv.pop(1));from flightdeck.desktop import ensure_service;_,r=ensure_service(Path(sys.argv[1]),port=int(sys.argv[2]));sys.exit(1 if r.get('update_pending') else 0)"]).arg(&source).arg(&app.state_dir).arg(port.to_string()).env_remove("PYTHONHOME").env_remove("PYTHONPATH");
-        cmd
-    };
+    let current = string(&state, "current")?;
+    let source = installer::verify_release(root, current)?;
+    // An older target cannot necessarily authenticate this service. Coordinate
+    // with the running binary and revalidate the selected release in the child.
+    let mut command = Command::new(std::env::current_exe()?);
+    command
+        .arg("desktop-handoff")
+        .arg("--state-dir")
+        .arg(&app.state_dir)
+        .arg("--port")
+        .arg(port.to_string())
+        .arg("--installation-root")
+        .arg(root)
+        .arg("--expected-release")
+        .arg(current);
     let child = process::spawn(
         command
             .current_dir(&source)

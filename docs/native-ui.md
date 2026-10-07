@@ -1,4 +1,4 @@
-# Native desktop and add-on management (0.2.5)
+# Native desktop and add-on management (0.2.6)
 
 All six Flightdeck views now use Rust and iced 0.14: overview, setup, updates,
 saves, mods and diagnostics. The previous artwork, Manrope font, icons, colors
@@ -27,9 +27,9 @@ in Git history (`v0.2.2:ui/`); it is no longer duplicated in the working tree.
 Python remains only in maintainer build/test tools. The
 Windows add-ons themselves still require their own .NET/Wine components.
 
-## Upcoming session and control fixes (source only)
+## Session and control fixes in 0.2.6
 
-The following changes are not in the published 0.2.5 installer.
+Version 0.2.6 adds the following session and control corrections.
 
 When cloud saves need attention but no operation is running, the overview can
 switch between installed MSFS editions. Starting the affected edition remains
@@ -126,7 +126,7 @@ selects Windows NLS; the [runtime options](https://learn.microsoft.com/en-us/dot
 document ReadyToRun. Flightdeck waits for detached installer children and checks
 only the current invocation's log slice.
 
-**Upcoming, source only:** Flightdeck distinguishes the detected **FenixApp
+**In 0.2.6:** Flightdeck distinguishes the detected **FenixApp
 manager** from the installed **Fenix aircraft**. The former can exist after a failed
 hook. **Repair Fenix app** validates the contained app and its `sq.version`, reapplies
 the settings above and reruns the official `--veloapp-install` command with a

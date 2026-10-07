@@ -1,0 +1,166 @@
+name: Publish a verified native release
+
+on:
+  push:
+    branches: [main]
+    paths: [Cargo.toml]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: flightdeck-stable-release
+  cancel-in-progress: false
+
+jobs:
+  gate:
+    if: github.repository == 'marselnenaj/flightdeck-msfs-2024-linux-xbox' && startsWith(github.event.head_commit.message, 'Release Flightdeck ')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      eligible: ${{ steps.commit.outputs.eligible }}
+      version: ${{ steps.commit.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Require the exact release subject and a changed stable Cargo version
+        id: commit
+        run: python3 scripts/release.py gate
+
+  build:
+    needs: gate
+    if: needs.gate.outputs.eligible == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      RUSTUP_TOOLCHAIN: 1.98.0
+      RELEASE_VERSION: ${{ needs.gate.outputs.version }}
+      ICED_TEST_BACKEND: tiny-skia
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Install pinned toolchain and native build prerequisites
+        run: |
+          rustup toolchain install 1.98.0 --profile minimal --component rustfmt --component clippy --component rust-docs
+          sudo apt-get update
+          sudo apt-get install -y build-essential binutils woff2 pkg-config liblzma-dev libxkbcommon-dev libwayland-dev libx11-dev libxrandr-dev libxi-dev
+      - name: Format, lint and test the locked workspace
+        run: |
+          cargo fmt --all -- --check
+          cargo clippy --locked --workspace --all-targets -- -D warnings
+          cargo test --locked --workspace
+          python3 -m unittest discover -s tests/compat -p 'test_*.py' -v
+          python3 scripts/check-source-export.py
+      - name: Check native HTTP contract and render both UI languages
+        run: |
+          cargo build --locked --bin flightdeck-rust --example runtime-lab
+          python3 scripts/check-rust-http.py --binary target/debug/flightdeck-rust
+          cargo test --locked -p flightdeck-ui capture_ -- --ignored
+      - name: Fetch and validate pinned compatibility, graphics and corresponding sources
+        run: python3 scripts/release.py prepare --cache build/release-inputs --output build/release-previous
+      - name: Build and assemble the complete native package
+        run: |
+          python3 scripts/build-native.py --toolchain 1.98.0
+          cargo metadata --locked --filter-platform x86_64-unknown-linux-gnu --format-version 1 > build/cargo-metadata.json
+          python3 scripts/native-release.py \
+            --binary target/release/flightdeck-rust \
+            --cargo-metadata build/cargo-metadata.json \
+            --rust-notices "$(rustc --print sysroot)/share/doc/rust/COPYRIGHT-library.html" \
+            --native build/release-inputs/native.tar.gz \
+            --graphics build/release-previous/flightdeck-linux/resources/graphics \
+            --output build/release-assets
+          python3 scripts/source-release.py --output "build/release-assets/flightdeck-source-${RELEASE_VERSION}.tar.gz"
+          python3 scripts/release.py unpack --archive build/release-assets/Flightdeck-Linux-x86_64.tar.gz --output build/release-current
+      - name: Test actual installation, service handoff and rollback against published 0.2.5
+        run: |
+          python3 scripts/check-native-package.py \
+            --package build/release-current/flightdeck-linux \
+            --previous-native build/release-previous/flightdeck-linux \
+            --output build/release-package-check
+      - name: Bind the tested assets and unchanged corresponding sources to this commit
+        run: |
+          python3 scripts/release.py stage \
+            --assets build/release-assets --cache build/release-inputs \
+            --check build/release-package-check/result.json --commit "$GITHUB_SHA"
+          python3 - <<'PY'
+          import os, pathlib, re
+          version = os.environ["RELEASE_VERSION"]
+          changelog = pathlib.Path("docs/changelog.md").read_text()
+          match = re.search(r"^## " + re.escape(version) + r" — [^\n]+\n(.*?)(?=^## |\Z)", changelog, re.M | re.S)
+          if not match:
+              raise SystemExit("Release notes missing for the current version")
+          notes = match[1].strip()
+          pathlib.Path("build/release-notes.md").write_text(notes + "\n")
+          PY
+      - name: Retain validated publish inputs
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-${{ github.sha }}
+          path: |
+            build/release-assets/*
+            build/release-notes.md
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+      - name: Retain local build evidence even after a failed check
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-evidence-${{ github.sha }}
+          path: |
+            build/release-assets/*
+            build/release-package-check/result.json
+            build/native-ui/*.png
+            build/ui-parity/*.png
+          if-no-files-found: warn
+          retention-days: 14
+          compression-level: 0
+
+  cleanup:
+    needs: gate
+    if: needs.gate.outputs.eligible == 'true' && needs.gate.outputs.version == '0.2.6'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Remove only the already merged security branch at its verified tip
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/release.py cleanup
+
+  release:
+    needs: [gate, build]
+    if: needs.gate.outputs.eligible == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 2
+          persist-credentials: false
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: release-${{ github.sha }}
+          path: build/publish-inputs
+      - name: Create a new draft, verify uploaded bytes and publish as Latest
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 scripts/release.py publish \
+            --assets build/publish-inputs/release-assets \
+            --notes build/publish-inputs/release-notes.md \
+            --readback build/release-readback

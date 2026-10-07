@@ -2,8 +2,8 @@
 
 [Overview and quick start](../README.md) · [Deutsch](readme.de.md)
 
-The published launcher is **0.2.5**. The [changelog](changelog.md) separates
-unreleased source changes from features already included in an installer.
+This documentation covers the current stable release, **0.2.6**. The
+[changelog](changelog.md) records its changes and earlier releases.
 Hardware reports describe the tested setup, not universal compatibility.
 
 ## Using Flightdeck

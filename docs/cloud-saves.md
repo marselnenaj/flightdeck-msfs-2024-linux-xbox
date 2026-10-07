@@ -102,11 +102,11 @@ require a Linux restart before another automatic session. This prevents save
 changes while an orphaned game process might still be running. A normal game
 exit and the launcher's Stop button do not require a restart.
 
-**Upcoming, source only:** **Check session** can release this block without a
+**In 0.2.6:** **Check session** can release this block without a
 Linux restart. Flightdeck first verifies that the runtime's processes have ended
 and backs up local saves. A failed check keeps the block in place. The action
 does not start MSFS or upload saves; the next normal launch reconciles pending
-local and cloud changes. [Details](native-ui.md#upcoming-session-and-control-fixes-source-only).
+local and cloud changes. [Details](native-ui.md#session-and-control-fixes-in-026).
 
 This check also protects the normal exit path: if another Windows application
 is still using that profile, close it before retrying session recovery and sync.

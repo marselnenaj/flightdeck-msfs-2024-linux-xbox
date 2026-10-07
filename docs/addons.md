@@ -131,11 +131,11 @@ pin has been reviewed and updated. No FSDT or Microsoft binaries are bundled.
 ### Fenix A320
 
 The official installer can report **“application install hook failed”** after
-extracting the FenixApp manager. Flightdeck 0.2.5 applies the existing ICU/.NET
+extracting the FenixApp manager. Flightdeck applies the existing ICU/.NET
 workaround when the EXE is started through **Mods → Fenix → Start installer**.
-Close all installer windows before retrying.
+This workaround is also present in 0.2.5. Close all installer windows before retrying.
 
-**Upcoming, source only:** If FenixApp is detected, **Open Fenix app** continues
+**In 0.2.6:** If FenixApp is detected, **Open Fenix app** continues
 installation in that manager. **Repair Fenix app** reruns its official setup hook
 when metadata is valid, without resetting the profile. Then reopen the manager to
 install your aircraft. If repair still fails, prepare a new diagnostic report;

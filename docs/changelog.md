@@ -1,8 +1,10 @@
 # Changes and release status
 
-## Unreleased
+## 0.2.6 — 8 October 2026
 
-These changes are in source only. The published installer remains 0.2.5.
+Stable release with full installer and corresponding source archives.
+Existing 0.1.22 and native 0.2.1–0.2.5 launchers can use the in-app updater.
+Older clients need the full installer or explicit bridge.
 
 - Allow edition switching while idle even when cloud saves need attention.
   Keep switching blocked during synchronization and running work.
@@ -28,6 +30,8 @@ These changes are in source only. The published installer remains 0.2.5.
   hook warning can be investigated without exporting raw logs or account data.
 - Keep the interrupted-session guard when runtime-bound processes remain after
   the supervisor exits; do not begin cloud backup or upload in that state.
+- Handle a process exiting during its `/proc` status read without falsely
+  retaining the session block. Unknown live writers remain blocked.
 - Refuse nested mounted directories during managed tree removal, including bind
   mounts on the same filesystem, so removing a mod cannot traverse their contents.
 - Preserve Store-check failures even when individual stages already passed.
@@ -35,6 +39,10 @@ These changes are in source only. The published installer remains 0.2.5.
 - Use the detected Store region on first setup while preserving a later manual
   choice. Honor cancellation during VR preparation before changing its settings.
 - Avoid serializing an existing local save a second time during cloud export.
+- Require the local session token for API reads as well as actions, and update
+  the locked rustls dependency.
+- Coordinate update and rollback restarts from the running launcher so older
+  versions can take over without relaxing the service's authentication.
 - Shorten both README versions and add a documentation index. Update NVIDIA's
   normal-rendering status to user-confirmed, retaining known limitations such
   as missing startup video and separate validation requirements for VR/features.
@@ -51,7 +59,7 @@ These changes are in source only. The published installer remains 0.2.5.
 - Decode each panorama once and avoid unnecessary text clipping masks. Document
   the measured native UI improvement over 0.2.4 in [performance results](performance.md).
 
-Mark 0.2.5 as GitHub Latest. Users still on 0.1.21 or earlier need the full
+0.2.5 became GitHub Latest. Users still on 0.1.21 or earlier need the full
 installer once, or an explicit 0.1.22 bridge install. Existing 0.1.22 and native
 0.2.1–0.2.4 launchers update normally.
 

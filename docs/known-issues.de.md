@@ -2,9 +2,8 @@
 
 [English](known-issues.md) · [Dokumentation](index.md)
 
-Stand: 7. Oktober 2026. Der veröffentlichte Installer ist 0.2.5. Änderungen für
-die nächste Version sind im [Changelog](changelog.md#unreleased) als **nur im
-Quellcode** gekennzeichnet.
+Stand: 8. Oktober 2026, für die stabile Version **0.2.6**.
+Siehe [Änderungsübersicht](changelog.md#026--8-october-2026).
 
 - **NVIDIA:** Die normale MSFS-2024-Darstellung ist durch Nutzertests bestätigt.
   Kleinere Probleme bleiben möglich, etwa ein fehlendes oder schwarzes Startvideo.
@@ -14,16 +13,15 @@ Quellcode** gekennzeichnet.
 - **Fenix-Installation:** Bei „application install hook failed“ können bereits
   FenixApp-Dateien vorhanden sein, obwohl die Einrichtung nicht abgeschlossen ist.
   Ein reproduzierter ICU-/.NET-Fall ist reparierbar; die allgemeine Meldung allein
-  verrät die Ursache nicht. In 0.2.5 den Installer schließen und über **Mods →
-  Fenix → Installer starten** erneut ausführen. **Nur im Quellcode:** **Fenix-App
-  reparieren** wiederholt den offiziellen Einrichtungsschritt der vorhandenen
+  verrät die Ursache nicht. In 0.2.6 den Installer schließen und **Mods →
+  Fenix → Fenix-App reparieren** verwenden. Dies wiederholt den offiziellen Einrichtungsschritt der vorhandenen
   App; die Diagnose erfasst den letzten Versuch. Eine erkannte FenixApp bestätigt
   weder die Flugzeuginstallation noch die Aktivierung.
   [Fenix einrichten](addons.de.md#fenix-a320-einrichten) · [Prüfumfang](native-ui.md#fenix-install-hook-warning).
-- **Unterbrochene Sitzungen und Schaltflächen:** **Nur im Quellcode:** sichere
+- **Unterbrochene Sitzungen und Schaltflächen:** In 0.2.6 beheben die sichere
   Sitzungsprüfung, Reparatur verwaister Dienst-Sockets und korrigierte Anzeigen
-  für Start, Stop und Simulatorauswahl beheben Startblockaden nach unterbrochenen
-  Sitzungen. [Details](native-ui.md#upcoming-session-and-control-fixes-source-only).
+  für Start, Stop und Simulatorauswahl Startblockaden nach unterbrochenen
+  Sitzungen. [Details](native-ui.md#session-and-control-fixes-in-026).
 - **Cloud-Spielstände:** Wiederholte Sync-Fehler bleiben gemeldet.
   Wiederherstellung und lokales Spielen beschreibt die
   [Cloud-Anleitung](cloud-saves.de.md). Lokales Spielen bestätigt keinen Cloud-Abgleich.

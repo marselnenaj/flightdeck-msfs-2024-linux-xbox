@@ -126,6 +126,12 @@ fn unrelated_protected_service(command: &[u8], runtime: &Path) -> bool {
     )
 }
 
+fn process_disappeared(error: &crate::Error) -> bool {
+    matches!(error, crate::Error::Io(error)
+        if error.kind() == std::io::ErrorKind::NotFound
+            || error.raw_os_error() == Some(rustix::io::Errno::SRCH.raw_os_error()))
+}
+
 /// Check the entire owned session, including native Xodus helpers which can
 /// outlive the Wine process tree. Retain a pidfd while inspecting each process;
 /// an exited process or reused PID must never establish a live identity.
@@ -148,9 +154,8 @@ fn quiescent(runtime: &Path) -> Result<()> {
         }
         let status = match files::read_public(&entry.path().join("status"), 65536) {
             Ok(value) => value,
-            Err(crate::Error::Io(error)) if error.kind() == std::io::ErrorKind::NotFound => {
-                continue;
-            }
+            // An exit after open but before read returns ESRCH, not ENOENT.
+            Err(error) if process_disappeared(&error) => continue,
             Err(error) => return Err(error.into()),
         };
         // /proc directory ownership changes for non-dumpable processes; read
@@ -333,6 +338,35 @@ pub fn clear(runtime: &Path, lease: &File) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn status_read_after_process_exit_is_not_an_unresolved_writer() {
+        struct Child(std::process::Child);
+        impl Drop for Child {
+            fn drop(&mut self) {
+                let _ = self.0.kill();
+                let _ = self.0.wait();
+            }
+        }
+        let mut child = Child(
+            std::process::Command::new("sleep")
+                .arg("30")
+                .spawn()
+                .expect("owned process"),
+        );
+        let status = File::open(format!("/proc/{}/status", child.0.id())).expect("live status");
+        child.0.kill().expect("stop owned process");
+        child.0.wait().expect("reap owned process");
+        let error = files::read_file(status, 65536).expect_err("task exited after opening status");
+        assert!(process_disappeared(&error));
+        assert!(!process_disappeared(&crate::Error::Io(
+            std::io::Error::from(std::io::ErrorKind::PermissionDenied),
+        )));
+        assert!(!process_disappeared(&crate::Error::Invalid(
+            "unknown status"
+        )));
+    }
+
     #[test]
     fn recovery_retains_replaced_fence_even_with_identical_record() {
         let temp = tempfile::tempdir().expect("runtime");

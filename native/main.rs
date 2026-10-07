@@ -61,6 +61,10 @@ enum Command {
         state_dir: PathBuf,
         #[arg(long)]
         port: u16,
+        #[arg(long, requires = "expected_release")]
+        installation_root: Option<PathBuf>,
+        #[arg(long, requires = "installation_root")]
+        expected_release: Option<String>,
     },
     #[command(hide = true)]
     RunGame {
@@ -237,9 +241,19 @@ fn main() -> ExitCode {
                 Some(&language),
             );
         }
-        Some(Command::DesktopHandoff { state_dir, port }) => {
+        Some(Command::DesktopHandoff {
+            state_dir,
+            port,
+            installation_root,
+            expected_release,
+        }) => {
             return finish(
-                flightdeck::desktop::handoff(state_dir, *port),
+                match (installation_root, expected_release) {
+                    (Some(root), Some(expected)) => {
+                        flightdeck::desktop::installed_handoff(state_dir, *port, root, expected)
+                    }
+                    _ => flightdeck::desktop::handoff(state_dir, *port),
+                },
                 Some(&language),
             );
         }
