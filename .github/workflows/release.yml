@@ -34,6 +34,9 @@ jobs:
     if: needs.gate.outputs.eligible == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 90
+    permissions:
+      contents: read
+      actions: read
     env:
       RUSTUP_TOOLCHAIN: 1.98.0
       RELEASE_VERSION: ${{ needs.gate.outputs.version }}
@@ -43,12 +46,18 @@ jobs:
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
+          fetch-depth: 0
+      - name: Check whether the exact tested 0.2.6 build is reusable
+        id: prior
+        run: python3 scripts/release-reuse.py probe
       - name: Install pinned toolchain and native build prerequisites
+        if: steps.prior.outputs.reuse != 'true'
         run: |
           rustup toolchain install 1.98.0 --profile minimal --component rustfmt --component clippy --component rust-docs
           sudo apt-get update
           sudo apt-get install -y build-essential binutils woff2 pkg-config liblzma-dev libxkbcommon-dev libwayland-dev libx11-dev libxrandr-dev libxi-dev
       - name: Format, lint and test the locked workspace
+        if: steps.prior.outputs.reuse != 'true'
         run: |
           cargo fmt --all -- --check
           cargo clippy --locked --workspace --all-targets -- -D warnings
@@ -56,13 +65,28 @@ jobs:
           python3 -m unittest discover -s tests/compat -p 'test_*.py' -v
           python3 scripts/check-source-export.py
       - name: Check native HTTP contract and render both UI languages
+        if: steps.prior.outputs.reuse != 'true'
         run: |
           cargo build --locked --bin flightdeck-rust --example runtime-lab
           python3 scripts/check-rust-http.py --binary target/debug/flightdeck-rust
           cargo test --locked -p flightdeck-ui capture_ -- --ignored
       - name: Fetch and validate pinned compatibility, graphics and corresponding sources
         run: python3 scripts/release.py prepare --cache build/release-inputs --output build/release-previous
+      - name: Retrieve only the exact validated build after a test-only correction
+        if: steps.prior.outputs.reuse == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/release-reuse.py fetch
+      - name: Validate the corrected helpers and regenerate current source archive
+        if: steps.prior.outputs.reuse == 'true'
+        run: |
+          python3 -m unittest discover -s tests/compat -p 'test_*.py' -v
+          python3 scripts/check-source-export.py
+          python3 scripts/source-release.py --output "build/release-assets/flightdeck-source-${RELEASE_VERSION}.tar.gz"
+          python3 scripts/release.py unpack --archive build/release-assets/Flightdeck-Linux-x86_64.tar.gz --output build/release-current
+          python3 scripts/check-rust-http.py --binary build/release-current/flightdeck-linux/bin/flightdeck
       - name: Build and assemble the complete native package
+        if: steps.prior.outputs.reuse != 'true'
         run: |
           python3 scripts/build-native.py --toolchain 1.98.0
           cargo metadata --locked --filter-platform x86_64-unknown-linux-gnu --format-version 1 > build/cargo-metadata.json

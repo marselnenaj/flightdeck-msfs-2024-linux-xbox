@@ -184,6 +184,9 @@ def stage(args):
     manifest = {"schema": 1, "version": version(), "commit": args.commit,
                 "files": {name: checksum(args.assets / name) for name in sorted(asset_names())},
                 "native_installation_check": result}
+    provenance = ROOT / "build/release-build-provenance.json"
+    if provenance.exists():
+        manifest["binary_build"] = support.read_json(provenance.read_bytes(), "Build provenance")
     (args.assets / "RELEASE-MANIFEST.json").write_text(json.dumps(manifest, indent=2) + "\n")
     sums = "".join(f"{checksum(args.assets / name)}  {name}\n"
                    for name in sorted(asset_names() | {"RELEASE-MANIFEST.json"}))

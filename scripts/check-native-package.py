@@ -13,6 +13,12 @@ import sys
 import time
 
 
+class RequestFailure(AssertionError):
+    def __init__(self, status, path, value):
+        super().__init__((status, path, value))
+        self.status = status
+
+
 def request(record, path, data=None):
     connection = http.client.HTTPConnection("127.0.0.1", record["port"], timeout=5)
     try:
@@ -21,7 +27,8 @@ def request(record, path, data=None):
                            body=json.dumps(data) if data is not None else None, headers=headers)
         response = connection.getresponse()
         value = json.loads(response.read())
-        assert response.status == 200, (path, value)
+        if response.status != 200:
+            raise RequestFailure(response.status, path, value)
         return value
     finally:
         connection.close()
@@ -43,7 +50,14 @@ def wait_for(check, timeout=60):
 
 def record_at(state):
     record = json.loads((state / "desktop-service.json").read_text())
-    status = request(record, "/api/status")
+    try:
+        status = request(record, "/api/status")
+    except RequestFailure as error:
+        if error.status not in (401, 403):
+            raise
+        # The replacement may rotate authentication after the record was read.
+        # Only bounded discovery polling retries this; mutation errors stay fatal.
+        raise ValueError("Service authentication changed during handoff") from error
     if status["csrf_token"] != record["token"] or status["service"]["release"] != record["release"]:
         # The replacement can publish its record between our file read and
         # HTTP request. Retry this observation; never reuse the stale token.
