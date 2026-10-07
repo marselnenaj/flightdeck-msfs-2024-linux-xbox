@@ -52,7 +52,7 @@ jobs:
         run: |
           cargo fmt --all -- --check
           cargo clippy --locked --workspace --all-targets -- -D warnings
-          cargo test --locked --workspace
+          python3 scripts/check-native-tests.py
           python3 -m unittest discover -s tests/compat -p 'test_*.py' -v
           python3 scripts/check-source-export.py
       - name: Check native HTTP contract and render both UI languages
