@@ -536,7 +536,93 @@ pub fn configure(ctx: &Context) -> Result<()> {
         "Start Fenix once and sign in, then close it and apply settings again. CPU rendering and Legacy readouts need its initial settings files.",
     )
 }
+fn invocation_log(
+    wine: &Wine<'_>,
+    path: &Path,
+    offset: u64,
+    attempt: &mut Option<crate::fenix_diagnostics::Attempt>,
+) -> Result<crate::fenix_installer::Hooks> {
+    let result = crate::fenix_installer::scan_log(path, &wine.log, offset);
+    if let Some(attempt) = attempt {
+        match &result {
+            Ok(hooks) => {
+                attempt.evidence_complete = true;
+                if let Some(kind) = hooks.hook {
+                    attempt.hook = Some(kind.into());
+                }
+                if let Some(code) = hooks.exit_code {
+                    attempt.hook_exit_code = Some(code);
+                }
+                if let Some(version) = &hooks.package_version {
+                    attempt.package_version = Some(version.clone());
+                }
+                if let Some(failure) = hooks.failure() {
+                    attempt.failure = Some(failure.into());
+                }
+            }
+            Err(error) => {
+                attempt.failure = Some(match error {
+                    Error::Invalid("Das Fenix-Protokoll wurde während der Installation verändert.") => "log_changed",
+                    Error::Invalid("Das Fenix-Protokoll ist zu groß. Bitte den lokalen Installationsfehler prüfen.") => "log_too_large",
+                    _ => "log_unavailable",
+                }.into());
+            }
+        }
+    }
+    result
+}
 fn windows_app(ctx: &Context, operation: &str, data: &Value) -> Result<()> {
+    let root = ctx.root()?;
+    let mut attempt = if ["installer", "manager", "repair"].contains(&operation) {
+        let runner = match bundle::runner_variant(&root.join("runner"), true) {
+            Ok(None) => "flightdeck",
+            Ok(Some(ref variant)) if variant == "experimental-11" => "experimental",
+            Ok(Some(ref variant)) if variant == "cachyos-10" => "cachyos",
+            _ => "unknown",
+        };
+        Some(crate::fenix_diagnostics::begin(root, operation, runner)?)
+    } else {
+        None
+    };
+    let result = windows_app_run(ctx, operation, data, &mut attempt);
+    if let Some(mut attempt) = attempt {
+        attempt.completed_at = Some(files::now());
+        attempt.status = match &result {
+            Ok(()) if attempt.hook_exit_code == Some(0) && attempt.failure.is_none() => "succeeded",
+            Ok(()) => "unknown",
+            Err(Error::Cancelled) => "cancelled",
+            Err(_) => "failed",
+        }
+        .into();
+        if result.is_err() && !matches!(&result, Err(Error::Cancelled)) && attempt.failure.is_none()
+        {
+            attempt.failure = Some(
+                if attempt.process_exit_code.is_some_and(|code| code != 0) {
+                    "process_nonzero"
+                } else if attempt.process_exit_code == Some(0) {
+                    "unknown"
+                } else {
+                    "preparation_failed"
+                }
+                .into(),
+            );
+        }
+        let recorded = crate::fenix_diagnostics::save(root, &attempt).is_ok();
+        ctx.update(json!({"diagnostics_recorded":recorded}));
+        if !recorded {
+            eprintln!("Fenix diagnostic result could not be saved.");
+        }
+        result
+    } else {
+        result
+    }
+}
+fn windows_app_run(
+    ctx: &Context,
+    operation: &str,
+    data: &Value,
+    attempt: &mut Option<crate::fenix_diagnostics::Attempt>,
+) -> Result<()> {
     let root = ctx.root()?;
     validate(root, false)?;
     let prefix = root.join("local/msfs-prefix");
@@ -577,17 +663,62 @@ fn windows_app(ctx: &Context, operation: &str, data: &Value) -> Result<()> {
             )?;
             path
         }
-        "manager" => setup::manager(&prefix)?,
+        "manager" | "repair" => setup::manager(&prefix)?,
         _ => prefix.join(setup::PROGRAM).join("Fenix.exe"),
     };
     files::open_at(rustix::fs::CWD, &app, false, false)?;
-    crate::framework_maintenance::ensure(ctx)?;
+    if operation != "repair" {
+        crate::framework_maintenance::ensure(ctx)?;
+    }
     let wine = Wine::new(
         &prefix,
         &root.join("runner"),
         &root.join("private/fenix-app.log"),
         &ctx.cancel,
     )?;
+    if operation == "repair" {
+        let version = crate::fenix_installer::installed_version(&prefix).inspect_err(|_| {
+            if let Some(attempt) = attempt {
+                attempt.failure = Some("invalid_metadata".into());
+            }
+        })?;
+        if let Some(attempt) = attempt {
+            attempt.package_version = Some(version);
+            attempt.hook = Some("install".into());
+        }
+        ctx.progress("Die Fenix-App wird repariert. Der offizielle Einrichtungsschritt wird erneut ausgeführt …");
+        let offset = wine.log.metadata()?.len();
+        let result = crate::fenix_installer::repair(&wine);
+        if let Some(attempt) = attempt {
+            match &result {
+                Ok(code) => {
+                    attempt.process_exit_code = code.code();
+                    attempt.hook_exit_code = code.code();
+                    if !code.success() {
+                        attempt.failure = Some("hook_nonzero".into());
+                    }
+                }
+                Err(Error::Invalid("Der Vorgang hat nicht rechtzeitig geantwortet.")) => {
+                    attempt.failure = Some("hook_timeout".into())
+                }
+                _ => (),
+            }
+        }
+        let log = invocation_log(&wine, &root.join("private/fenix-app.log"), offset, attempt);
+        let cleaned = wine_processes::stop(root, wine_processes::FENIX);
+        let code = result?;
+        log?.check()?;
+        require(
+            code.success(),
+            "Der Fenix-Einrichtungsschritt ist weiterhin fehlgeschlagen. Bitte den neuen Diagnosebericht teilen.",
+        )?;
+        return cleaned;
+    }
+    if operation == "manager"
+        && let Some(attempt) = attempt
+    {
+        attempt.package_version = crate::fenix_installer::installed_version(&prefix).ok();
+    }
     setup::ui_fonts(&wine)?;
     crate::fenix_installer::prepare(&wine)?;
     wine.reg(
@@ -605,7 +736,11 @@ fn windows_app(ctx: &Context, operation: &str, data: &Value) -> Result<()> {
             .ok_or(Error::Invalid("Invalid Fenix executable path."))?,
     );
     let log_offset = wine.log.metadata()?.len();
-    let mut child = process::spawn(&mut c, None)?;
+    let mut child = process::spawn(&mut c, None).inspect_err(|_| {
+        if let Some(attempt) = attempt {
+            attempt.failure = Some("spawn_failed".into());
+        }
+    })?;
     let mut handoff = crate::fenix_installer::Handoff::default();
     let result = (|| {
         loop {
@@ -616,6 +751,17 @@ fn windows_app(ctx: &Context, operation: &str, data: &Value) -> Result<()> {
                 return ctx.interrupted();
             }
             if let Some(code) = child.try_wait()? {
+                if let Some(attempt) = attempt {
+                    attempt.process_exit_code = code.code();
+                }
+                if !code.success() {
+                    let _ = invocation_log(
+                        &wine,
+                        &root.join("private/fenix-app.log"),
+                        log_offset,
+                        attempt,
+                    );
+                }
                 require(
                     code.success(),
                     "Fenix wurde unerwartet beendet. Details stehen im lokalen Fenix-Protokoll.",
@@ -626,11 +772,13 @@ fn windows_app(ctx: &Context, operation: &str, data: &Value) -> Result<()> {
                         std::thread::sleep(Duration::from_secs(1));
                         continue;
                     }
-                    crate::fenix_installer::check_log(
+                    invocation_log(
+                        &wine,
                         &root.join("private/fenix-app.log"),
-                        &wine.log,
                         log_offset,
-                    )?;
+                        attempt,
+                    )?
+                    .check()?;
                 }
                 ctx.update(json!({"app_exited":true}));
                 wine_processes::stop(root, wine_processes::FENIX)?;
@@ -700,12 +848,12 @@ pub fn snapshot(app: &Launcher) -> Value {
             let (fenix_running, game_running) = wine_processes::status(&prefix);
             let interactive = job["state"] == "running"
                 && job["app_exited"] != true
-                && ["installer", "open", "manager"]
+                && ["installer", "open", "manager", "repair"]
                     .contains(&job["operation"].as_str().unwrap_or(""));
             value["idle"] = json!(idle);
             value["fenix_running"] = json!(fenix_running);
             value["can_stop"] = json!(
-                fenix_running
+                (fenix_running || interactive && job["operation"] == "repair")
                     && !game_running
                     && !owned
                     && !closing
@@ -713,6 +861,11 @@ pub fn snapshot(app: &Launcher) -> Value {
                     && (interactive || !busy)
             );
             value["can_change"] = json!(!busy && !owned && !closing && idle);
+            value["can_repair_installer"] = json!(
+                value["can_change"] == true
+                    && (value["installed"] == true || value["state"] == "legacy")
+                    && crate::fenix_installer::installed_version(&prefix).is_ok()
+            );
             if value["state"] != "legacy" {
                 value["message"] = json!("");
             }
@@ -733,6 +886,7 @@ pub fn start(app: &Arc<Launcher>, operation: &str, data: &Value) -> Result<Value
             "installer",
             "open",
             "manager",
+            "repair",
             "stop",
         ]
         .contains(&operation),
@@ -744,12 +898,19 @@ pub fn start(app: &Arc<Launcher>, operation: &str, data: &Value) -> Result<Value
         if s.active.as_ref().is_some_and(|a| a.kind == "fenix")
             && s.jobs.get("fenix").is_some_and(|j| {
                 j["state"] == "running"
-                    && ["installer", "open", "manager"]
+                    && ["installer", "open", "manager", "repair"]
                         .contains(&j["operation"].as_str().unwrap_or(""))
             })
         {
             if let Some(active) = &s.active {
-                active.pause.store(true, Ordering::Relaxed);
+                if s.jobs
+                    .get("fenix")
+                    .is_some_and(|job| job["operation"] == "repair")
+                {
+                    active.cancel.store(true, Ordering::Release);
+                } else {
+                    active.pause.store(true, Ordering::Relaxed);
+                }
             }
             let job = s
                 .jobs
@@ -764,7 +925,7 @@ pub fn start(app: &Arc<Launcher>, operation: &str, data: &Value) -> Result<Value
     app.start_job("fenix",&operation.clone(),true,move|ctx|{
         if ["configure","installer","open","manager"].contains(&operation.as_str())&&snapshot(&ctx.launcher)["update_available"]==true{let payload=bundle::obtain(&ctx.launcher.state_dir.join("fenix-bundles"),None,ctx)?;install(ctx,&payload)?;}
         match operation.as_str(){"install"=>{let payload=bundle::obtain(&ctx.launcher.state_dir.join("fenix-bundles"),data["bundle_path"].as_str(),ctx)?;install(ctx,&payload)?;},"restore"=>restore(ctx)?,"configure"=>configure(ctx)?,"stop"=>{validate(ctx.root()?,true)?;wine_processes::stop(ctx.root()?,wine_processes::FENIX)?;},_=>windows_app(ctx,&operation,&data)?,}
-        Ok(json!({"state":"complete","stopping":false,"message":match operation.as_str(){"install"=>"Fenix-Patch eingerichtet. Die nächsten Schritte stehen oben.","configure"=>"Anzeigen und automatischer Fenix-Start sind eingerichtet.","restore"=>"Das Profil vor dem Patch wurde wiederhergestellt.","installer"=>"Installer beendet. Prüfe die nächsten Schritte oben; die Fenix-Einrichtung ist noch nicht automatisch abgeschlossen.",_=>"Fenix wurde beendet."}}))
+        Ok(json!({"state":"complete","stopping":false,"message":match operation.as_str(){"install"=>"Fenix-Patch eingerichtet. Die nächsten Schritte stehen oben.","configure"=>"Anzeigen und automatischer Fenix-Start sind eingerichtet.","restore"=>"Das Profil vor dem Patch wurde wiederhergestellt.","installer"=>"Installer beendet. Prüfe die nächsten Schritte oben; die Fenix-Einrichtung ist noch nicht automatisch abgeschlossen.","repair"=>"Der Fenix-Einrichtungsschritt wurde erfolgreich repariert. Öffne die Fenix-App, um die Flugzeuginstallation fortzusetzen.",_=>"Fenix wurde beendet."}}))
     })
 }
 

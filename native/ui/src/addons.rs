@@ -107,11 +107,29 @@ impl App {
                 0 => ("Kompatibilität einrichten", column![
                     self.paragraph(self.t("Erstellt eine eigene Runner-Kopie, sichert das Windows-Profil und installiert bei Bedarf Microsoft .NET.").to_string()),
                     self.action(if yes(data,"can_retry") { "Einrichtung reparieren" } else if yes(data,"update_available") { "Patch aktualisieren" } else { "Patch einrichten" }, Fenix("install"))]),
-                1 => ("Fenix installieren", column![
-                    self.paragraph(self.t("Schritt 2 von 4: Lade den offiziellen Fenix-Installer herunter, wähle die EXE aus und installiere dein Flugzeug.").to_string()),
-                    self.help_link("Offiziellen Installer im Fenix-Konto herunterladen",HelpLink::FenixInstaller),
-                    self.input("Fenix-Installer-Datei", "installer_path", "/home/…/FenixInstaller.exe", Some(FenixPick("installer"))),
-                    self.action("Installer starten",Fenix("installer"))]),
+                1 => {
+                    let manager = yes(data, "manager_installed");
+                    let mut body = column![self.paragraph(self.t(if manager {
+                        "Schritt 2 von 4: Öffne die vorhandene Fenix-App und installiere dort dein Flugzeug. Schließe die App danach vollständig."
+                    } else {
+                        "Schritt 2 von 4: Lade den offiziellen Fenix-Installer herunter, wähle die EXE aus und installiere dein Flugzeug."
+                    }).to_string())];
+                    if manager {
+                        let mut controls = vec![("Fenix-App öffnen", Fenix("manager"))];
+                        if yes(data, "can_repair_installer") {
+                            controls.push(("Fenix-App reparieren", Fenix("repair")));
+                        }
+                        body = body.push(self.actions(&controls));
+                        if yes(data, "can_repair_installer") {
+                            body = body.push(self.paragraph(self.t("Führt den Einrichtungsschritt der vorhandenen Fenix-App erneut aus. Dein Flugzeug wird dabei nicht installiert.").to_string()));
+                        }
+                        body = body.push(self.paragraph(self.t("Falls du die Fenix-App neu installieren möchtest, kannst du weiterhin die offizielle Installer-EXE auswählen.").to_string()));
+                    }
+                    ("Fenix installieren", body
+                        .push(self.help_link("Offiziellen Installer im Fenix-Konto herunterladen", HelpLink::FenixInstaller))
+                        .push(self.input("Fenix-Installer-Datei", "installer_path", "/home/…/FenixInstaller.exe", Some(FenixPick("installer"))))
+                        .push(self.action(if manager { "Installer erneut ausführen" } else { "Installer starten" }, Fenix("installer"))))
+                },
                 2 => ("Fenix öffnen und anmelden", column![
                     self.paragraph(self.t("Melde dich in Fenix an und schließe das Programm danach vollständig. Deine Anmeldung und Lizenz prüft Fenix selbst.").to_string()),
                     self.paragraph(self.t("Falls @ mit AltGr+Q nicht klappt: Strg+Alt+Q probieren oder @ kopieren und mit Strg+V einfügen.").to_string()),
@@ -128,8 +146,14 @@ impl App {
                 body.spacing(12),
             ));
         }
+        let mut manager_controls = row![self.action("Installer & Liveries", Fenix("manager"))];
+        if progress.steps.is_empty() && yes(data, "can_repair_installer") {
+            manager_controls =
+                manager_controls.push(self.action("Fenix-App reparieren", Fenix("repair")));
+            content = content.push(self.paragraph(self.t("Führt den Einrichtungsschritt der vorhandenen Fenix-App erneut aus. Dein Flugzeug wird dabei nicht installiert.").to_string()));
+        }
         content = content.push(self.job("fenix"))
-            .push(row![self.action("Installer & Liveries",Fenix("manager")),self.refresh_button()].spacing(10).wrap())
+            .push(manager_controls.push(self.refresh_button()).spacing(10).wrap())
             .push(self.paragraph(self.t("Öffnet den separaten Fenix-Manager zum Installieren, Aktualisieren und Verwalten von Liveries.").to_string()))
             .push(self.disclosure(Disclosure::FenixAdvanced,"Lokales Patch-Paket und Wiederherstellung","",column![
                 self.input("Entpacktes Release (leer = geprüfter Download)","bundle_path",self.tr("Automatisch herunterladen","Download automatically"),Some(FenixPick("bundle"))),

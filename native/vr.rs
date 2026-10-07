@@ -358,7 +358,16 @@ pub fn public(value: &Value) -> Value {
     let state = value["state"].as_str().unwrap_or("failed");
     json!({"state":state,"message":message(state),"checked_at":files::now()})
 }
-pub fn prepare(root: &Path, env: Environment) -> Result<Environment> {
+pub fn prepare(root: &Path, env: Environment, cancel: &AtomicBool) -> Result<Environment> {
+    prepare_with_probe(root, env, cancel, probe)
+}
+fn prepare_with_probe(
+    root: &Path,
+    env: Environment,
+    cancel: &AtomicBool,
+    check: impl FnOnce(&Value, Environment, &AtomicBool) -> Value,
+) -> Result<Environment> {
+    crate::transaction::interrupted(cancel)?;
     let mode = settings(Some(root))?;
     if mode == "off" {
         return Ok(env);
@@ -377,7 +386,8 @@ pub fn prepare(root: &Path, env: Environment) -> Result<Environment> {
         .any(|k| env.get(*k).is_some_and(|s| !s.is_empty())),
         "Entferne manuelle GPU-Namens- und Indexfilter, damit Spiel und VR-System dieselbe Grafikkarte verwenden können.",
     )?;
-    let result = probe(&selected, env.clone(), &AtomicBool::new(false));
+    let result = check(&selected, env.clone(), cancel);
+    crate::transaction::interrupted(cancel)?;
     require(
         result["state"] == "ready",
         message(result["state"].as_str().unwrap_or("failed")),
@@ -436,6 +446,7 @@ pub fn prepare(root: &Path, env: Environment) -> Result<Environment> {
     let reg = folder.join(format!(".vr-{}.reg", uuid::Uuid::new_v4().simple()));
     let mut bytes = vec![0xff, 0xfe];
     bytes.extend(registry.encode_utf16().flat_map(u16::to_le_bytes));
+    crate::transaction::interrupted(cancel)?;
     process::private_write(&reg, &bytes)?;
     let outcome = process::run(
         Command::new(runtime::wine(&root.join("runner")))
@@ -452,12 +463,83 @@ pub fn prepare(root: &Path, env: Environment) -> Result<Environment> {
             .stdout(Stdio::null())
             .stderr(Stdio::null()),
         Duration::from_secs(20),
-        &AtomicBool::new(false),
+        cancel,
     );
     let _ = std::fs::remove_file(reg);
+    crate::transaction::interrupted(cancel)?;
     require(
         outcome.is_ok_and(|s| s.success()),
         "Die OpenXR-Anbindung konnte nicht eingerichtet werden. Beende Programme dieser Spielumgebung und versuche es erneut.",
     )?;
     Ok(env)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::{Arc, atomic::Ordering, mpsc};
+    use std::time::Instant;
+
+    #[test]
+    fn cancelled_probe_exits_promptly_without_starting_registry_preparation() {
+        let temp = tempfile::tempdir().expect("fixture");
+        let root = temp.path();
+        for path in [
+            "private",
+            "runner/files/bin",
+            "runner/files/lib/wine/x86_64-windows",
+            "runner/files/lib/wine/x86_64-unix",
+        ] {
+            files::private_dir(&root.join(path)).expect("fixture folder");
+        }
+        for path in [
+            "runner/files/bin/wine",
+            "runner/files/lib/wine/x86_64-windows/wineopenxr.dll",
+            "runner/files/lib/wine/x86_64-unix/wineopenxr.so",
+        ] {
+            files::atomic(&root.join(path), b"synthetic bridge").expect("fixture bridge");
+        }
+        files::atomic_json(
+            &root.join("private/vr-settings.json"),
+            &json!({"schema":1,"mode":"auto"}),
+        )
+        .expect("VR settings");
+        let manifest = root.join("monado.json");
+        files::atomic_json(
+            &manifest,
+            &json!({"runtime":{"library_path":"libmonado.so"}}),
+        )
+        .expect("runtime manifest");
+        let env = Environment::from([(
+            "XR_RUNTIME_JSON".into(),
+            manifest.to_string_lossy().into_owned(),
+        )]);
+        let cancel = Arc::new(AtomicBool::new(false));
+        let (entered, waiting) = mpsc::channel();
+        let flag = Arc::clone(&cancel);
+        let stop = std::thread::spawn(move || {
+            waiting
+                .recv_timeout(Duration::from_secs(5))
+                .expect("probe entered");
+            flag.store(true, Ordering::Relaxed);
+        });
+        let started = Instant::now();
+        let result = prepare_with_probe(root, env, &cancel, |_, _, cancel| {
+            entered.send(()).expect("probe started");
+            // Exercise the production bounded child-process cancellation path
+            // without loading a real OpenXR runtime or needing a headset/GPU.
+            let result = process::output(
+                Command::new("sleep").arg("30"),
+                Duration::from_secs(10),
+                1024,
+                cancel,
+            );
+            assert!(matches!(result, Err(Error::Cancelled)));
+            json!({"state":"cancelled"})
+        });
+        stop.join().expect("cancel worker");
+        assert!(matches!(result, Err(Error::Cancelled)));
+        assert!(started.elapsed() < Duration::from_secs(2));
+        assert!(!root.join("private/vr").exists());
+    }
 }

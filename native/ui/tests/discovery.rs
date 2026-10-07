@@ -16,7 +16,7 @@ use std::{
 
 struct Server {
     port: u16,
-    requests: Arc<Mutex<Vec<String>>>,
+    requests: Arc<Mutex<Vec<(String, String)>>>,
     stop: Arc<AtomicBool>,
     thread: Option<thread::JoinHandle<()>>,
 }
@@ -24,7 +24,10 @@ impl Drop for Server {
     fn drop(&mut self) {
         self.stop.store(true, Ordering::Release);
         if let Some(thread) = self.thread.take() {
-            thread.join().expect("HTTP fixture stopped");
+            let result = thread.join();
+            if !thread::panicking() {
+                result.expect("HTTP fixture stopped");
+            }
         }
     }
 }
@@ -62,26 +65,87 @@ fn server() -> Server {
                 .expect("timeout");
             let mut bytes = Vec::new();
             let mut part = [0; 4096];
-            while !bytes.ends_with(b"\r\n\r\n") {
+            let header_end = loop {
+                if let Some(end) = bytes.windows(4).position(|part| part == b"\r\n\r\n") {
+                    break end + 4;
+                }
                 let size = stream.read(&mut part).expect("request");
                 assert!(size > 0);
                 bytes.extend_from_slice(&part[..size]);
                 assert!(bytes.len() < 16384);
-            }
-            let header = String::from_utf8(bytes).expect("request header");
+            };
+            let header = String::from_utf8(bytes[..header_end].to_vec()).expect("request header");
             let request = header.lines().next().expect("request line");
-            assert!(
-                request.starts_with("GET "),
-                "discovery must not mutate the installation"
-            );
+            let method = request.split_whitespace().next().expect("method");
             let path = request
                 .split_whitespace()
                 .nth(1)
                 .expect("path")
                 .strip_prefix("/api/")
                 .expect("API path");
-            captured.lock().expect("requests").push(path.into());
-            let payload = snapshot.get(path).unwrap_or(&Value::Null).to_string();
+            let headers: std::collections::BTreeMap<_, _> = header
+                .lines()
+                .skip(1)
+                .filter_map(|line| line.split_once(':'))
+                .map(|(key, value)| (key.to_ascii_lowercase(), value.trim()))
+                .collect();
+            assert!(
+                !headers.contains_key("transfer-encoding"),
+                "bounded fixture requests only"
+            );
+            let length = headers
+                .get("content-length")
+                .map(|value| value.parse::<usize>().expect("content length"))
+                .unwrap_or(0);
+            assert!(length <= 4096, "bounded request body");
+            while bytes.len() < header_end + length {
+                let size = stream.read(&mut part).expect("request body");
+                assert!(size > 0);
+                bytes.extend_from_slice(&part[..size]);
+            }
+            assert_eq!(
+                bytes.len(),
+                header_end + length,
+                "one request per connection"
+            );
+            let payload = match method {
+                "GET" => {
+                    assert_eq!(length, 0, "discovery has no request body");
+                    snapshot
+                        .get(path)
+                        .expect("known discovery resource")
+                        .to_string()
+                }
+                "POST" => {
+                    assert_eq!(
+                        path, "updates/check-startup",
+                        "no installation or download action"
+                    );
+                    assert_eq!(
+                        headers.get("x-flightdeck-token"),
+                        Some(&"synthetic-session-000000000000000000000000")
+                    );
+                    assert_eq!(
+                        headers.get("origin").copied(),
+                        Some(format!("http://127.0.0.1:{port}").as_str())
+                    );
+                    assert_eq!(
+                        headers.get("x-flightdeck-context"),
+                        Some(&"\"/synthetic/msfs2024\"")
+                    );
+                    assert_eq!(headers.get("content-type"), Some(&"application/json"));
+                    assert_eq!(
+                        serde_json::from_slice::<Value>(&bytes[header_end..]).expect("JSON body"),
+                        json!({})
+                    );
+                    json!({"ok":true}).to_string()
+                }
+                _ => panic!("unexpected fixture method: {method}"),
+            };
+            captured
+                .lock()
+                .expect("requests")
+                .push((method.into(), path.into()));
             write!(stream,"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{payload}",payload.len()).expect("response");
         }
     });
@@ -138,9 +202,20 @@ fn opening_setup_discovers_runners_and_selects_the_active_one_without_a_search_c
                 .lock()
                 .expect("requests")
                 .iter()
-                .filter(|p| *p == "proton/discover")
+                .filter(|(method, path)| method == "GET" && path == "proton/discover")
                 .count(),
             1
+        );
+        assert_eq!(
+            server
+                .requests
+                .lock()
+                .expect("requests")
+                .iter()
+                .filter(|(method, path)| method == "POST" && path == "updates/check-startup")
+                .count(),
+            1,
+            "initial runtime discovery also checks updates without a search click"
         );
         let _ = app.update(Message::Field("proton", "custom".into()));
         let task = app.update(Message::Refresh);
@@ -152,9 +227,20 @@ fn opening_setup_discovers_runners_and_selects_the_active_one_without_a_search_c
                 .lock()
                 .expect("requests")
                 .iter()
-                .filter(|p| *p == "proton/discover")
+                .filter(|(method, path)| method == "GET" && path == "proton/discover")
                 .count(),
             2
+        );
+        assert_eq!(
+            server
+                .requests
+                .lock()
+                .expect("requests")
+                .iter()
+                .filter(|(method, _)| method == "POST")
+                .count(),
+            1,
+            "refresh must neither repeat the background check nor install anything"
         );
     });
 }

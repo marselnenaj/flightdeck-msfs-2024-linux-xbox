@@ -66,7 +66,7 @@ impl App {
         self.poll_count = self.poll_count.wrapping_add(1);
         let mut keys = vec!["setup", "launcher-update"];
         match self.page {
-            Page::Overview => {}
+            Page::Overview => keys.push("game-update"),
             Page::Setup => {
                 keys.extend(["proton", "maintenance"]);
                 for key in ["proton/discover", "setup/discover"] {
@@ -119,6 +119,43 @@ impl App {
             move |result| Message::Completed(generation, action.clone(), result),
         )
     }
+    fn reset_startup_check(&mut self) {
+        self.startup_checked = false;
+        self.startup_attempt = None;
+        self.startup_inflight = None;
+        self.startup_retry = false;
+    }
+    pub(crate) fn startup_due(&self, now: std::time::Instant) -> bool {
+        !self.restarting
+            && self.startup_inflight.is_none()
+            && (!self.startup_checked
+                || self.startup_attempt.is_some_and(|attempt| {
+                    now.saturating_duration_since(attempt)
+                        >= Duration::from_secs(if self.startup_retry { 30 } else { 300 })
+                }))
+    }
+    fn check_startup(&mut self) -> Task<Message> {
+        let Some(request) = self.request(&Action::Startup) else {
+            return Task::none();
+        };
+        let Some(client) = self.client.clone() else {
+            return Task::none();
+        };
+        self.startup_sequence = self.startup_sequence.wrapping_add(1);
+        let sequence = self.startup_sequence;
+        self.startup_inflight = Some(sequence);
+        self.startup_checked = true;
+        self.startup_attempt = Some(std::time::Instant::now());
+        let runtime = request.runtime.clone();
+        let language = self.language.code();
+        // Version discovery has its own completion token. It neither reserves
+        // the UI nor invalidates a poll/action when the user changes pages.
+        // The service throttles network checks (30 min success / 5 min failure).
+        Task::perform(
+            async move { client.post(&request, language).await },
+            move |result| Message::StartupCompleted(sequence, runtime.clone(), result),
+        )
+    }
     pub fn update(&mut self, message: Message) -> Task<Message> {
         if self.confirmation.is_some()
             && matches!(
@@ -148,7 +185,7 @@ impl App {
                         self.snapshot.clear();
                         self.confirmation = None;
                         self.connect_after_check = None;
-                        self.startup_checked = false;
+                        self.reset_startup_check();
                         return self.refresh();
                     }
                     Err(error) => self.notice = Some(error),
@@ -187,6 +224,7 @@ impl App {
                         if old_root != new_root {
                             self.snapshot.clear();
                             self.poll_count = 0;
+                            self.reset_startup_check();
                         }
                         let discovered = ["proton/discover", "setup/discover"]
                             .map(|key| (key, snapshot.remove(key)));
@@ -255,17 +293,13 @@ impl App {
                                 return self.update(Message::Action(Action::SetupStart));
                             }
                         }
-                        if !self.startup_checked
-                            && let Some(request) = self.request(&Action::Startup)
-                        {
-                            self.startup_checked = true;
-                            return self.submit(Action::Startup, request);
-                        }
+                        let startup = self.check_startup();
                         if self.page == Page::Setup
                             && !self.discoveries.contains_key("proton/discover")
                         {
-                            return self.refresh();
+                            return Task::batch([startup, self.refresh()]);
                         }
+                        return startup;
                     }
                     Err(error) => {
                         self.online = false;
@@ -276,6 +310,9 @@ impl App {
                 }
             }
             Message::Action(action) => {
+                if action == Action::Startup {
+                    return self.check_startup();
+                }
                 if let Some(request) = self.request(&action) {
                     if request.confirmation.is_some() {
                         self.confirmation = Some((action, request));
@@ -299,6 +336,16 @@ impl App {
                 }
             }
             Message::CancelConfirm => self.confirmation = None,
+            Message::StartupCompleted(sequence, runtime, result) => {
+                if self.startup_inflight != Some(sequence) || self.runtime() != runtime {
+                    return Task::none();
+                }
+                self.startup_inflight = None;
+                self.startup_retry = result
+                    .as_ref()
+                    .map_or(true, |value| value["deferred"] == true);
+                return self.refresh();
+            }
             Message::Completed(generation, action, result) => {
                 if generation != self.generation {
                     return Task::none();
@@ -547,6 +594,12 @@ impl App {
                     return Task::perform(open_help(link), Message::Exported);
                 }
             }
+            Message::OpenReleaseLink(url) => {
+                if !self.exporting && release_notes::safe_url(&url).is_some() {
+                    self.exporting = true;
+                    return Task::perform(open_url(url), Message::Exported);
+                }
+            }
             Message::CopyReport => {
                 if let Some(report) = self.report_text() {
                     return iced::clipboard::write(report);
@@ -667,16 +720,22 @@ impl App {
     pub fn launch_label(&self) -> &str {
         if self.pending_action == Some(Action::Launch) {
             self.tr("Start wird vorbereitet …", "Preparing launch …")
-        } else if self.pending_action == Some(Action::Stop) {
+        } else if self.pending_action == Some(Action::Stop)
+            || self.status()["game"]["state"] == "stopping"
+        {
             self.tr("Simulator wird beendet …", "Stopping simulator …")
         } else if self.status()["cloud"]["state"] == "syncing" {
-            if self.status()["cloud"]["phase"] == "after_exit" {
+            if self.status()["cloud"]["phase"] == "recovery" {
+                self.tr("Sitzung wird geprüft …", "Checking session …")
+            } else if self.status()["cloud"]["phase"] == "after_exit" {
                 self.tr("Spielstände sichern …", "Saving progress …")
             } else {
                 self.tr("Spielstände abgleichen …", "Syncing saves …")
             }
         } else if yes(&self.status()["game"], "can_stop") {
             self.tr("Simulator beenden", "Stop simulator")
+        } else if self.status()["cloud"]["state"] == "attention" {
+            self.tr("Start blockiert", "Launch blocked")
         } else if !yes(&self.status()["runtime"], "ready") {
             self.tr("Simulator einrichten", "Set up simulator")
         } else {
@@ -694,11 +753,27 @@ impl App {
             None
         }
     }
+    pub(crate) fn session_failed(&self) -> bool {
+        self.online
+            && !self.pending
+            && self.status()["game"]["state"] == "stopped"
+            && self.status()["cloud"]["state"] != "syncing"
+            && self.status()["game"]["exit_code"]
+                .as_i64()
+                .is_some_and(|code| ![0, 130, 143].contains(&code))
+    }
     pub fn launch_note(&self) -> &str {
         if self.pending_action == Some(Action::Launch) {
             self.tr(
                 "Dein Start wurde angefordert. Flightdeck bereitet den Simulator vor.",
                 "Launch requested. Flightdeck is preparing the simulator.",
+            )
+        } else if self.pending_action == Some(Action::Stop)
+            || self.status()["game"]["state"] == "stopping"
+        {
+            self.tr(
+                "Flightdeck wartet, bis die Prozesse des Simulators geschlossen sind.",
+                "Flightdeck is waiting for the simulator's processes to close.",
             )
         } else if ["syncing", "attention"].contains(&s(&self.status()["cloud"], "state"))
             && !s(&self.status()["cloud"], "message").is_empty()
@@ -713,6 +788,11 @@ impl App {
             self.tr(
                 "Richte deine Installation vor dem ersten Start ein.",
                 "Set up your installation before the first launch.",
+            )
+        } else if self.session_failed() {
+            self.tr(
+                "Die letzte Simulator-Sitzung ist fehlgeschlagen. Details findest du unter Diagnose; du kannst erneut starten.",
+                "The last simulator session failed. Check Diagnostics for details; you can try starting again.",
             )
         } else if yes(&self.status()["cloud"], "enabled") {
             self.tr(
@@ -730,10 +810,22 @@ impl App {
         if self.pending_action == Some(Action::Launch) {
             return self.tr("Start wird vorbereitet …", "Preparing launch …");
         }
+        if self.pending_action == Some(Action::Stop) {
+            return self.tr("Simulator wird beendet …", "Stopping simulator …");
+        }
         if !self.online {
             return self.tr("Verbindung wird hergestellt …", "Connecting …");
         }
-        if ["syncing", "attention"].contains(&s(&self.status()["cloud"], "state")) {
+        if self.status()["cloud"]["state"] == "attention" {
+            return self.tr(
+                "Start blockiert · Hinweis beachten",
+                "Launch blocked · check the message",
+            );
+        }
+        if self.status()["cloud"]["state"] == "syncing" {
+            if self.status()["cloud"]["phase"] == "recovery" {
+                return self.tr("Sitzung wird geprüft …", "Checking session …");
+            }
             return self.tr(
                 "Cloud-Abgleich · Status unten beachten",
                 "Cloud sync · check status below",
@@ -746,6 +838,10 @@ impl App {
             "external" => self.tr(
                 "Installation wird außerhalb von Flightdeck verwendet",
                 "Installation is in use outside Flightdeck",
+            ),
+            "stopped" if self.session_failed() => self.tr(
+                "Simulator-Sitzung fehlgeschlagen",
+                "Simulator session failed",
             ),
             "stopped" if yes(&self.status()["runtime"], "ready") => {
                 self.tr("Bereit zum Start", "Ready to start")
@@ -882,11 +978,15 @@ async fn open_draft(uri: String) -> Result<Option<String>, String> {
 }
 
 async fn open_help(link: HelpLink) -> Result<Option<String>, String> {
+    open_url(link.url().to_string()).await
+}
+
+async fn open_url(url: String) -> Result<Option<String>, String> {
     use std::process::Stdio;
     let status = tokio::time::timeout(
         Duration::from_secs(30),
         tokio::process::Command::new("xdg-open")
-            .arg(link.url())
+            .arg(url)
             .kill_on_drop(true)
             .stdin(Stdio::null())
             .stdout(Stdio::null())
@@ -900,5 +1000,114 @@ async fn open_help(link: HelpLink) -> Result<Option<String>, String> {
         Ok(None)
     } else {
         Err("Could not open the browser".into())
+    }
+}
+
+#[cfg(test)]
+mod startup_tests {
+    use super::*;
+
+    fn snapshot(root: &str) -> Snapshot {
+        Snapshot::from([
+            (
+                "status",
+                json!({
+                    "runtime":{"path":root,"configured":true,"ready":true,"game_id":"msfs2024"},
+                    "game":{"state":"stopped","can_start":true},
+                    "setup":{"busy":false},"cloud":{"state":"idle"}
+                }),
+            ),
+            ("setup", json!({})),
+        ])
+    }
+
+    fn app() -> App {
+        let mut app = App::new(Edition::Msfs2024);
+        // Tasks remain unpolled: these tests exercise message ordering without
+        // opening a socket, checking GitHub or launching a simulator.
+        app.client = Some(Client::new(9, "a".repeat(32)).expect("synthetic client"));
+        let _ = app.update(Message::Loaded(0, Ok(snapshot("/synthetic/2024"))));
+        app
+    }
+
+    #[test]
+    fn background_check_does_not_block_actions_or_lose_completion_after_generation_change() {
+        let mut app = app();
+        assert!(!app.pending);
+        assert_eq!(app.startup_inflight, Some(1));
+        assert!(app.request(&Action::Launch).is_some());
+        let _ = app.update(Message::Loaded(0, Ok(snapshot("/synthetic/2024"))));
+        assert_eq!(
+            app.startup_sequence, 1,
+            "polls must not duplicate an active check"
+        );
+        let _ = app.update(Message::Action(Action::Select(Edition::Msfs2020)));
+        assert!(app.pending);
+        assert_eq!(app.generation, 1);
+        let _ = app.update(Message::StartupCompleted(
+            1,
+            "/synthetic/2024".into(),
+            Ok(json!({"ok":true})),
+        ));
+        assert_eq!(app.startup_inflight, None);
+        assert!(
+            app.pending,
+            "background completion must not complete the user's action"
+        );
+        assert_eq!(app.generation, 1);
+    }
+
+    #[test]
+    fn switched_runtime_ignores_old_completion_without_clearing_its_new_check() {
+        let mut app = app();
+        let _ = app.update(Message::Loaded(0, Ok(snapshot("/synthetic/2020"))));
+        assert_eq!(app.startup_inflight, Some(2));
+        let _ = app.update(Message::StartupCompleted(
+            1,
+            "/synthetic/2024".into(),
+            Err("old runtime".into()),
+        ));
+        assert_eq!(app.startup_inflight, Some(2));
+        assert!(!app.startup_retry);
+        let _ = app.update(Message::StartupCompleted(
+            2,
+            "/synthetic/2020".into(),
+            Ok(json!({"ok":true})),
+        ));
+        assert_eq!(app.startup_inflight, None);
+        assert_eq!(app.runtime(), "/synthetic/2020");
+    }
+
+    #[test]
+    fn deferred_and_unreachable_checks_retry_with_a_bound_and_successes_periodically() {
+        for result in [
+            Ok(json!({"ok":true,"deferred":true})),
+            Err("offline".into()),
+            Ok(json!({"ok":true})),
+        ] {
+            let mut app = app();
+            let retry = result
+                .as_ref()
+                .map_or(true, |value| value["deferred"] == true);
+            let attempt = app.startup_attempt.expect("attempt recorded");
+            let _ = app.update(Message::StartupCompleted(
+                1,
+                "/synthetic/2024".into(),
+                result,
+            ));
+            let seconds = if retry { 30 } else { 300 };
+            assert!(!app.startup_due(attempt + Duration::from_secs(seconds - 1)));
+            assert!(app.startup_due(attempt + Duration::from_secs(seconds)));
+            app.startup_attempt = Some(std::time::Instant::now() - Duration::from_secs(seconds));
+            app.online = false;
+            assert!(
+                app.request(&Action::Startup).is_none(),
+                "offline polling must not queue checks"
+            );
+            app.online = true;
+            let _ = app.update(Message::Action(Action::Startup));
+            assert_eq!(app.startup_inflight, Some(2));
+            assert!(!app.pending);
+        }
     }
 }

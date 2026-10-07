@@ -337,7 +337,10 @@
   "Die neue Spielumgebung existiert bereits und wird nicht überschrieben.": "The new game environment already exists and will not be overwritten.",
   "Die neue Spielumgebung wurde nicht vollständig eingerichtet.": "The new game environment was not prepared completely.",
   "Die vollständige Reparatur ist vorbereitet. Das Store-Basispaket wird nach Bestätigung neu heruntergeladen.": "Full repair is ready. The Store base package will be downloaded again after confirmation.",
-  "Die vorherige Spielsitzung wurde unerwartet unterbrochen. Bitte Linux neu starten, bevor Flightdeck die Spielstände erneut verwendet.": "The previous game session ended unexpectedly. Restart Linux before Flightdeck uses the saves again.",
+  "Die vorherige Spielsitzung ist noch nicht freigegeben. Erneut versuchen prüft, ob alle zugehörigen Prozesse beendet sind, und sichert die lokalen Spielstände.": "The previous game session has not been released yet. Retry checks that all associated processes have exited and backs up local saves.",
+  "Die vorherige Spielsitzung muss geprüft werden. Beende die zugehörigen Prozesse und versuche es erneut.": "The previous game session needs to be checked. Close its associated processes and try again.",
+  "Vorherige Spielsitzung wird geprüft und lokale Spielstände werden gesichert …": "Checking the previous game session and backing up local saves …",
+  "Die vorherige Sitzung ist beendet und lokale Spielstände sind gesichert. Der Simulator kann wieder gestartet werden.": "The previous session has ended and local saves have been backed up. You can start the simulator again.",
   "Die vorherige Spielumgebung ist wieder aktiv.": "The previous game environment is active again.",
   "Die vorherige Spielversion ist nicht eindeutig verfügbar. Es wurde nichts gelöscht.": "The previous game version cannot be identified reliably. Nothing has been deleted.",
   "Die vorherige Spielversion wurde wieder aktiviert. Spielstände und Add-ons wurden nicht verändert.": "The previous game version is active again. Saves and add-ons have not been changed.",
@@ -656,5 +659,9 @@
   "{label} ist nicht ausführbar. Bitte die Dateirechte prüfen.": "{label} is not executable. Check its permissions.",
   "{label}: Dateien oder Zugriffsrechte prüfen.": "{label}: check the files and access permissions.",
   "Ältere Runtime ohne verwaltetes Komponentenupdate": "Older runtime without managed component updates",
-  "Übernimmt den von FSDT angelegten Start mit MSFS. Prüfe anschließend das GSX-Menü und die Bodendienste im Simulator.": "Enables the startup entry created by FSDT for MSFS. Then check the GSX menu and ground services in the simulator."
+  "Übernimmt den von FSDT angelegten Start mit MSFS. Prüfe anschließend das GSX-Menü und die Bodendienste im Simulator.": "Enables the startup entry created by FSDT for MSFS. Then check the GSX menu and ground services in the simulator.",
+  "Ungültige Fenix-Paketmetadaten.": "Invalid Fenix package metadata.",
+  "Die Fenix-App wird repariert. Der offizielle Einrichtungsschritt wird erneut ausgeführt …": "Repairing the Fenix app. Rerunning its official setup step …",
+  "Der Fenix-Einrichtungsschritt ist weiterhin fehlgeschlagen. Bitte den neuen Diagnosebericht teilen.": "The Fenix setup step still failed. Please share the new diagnostic report.",
+  "Der Fenix-Einrichtungsschritt wurde erfolgreich repariert. Öffne die Fenix-App, um die Flugzeuginstallation fortzusetzen.": "The Fenix setup step was repaired successfully. Open the Fenix app to continue installing your aircraft."
 }

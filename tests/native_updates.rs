@@ -118,3 +118,32 @@ fn a_commit_cannot_be_cancelled_between_check_and_exchange() {
     assert!(app.cancel("setup", &ctx.id).is_err());
     assert!(!ctx.cancel.load(std::sync::atomic::Ordering::Relaxed));
 }
+
+#[test]
+fn update_capability_uses_local_presence_but_execution_still_verifies_checksum() {
+    let temp = tempfile::tempdir().unwrap();
+    let local = temp.path().join("bin/xodus-cli");
+    write(
+        &local,
+        b"an unverified executable is only a capability hint",
+    );
+    use std::os::unix::fs::PermissionsExt;
+    fs::set_permissions(&local, fs::Permissions::from_mode(0o700)).unwrap();
+    let (advertised, expected, features) = game_update::tools(temp.path(), false).unwrap();
+    assert_eq!(advertised, local);
+    assert!(
+        features
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|value| value == "package-info-json-v1")
+    );
+    assert!(flightdeck::game_install::verify_cli(&local, &expected).is_err());
+    // A machine with the pinned bundle may select that verified fallback;
+    // otherwise execution is unavailable. Neither case admits the local fake.
+    if let Ok((selected, hash, _)) = game_update::tools(temp.path(), true) {
+        assert_ne!(selected, local);
+        assert_eq!(hash, expected);
+        flightdeck::game_install::verify_cli(&selected, &hash).unwrap();
+    }
+}

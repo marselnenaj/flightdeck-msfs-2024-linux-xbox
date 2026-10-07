@@ -26,6 +26,7 @@ pub mod display_refresh;
 pub mod error;
 pub mod fenix;
 pub mod fenix_bundle;
+pub mod fenix_diagnostics;
 pub mod fenix_installer;
 pub mod fenix_setup;
 pub mod files;

@@ -4,7 +4,9 @@ This is a historical investigation note. The current support status is in
 [known issues](known-issues.md). The exporter instructions below remain a tool
 reference, not a request for affected users to repeat diagnostic submissions.
 
-The remaining Marketplace and NVIDIA/audio symptoms are **not confirmed fixed**.
+At the time of these 0.1.8 reports, the remaining Marketplace and NVIDIA/audio
+symptoms were **not confirmed fixed**. See the current [NVIDIA status](graphics.md)
+for subsequent user confirmation.
 The first tester's screenshot says **“Marketplace-Sitzung abgelaufen”**
 (Marketplace session expired). This is the simulator's message; it does not
 establish a timeout in Flightdeck's purchase window.

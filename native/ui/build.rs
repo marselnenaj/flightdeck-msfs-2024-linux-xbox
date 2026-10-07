@@ -23,6 +23,7 @@ fn main() {
         "flask",
         "monitor",
         "check-circle",
+        "info",
         "play",
         "drive",
         "check",

@@ -30,6 +30,49 @@ fn fixture(base: &Path) -> (PathBuf, std::sync::Arc<Launcher>) {
     let app = Launcher::new(base.join("state"), Some(root.to_str().unwrap())).unwrap();
     (root, app)
 }
+
+#[test]
+fn fenix_repair_stop_cancels_the_owned_hook_and_preserves_the_profile() {
+    use std::time::{Duration, Instant};
+    let temp = tempfile::tempdir().unwrap();
+    let (root, app) = fixture(temp.path());
+    let prefix = root.join("local/msfs-prefix");
+    let current = prefix.join("drive_c/users/steamuser/AppData/Local/FenixApp/current");
+    write(&current.join("FenixApp.exe"), b"MZfixture");
+    write(&current.join("sq.version"), b"<package><metadata><id>FenixApp</id><version>1.0.286</version><mainExe>FenixApp.exe</mainExe></metadata></package>");
+    write(&root.join("private/fenix-compat.json"), b"{\"format\":1}");
+    let executable = temp.path().join("runner/files/bin/wine");
+    write(&executable, b"#!/bin/sh\nif [ \"$2\" = --veloapp-install ]; then\n touch \"$WINEPREFIX/hook-started\"\n exec sleep 30\nfi\nexit 0\n");
+    fs::set_permissions(&executable, fs::Permissions::from_mode(0o700)).unwrap();
+    assert_eq!(fenix::snapshot(&app)["can_repair_installer"], true);
+    let before = fenix::identity(&prefix).unwrap();
+    fenix::start(&app, "repair", &json!({})).unwrap();
+    let deadline = Instant::now() + Duration::from_secs(5);
+    while !prefix.join("hook-started").exists() {
+        assert!(
+            Instant::now() < deadline,
+            "repair hook did not start: {}",
+            app.job("fenix")
+        );
+        std::thread::sleep(Duration::from_millis(10));
+    }
+    assert_eq!(fenix::snapshot(&app)["can_stop"], true);
+    fenix::start(&app, "stop", &json!({})).unwrap();
+    let deadline = Instant::now() + Duration::from_secs(5);
+    while app.job("fenix")["state"] == "running" {
+        assert!(Instant::now() < deadline, "Stop did not cancel repair");
+        std::thread::sleep(Duration::from_millis(20));
+    }
+    assert_eq!(app.job("fenix")["state"], "cancelled");
+    let evidence = flightdeck::fenix_diagnostics::load(&root);
+    assert_eq!(evidence["status"], "cancelled");
+    assert!(evidence["hook_exit_code"].is_null());
+    assert_eq!(fenix::identity(&prefix).unwrap(), before);
+    assert_eq!(
+        fs::read(prefix.join("system.reg")).unwrap(),
+        b"retained original registry"
+    );
+}
 #[test]
 fn gsx_recovers_each_interrupted_publish_boundary_and_keeps_the_prior_marker() {
     for phase in 0..3 {

@@ -2,17 +2,15 @@
 
 [English](graphics.md)
 
-**Flightdeck 0.1.11** verwendet auf NVIDIA automatisch Kompatibilitätseinstellungen.
-NVIDIA Low Latency wird für DirectX 11 und 12 deaktiviert; DXVKs bislang
-wirkungslose Abschaltoption ist korrigiert. Die bisherigen VKD3D-Korrekturen für
-mehrere Renderfenster sind enthalten. Damit ist die unvollständige Einrichtung
-korrigiert; die Behebung der schwarzen MSFS-Hauptansicht muss noch auf
-NVIDIA-Hardware bestätigt werden. [Build und Prüfungen](nvidia-renderer.md).
+**Der NVIDIA-Betrieb ist durch Nutzertests bestätigt.** Die Hauptansicht von
+MSFS 2024 funktioniert in den gemeldeten Konfigurationen. Kleinere Probleme können
+weiter auftreten, etwa ein fehlendes oder schwarzes Video beim Start. Die
+Bestätigung gilt für die normale Monitordarstellung; sie ist keine Freigabe für
+jede GPU-/Treiberkombination, VR, DLSS oder Frame Generation.
 
-Aktualisiere über **Updates → Flightdeck**, schließe das Update ab und starte
-den Simulator erneut. Eine bestehende Einstellung **Automatisch** übernimmt das
-neue Profil. Eine Neuinstallation von MSFS, das Zurücksetzen der Wine-Umgebung
-oder zusätzliche Startparameter sind dafür nicht erforderlich.
+Verwende zunächst **Automatisch** und halte Flightdeck über **Updates → Flightdeck**
+aktuell. Nach einem Moduswechsel den Simulator schließen und erneut starten.
+[Aktuelle Einschränkungen](known-issues.de.md) · [Technischer Hintergrund](nvidia-renderer.md)
 
 Flightdeck verwendet die Grafikkomponenten des Runners und den unter Linux
 installierten NVIDIA-Treiber. Ein funktionierender Vulkan-Treiber ist erforderlich.
@@ -40,48 +38,35 @@ Der Kompatibilitätsmodus entfernt keine DLLs, ändert keine Treiber und wählt 
 integrierte Grafik. AMD-/Intel-Systeme behalten ihre bisherige Grafikeinrichtung
 und zeigen diese Auswahl nicht an.
 
-Die native Version 0.2.1 gleicht vor dem Start auch die
+Flightdeck gleicht vor dem Start auch die
 gespeicherten Grafikoptionen von MSFS 2024 ab. Bei abgeschalteten NVIDIA-Funktionen
-ersetzt er gespeichertes DLSS durch TAA und deaktiviert Reflex sowie NVIDIA
+ersetzt Flightdeck gespeichertes DLSS durch TAA und deaktiviert Reflex sowie NVIDIA
 Frame Generation, einschließlich ihrer VR-Einstellungen. Die ursprünglichen
 Werte bleiben in der Wine-Umgebung gesichert. Beim Wechsel zu NVIDIA-Funktionen
 werden nur Werte wiederhergestellt, die noch Flightdecks Änderung entsprechen.
 FSR, andere Frame-Generatoren, Auflösung, Grafikqualität und spätere manuelle
 Änderungen bleiben erhalten. Uneindeutige oder extern verknüpfte Dateien bleiben
-unverändert. Diese Anpassung ist noch nicht im veröffentlichten Paket 0.1.22.
+unverändert.
 
-Der Launcher 0.2.1 startet beide Simulator-Versionen außerdem mit
-`-FastLaunch`. Das übernimmt einen [berichteten Workaround für die schwarze
-Hauptansicht](nvidia-renderer.md#intro-startup-workaround) auch beim
-Standard-Runner und den ausgewählten Proton-Versionen. Die Wirkung beim
-gemeldeten Linux-/NVIDIA-Fall ist damit noch nicht bestätigt.
+Beide Simulator-Versionen starten mit `-FastLaunch`, um den Intro-Pfad zu
+überspringen. Videowiedergabe und 3D-Hauptansicht sind getrennt zu prüfen: Ein
+fehlendes Startvideo bedeutet für sich allein keinen Ausfall der NVIDIA-Darstellung.
 
 Der vollständige Installer ersetzt nur erkannte Grafik-DLLs durch das abgestimmte
 Paket. Eigene Grafikbibliotheken bleiben erhalten. Das reine Quellpaket enthält
 die neu gebauten Bibliotheken nicht; verwende für die Korrektur den vollständigen Installer.
 
-## Verbleibende Einschränkung
+## Verbleibende Probleme melden
 
-Funktionierende Menüs bei schwarzem Globus, schwarzer Free-Flight-Karte oder
-Cockpit-Hauptansicht bleiben ein gemeldetes NVIDIA-Problem. Die Modi früherer
-Versionen haben nicht jeden Fall behoben. Ein funktionierendes zweites Fenster
-bestätigt nicht die Behebung der Hauptansicht. Siehe [bekannte Probleme](known-issues.de.md)
-und die [Steam-Kompatibilitätsreferenz](nvidia-steam-parity.md).
+Das Startvideo kann fehlen oder schwarz bleiben, obwohl Menü, Karte und Cockpit
+normal dargestellt werden. Treiberspezifische Probleme sind weiterhin möglich.
+Bleibt auch die 3D-Hauptansicht schwarz, melde das getrennt mit Flightdeck-Version,
+GPU, Treiber, Grafikmodus und einem [Diagnosebericht](problem-reports.de.md).
 
-Ein betroffener Tester hat **0.1.18**, **Automatisch** und den korrigierten
-Renderer-Build `628afa6f9cfece4` bestätigt. Globus/Karte und Cockpit bleiben
-auf seinem System schwarz. Die 3D-Texturkorrektur behebt diesen Fall somit nicht.
-
-Flightdeck 0.1.19 bietet unter **Einrichtung → Proton-Version
-(experimentell)** eine Auswahl installierter Proton-Versionen mit eigener
-Windows-Umgebung und Rückkehr zum bisherigen Flightdeck-Runner. Sie ermöglicht den
-Vergleich ganzer Wine-/DXVK-/VKD3D-Versionen; eine Behebung des NVIDIA-Problems
-ist damit noch nicht bestätigt. [Ablauf und Grenzen](runtime.md#experimental-proton-selection).
-
-Der lokale Render-Test umfasst gleichzeitig verwendete DirectX-11-/12-Geräte,
-Haupt- und Zweitfenster, Größenänderungen und das Schließen von Fenstern. Er
-besteht auf AMD-Hardware und bestätigt damit weder NVIDIA-Treiberverhalten noch
-MSFS-Flugstabilität.
+Frühere Versionen hatten Meldungen zur schwarzen Hauptansicht. Die damaligen
+Untersuchungen und isolierten Tests bleiben im [technischen Hintergrund](nvidia-renderer.md)
+erhalten; sie beschreiben nicht den allgemeinen aktuellen Kompatibilitätsstand.
+Lokale AMD-Renderertests ersetzen keine NVIDIA-Nutzertests.
 
 Eigene Einstellungen beschreibt die
 [Runtime-Referenz](runtime.md#nvidia-graphics-in-launcher-managed-starts).

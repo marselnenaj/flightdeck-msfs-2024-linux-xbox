@@ -134,7 +134,15 @@ fn disabled_vr_leaves_environment_alone_and_invalid_explicit_runtime_never_falls
         "XR_RUNTIME_JSON".into(),
         manifest.to_string_lossy().into_owned(),
     )]);
-    assert_eq!(vr::prepare(temp.path(), env.clone()).unwrap(), env);
+    assert_eq!(
+        vr::prepare(
+            temp.path(),
+            env.clone(),
+            &std::sync::atomic::AtomicBool::new(false)
+        )
+        .unwrap(),
+        env
+    );
     let selected = vr::choose("auto", &env).unwrap();
     assert_eq!(selected["path"], manifest.to_str().unwrap());
     assert_eq!(selected["active"], true);

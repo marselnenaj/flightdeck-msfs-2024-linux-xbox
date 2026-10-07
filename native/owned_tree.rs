@@ -48,6 +48,30 @@ fn checked(parent: &File, name: &OsString, device: u64) -> Result<fs::Stat> {
     )?;
     Ok(stat)
 }
+fn child_directory(parent: &File, name: &OsString, before: &fs::Stat) -> Result<File> {
+    // st_dev also matches bind mounts on the same filesystem. Enforce the
+    // boundary while opening the directory, before ever entering its contents.
+    // The explicitly selected root may itself be a mount; descendants may not.
+    let child = File::from(
+        fs::openat2(
+            parent,
+            name,
+            fs::OFlags::RDONLY | fs::OFlags::DIRECTORY | fs::OFlags::CLOEXEC,
+            fs::Mode::empty(),
+            fs::ResolveFlags::NO_XDEV | fs::ResolveFlags::NO_SYMLINKS,
+        )
+        .map_err(|error| match error {
+            rustix::io::Errno::XDEV | rustix::io::Errno::LOOP => Error::Invalid(FOREIGN),
+            _ => error.into(),
+        })?,
+    );
+    let info = child.metadata()?;
+    require(
+        [info.dev(), info.ino()] == [before.st_dev, before.st_ino] && info.uid() == files::uid(),
+        FOREIGN,
+    )?;
+    Ok(child)
+}
 struct Walk<'a> {
     device: u64,
     count: usize,
@@ -92,12 +116,7 @@ impl Walk<'_> {
                     .update((target.as_bytes().len() as u64).to_le_bytes());
                 self.hash.update(target.as_bytes());
             } else {
-                let child = files::open_at(folder, &name, true, false)?;
-                let info = child.metadata()?;
-                require(
-                    [info.dev(), info.ino()] == [stat.st_dev, stat.st_ino],
-                    FOREIGN,
-                )?;
+                let child = child_directory(folder, &name, &stat)?;
                 self.scan(&child, &relative, depth + 1)?;
             }
         }
@@ -130,12 +149,7 @@ fn remove_contents(folder: &File, device: u64, count: &mut usize, depth: usize) 
         let before = checked(folder, &name, device)?;
         let directory = FileType::from_raw_mode(before.st_mode) == FileType::Directory;
         if directory {
-            let child = files::open_at(folder, &name, true, false)?;
-            let info = child.metadata()?;
-            require(
-                [info.dev(), info.ino()] == [before.st_dev, before.st_ino],
-                FOREIGN,
-            )?;
+            let child = child_directory(folder, &name, &before)?;
             remove_contents(&child, device, count, depth + 1)?;
         }
         let after = checked(folder, &name, device)?;

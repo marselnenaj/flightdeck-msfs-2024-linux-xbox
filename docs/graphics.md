@@ -2,16 +2,14 @@
 
 [Deutsch](graphics.de.md)
 
-**Flightdeck 0.1.11** uses compatibility settings automatically on NVIDIA.
-It disables NVIDIA Low Latency in both DirectX 11 and 12 and corrects DXVK's
-previously ignored opt-out. The existing VKD3D multiwindow corrections are
-included. This corrects the incomplete compatibility setup; resolution of the
-black MSFS main view still needs confirmation on NVIDIA hardware.
-[Build and validation](nvidia-renderer.md).
+**NVIDIA operation is confirmed by user testing.** MSFS 2024's main view now
+works in reported setups. Smaller issues can remain, including a missing or
+black video during startup. This confirmation concerns normal monitor rendering;
+it does not qualify every GPU/driver combination, VR, DLSS or Frame Generation.
 
-Update through **Updates → Flightdeck**, finish the update and restart the
-simulator. Existing **Automatic** settings adopt the new profile. Reinstalling
-MSFS, resetting the Wine environment or adding launch parameters is unnecessary.
+Use the default **Automatic** mode and keep Flightdeck updated through
+**Updates → Flightdeck**. Close and restart the simulator after changing modes.
+[Current limitations](known-issues.md) · [Technical renderer history](nvidia-renderer.md)
 
 Flightdeck uses the graphics components supplied with its runner and the NVIDIA
 driver installed on Linux. A working Vulkan driver is required. Use your
@@ -38,43 +36,34 @@ restores feature availability on the next start. Compatibility does not remove
 DLLs, change drivers or select integrated graphics. AMD/Intel-only systems do
 not display these controls and keep their existing graphics setup.
 
-The 0.2.1 native release also reconciles MSFS 2024's saved graphics options
+Flightdeck also reconciles MSFS 2024's saved graphics options
 before launch. Saved DLSS selects TAA while NVIDIA features are disabled;
 saved Reflex and NVIDIA frame generation are switched off, including their VR
 settings. Their original values are retained in the Wine profile. Switching
 back to Features restores each value only if it still matches Flightdeck's
 change. FSR, other frame generators, display/quality settings and later manual
 changes are retained. Unsupported, ambiguous or externally linked configuration
-files are left intact. This change is not in the published 0.1.22 package.
+files are left intact.
 
-The 0.2.1 launcher also starts both simulator editions with `-FastLaunch`.
-This applies a [reported intro-path workaround](nvidia-renderer.md#intro-startup-workaround)
-for black main views to the default runner and selected Proton versions. It
-does not yet establish that the reported Linux/NVIDIA case is resolved.
+Both simulator editions start with `-FastLaunch` to skip the intro path.
+Video playback and the main 3D scene are separate checks: a missing startup
+video does not by itself mean that NVIDIA rendering has failed.
 
 The full installer replaces only recognized graphics DLLs with the matched
 bundle. Custom renderer files remain untouched. The source-only package does
 not contain the rebuilt libraries; use the full installer for this correction.
 
-## Remaining limitation
+## Remaining issues and reporting
 
-Working menus with a black globe, free-flight map or primary cockpit view remain
-a reported NVIDIA issue. Earlier releases' modes did not resolve every case.
-A working second render window does not establish that the primary view is fixed.
-An affected tester confirmed that **0.1.18**, **Automatic** mode and corrected
-renderer build `628afa6f9cfece4` still produce a black globe/map and cockpit.
-The 3D-texture correction is therefore not a fix for that reporting system.
-See [known issues](known-issues.md) and the
-[Steam compatibility reference](nvidia-steam-parity.md).
+The startup video may be missing or black even when the menu, map and cockpit
+render normally. Driver-specific problems can still occur. If the main 3D view
+also stays black, report that separately with the Flightdeck version, GPU,
+driver, selected graphics mode and a [diagnostic report](problem-reports.md).
 
-Flightdeck 0.1.19 offers an experimental
-[Proton selection](runtime.md#experimental-proton-selection) for comparing whole
-Wine/DXVK/VKD3D versions with a separate profile and a return to Flightdeck.
-This comparison does not establish that the black main view is fixed.
+Earlier releases had black-main-view reports. Their detailed investigations and
+isolated renderer tests remain in the [technical history](nvidia-renderer.md);
+they are not the current general compatibility status. Local renderer tests on
+AMD do not substitute for NVIDIA user testing.
 
-The local rendering regression covers mixed DirectX 11/12 devices, primary and
-secondary swapchains, resize and destruction. It passed on AMD hardware and does
-not establish NVIDIA driver behavior or MSFS flight stability.
-
-Custom configuration is documented in the
+For custom settings, see the
 [runtime reference](runtime.md#nvidia-graphics-in-launcher-managed-starts).

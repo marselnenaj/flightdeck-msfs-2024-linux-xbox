@@ -45,7 +45,7 @@ impl fmt::Display for Failure {
             "quota" => "Der verfügbare Xbox-Cloud-Speicher reicht für diese Spielstände nicht aus.",
             "cancelled" => "Der Cloud-Vorgang wurde abgebrochen.",
             "deadline" => "Der Cloud-Vorgang hat sein Zeitlimit überschritten.",
-            "unsafe_session" => "Die vorherige Spielsitzung wurde unterbrochen. Bitte Linux neu starten.",
+            "unsafe_session" => "Die vorherige Spielsitzung muss geprüft werden. Beende die zugehörigen Prozesse und versuche es erneut.",
             "invalid_snapshot" => "Die Cloud-Kopie ist ungültig. Bitte erneut herunterladen.",
             "invalid_plan" => "Dieser Spielstandvergleich ist nicht mehr gültig. Bitte erneut vergleichen.",
             "local_storage" | "durability_unknown" => "Die Spielstandsicherung konnte nicht sicher abgeschlossen werden.",

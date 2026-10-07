@@ -28,6 +28,12 @@ text** downloads an optional `.txt` copy; the report is never silently shortened
   cloud errors, and the latest Store check if available.
 - The current cloud-service status, explicitly separate from the last game log.
 
+**Upcoming, source only:** reports also include the latest recorded Fenix
+installer, manager or repair attempt for the selected runtime: timestamps,
+validated app version, runner category, exit codes and a fixed failure category.
+They never include Fenix log text. Prepare a new report after the failed attempt;
+older reports cannot recover this evidence retroactively.
+
 Collection uses Flightdeck's existing diagnostic allowlist. Raw game logs,
 account credentials, authentication tokens, usernames, local paths, hardware
 UUIDs and save contents are not collected. Free text is yours: do not paste

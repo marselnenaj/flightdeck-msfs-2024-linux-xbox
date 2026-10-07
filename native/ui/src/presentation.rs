@@ -42,6 +42,8 @@ pub(crate) fn fenix(data: &Value, status: &Value) -> AddonProgress {
         progress.steps = vec![patched, aircraft, settings, ready];
         progress.title = if ready {
             "Fenix ist startbereit"
+        } else if next == 2 && yes(data, "manager_installed") {
+            "Fenix-App erkannt · Flugzeug noch nicht installiert"
         } else {
             "Einrichtung noch nicht abgeschlossen"
         };
@@ -51,6 +53,9 @@ pub(crate) fn fenix(data: &Value, status: &Value) -> AddonProgress {
             }
             1 => {
                 "Schritt 1 von 4: Richte zuerst den Linux-Patch ein. Flightdeck lädt das geprüfte Paket automatisch herunter."
+            }
+            2 if yes(data, "manager_installed") => {
+                "Schritt 2 von 4: Öffne die vorhandene Fenix-App und installiere dort dein Flugzeug. Schließe die App danach vollständig."
             }
             2 => {
                 "Schritt 2 von 4: Lade den offiziellen Fenix-Installer herunter, wähle die EXE aus und installiere dein Flugzeug."
@@ -160,7 +165,7 @@ pub(crate) fn gsx(data: &Value) -> AddonProgress {
 }
 
 pub(crate) fn launcher_update(data: &Value) -> &'static str {
-    if data.is_null() {
+    if data.is_null() || !data["_error"].is_null() {
         return "Updatestatus wird geladen …";
     }
     let job = &data["job"];
@@ -188,10 +193,29 @@ pub(crate) fn launcher_update(data: &Value) -> &'static str {
 }
 
 pub(crate) fn game_update(data: &Value) -> &'static str {
-    if data.is_null() {
+    if data.is_null() || !data["_error"].is_null() {
         return "Updatestatus wird geladen …";
     }
     let job = &data["job"];
+    // A newer background discovery supersedes a historical manual job's
+    // summary. The job and its diagnostics remain visible below the heading.
+    if yes(data, "background_current") && !super::model::active(job) && job["state"] != "ready" {
+        if yes(data, "background_checking") {
+            return "MSFS-Version wird geprüft";
+        }
+        if yes(data, "auth_required") {
+            return "Anmeldung zum Prüfen erforderlich";
+        }
+        if !s(data, "startup_error").is_empty() {
+            return "Update nicht abgeschlossen";
+        }
+        if yes(data, "update_available") {
+            return "Eine neue Spielversion ist verfügbar";
+        }
+        if data["update_available"] == false && !s(data, "latest_version").is_empty() {
+            return "Deine Spielversion ist aktuell";
+        }
+    }
     if job["operation"] == "verify" && super::model::active(job) {
         return "Spieldateien werden geprüft";
     }
@@ -227,7 +251,7 @@ pub(crate) fn game_update(data: &Value) -> &'static str {
     }
     if yes(data, "auth_required") {
         "Anmeldung zum Prüfen erforderlich"
-    } else if job["state"] == "failed" {
+    } else if job["state"] == "failed" || !s(data, "startup_error").is_empty() {
         "Update nicht abgeschlossen"
     } else if job["state"] == "cancelled" {
         "Update abgebrochen"

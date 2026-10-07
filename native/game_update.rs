@@ -35,7 +35,14 @@ pub fn tools(root: &Path, verify: bool) -> Result<(PathBuf, String, Value)> {
         "Diese Flightdeck-Komponenten unterstützen noch keine sicheren Spielupdates. Bitte Flightdeck aktualisieren.",
     )?;
     let expected = string(&spec["files"], "bin/xodus-cli")?;
-    let mut choices = vec![root.join("bin/xodus-cli")];
+    let local = root.join("bin/xodus-cli");
+    // Polling only advertises capability. Avoid hashing the bundled native
+    // files on every status request; execution always calls tools(root, true)
+    // and still verifies the selected executable against the pinned checksum.
+    if !verify && local.is_file() {
+        return Ok((local, expected.into(), features.clone()));
+    }
+    let mut choices = vec![local];
     if let Some(packaged) = bootstrap::native_path(&lock)? {
         choices.insert(0, packaged.join("bin/xodus-cli"));
     }
@@ -413,6 +420,27 @@ pub fn rollback(app: &Arc<Launcher>) -> Result<Value> {
         }
     }
 }
+pub(crate) fn terminal_job(job: &Value) -> bool {
+    matches!(
+        job["state"].as_str(),
+        Some("complete" | "failed" | "cancelled")
+    )
+}
+fn newer_background(discovered: &Value, job: &Value) -> bool {
+    let timestamp = |value: &Value| {
+        value
+            .as_str()
+            .and_then(|value| chrono::DateTime::parse_from_rfc3339(value).ok())
+    };
+    terminal_job(job)
+        && timestamp(&discovered["started_at"])
+            .or_else(|| timestamp(&discovered["checked_at"]))
+            .is_some_and(|started| {
+                timestamp(&job["completed_at"])
+                    .or_else(|| timestamp(&job["started_at"]))
+                    .is_some_and(|previous| started > previous)
+            })
+}
 pub fn snapshot(app: &Launcher) -> Value {
     let mut s = app.lock();
     Launcher::poll(&mut s);
@@ -425,7 +453,7 @@ pub fn snapshot(app: &Launcher) -> Value {
         .map(|record| record.value.clone())
         .unwrap_or(Value::Null);
     drop(s);
-    let mut value = json!({"available":false,"unavailable_reason":"Zuerst eine Runtime auswählen.","installed_version":null,"latest_version":null,"update_available":null,"can_check":false,"can_start":false,"can_rollback":false,"auth_required":false,"job":null,"can_repair":false,"integrity":{"available":false,"unavailable_reason":"Zuerst eine Runtime auswählen.","can_check":false,"result":null}});
+    let mut value = json!({"available":false,"unavailable_reason":"Zuerst eine Runtime auswählen.","installed_version":null,"latest_version":null,"update_available":null,"can_check":false,"can_start":false,"can_rollback":false,"auth_required":false,"job":null,"can_repair":false,"background_current":false,"checked_at":null,"integrity":{"available":false,"unavailable_reason":"Zuerst eine Runtime auswählen.","can_check":false,"result":null}});
     let Some(root) = root else {
         return value;
     };
@@ -466,11 +494,19 @@ pub fn snapshot(app: &Launcher) -> Value {
         );
     }
     value["can_rollback"] = json!(!busy && history(&root).is_ok());
-    if value["job"].is_null() && value["available"] == true {
+    let background_current = matches!(
+        discovered["state"].as_str(),
+        Some("checking" | "failed" | "complete")
+    ) && (value["job"].is_null() || newer_background(&discovered, &job))
+        && (discovered["state"] != "complete"
+            || discovered["installed_version"] == value["installed_version"]);
+    if background_current && value["available"] == true {
+        value["background_current"] = json!(true);
         value["background_checking"] = json!(discovered["state"] == "checking");
         value["startup_error"] = json!(discovered["error"].as_str().unwrap_or(""));
         value["auth_required"] = json!(discovered["auth_required"] == true);
-        if discovered["installed_version"] == value["installed_version"] {
+        value["checked_at"] = discovered["checked_at"].clone();
+        if discovered["state"] == "complete" {
             for key in ["latest_version", "update_available"] {
                 if let Some(v) = discovered.get(key) {
                     value[key] = v.clone();

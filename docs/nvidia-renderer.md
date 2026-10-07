@@ -1,5 +1,9 @@
 # NVIDIA renderer corrections
 
+This page records technical investigations and their validation at the time.
+For current support, see [NVIDIA graphics](graphics.md): normal rendering is
+confirmed by user testing, with remaining issues such as missing startup video.
+
 Flightdeck 0.1.11 corrects the ignored NVIDIA Low Latency opt-out in the pinned
 DXVK and makes the complete D3D11/D3D12 compatibility profile automatic. It
 includes the VKD3D corrections from 0.1.9. This does not yet establish that the
@@ -189,7 +193,7 @@ inconsistency, not a confirmed diagnosis of the tester's black viewport.
 A synthetic comparison using the published 0.1.22 Python implementation
 reproduces the inconsistent saved values; the candidate replaces them and
 restores the original bytes on a mode change. The
-[Python](../tests/test_graphics_settings.py) and
+[Python](../tests/native_graphics_settings.rs) and
 [native](../tests/native_graphics_settings.rs) regressions also cover migration,
 user changes, interrupted writes, optional package-metadata failures and
 UTF-8/UTF-16 configuration files. The GPU/driver are mocked in this comparison;

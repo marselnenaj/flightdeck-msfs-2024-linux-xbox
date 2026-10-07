@@ -116,7 +116,6 @@ impl Default for Forms {
             text: BTreeMap::from([
                 ("mode", "install".into()),
                 ("game_id", "msfs2024".into()),
-                ("market", "AT".into()),
                 ("graphics", "auto".into()),
                 ("vr", "off".into()),
                 ("proton", "default".into()),
@@ -194,7 +193,12 @@ impl App {
             ),
             Select(edition) => {
                 body = json!({"game_id":edition.id()});
-                ("game/select", safe_idle)
+                // An inactive cloud review belongs to the current runtime.
+                // It must not prevent selecting another installed simulator.
+                (
+                    "game/select",
+                    idle && !["syncing", "playing"].contains(&s(&status["cloud"], "state")),
+                )
             }
             Backup => (
                 "saves/backup",
@@ -429,6 +433,13 @@ impl App {
                         "manager" => (
                             "fenix/manager",
                             change
+                                && yes(data, "manager_installed")
+                                && (yes(data, "installed") || data["state"] == "legacy"),
+                        ),
+                        "repair" => (
+                            "fenix/repair",
+                            change
+                                && yes(data, "can_repair_installer")
                                 && yes(data, "manager_installed")
                                 && (yes(data, "installed") || data["state"] == "legacy"),
                         ),
@@ -772,7 +783,10 @@ impl App {
                         && !s(&self.data("problem-reports")["draft"]["report"], "id").is_empty(),
                 )
             }
-            Startup => ("updates/check-startup", !self.startup_checked),
+            Startup => (
+                "updates/check-startup",
+                self.startup_due(std::time::Instant::now()),
+            ),
         };
         allowed.then(|| Request {
             path,

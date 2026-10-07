@@ -117,6 +117,17 @@ weiteren automatischen Sitzung ein Linux-Neustart erforderlich sein. Dadurch
 werden Spielstände nicht verändert, während ein verwaister Spielprozess noch
 laufen könnte. Nach normalem Beenden oder dem Stoppknopf ist kein Neustart nötig.
 
+**Für die nächste Version, nur im Quellcode:** **Sitzung prüfen** kann diese Sperre
+ohne Linux-Neustart lösen. Flightdeck prüft zunächst, ob die zugehörigen Prozesse
+beendet sind, und sichert lokale Spielstände. Scheitert die Prüfung, bleibt die
+Sperre bestehen. Die Aktion startet MSFS nicht und lädt keine Spielstände hoch;
+der nächste normale Start gleicht ausstehende lokale und Cloud-Änderungen ab.
+[Details](native-ui.md#upcoming-session-and-control-fixes-source-only).
+
+Die Prüfung schützt auch den normalen Beendigungspfad. Verwendet noch eine
+Windows-Anwendung dasselbe Profil, schließe sie vor der erneuten Sitzungsprüfung
+und dem Abgleich.
+
 ## Erweiterte Werkzeuge
 
 Unter **Spielstände → Erweiterte Optionen** findest du manuellen Vergleich,

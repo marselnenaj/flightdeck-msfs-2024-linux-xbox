@@ -14,6 +14,9 @@ use std::{
 /// This registry belongs to this Wine profile, never the Linux host.
 pub fn prepare(wine: &Wine<'_>) -> Result<()> {
     for (name, value) in crate::wine::DOTNET_COMPATIBILITY {
+        if wine.cancel.load(std::sync::atomic::Ordering::Acquire) {
+            return Err(Error::Cancelled);
+        }
         wine.reg(r"HKCU\Environment", name, value, "REG_SZ")?;
     }
     Ok(())
@@ -24,16 +27,43 @@ pub struct Hooks {
     pending: bool,
     failed: bool,
     icu: bool,
+    timed_out: bool,
+    pub hook: Option<&'static str>,
+    pub exit_code: Option<i32>,
+    pub package_version: Option<String>,
+    package_is_fenix: bool,
 }
 impl Hooks {
     pub fn line(&mut self, line: &str) {
+        if let Some(id) = line
+            .split_once("Package ID:")
+            .map(|(_, value)| value.trim())
+        {
+            self.package_is_fenix = id == "FenixApp";
+        }
+        if self.package_is_fenix
+            && let Some(version) = line
+                .split_once("Package Version:")
+                .map(|(_, value)| value.trim())
+            && crate::fenix_diagnostics::valid_version(version)
+        {
+            self.package_version = Some(version.into());
+        }
         if line.contains("Running --veloapp-install hook")
             || line.contains("Running --veloapp-updated hook")
         {
             self.pending = true;
+            self.hook = Some(if line.contains("--veloapp-install") {
+                "install"
+            } else {
+                "updated"
+            });
         }
         if line.contains("Hook executed successfully") {
             self.pending = false;
+            if !self.failed {
+                self.exit_code = Some(0);
+            }
         }
         if line.contains("Hook exited with non-zero exit code")
             || line.contains("Hook timed out")
@@ -42,8 +72,32 @@ impl Hooks {
             self.pending = false;
             self.failed = true;
         }
+        if line.contains("Hook timed out") {
+            self.timed_out = true;
+        }
+        if let Some(code) = line
+            .split_once("Hook exited with non-zero exit code:")
+            .and_then(|(_, value)| value.trim().parse::<i32>().ok())
+        {
+            self.exit_code = Some(code);
+        }
         if line.contains("Cannot get symbol") && line.contains("libicu") {
             self.icu = true;
+        }
+    }
+    pub fn failure(&self) -> Option<&'static str> {
+        if self.icu {
+            Some("icu_symbol_missing")
+        } else if self.timed_out {
+            Some("hook_timeout")
+        } else if self.exit_code.is_some_and(|code| code != 0) {
+            Some("hook_nonzero")
+        } else if self.failed {
+            Some("hook_failed")
+        } else if self.pending {
+            Some("hook_incomplete")
+        } else {
+            None
         }
     }
     pub fn check(&self) -> Result<()> {
@@ -62,6 +116,9 @@ impl Hooks {
 /// Read only this invocation, so an old failed install cannot poison a retry.
 /// Read line fragments with a fixed buffer: third-party output is untrusted.
 pub fn check_log(path: &Path, original: &File, offset: u64) -> Result<()> {
+    scan_log(path, original, offset)?.check()
+}
+pub fn scan_log(path: &Path, original: &File, offset: u64) -> Result<Hooks> {
     let mut file = files::open_at(rustix::fs::CWD, path, false, false)?;
     let before = original.metadata()?;
     let after = file.metadata()?;
@@ -90,7 +147,11 @@ pub fn check_log(path: &Path, original: &File, offset: u64) -> Result<()> {
             if byte == b'\n' {
                 hooks.line(&String::from_utf8_lossy(&line));
                 line.clear();
-            } else if line.len() < 4096 {
+            } else {
+                require(
+                    line.len() < 4096,
+                    "Das Fenix-Protokoll ist zu groß. Bitte den lokalen Installationsfehler prüfen.",
+                )?;
                 line.push(byte);
             }
         }
@@ -100,7 +161,82 @@ pub fn check_log(path: &Path, original: &File, offset: u64) -> Result<()> {
     if !line.is_empty() {
         hooks.line(&String::from_utf8_lossy(&line));
     }
-    hooks.check()
+    let completed = reader.get_ref().metadata()?;
+    require(
+        remaining == 0
+            && (
+                after.len(),
+                after.mtime(),
+                after.mtime_nsec(),
+                after.ctime(),
+                after.ctime_nsec(),
+            ) == (
+                completed.len(),
+                completed.mtime(),
+                completed.mtime_nsec(),
+                completed.ctime(),
+                completed.ctime_nsec(),
+            ),
+        "Das Fenix-Protokoll wurde während der Installation verändert.",
+    )?;
+    Ok(hooks)
+}
+
+/// Validate the package identity and bounded version before invoking its
+/// official post-install command. Only the unique contained FenixApp is used.
+pub fn installed_version(prefix: &Path) -> Result<String> {
+    let app = crate::fenix_setup::manager(prefix)?;
+    let mut executable = files::open_at(rustix::fs::CWD, &app, false, false)?;
+    let mut magic = [0; 2];
+    std::io::Read::read_exact(&mut executable, &mut magic)?;
+    require(magic == *b"MZ", "Ungültige Fenix-Paketmetadaten.")?;
+    let directory = app
+        .parent()
+        .ok_or(Error::Invalid("Ungültige Fenix-Paketmetadaten."))?;
+    let package = crate::xml::parse(&files::read(&directory.join("sq.version"), 65536)?)?;
+    let metadata = package
+        .child("metadata")
+        .ok_or(Error::Invalid("Ungültige Fenix-Paketmetadaten."))?;
+    let version = metadata
+        .child("version")
+        .map(|value| value.text())
+        .unwrap_or_default();
+    require(
+        package.named("package")
+            && metadata
+                .child("id")
+                .is_some_and(|value| value.text() == "FenixApp")
+            && metadata
+                .child("mainExe")
+                .is_some_and(|value| value.text() == "FenixApp.exe")
+            && crate::fenix_diagnostics::valid_version(&version),
+        "Ungültige Fenix-Paketmetadaten.",
+    )?;
+    Ok(version)
+}
+
+/// Run only the official post-install step, never the application/login UI.
+/// The caller owns the idle profile reservation; cancellation terminates this
+/// subprocess through the same bounded process runner used by setup.
+pub fn repair(wine: &Wine<'_>) -> Result<std::process::ExitStatus> {
+    if wine.cancel.load(std::sync::atomic::Ordering::Acquire) {
+        return Err(Error::Cancelled);
+    }
+    let version = installed_version(&wine.prefix)?;
+    let app = crate::fenix_setup::manager(&wine.prefix)?;
+    prepare(wine)?;
+    if wine.cancel.load(std::sync::atomic::Ordering::Acquire) {
+        return Err(Error::Cancelled);
+    }
+    let mut command = wine.command()?;
+    command
+        .arg(&app)
+        .args(["--veloapp-install", &version])
+        .current_dir(
+            app.parent()
+                .ok_or(Error::Invalid("Ungültige Fenix-Paketmetadaten."))?,
+        );
+    crate::process::run(&mut command, Duration::from_secs(60), wine.cancel)
 }
 
 /// Velopack bootstrappers can exit before the installer or app they started.
@@ -184,5 +320,88 @@ mod tests {
         assert!(check_log(&path, &log, offset).is_ok());
         writeln!(log, "Hook timed out").expect("write");
         assert!(check_log(&path, &log, offset).is_err());
+    }
+
+    #[test]
+    fn hook_evidence_contains_only_typed_package_and_failure_fields() {
+        let mut hooks = Hooks::default();
+        hooks.line("[INFO] Package Version: 9.9.9");
+        assert_eq!(hooks.package_version, None);
+        hooks.line("[INFO] Package ID: FenixApp");
+        hooks.line("[INFO] Package Version: 1.0.286");
+        hooks.line("[INFO] Running --veloapp-install hook...");
+        hooks.line("[WARN] Hook exited with non-zero exit code: 3");
+        assert_eq!(hooks.package_version.as_deref(), Some("1.0.286"));
+        assert_eq!(hooks.hook, Some("install"));
+        assert_eq!(hooks.exit_code, Some(3));
+        assert_eq!(hooks.failure(), Some("hook_nonzero"));
+        hooks.line("Hook executed successfully");
+        assert_eq!(hooks.failure(), Some("hook_nonzero"));
+        hooks.line("Cannot get symbol u_charsToUChars from libicuuc");
+        assert_eq!(hooks.failure(), Some("icu_symbol_missing"));
+        let mut malicious = Hooks::default();
+        malicious.line("Package ID: FenixApp");
+        malicious.line("Package Version: user@example.org/token");
+        malicious.line("Hook exited with non-zero exit code: https://private.example/token");
+        assert_eq!(malicious.package_version, None);
+        assert_eq!(malicious.exit_code, None);
+    }
+
+    #[test]
+    fn oversized_line_cannot_hide_a_failed_hook() {
+        use std::io::Write;
+        let temp = tempfile::tempdir().expect("fixture");
+        let path = temp.path().join("installer.log");
+        let mut log = crate::process::log(&path).expect("log");
+        log.write_all(&vec![b'x'; 4096]).expect("long line");
+        writeln!(log, "Hook exited with non-zero exit code: 3").expect("failure suffix");
+        assert!(scan_log(&path, &log, 0).is_err());
+    }
+
+    #[test]
+    fn repair_validates_package_then_runs_only_official_hook_with_scoped_settings() {
+        use std::{os::unix::fs::PermissionsExt, sync::atomic::AtomicBool};
+        let temp = tempfile::tempdir().expect("fixture");
+        let prefix = temp.path().join("prefix");
+        let current = prefix.join("drive_c/users/steamuser/AppData/Local/FenixApp/current");
+        files::private_dir(&current).expect("app directory");
+        files::private_dir(&prefix.join("drive_c/windows/system32")).expect("system32");
+        files::atomic(&current.join("FenixApp.exe"), b"MZfixture").expect("app");
+        let manifest = current.join("sq.version");
+        files::atomic(&manifest, b"<package><metadata><id>FenixApp</id><version>1.0.286</version><mainExe>FenixApp.exe</mainExe></metadata></package>").expect("metadata");
+        assert_eq!(installed_version(&prefix).expect("version"), "1.0.286");
+        let runner = temp.path().join("runner");
+        files::private_dir(&runner.join("files/bin")).expect("runner");
+        let executable = runner.join("files/bin/wine");
+        files::atomic(&executable, b"#!/bin/sh\nprintf '%s\\n' \"$*\"\n[ \"$DOTNET_SYSTEM_GLOBALIZATION_USENLS\" = 1 ] && [ \"$DOTNET_ReadyToRun\" = 0 ]\n").expect("fixture executable");
+        std::fs::set_permissions(&executable, std::fs::Permissions::from_mode(0o700))
+            .expect("mode");
+        let log = temp.path().join("repair.log");
+        let cancel = AtomicBool::new(false);
+        let wine = Wine::new(&prefix, &runner, &log, &cancel).expect("wine");
+        assert!(repair(&wine).expect("repair").success());
+        let output = String::from_utf8(files::read(&log, 65536).expect("log")).expect("utf8");
+        let lines = output.lines().collect::<Vec<_>>();
+        assert_eq!(lines.len(), 3);
+        assert!(
+            lines[0].starts_with("reg add HKCU\\Environment /v DOTNET_SYSTEM_GLOBALIZATION_USENLS")
+        );
+        assert!(lines[1].starts_with("reg add HKCU\\Environment /v DOTNET_ReadyToRun"));
+        assert!(lines[2].ends_with("FenixApp.exe --veloapp-install 1.0.286"));
+        cancel.store(true, std::sync::atomic::Ordering::Release);
+        assert!(matches!(repair(&wine), Err(Error::Cancelled)));
+        assert_eq!(
+            files::read(&log, 65536).expect("no cancelled subprocess"),
+            output.as_bytes()
+        );
+        cancel.store(false, std::sync::atomic::Ordering::Release);
+        files::atomic(&manifest, b"<package><metadata><id>OtherApp</id><version>1.0.286</version><mainExe>FenixApp.exe</mainExe></metadata></package>").expect("wrong identity");
+        assert!(repair(&wine).is_err());
+        assert_eq!(
+            files::read(&log, 65536).expect("unchanged log"),
+            output.as_bytes()
+        );
+        files::atomic(&manifest, b"<package><metadata><id>FenixApp</id><version>1.0.286 --unsafe</version><mainExe>FenixApp.exe</mainExe></metadata></package>").expect("bad version");
+        assert!(repair(&wine).is_err());
     }
 }

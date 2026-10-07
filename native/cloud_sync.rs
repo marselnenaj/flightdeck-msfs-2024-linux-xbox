@@ -53,6 +53,9 @@ pub fn automatic(s: &crate::backend::State) -> Value {
         .runtime
         .as_deref()
         .is_some_and(|root| crate::cloud_runtime::available(root, true));
+    automatic_enabled(s, enabled)
+}
+fn automatic_enabled(s: &crate::backend::State, enabled: bool) -> Value {
     let current = s.cloud_data.auto_runtime == s.runtime;
     let mut value = if current {
         s.cloud.clone()
@@ -60,10 +63,37 @@ pub fn automatic(s: &crate::backend::State) -> Value {
         json!({"state":"idle","phase":null,"message":"Cloud-Spielstände werden vor dem Start und nach dem Beenden automatisch abgeglichen.","error_code":null,"error_details":{},"request_id":null,"last_synced_at":null,"timings":{}})
     };
     let active = current && s.active.as_ref().is_some_and(|a| a.kind == "cloud-auto");
-    let attention = enabled && current && value["state"] == "attention" && !active && !s.closing;
-    let review = current && s.cloud_data.review.is_some();
+    // A durable fence outlives the service's in-memory cloud state. Surface it
+    // only when idle; every legitimate running session also has this fence.
+    let pending = if enabled && s.active.is_none() && s.process.is_none() && !s.closing {
+        s.runtime.as_deref().and_then(|root| {
+            crate::cloud_process_guard::recovery_id(root)
+                .unwrap_or_else(|_| Some("interrupted-invalid".into()))
+        })
+    } else {
+        None
+    };
+    if let Some(id) = &pending {
+        if !current || value["error_code"] != "unsafe_session" {
+            value["request_id"] = json!(id);
+        }
+        value["state"] = json!("attention");
+        value["phase"] = json!("before_start");
+        value["error_code"] = json!("unsafe_session");
+        value["message"] = json!(
+            "Die vorherige Spielsitzung ist noch nicht freigegeben. Erneut versuchen prüft, ob alle zugehörigen Prozesse beendet sind, und sichert die lokalen Spielstände."
+        );
+    }
+    let attention = enabled
+        && (current || pending.is_some())
+        && value["state"] == "attention"
+        && !active
+        && !s.closing;
+    let review = current && pending.is_none() && s.cloud_data.review.is_some();
     let code = value["error_code"].as_str().unwrap_or("");
-    let retry = attention && code != "unsafe_session";
+    // An interrupted session gets a recovery-only retry: verify no owned
+    // writers remain and preserve a local backup before clearing its fence.
+    let retry = attention;
     let sign_in = attention && matches!(code, "authentication" | "auth_required" | "unauthorized");
     let local = attention
         && !review
@@ -102,6 +132,7 @@ pub fn automatic(s: &crate::backend::State) -> Value {
     };
     value
 }
+
 pub fn snapshot(app: &Arc<Launcher>) -> Value {
     let mut s = app.lock();
     Launcher::poll(&mut s);
@@ -399,5 +430,42 @@ pub fn post(app: &Arc<Launcher>, action: &str, data: &Value) -> Result<Value> {
         "discard-plan" => discard(app, string(data, "plan_id")?),
         "cancel" => app.cancel("cloud", string(data, "job_id")?),
         _ => start(app, action, data),
+    }
+}
+
+#[cfg(test)]
+mod recovery_tests {
+    use super::*;
+    #[test]
+    fn persisted_fence_is_recoverable_after_service_restart_but_not_during_owned_work() {
+        let temp = tempfile::tempdir().expect("state");
+        let root = temp.path().join("runtime");
+        files::private_dir(&root.join("private")).expect("private");
+        let lease = files::Lease::acquire(&root.join("private/play.lock"), true).expect("lease");
+        crate::cloud_process_guard::mark(&root, &lease.0).expect("fence");
+        drop(lease);
+        let app = Launcher::new(temp.path().join("launcher"), None).expect("launcher");
+        let mut state = app.lock();
+        state.runtime = Some(root.clone());
+        let status = automatic_enabled(&state, true);
+        assert_eq!(status["state"], "attention");
+        assert_eq!(status["error_code"], "unsafe_session");
+        assert_eq!(status["can_retry"], true);
+        assert_eq!(status["can_play_local"], false);
+        assert!(
+            status["request_id"]
+                .as_str()
+                .is_some_and(|id| id.starts_with("interrupted-"))
+        );
+        let ctx = app
+            .reserve_locked(&mut state, "cloud-auto", "recover", true)
+            .expect("reserve");
+        assert_ne!(automatic_enabled(&state, true)["state"], "attention");
+        drop(state);
+        app.finish(&ctx, Ok(json!({})), false);
+        let mut state = app.lock();
+        assert_eq!(automatic_enabled(&state, true)["can_retry"], true);
+        state.runtime = None;
+        assert_eq!(automatic_enabled(&state, false)["state"], "idle");
     }
 }

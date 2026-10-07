@@ -26,6 +26,14 @@ pub struct State {
     pub records: BTreeMap<PathBuf, Record>,
     pub worker: Option<Arc<AtomicBool>>,
 }
+fn retry_due(record: &Record, now: Instant) -> bool {
+    let delay = Duration::from_secs(if record.value["state"] == "failed" {
+        300
+    } else {
+        1800
+    });
+    now.saturating_duration_since(record.attempt) >= delay
+}
 pub fn discover(root: &Path, cancel: &AtomicBool) -> Result<Value> {
     let game = Game::for_runtime(root)?;
     let current = integrity::installed_identity(&game.path(root), game)?;
@@ -55,10 +63,12 @@ pub fn check(app: &Arc<Launcher>) -> Result<Value> {
     if s.startup_updates
         .records
         .get(&root)
-        .is_some_and(|v| v.attempt.elapsed() < Duration::from_secs(1800))
-        || s.jobs
-            .get("setup")
-            .is_some_and(|v| v["mode"] == "update" && v["runtime_path"].as_str() == root.to_str())
+        .is_some_and(|record| !retry_due(record, Instant::now()))
+        || s.jobs.get("setup").is_some_and(|job| {
+            job["mode"] == "update"
+                && job["runtime_path"].as_str() == root.to_str()
+                && !game_update::terminal_job(job)
+        })
     {
         return Ok(json!({"ok":true}));
     }
@@ -73,12 +83,13 @@ pub fn check(app: &Arc<Launcher>) -> Result<Value> {
         s.startup_updates.records.remove(&old);
     }
     let cancel = Arc::new(AtomicBool::new(false));
+    let started_at = files::now();
     s.startup_updates.worker = Some(Arc::clone(&cancel));
     s.startup_updates.records.insert(
         root.clone(),
         Record {
             attempt: Instant::now(),
-            value: json!({"state":"checking"}),
+            value: json!({"state":"checking","started_at":started_at}),
         },
     );
     drop(s);
@@ -89,15 +100,16 @@ pub fn check(app: &Arc<Launcher>) -> Result<Value> {
                 .unwrap_or(Err(Error::Invalid(
                     "Die Updateprüfung konnte nicht abgeschlossen werden.",
                 )));
-        let value = match result {
+        let mut value = match result {
             Ok(value) => value,
             Err(Error::AuthRequired(message)) => {
-                json!({"state":"failed","auth_required":true,"error":message})
+                json!({"state":"failed","auth_required":true,"error":message,"checked_at":files::now()})
             }
             Err(_) => {
-                json!({"state":"failed","error":"Die Updateprüfung konnte nicht abgeschlossen werden. Verbindung prüfen und erneut versuchen."})
+                json!({"state":"failed","error":"Die Updateprüfung konnte nicht abgeschlossen werden. Verbindung prüfen und erneut versuchen.","checked_at":files::now()})
             }
         };
+        value["started_at"] = json!(started_at);
         let mut s = app.lock();
         if !cancel.load(Ordering::Relaxed)
             && !s.closing
@@ -108,4 +120,25 @@ pub fn check(app: &Arc<Launcher>) -> Result<Value> {
         s.startup_updates.worker = None;
     });
     Ok(json!({"ok":true}))
+}
+
+#[cfg(test)]
+mod retry_tests {
+    use super::*;
+
+    #[test]
+    fn failed_game_discovery_retries_sooner_without_expiring_a_successful_check() {
+        let attempt = Instant::now();
+        let mut record = Record {
+            attempt,
+            value: json!({"state":"failed"}),
+        };
+        assert!(!retry_due(&record, attempt + Duration::from_secs(299)));
+        assert!(retry_due(&record, attempt + Duration::from_secs(300)));
+        for state in ["complete", "checking"] {
+            record.value = json!({"state":state});
+            assert!(!retry_due(&record, attempt + Duration::from_secs(1799)));
+            assert!(retry_due(&record, attempt + Duration::from_secs(1800)));
+        }
+    }
 }

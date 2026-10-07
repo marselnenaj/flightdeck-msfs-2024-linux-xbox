@@ -32,6 +32,13 @@ Grafikkomponenten und Einstellungen, numerische Anmelde-, Store- und
 Cloud-Fehler sowie die letzte Store-Prüfung. Der aktuelle Cloud-Dienststatus
 ist ausdrücklich getrennt vom letzten Spiellog gekennzeichnet.
 
+**Für die nächste Version, nur im Quellcode:** Berichte enthalten außerdem den
+letzten erfassten Fenix-Installer-, Manager- oder Reparaturversuch der ausgewählten
+Installation: Zeitpunkte, geprüfte App-Version, Runner-Kategorie, Exitcodes und
+eine feste Fehlerkategorie. Fenix-Logtext wird nicht übernommen. Nach dem Fehler
+einen neuen Bericht vorbereiten; alte Berichte enthalten diesen Befund nicht
+rückwirkend.
+
 Flightdeck übernimmt keine rohen Spiellogs, Kontozugangsdaten, Anmeldetokens,
 Benutzernamen, lokalen Pfade, Hardware-UUIDs oder Spielstandinhalte. Das
 Beschreibungsfeld ist Freitext: Füge dort keine Passwörter oder privaten Logs

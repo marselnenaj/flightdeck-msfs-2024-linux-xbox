@@ -505,6 +505,24 @@ impl App {
         }
     }
     pub(crate) fn overview_details(&self, width: f32, _compact: bool) -> Element<'_, Message> {
+        let updates = self.card(
+            "Updates",
+            column![
+                self.overview_update_status("launcher-update", "Flightdeck"),
+                self.overview_update_status("game-update", "Simulator"),
+                label(
+                    self.tr(
+                        "Automatische Prüfung · Downloads startest du selbst.",
+                        "Automatic checks · You choose when to download."
+                    ),
+                    13.0,
+                    Weight::Normal,
+                    MUTED
+                ),
+                self.link(self.tr("Updates öffnen", "Open updates"), Page::Updates)
+            ]
+            .spacing(12),
+        );
         let installation = self.card(
             "Installation",
             column![
@@ -534,7 +552,7 @@ impl App {
             ]
             .spacing(14),
         );
-        if width < 760.0 {
+        let details: Element<'_, Message> = if width < 760.0 {
             column![installation, saves].spacing(20).into()
         } else {
             row![
@@ -543,7 +561,40 @@ impl App {
             ]
             .spacing(22)
             .into()
-        }
+        };
+        column![updates, details].spacing(20).into()
+    }
+    fn overview_update_status(&self, key: &'static str, name: &str) -> Element<'_, Message> {
+        let data = self.data(key);
+        let status = if !self.fresh(key) {
+            self.tr("Status nicht verfügbar", "Status unavailable")
+                .to_string()
+        } else if key == "launcher-update" {
+            self.t(presentation::launcher_update(data)).to_string()
+        } else {
+            self.t(presentation::game_update(data)).to_string()
+        };
+        let available = self.fresh(key) && yes(data, "update_available");
+        let version = if available {
+            format!(" · {}", s(data, "latest_version"))
+        } else {
+            String::new()
+        };
+        label(
+            format!("{name}: {status}{version}"),
+            15.0,
+            if available {
+                Weight::Semibold
+            } else {
+                Weight::Normal
+            },
+            if available {
+                self.edition.accent()
+            } else {
+                MUTED
+            },
+        )
+        .into()
     }
     fn save_summary(&self) -> Element<'_, Message> {
         let saves = &self.status()["saves"];
@@ -731,10 +782,14 @@ impl App {
             }
         }
         let mut launcher_view=column![self.paragraph(self.t("Lade neue Flightdeck-Versionen direkt von GitHub. Deine Einstellungen bleiben erhalten.").to_string()),self.job("launcher-update"),self.actions(&launcher_actions)].spacing(16);
-        for key in ["unavailable_reason", "notes"] {
+        for key in ["unavailable_reason"] {
             if !s(launcher, key).is_empty() {
                 launcher_view = launcher_view.push(self.paragraph(s(launcher, key)));
             }
+        }
+        if !s(launcher, "notes").is_empty() {
+            launcher_view = launcher_view
+                .push(self.release_notes(s(launcher, "notes"), s(launcher, "release_url")));
         }
         if yes(launcher, "can_rollback") {
             launcher_view = launcher_view.push(self.disclosure(
@@ -821,7 +876,10 @@ impl App {
         ]
         .spacing(16);
         let mut page = column![
-            self.heading(self.t("Alles auf dem neuesten Stand.").to_string()),
+            self.heading(self.tr(
+                "Updates für Flightdeck & Simulator",
+                "Flightdeck & simulator updates"
+            )),
             self.paragraph(
                 self.t("Aktualisiere Flightdeck und deinen Simulator direkt hier im Launcher.")
                     .to_string()

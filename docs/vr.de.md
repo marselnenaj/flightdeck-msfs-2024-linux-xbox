@@ -47,8 +47,8 @@ GPU-UUID wird als Fehler gemeldet.
 Beginne bei NVIDIA mit dem Grafikmodus **Automatisch**. Er deaktiviert DLSS,
 Reflex, NVIDIA Frame Generation und NVAPI zugunsten der Kompatibilität.
 Die experimentellen NVIDIA-Funktionen sind für VR nicht erforderlich.
-Die bisher gemeldete schwarze NVIDIA-Hauptansicht gilt weiterhin nicht als
-nachweislich behoben. Treiber, Runtime, Headset und bei drahtloser Verbindung
+Die [normale NVIDIA-Darstellung](graphics.de.md) ist durch Nutzertests bestätigt;
+VR muss gesondert geprüft werden. Treiber, Runtime, Headset und bei drahtloser Verbindung
 auch Encoder und Netzwerk beeinflussen, ob eine Kombination funktioniert.
 
 ## Fehler eingrenzen

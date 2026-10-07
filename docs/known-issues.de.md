@@ -1,66 +1,42 @@
 # Bekannte Probleme
 
-[English](known-issues.md)
+[English](known-issues.md) · [Dokumentation](index.md)
 
-Stand: Flightdeck 0.2.4, 5. Oktober 2026.
+Stand: 7. Oktober 2026. Der veröffentlichte Installer ist 0.2.5. Änderungen für
+die nächste Version sind im [Changelog](changelog.md#unreleased) als **nur im
+Quellcode** gekennzeichnet.
 
-**VR:** Die optionale OpenXR-Einrichtung für WiVRn, SteamVR und Monado ist
-verfügbar. DirectX-11-/DirectX-12-Stereo-Frames bestehen den Test auf AMD mit
-simuliertem Monado-Headset. Echte Headsets, NVIDIA-Hardware und tatsächliche
-MSFS-VR-Flüge sind noch nicht bestätigt. [Einrichtung und Teststand](vr.de.md).
+- **NVIDIA:** Die normale MSFS-2024-Darstellung ist durch Nutzertests bestätigt.
+  Kleinere Probleme bleiben möglich, etwa ein fehlendes oder schwarzes Startvideo.
+  Das bestätigt nicht jede GPU-/Treiberkombination, VR oder NVIDIA-Zusatzfunktionen.
+  Bleiben auch Hauptkarte oder Cockpit schwarz, bitte getrennt melden.
+  [Grafikeinrichtung und Fehlermeldungen](graphics.de.md).
+- **Fenix-Installation:** Bei „application install hook failed“ können bereits
+  FenixApp-Dateien vorhanden sein, obwohl die Einrichtung nicht abgeschlossen ist.
+  Ein reproduzierter ICU-/.NET-Fall ist reparierbar; die allgemeine Meldung allein
+  verrät die Ursache nicht. In 0.2.5 den Installer schließen und über **Mods →
+  Fenix → Installer starten** erneut ausführen. **Nur im Quellcode:** **Fenix-App
+  reparieren** wiederholt den offiziellen Einrichtungsschritt der vorhandenen
+  App; die Diagnose erfasst den letzten Versuch. Eine erkannte FenixApp bestätigt
+  weder die Flugzeuginstallation noch die Aktivierung.
+  [Fenix einrichten](addons.de.md#fenix-a320-einrichten) · [Prüfumfang](native-ui.md#fenix-install-hook-warning).
+- **Unterbrochene Sitzungen und Schaltflächen:** **Nur im Quellcode:** sichere
+  Sitzungsprüfung, Reparatur verwaister Dienst-Sockets und korrigierte Anzeigen
+  für Start, Stop und Simulatorauswahl beheben Startblockaden nach unterbrochenen
+  Sitzungen. [Details](native-ui.md#upcoming-session-and-control-fixes-source-only).
+- **Cloud-Spielstände:** Wiederholte Sync-Fehler bleiben gemeldet.
+  Wiederherstellung und lokales Spielen beschreibt die
+  [Cloud-Anleitung](cloud-saves.de.md). Lokales Spielen bestätigt keinen Cloud-Abgleich.
+- **Microsoft-Anmeldung:** Vor einem erneuten Versuch Flightdeck aktualisieren
+  und neu starten. Bleibt der Fehler bestehen, den angezeigten Code und die
+  Launcher-Version melden. [Anmeldung und Store-Reparatur](store-session-refresh.md).
+- **Marketplace:** Die blockierende Meldung „Marketplace-Sitzung abgelaufen“
+  bleibt im Simulator gemeldet. Ein Neustart ist eine Wiederherstellung, keine
+  bestätigte dauerhafte Behebung. Abgeschlossene Käufe und die Auslieferung
+  gekaufter Inhalte bleiben unbestätigt. [Marketplace-Umfang](marketplace-collections.md).
+- **VR:** OpenXR-Einrichtung für WiVRn, SteamVR und Monado ist verfügbar. Stereo-
+  Tests bestehen auf AMD mit simuliertem Headset. Echte Headsets, NVIDIA-VR und
+  MSFS-VR-Flüge müssen gesondert geprüft werden. [VR einrichten](vr.de.md).
 
-**Komponentenupdates:** 0.1.10 behebt, dass ältere Store-Binaries bei angepassten
-Startskripten erhalten blieben. Aktualisiere Flightdeck und öffne es bei
-geschlossenem Simulator erneut; die Store-Prüfung sollte anschließend den
-Komponentenschritt bestehen. Eigene Skripte bleiben erhalten. Die weiteren
-Online-Prüfungen sind damit noch nicht bestätigt.
-
-Die Behebung der folgenden gemeldeten Fehler ist noch nicht bestätigt. Sie betreffen nicht
-jede Installation. Ein Anmeldefehler kann verhindern, dass die Darstellung im
-Simulator geprüft wird.
-
-## Aktueller Umfang
-
-- **Microsoft-Anmeldung:** 0.1.16 verarbeitet Verifizierungsschritte innerhalb
-  einer Antwort mit mehreren Tokens, verkürzte SOAP-Fehlerantworten und
-  verschlüsselte Antworten, die bisher mit Code 74 scheiterten. Die Korrekturen
-  für Sitzungscookies und Rückmeldungen aus 0.1.15 bleiben enthalten. Vor einem
-  erneuten Versuch aktualisieren und neu starten. Falls die Anmeldung weiter
-  scheitert, den angezeigten Code und die Version melden; der Erfolg ist noch
-  nicht auf allen betroffenen Systemen bestätigt. Ein Zusammenhang mit dem
-  NVIDIA-Problem ist nicht bestätigt.
-  [Korrektur und Prüfumfang (Englisch)](store-session-refresh.md#soap-response-correction-0116).
-- **NVIDIA:** MSFS 2024 kann funktionierende Menüs und Overlays anzeigen,
-  während Weltkarte und 3D-Hauptansicht schwarz bleiben. 0.1.11 korrigiert DXVKs
-  wirkungslose Low-Latency-Abschaltung und verwendet automatisch das vollständige
-  Kompatibilitätsprofil für DirectX 11 und 12. DLSS, Reflex und NVIDIA Frame
-  Generation sind damit standardmäßig deaktiviert. Ein Nutzer meldete, dass die
-  späteren Startkorrekturen die Hauptansicht wiederherstellen; das Ladevideo
-  bleibt bei ihm schwarz. Das ist eine Nutzerrückmeldung, keine Bestätigung für
-  alle NVIDIA-Karten und Treiber. Ein funktionierendes zweites Fenster allein
-  bestätigt die Hauptansicht nicht.
-  [Grafikmodi und aktueller Stand](graphics.de.md).
-- **Fenix-Installation:** 0.2.3 korrigiert den reproduzierten ICU-Fehler beim
-  Installationshook und wartet auf Installer-Unterprozesse. Der offizielle Hook
-  besteht den Test in einem separaten Wine-Profil. Die allgemeine Warnung im
-  gemeldeten Bild beweist die genaue Ursache beim Nutzer nicht. Erneut über
-  **Mods → Fenix → Installer starten** ausführen und danach alle Fenster schließen.
-  [Korrektur und Prüfumfang](native-ui.md#fenix-install-hook-warning).
-- **Cloud-Spielstände:** Wiederholte Sync-Fehler werden auch nach den
-  Timeout-Korrekturen aus 0.1.8 gemeldet. Wiederherstellung und lokales Spielen
-  beschreibt die [Cloud-Anleitung](cloud-saves.de.md). Lokales Spielen bestätigt
-  keinen erfolgreichen Cloud-Abgleich.
-- **Marketplace:** Die nicht schließbare Meldung „Marketplace-Sitzung abgelaufen“
-  tritt laut Bericht beim Öffnen des Marketplace im Simulator auf. Sie ist von
-  Fehlern im Flightdeck-Kauffenster
-  zu unterscheiden. Ein Simulator-Neustart dient der Wiederherstellung und ist
-  keine dauerhafte Fehlerbehebung. [Marketplace-Umfang](marketplace-collections.md).
-
-Weitere ungeprüfte Funktionen, darunter der MSFS-2020-Spielstart und vollständig
-abgeschlossene Käufe, stehen in der [Kompatibilitätsübersicht](readme.de.md#aktueller-stand).
-
-Flightdeck 0.1.9 erneuert ablaufende Tickets, erhält die
-Store-Sitzung desselben Kontos und bietet eine erneute Microsoft-Anmeldung mit
-anschließender Prüfung bei geschlossenem Simulator. Damit ist die blockierende
-Marketplace-Meldung im Spiel noch nicht als behoben bestätigt.
-[Umfang und Prüfung der Store-Korrektur (Englisch)](store-session-refresh.md).
+Weitere Grenzen stehen unter [Kompatibilität](readme.de.md#kompatibilität).
+[Problemberichte](problem-reports.de.md) enthalten ausgewählte Diagnosedaten.

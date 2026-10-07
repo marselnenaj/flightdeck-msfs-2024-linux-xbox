@@ -18,7 +18,7 @@ const OBSERVATIONS: [&str; 4] = [
     "second_window_works",
     "second_window_crashes",
 ];
-const FIELDS: [&str; 20] = [
+const FIELDS: [&str; 21] = [
     "context",
     "vr",
     "run_found",
@@ -39,6 +39,7 @@ const FIELDS: [&str; 20] = [
     "log_coverage",
     "summary_limited",
     "proton",
+    "fenix",
 ];
 const UNREADABLE: &str =
     "Der gespeicherte Bericht konnte nicht gelesen werden. Bitte einen neuen Bericht vorbereiten.";

@@ -3,293 +3,130 @@
 </p>
 <h1 align="center">Flightdeck</h1>
 <p align="center">
-  Ein Linux-Launcher für die Xbox-PC-Versionen von Microsoft Flight Simulator 2024 und 2020.
+  Linux-Launcher für die Xbox-PC-Versionen von Microsoft Flight Simulator 2024 und 2020.
 </p>
 <p align="center">
   <a href="#loslegen"><strong>Loslegen</strong></a> &nbsp;·&nbsp;
-  <a href="addons.de.md">Mods installieren</a> &nbsp;·&nbsp;
-  <a href="vr.de.md">VR</a> &nbsp;·&nbsp;
-  <a href="game-updates.md">Spielupdates</a> &nbsp;·&nbsp;
+  <a href="index.md">Dokumentation</a> &nbsp;·&nbsp;
   <a href="known-issues.de.md">Bekannte Probleme</a> &nbsp;·&nbsp;
   <a href="changelog.md">Änderungen</a> &nbsp;·&nbsp;
-  <a href="../BUILDING.md">Selbst bauen</a> &nbsp;·&nbsp;
   <a href="../README.md">English</a>
 </p>
 
 ![Originales Flightdeck-Flugzeugmotiv](../ui/flight-panorama.png)
 
-Flightdeck installiert und startet deine **gekaufte Xbox-PC-/Microsoft-Store-
-Version von MSFS 2024 oder 2020** unter Linux mit Wine/Proton. Mit dem Microsoft-Konto
-anmelden, das Spiel herunterladen und im Launcher starten.
+Flightdeck installiert und startet deine **gekaufte Xbox-PC-/Microsoft-Store-Version
+von MSFS 2024 oder 2020** unter Linux über Wine/Proton. Melde dich mit deinem
+Microsoft-Konto an, lade das lizenzierte Spiel herunter und starte es über die
+native Rust-Oberfläche. Windows, die Xbox-App und eine bestehende MSFS-Installation
+sind dafür nicht erforderlich.
 
-**Aktuelle Version: [Flightdeck 0.2.4](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.2.4).**
-Aktualisiere von 0.2.1, 0.2.2 oder 0.2.3 über **Updates → Flightdeck** oder verwende den vollständigen Installer.
-Oberfläche, Backend, Installer, Updater und Runtime-Helfer verwenden Rust und benötigen kein
-Python. **0.1.22** findet diese Version im vorhandenen Updater. Ältere Launcher
-erhalten **zuerst 0.1.22**: installieren, Flightdeck neu starten und anschließend
-erneut nach Updates suchen, um **0.2.4** zu erhalten. GitHubs Latest-Eintrag bleibt
-absichtlich beim Zwischenupdate. Die frühere Vorabversion `0.2.0-dev.1` wurde
-von der stabilen Update-Suche ausgeschlossen. In dieser Vorabversion und der
-zurückgezogenen 0.2.0 ist die native Update-Suche fehlerhaft; hier einmal den
-vollständigen 0.2.4-Installer verwenden. Die bestehende Installation bleibt erhalten.
-[Update-Reihenfolge](rust-transition.md).
+**Aktuelle Veröffentlichung: [Flightdeck 0.2.5](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.2.5).**
+Launcher, Installer und Updater benötigen kein Python.
 
-Version **0.2.4** ergänzt fehlendes Verhalten der Rust-Oberfläche: automatische
-Proton-Erkennung, korrekte Anzeige bestehender Fenix-Installationen, lesbare
-Hilfefelder und angeglichene Seiten und Bedienelemente. Community-Mods lassen
-sich jetzt über **Mods → Deinstallation prüfen** mit Pfadvorschau und Bestätigung
-entfernen. Bei Verknüpfungen bleiben die Originaldateien erhalten. Fenix- und
-GSX-Begleitprogramme werden über ihre offiziellen Installer deinstalliert.
-Der alte Python-Launcher und die Weboberfläche sind in der Git-Historie erhalten;
-der aktuelle Launcher läuft vollständig in Rust.
-[Änderungen](changelog.md) · [Prüfumfang](native-ui.md) · [Build-Anleitung](../BUILDING.md).
-
-**Neu in 0.1.20:** Proton-Wechsel mit erhaltenen Add-ons und passenden Fenix-Patches für Experimental und CachyOS. [Änderungen](changelog.md#0120--3-october-2026).
-
-**0.1.18** ergänzt die optionale VR-Einrichtung für WiVRn, SteamVR und Monado,
-eine Headset-Prüfung und die Wine-/OpenXR-Anbindung für AMD und NVIDIA.
-Aktiviere sie unter **Einrichtung → Virtual Reality**. Stereo-Frames mit
-DirectX 11 und 12 wurden auf AMD mit simuliertem Headset geprüft; echte Headsets,
-NVIDIA-Hardware und ein MSFS-VR-Flug bleiben unbestätigt. [VR einrichten](vr.de.md).
-
-**0.1.16** behebt den Anmeldeabbruch mit Code 74, wenn eine Microsoft-Tokenantwort
-zugleich einen erforderlichen Verifizierungsschritt enthält. Flightdeck öffnet
-diesen Schritt jetzt und schließt die Verifizierung vor dem Speichern der
-Anmeldung ab. Weitere Korrekturen für SOAP-Antworten und genauere Fehlercodes
-helfen, verbleibende Probleme zuzuordnen.
-Aktualisiere Flightdeck und starte es vor dem nächsten Anmeldeversuch neu.
-
-**0.1.13** korrigiert fehlgeschlagene Marketplace-Produktabfragen, wenn Microsoft
-einen Ersatztext für die gewählte Store-Region liefert. Bei deutscher Sprache
-haben vorhandene deutsche Texte Vorrang; Region und Preise bleiben erhalten.
-Berichte benennen nicht unterstützte Produktmerkmale genauer. Der Store-Check
-kennzeichnet jetzt ausdrücklich, dass er keine Produktabfragen im Spiel prüft.
-Die Behebung des gemeldeten Marketplace-Fehlers muss noch im betroffenen Spiel bestätigt werden.
-
-**0.1.12** korrigiert die Update-/Neustart-Prüfung größerer, neu hinzugekommener
-Runtime-Bibliotheken. Meldet ein älterer Launcher nach dem Update, dass die
-installierte Version nicht zugeordnet werden konnte, schließe Flightdeck und
-öffne es einmal erneut. NVIDIA- und Store-Komponenten bleiben auf dem Stand von 0.1.11.
-
-**0.1.11** verwendet für NVIDIA automatisch den Kompatibilitätsmodus und
-korrigiert die wirkungslose Low-Latency-Abschaltung in DXVK, für DirectX 11 und 12.
-DLSS, Reflex und NVIDIA Frame Generation sind standardmäßig deaktiviert;
-**NVIDIA-Funktionen (experimentell)** bleiben auswählbar. Die Behebung der schwarzen
-Hauptansicht muss noch auf NVIDIA-Hardware bestätigt werden. Die Korrektur der
-Store-Komponentenupdates aus 0.1.10 ist enthalten.
-Siehe [Cloud-Spielstände](cloud-saves.de.md), [Marketplace-Umfang](marketplace-collections.md) und
-[Änderungsübersicht](changelog.md).
-
-**Experimentell.** MSFS 2024 wurde unter Linux einschließlich Cockpit-Zugriff
-und Flugzeugstart getestet. Darstellung und Stabilität mit NVIDIA müssen noch
-auf entsprechender Hardware bestätigt werden; Ergebnisse können je nach Treiber
-und Grafikkarte abweichen. Für MSFS 2020 sind erfolgreicher Spielstart und
-vollständige Flüge noch nicht bestätigt. Automatische Xbox-Cloud-Saves sind
-experimentell. [Kompatibilität und Grenzen](#aktueller-stand)
-
-**Bekannte Probleme:** Einige NVIDIA-Nutzer melden eine schwarze 3D-Hauptansicht
-bei funktionierenden Menüs. Wiederholte Cloud-Sync-Fehler und eine blockierende
-Meldung „Marketplace-Sitzung abgelaufen“ werden ebenfalls weiterhin gemeldet.
-Die Behebung dieser Fehler ist noch nicht bestätigt.
-Falls die Microsoft-Anmeldung mit 0.1.16 weiterhin scheitert, gib den angezeigten
-Fehlercode und die Flightdeck-Version im Bericht an.
-[Aktueller Stand und Umfang](known-issues.de.md).
-
-**NVIDIA-Rendererkorrektur (0.1.17, in 0.1.19 enthalten):** Die Korrektur der
-Bildzustände von 3D-Texturen besteht den isolierten Vulkan-Regressionstest.
-Ein Tester bestätigt den geladenen korrigierten Build unter 0.1.18;
-die schwarze NVIDIA-Hauptansicht bleibt auf seinem System unverändert.
-Die aktuelle Version ist über **Updates → Flightdeck** verfügbar.
-[Details und Prüfungen](nvidia-renderer.md#3d-texture-layout-correction-0117).
-
-**In 0.1.19 enthalten:** experimentelle GSX-Pro-Einrichtung für MSFS 2024 mit dem
-offiziellen FSDT-Installer unter Mods. Die Installer-Vorbereitung wurde unter
-Wine geprüft; GSX im Simulator ist noch unbestätigt.
-[GSX einrichten und Testumfang](addons.de.md#gsx-pro-einrichten-experimentell).
+**Noch unveröffentlichter Quellstand:** Sitzungswiederherstellung, Korrekturen für
+Start/Stopp und Editionswechsel sowie klarere Erkennung und Reparatur der Fenix-App.
+Diese Änderungen sind nicht im veröffentlichten 0.2.5-Installer enthalten.
+[Änderungsübersicht](changelog.md) · [Native Oberfläche](native-ui.md)
 
 ## Loslegen
 
-**1. Flightdeck installieren**
+1. Lade **Flightdeck-Linux-x86_64.tar.gz** aus der
+   [0.2.5-Veröffentlichung](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.2.5),
+   entpacke es und öffne **Install Flightdeck.desktop**. Eventuell musst du den
+   lokalen Starter im Dateimanager freigeben. Alternativ dort `./install.sh` ausführen.
+2. Wähle **MSFS installieren**, die Edition 2024 oder 2020 und einen Zielordner.
+   Melde dich über **Anmelden & installieren** mit dem Microsoft-Konto an,
+   dem die PC-Version gehört.
+3. Öffne **Flightdeck** über dein Anwendungsmenü und starte den Simulator.
+   Auf der Übersicht wechselst du zwischen installierten Editionen. Jede behält
+   ihre eigene Runtime, ihr Wine-Profil, ihre Updates und lokalen Spielstände.
 
-**Flightdeck-Linux-x86_64.tar.gz** auf der
-[0.2.4-Release-Seite](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.2.4)
-herunterladen, entpacken und **Install Flightdeck.desktop** doppelklicken. Der
-Dateimanager kann verlangen, diesen lokalen Starter als vertrauenswürdig zu
-markieren.
+Du benötigst eine Internetverbindung und eine gekaufte PC-Lizenz. Plane mindestens
+**100 GiB freien Speicher** ein, auch für gestreamte Inhalte, Caches und aufbewahrte
+Spielversionen. Die angezeigte Größe des Basisspiel-Downloads ist nur ein Teil davon.
 
-**2. MSFS herunterladen**
+Das Binärpaket benötigt Linux x86-64 mit **glibc 2.39+**, Vulkan-Treiber,
+einen Wayland- oder X11-Desktop und einen Linux-Secret-Service-Schlüsselbund.
+Zur vollständigen Runtime gehören außerdem GTK 3, WebKitGTK 4.1, OpenSSL 3 und
+GStreamer Good/Bad/Libav; das native Fenster benötigt libxkbcommon.
+Setup prüft fehlende Voraussetzungen. Arch Linux wurde getestet;
+andere Distributionen benötigen eigene Prüfungen.
+[Voraussetzungen und Installationsoptionen](install.md)
 
-**MSFS installieren** und 2024 oder 2020 wählen, den Zielordner prüfen und mit dem Microsoft-Konto
-anmelden, das die PC-Version besitzt. Flightdeck bereitet die Wine-Umgebung vor,
-lädt das lizenzierte Spiel über Xodus und verbindet die fertige Installation.
-Die Microsoft-Anmeldung öffnet ein eigenes GTK/WebKitGTK-Fenster, getrennt von
-der nativen Flightdeck-Oberfläche.
-
-**3. Über das Anwendungsmenü starten**
-
-**Flightdeck** öffnen und MSFS starten. Der lokale Hintergrunddienst startet
-automatisch. Du musst keinen Server starten und kein Terminal offen halten.
-Auf der Übersicht direkt **MSFS 2024** oder **MSFS 2020** wählen. Fehlt eine
-Version, öffnet ihre Schaltfläche die passende Einrichtung. Beide Versionen
-behalten eigene Runtimes, Wine-Prefixe, Updates und
-lokale Spielstände.
-
-Windows, Xbox-App, Microsoft Store und eine vorhandene MSFS-Installation werden
-nicht vorausgesetzt. Deine gekaufte PC-Lizenz und eine Internetverbindung sind
-weiterhin erforderlich.
-
-<details>
-<summary><strong>Systemanforderungen und weitere Installationswege</strong></summary>
-
-Die Pakete benötigen Linux x86-64 mit **glibc 2.39+**,
-Vulkan-Grafiktreiber und eine grafische Sitzung mit Linux-Secret-Service-
-Schlüsselbund. GTK 3, WebKitGTK 4.1, OpenSSL 3 sowie GStreamer Good/Bad/Libav
-müssen vorhanden sein. Für die Erstinstallation mindestens **100 GiB freien
-Speicher** vorsehen; Updates und Reparaturen behalten zusätzlich das bisherige
-Spielpaket.
-Das Zwischenupdate 0.1.22 benötigt zusätzlich Python 3.10.12+;
-die native Version 0.2.4 benötigt keinen Python-Interpreter.
-Sein optionaler grafischer Installer verwendet Zenity oder KDialog.
-
-Getestet wurde Arch Linux. Andere Distributionen benötigen kompatible
-Bibliotheken und sind noch nicht bestätigt. Die Einrichtung zeigt fehlende
-Voraussetzungen an. Das native Fenster benötigt libxkbcommon sowie die
-Bibliotheken für Wayland oder X11.
-Fehlende Systempakete über die Softwareverwaltung deiner Distribution installieren.
-
-- [Installationsdetails](install.md)
-- [Vorbereitete Runtime verbinden](runtime.md)
-- [Komponenten selbst bauen](../BUILDING.md)
-
-`./install.sh` führt dieselbe Installation im Benutzerkonto aus. Aus einem
-neueren entpackten Paket gestartet aktualisiert es Flightdeck.
-Ab 0.1.4 geht das auch direkt unter **Updates → Flightdeck → Nach Updates
-suchen**: Änderungen ansehen, **Herunterladen & installieren** wählen und
-anschließend Flightdeck neu starten. Der Download wird geprüft; die vorherige
-Launcher-Version lässt sich im selben Bereich wiederherstellen. Prüfen geht
-auch während eines Flugs, installieren erst bei beendetem Spiel. Für ältere
-Versionen ist einmalig die Installation aus dem neuen Paket nötig.
-Eine erkannte, verwaltete Spiel-Runtime erhält die neuen geprüften Store-
-und Anmeldekomponenten beim nächsten Flightdeck-Start automatisch, sobald MSFS und
-die Einrichtung beendet sind. Falls das Update noch aussteht, Flightdeck neu
-öffnen oder `flightdeck --refresh-components` ausführen.
-Eigene Komponenten und Startskripte bleiben erhalten. Der optionale Fenix-Patch
-wird über **Mods → Fenix A320** gesondert eingerichtet.
-`flightdeck --rollback` stellt die vorherige **Launcher-Version** wieder her.
-`flightdeck --uninstall` entfernt die verwalteten Launcher-Dateien und erhält
-Runtime, Einstellungen und Spielstände. `sudo` ist nicht erforderlich.
-Die Installation fehlender Linux-Systempakete kann Administratorrechte benötigen.
-
-</details>
+Aktualisiere den Launcher über **Updates → Flightdeck** oder den vollständigen
+Installer. Bei 0.1.21 und älter, der 0.2.0-Vorschau oder der zurückgezogenen 0.2.0
+ist einmal der vollständige Installer nötig. Bestehende Runtimes und Spielstände
+bleiben erhalten. [Update und Rollback](install.md#update-and-rollback) ·
+[Migration älterer Versionen](rust-transition.md)
 
 ## Im Launcher
 
-![Flightdeck-Übersicht](images/launcher-overview.png)
+| Bereich | Funktionen |
+| --- | --- |
+| **Installation und Updates** | Lizenzierte Downloads, Pause/Fortsetzen, Dateiprüfung, vollständige Reparatur und Rollback. [Details](game-updates.md) |
+| **Mods** | Community-Ordner verwalten sowie Fenix und GSX über ihre offiziellen Installer einrichten. [Anleitung](addons.de.md) |
+| **Spielstände** | Lokale Backups und experimenteller automatischer Xbox-Cloud-Abgleich mit Konfliktbehandlung. [Anleitung](cloud-saves.de.md) |
+| **Grafik und VR** | Automatische GPU-Einrichtung, NVIDIA-Kompatibilitätsoptionen und optionale OpenXR-Einrichtung. [Grafik](graphics.de.md) · [VR](vr.de.md) |
+| **Diagnose** | Ausgewählte Prüfungen und kontrollierbare Problemberichte ohne rohe Spiellogs, Tokens oder Spielstandinhalte. [Anleitung](problem-reports.de.md) |
 
-<sub>Flightdeck 0.1.2 mit Simulatorauswahl, hier in der englischen Oberfläche.</sub>
+Die Oberfläche unterstützt Deutsch und Englisch. Der lokale Hintergrunddienst
+startet automatisch; kein Terminal muss geöffnet bleiben. Das Schließen von
+Flightdeck beendet einen laufenden Simulator nicht. Ein Download lässt sich nach
+einem Dienst- oder Linux-Neustart noch nicht wiederaufnehmen.
+[Grenzen von Pause/Fortsetzen](download-pause.md)
 
-| Bereich | Funktion |
-| :--- | :--- |
-| **Installation** | Microsoft-Anmeldung, Zielordner und Download deiner gekauften PC-Version, mit MB/GB und Prozentanzeige bei bekannter Gesamtgröße. |
-| **Simulatorauswahl** | Auf der Übersicht zwischen getrennten MSFS-2024- und MSFS-2020-Installationen wechseln. |
-| **Pause und Fortsetzen** | Fertige, geprüfte Dateien bleiben während der laufenden Installationssitzung erhalten. |
-| **Spielupdates** | Installierte und verfügbare Store-Version vergleichen, Update herunterladen und geprüft aktivieren. Die vorherige Version bleibt für eine Rückkehr erhalten. |
-| **Prüfen und reparieren** | Spieldateien mit den ursprünglichen Download-Prüfsummen vergleichen. Bei fehlenden oder beschädigten Dateien eine vollständige Reparatur vorbereiten, auch mit derselben Spielversion. |
-| **Mods** | Den tatsächlichen Community-Ordner öffnen und Paketnamen, Versionen und Hersteller sehen. |
-| **Fenix A320** | Geprüften Linux-Patch laden, den offiziellen Fenix-Installer starten, Cockpitanzeigen einrichten und den Liverymanager öffnen. Nur für MSFS 2024. |
-| **Lokale Spielstände** | Lokal speichern und bei beendetem Simulator Backups erstellen. |
-| **Xbox-Cloud-Spielstände** | Vor dem Spielen den Cloud-Stand laden, nach dem Beenden Änderungen hochladen und lokale Sicherungen behalten. Experimentell. |
-| **Diagnose** | Ausgewählte Prüfungen exportieren, ohne rohe Spiellogs, Kontotokens oder Spielstandinhalte. [Fehlermeldungen per E-Mail](problem-reports.de.md) mit Diagnosedaten direkt im Nachrichtentext vorbereiten. |
-| **Deutsch und Englisch** | Sprache der Oberfläche wechseln; auch Installer und Kommandozeile sind übersetzt. |
+## Kompatibilität
 
-Flightdeck 0.1.7 ergänzt **Diagnose → Store prüfen**: Anmeldung,
-Katalog, Spiellizenz, Bibliothek und ein lokales Testfenster lassen sich ohne
-Kauf prüfen. Der Bericht enthält außerdem die zeitliche Folge der Store-Schritte
-und die beim Spielstart erfassten Komponentenversionen.
-[Umfang und Grenzen](marketplace-collections.md#check-store-without-a-purchase).
-Der Kaufdialog zeigt außerdem Verbindungs- und Ladefehler an. Seine Darstellung
-wurde in MSFS 2024 geprüft; abgeschlossene Käufe und die Bereitstellung gekaufter
-Inhalte bleiben ungeprüft.
+**Experimentell.** Cockpit-Zugriff und Flugzeugstart in MSFS 2024 wurden auf AMD
+getestet. **Die NVIDIA-Darstellung ist durch Nutzertests bestätigt**;
+kleinere Probleme und das Startvideo bleiben offen. Das bestätigt keine allgemeine
+Unterstützung aller GPUs und Treiber. Für MSFS 2020 sind Installation und
+Lizenzprüfung implementiert; erfolgreicher Simulatorstart und vollständige Flüge
+bleiben unbestätigt.
 
-Beim Pausieren können bis zu vier noch unvollständige Dateien neu beginnen.
-Fortsetzen nach einem Neustart des Hintergrunddienstes oder Rechners ist noch
-nicht implementiert. Spielupdates laden das vollständige Store-Basispaket;
-Zusatzinhalte werden von MSFS und den jeweiligen Add-on-Installern verwaltet.
-[Download-Verhalten](download-pause.md) · [Updates, Prüfung und Reparatur](game-updates.md)
-
-Die angezeigte Downloadgröße umfasst die Dateien des Store-Basispakets. Bei
-MSFS 1.8.16.0 waren das rund **9,9 GB**; die Größe kann sich mit der Spielversion
-ändern. Wine/Proton, im Spiel nachgeladene Inhalte, Caches und Add-ons brauchen
-zusätzlichen Speicher. Der Simulator läuft lokal und lädt weitere Inhalte bei
-Bedarf nach. Deshalb weiterhin mindestens **100 GiB freien Speicher** vorsehen.
-[Downloadgröße und Speicherbedarf](install.md#download-size-and-storage)
-
-Die Dateiprüfung benötigt einen vollständigen Prüfnachweis aus einem erfolgreichen
-Flightdeck-Download. Bei älteren Installationen ohne diesen Nachweis ist zuerst
-eine vollständige Reparatur nötig. Sie lädt das gesamte verfügbare Basispaket
-neu und erhält die bisherige Installation. Der separate Community-Ordner und
-Spielstände bleiben bestehen.
-
-## Aktueller Stand
-
-| Bereich | Nachweis |
-| :--- | :--- |
-| **MSFS-2024-Simulator** | Cockpit-Zugriff und Flugzeugstart unter Linux mit AMD-Grafik getestet. Vollständige Flüge sind noch nicht umfassend geprüft. |
-| **NVIDIA-Grafik** | Automatische Grafikeinrichtung und auswählbarer Kompatibilitätsmodus. Darstellung und Flugstabilität müssen auf NVIDIA-Hardware bestätigt werden. [Einrichtung und Grenzen](graphics.de.md) |
-| **MSFS-2020-Simulator** | Installation, Updates und Lizenzprüfung sind implementiert. Beim Start kann eine Datenträgeraufforderung auftreten; erfolgreicher Spielstart und vollständige Flüge sind noch nicht bestätigt. |
-| **Lokale Spielstände** | Laden nach einem Neustart und lokale Backups getestet. |
-| **Kostenlose Store-Inhalte** | Download in einem Nutzertest erfolgreich. |
-| **Gekaufte Marketplace-Inhalte** | Kontoeigene Add-ons lassen sich abfragen; unterstützte Durable-Lizenzen verwenden echte signierte Freigaben. Vollständige DLC-Abdeckung und das MSFS-2024-Aviator-Upgrade bleiben ungeprüft. [Umfang](marketplace-collections.md) |
-| **Marketplace-Käufe** | Der Microsoft-Bestätigungsdialog öffnet sich; seine Darstellung wurde in MSFS 2024 geprüft. Abgeschlossene Käufe und die Bereitstellung gekaufter Inhalte bleiben ungeprüft. Über Geräte geteilte DLC-Rechte bleiben ununterstützt. [Umfang](marketplace-collections.md#purchase-dialog) |
-| **Multiplayer** | Online-Multiplayer unter Linux als funktionierend gemeldet. Gruppeneinladungen müssen separat getestet werden. |
-| **Xbox-Cloud-Saves** | Automatischer Abgleich bei Spielstart und Spielende, lokale Backups und Konfliktbehandlung implementiert. Nativer Cloud-Zugriff getestet; ein Spieltest über mehrere Geräte steht aus. [Details](cloud-saves.de.md) |
-| **FlyByWire A32NX** | MSFS-2024-Version Stable 2024.1.0 installiert und erkannt; Flugtest offen. |
-| **SimBridge** | Dienstprüfung, Web-MCDU, WebSocket und Geländedateninitialisierung unter Wine getestet; Spielverbindung offen. |
-| **Fenix A320** | Optionaler Installer mit Wine-Korrekturen, CPU-Anzeigen, Legacy-Readouts und Wiederherstellung. Cockpit mit 2.4.0.4720 geprüft; vollständiger Testflug noch offen. [Fenix einrichten](addons.de.md#fenix-a320-einrichten). |
-
-Installation, Download-Pause/Fortsetzen und Dateiprüfung wurden unter Arch Linux
-getestet. Andere Distributionen und eine frische Betriebssysteminstallation
-benötigen eigene Prüfungen. Ein Eintrag in der Mod-Liste bestätigt installierte
-Dateien, aber keine Aktivierung oder funktionierenden Cockpit-Systeme.
-
-[Mod-Anleitung](addons.de.md) · [Marketplace-Umfang](marketplace-collections.md) ·
-[Multiplayer testen](multiplayer.md)
+Das Fenix-Cockpit wurde geprüft. Umfassende Flugtests, GSX im Simulator, echte
+VR-Headsets und geräteübergreifendes Spielen mit Cloud-Saves stehen noch aus.
+Marketplace-Sitzungsfehler und unvollständig geprüfte DLC-/Kauffunktionen sind
+separat dokumentiert. Vorhandene Dateien bestätigen weder Aktivierung noch
+funktionierende Flugzeugsysteme.
+[Bekannte Probleme](known-issues.de.md) · [Add-on-Umfang](addons.de.md) ·
+[Marketplace-Umfang](marketplace-collections.md)
 
 ## Lokale Daten
 
-Flightdeck 0.2.4 verwendet Rust. Der aktuelle Quellstand enthält keinen alten
-Python-Launcher mehr; Python-Skripte dienen nur noch dem Paketbau und Tests.
-Die native Oberfläche verbindet sich mit dem privaten lokalen Dienst. Dieser
-lauscht nur auf Loopback; Herkunftsprüfungen und ein Sitzungstoken schützen
-Aktionen. Der Launcher enthält keine Telemetrie und
-braucht kein CDN. Microsoft-Anmeldung, Downloads und Online-Inhalte des Spiels
-verwenden weiterhin ihre jeweiligen Netzwerkdienste.
+Flightdeck verwendet Rust mit einer nativen Oberfläche und einer API, die nur
+auf Loopback lauscht. Herkunftsprüfungen und ein Sitzungstoken schützen jeden
+API-Lesezugriff und jede Aktion. Desktop- und Headless-Clients lesen das Token
+aus der nur für den Benutzer zugänglichen `desktop-service.json` im gewählten
+Zustandsordner und senden es im Header `X-Flightdeck-Token`. Nicht authentifizierte
+Statusabfragen können keine Sitzung initialisieren. Der Launcher enthält keine
+Telemetrie und benötigt kein CDN. Microsoft-Anmeldung, Downloads und Online-Inhalte
+des Simulators verwenden weiterhin ihre jeweiligen Netzwerkdienste.
 
-Runtime, Zugangsdaten, Spielstände und Logs gehören nicht zu den Quell- oder
-Release-Archiven. Die Oberfläche kann lokale Installationspfade anzeigen;
-Screenshots vor dem Teilen prüfen. Das Schließen von Flightdeck beendet einen
-bereits laufenden Simulator nicht.
+Runtime-Dateien, Zugangsdaten, Spielstände und Logs gehören nicht zu Quell- oder
+Release-Archiven. Die Oberfläche kann lokale Pfade zeigen; Screenshots vor dem
+Teilen prüfen.
 
-## Mitentwickeln
+## Dokumentation und Entwicklung
 
-Die [Änderungsübersicht](changelog.md), die [Build-Anleitung](../BUILDING.md), der [Beitragsleitfaden](contributing.md)
-und die [Prüfbefehle in der englischen README](../README.md#documentation-and-development)
-beschreiben den Einstieg. Tests verwenden isolierte Beispieldaten, keine echten
-Konten oder Spielinstallationen.
+Der [Dokumentationsindex](index.md) führt zu Nutzeranleitungen, Entwicklung und
+technischen Hintergründen. [BUILDING.md](../BUILDING.md) enthält Build- und
+Prüfbefehle, der [Beitragsleitfaden](contributing.md) beschreibt Review und Releases.
+Tests verwenden isolierte Beispieldaten. Frühere Versionsmeldungen stehen in der
+[Änderungsübersicht](changelog.md); die frühere Python-/Web-Anwendung bleibt in der
+Git-Historie verfügbar.
 
 ## Lizenz
 
 Launcher, Oberfläche und neue Integrationstools stehen unter [MIT](../LICENSE).
 Xodus behält GPL-3.0-only, Wine/GDK-Komponenten LGPL-2.1-or-later. Native Pakete
-enthalten die Lizenzhinweise und vollständigen zugehörigen Quellen. Der separat
-geladene Runner behält seine eigenen Lizenzen. Die mitgelieferte Schrift Manrope
-steht unter der SIL Open Font License 1.1.
+enthalten Lizenzhinweise und vollständige zugehörige Quellen. Der separat geladene
+Runner behält seine eigenen Lizenzen; Manrope steht unter SIL Open Font License 1.1.
+[Lizenzhinweise](../compat/THIRD_PARTY_NOTICES.md) · [Paket-Herkunft](binary-release.md)
 
-[Lizenzhinweise](../compat/THIRD_PARTY_NOTICES.md) ·
-[Paket-Herkunft](binary-release.md) · [Grafiken und Schrift](artwork.md)
-
-Flightdeck ist ein unabhängiges Projekt und wird nicht von Microsoft, Xbox,
-Asobo oder den Upstream-Projekten unterstützt. MSFS-Dateien, kostenpflichtige
-Add-ons, proprietäre SDK-Header, Kontozugangsdaten und Spiellizenzen werden nicht
-mitgeliefert. Das Titelbild ist ein originales Flightdeck-Motiv und kein
-Simulator-Screenshot.
+Flightdeck ist unabhängig und wird nicht von Microsoft, Xbox, Asobo oder den
+Upstream-Projekten unterstützt. MSFS-Dateien, kostenpflichtige Add-ons, proprietäre
+SDK-Header, Zugangsdaten und Spiellizenzen werden nicht mitgeliefert. Das Titelbild
+ist originales Flightdeck-Artwork und kein Simulator-Screenshot.
+[Herkunft der Grafiken](artwork.md)

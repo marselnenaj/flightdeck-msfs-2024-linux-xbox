@@ -225,16 +225,29 @@ impl Processes {
         Ok(())
     }
     fn finish_server(&mut self) -> Result<()> {
-        self.collect()?;
-        if self
-            .handles
-            .values()
-            .any(|v| alive(&v.fd) && !INFRASTRUCTURE.contains(&v.name.as_str()))
-        {
-            return Ok(());
+        for (names, signal, seconds) in [
+            (&["wineserver"][..], Signal::INT, 3),
+            (INFRASTRUCTURE, Signal::TERM, 1),
+            (INFRASTRUCTURE, Signal::KILL, 1),
+        ] {
+            self.collect()?;
+            // Wine services can outlive their server and escape the game group.
+            // Only finish an otherwise idle prefix; another application may have
+            // started since the previous stage. Retained pidfds prevent PID reuse.
+            if self.applications_running() || !self.any(Some(INFRASTRUCTURE)) {
+                return Ok(());
+            }
+            for handle in self.handles.values() {
+                if names.contains(&handle.name.as_str()) && alive(&handle.fd) {
+                    let _ = pidfd_send_signal(&handle.fd, signal);
+                }
+            }
+            self.wait(INFRASTRUCTURE, seconds)?;
         }
-        self.send(&["wineserver"], Signal::INT)?;
-        self.wait(INFRASTRUCTURE, 3)
+        require(
+            !self.any(Some(INFRASTRUCTURE)),
+            "Windows background processes for this profile could not be fully stopped.",
+        )
     }
 }
 pub fn birth(pid: i32) -> Result<u64> {

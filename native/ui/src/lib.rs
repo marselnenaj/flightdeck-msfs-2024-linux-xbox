@@ -5,6 +5,7 @@ mod controller;
 mod model;
 mod pages;
 mod presentation;
+mod release_notes;
 mod setup_page;
 pub use client::{Client, Request, Snapshot};
 use iced::{Subscription, Task};
@@ -166,12 +167,14 @@ pub enum Message {
     Navigate(Page),
     Toggle(Disclosure),
     OpenHelp(HelpLink),
+    OpenReleaseLink(String),
     Action(Action),
     Tick,
     Refresh,
     Loaded(u64, Result<Snapshot, String>),
     Reconnected(u64, Result<Client, String>),
     Completed(u64, Action, Result<Value, String>),
+    StartupCompleted(u64, String, Result<Value, String>),
     Field(&'static str, String),
     Flag(&'static str, bool),
     Discover(&'static str),
@@ -208,6 +211,10 @@ pub struct App {
     generation: u64,
     pub confirmation: Option<(Action, client::Request)>,
     pub startup_checked: bool,
+    startup_attempt: Option<std::time::Instant>,
+    startup_inflight: Option<u64>,
+    startup_sequence: u64,
+    startup_retry: bool,
     pub restarting: bool,
     pub discoveries: std::collections::BTreeMap<&'static str, Value>,
     pub expanded: std::collections::BTreeSet<Disclosure>,
@@ -245,6 +252,10 @@ impl App {
             generation: 0,
             confirmation: None,
             startup_checked: false,
+            startup_attempt: None,
+            startup_inflight: None,
+            startup_sequence: 0,
+            startup_retry: false,
             restarting: false,
             discoveries: Default::default(),
             expanded: Default::default(),
@@ -616,6 +627,8 @@ impl App {
     }
 
     fn header(&self, compact: bool) -> Element<'_, Message> {
+        let attention =
+            self.online && self.status()["cloud"]["state"] == "attention" || self.session_failed();
         let language = pick_list(
             [Language::De, Language::En],
             Some(self.language),
@@ -637,9 +650,25 @@ impl App {
             },
         });
         let status = row![
-            icon("check-circle", 25.0, self.edition.accent()),
+            icon(
+                if attention || !self.online {
+                    "info"
+                } else {
+                    "check-circle"
+                },
+                25.0,
+                if attention {
+                    iced::color!(0xf2cb78)
+                } else if self.online {
+                    self.edition.accent()
+                } else {
+                    MUTED
+                }
+            ),
             label(
-                if self.online {
+                if attention {
+                    self.tr("Hinweis beachten", "Action needed")
+                } else if self.online {
                     self.tr("Flightdeck bereit", "Flightdeck ready")
                 } else {
                     self.tr("Verbindung wird hergestellt …", "Connecting …")
@@ -733,6 +762,7 @@ impl App {
             (self.request(&Action::Select(edition)).is_some() && !active)
                 .then_some(Message::Select(edition))
         };
+        let unavailable = message.is_none() && !active;
         let active_bg = if edition == Edition::Msfs2020 {
             iced::color!(0x3a2e22)
         } else {
@@ -740,7 +770,12 @@ impl App {
         };
         button(
             row![
-                label(format!("MSFS {}", edition.year()), 17.0, Weight::Bold, INK),
+                label(
+                    format!("MSFS {}", edition.year()),
+                    17.0,
+                    Weight::Bold,
+                    if unavailable { MUTED } else { INK }
+                ),
                 Space::new().width(Length::Fill),
                 label(
                     if self.pending_action == Some(Action::Select(edition)) {
@@ -751,6 +786,8 @@ impl App {
                         self.tr("Auswählen", "Select")
                     } else if active {
                         self.tr("Aktiv", "Active")
+                    } else if unavailable {
+                        self.tr("Nicht verfügbar", "Unavailable")
                     } else {
                         self.tr("Wechseln", "Switch")
                     },
@@ -770,6 +807,8 @@ impl App {
             background: Some(
                 if active {
                     active_bg
+                } else if matches!(status, button::Status::Disabled) {
+                    iced::color!(0x101b25)
                 } else if matches!(status, button::Status::Hovered) {
                     iced::color!(0x19333f)
                 } else {
@@ -777,10 +816,12 @@ impl App {
                 }
                 .into(),
             ),
-            text_color: INK,
+            text_color: if unavailable { MUTED } else { INK },
             border: Border {
                 color: if active || matches!(status, button::Status::Hovered) {
                     accent
+                } else if matches!(status, button::Status::Disabled) {
+                    LINE
                 } else {
                     iced::color!(0x496579)
                 },
@@ -794,6 +835,14 @@ impl App {
 
     fn hero(&self, width: f32, compact: bool, height: f32) -> Element<'_, Message> {
         let accent = self.edition.accent();
+        let attention = self.status()["cloud"]["state"] == "attention";
+        let warning = attention || self.session_failed();
+        let launch_message = self.launch_message();
+        let launch_ink = if launch_message.is_some() {
+            iced::color!(0x061721)
+        } else {
+            MUTED
+        };
         let left = if compact { 31.0 } else { 45.0 };
         let title_size = if compact { 35.0 } else { 42.0 };
         let scene = if self.edition == Edition::Msfs2020 {
@@ -825,13 +874,8 @@ impl App {
         let launch = button(
             container(
                 row![
-                    icon("play", 28.0, iced::color!(0x061721)),
-                    label(
-                        self.launch_label(),
-                        18.0,
-                        Weight::Bold,
-                        iced::color!(0x061721)
-                    )
+                    icon(if attention { "info" } else { "play" }, 28.0, launch_ink),
+                    label(self.launch_label(), 18.0, Weight::Bold, launch_ink)
                 ]
                 .spacing(13)
                 .align_y(alignment::Vertical::Center),
@@ -841,23 +885,56 @@ impl App {
         .width(300)
         .height(62)
         .padding([13, 34])
-        .on_press_maybe(self.launch_message())
+        .on_press_maybe(launch_message)
         .style(move |_, status| button::Style {
             background: Some(
-                if matches!(status, button::Status::Hovered) {
+                if matches!(status, button::Status::Disabled) {
+                    iced::color!(0x203443)
+                } else if matches!(status, button::Status::Hovered) {
                     Color { a: 0.9, ..accent }
                 } else {
                     accent
                 }
                 .into(),
             ),
-            text_color: iced::color!(0x061721),
+            text_color: launch_ink,
             border: Border {
                 radius: 8.0.into(),
-                ..Border::default()
+                color: if matches!(status, button::Status::Disabled) {
+                    iced::color!(0x496579)
+                } else {
+                    Color::TRANSPARENT
+                },
+                width: if matches!(status, button::Status::Disabled) {
+                    1.0
+                } else {
+                    0.0
+                },
             },
             ..button::Style::default()
         });
+        let recovery = Action::Automatic("retry");
+        let launch_actions: Element<'_, Message> = if self.status()["cloud"]["error_code"]
+            == "unsafe_session"
+            && self.request(&recovery).is_some()
+        {
+            row![
+                launch,
+                button(label(
+                    self.tr("Sitzung prüfen", "Check session"),
+                    15.0,
+                    Weight::Semibold,
+                    INK
+                ))
+                .padding([14, 18])
+                .on_press(Message::Action(recovery))
+            ]
+            .spacing(12)
+            .align_y(alignment::Vertical::Center)
+            .into()
+        } else {
+            launch.into()
+        };
         let content = column![
             label(self.edition.name(), title_size, Weight::Bold, INK)
                 .line_height(1.16)
@@ -875,7 +952,15 @@ impl App {
             ),
             Space::new().height(28),
             row![
-                icon("check-circle", 28.0, accent),
+                icon(
+                    if warning { "info" } else { "check-circle" },
+                    28.0,
+                    if warning {
+                        iced::color!(0xf2cb78)
+                    } else {
+                        accent
+                    }
+                ),
                 label(
                     self.launch_state(),
                     15.0,
@@ -886,7 +971,7 @@ impl App {
             .spacing(12)
             .align_y(alignment::Vertical::Center),
             Space::new().height(22),
-            launch,
+            launch_actions,
             Space::new().height(9),
             label(
                 self.launch_note(),

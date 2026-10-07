@@ -356,7 +356,7 @@ Runtime cleanup and direct-launch interruption checks also live in
 behavior, not GSX activation or a working simulator connection. Review a changed
 official installer in a separate profile before updating the pin, including its
 licensing registration and automatic updater behavior. See the
-[setup scope](docs/addons.md#gsx-pro-experimental-development-build).
+[setup scope](docs/addons.md#gsx-pro-experimental).
 
 ## Optional Fenix patch
 

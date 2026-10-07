@@ -46,8 +46,8 @@ or index filters before enabling VR; an incompatible explicit UUID is rejected.
 On NVIDIA, begin with Flightdeck's **Automatic** graphics setting. Its existing
 compatibility mode disables NVAPI, DLSS, Reflex and NVIDIA Frame Generation.
 The experimental NVIDIA features setting is not a prerequisite for VR.
-This release does not establish that the previously reported NVIDIA black
-main view is fixed. Runtime, driver, headset and encoder support still determine
+[Normal NVIDIA rendering](graphics.md) is confirmed by user testing; VR needs
+separate validation. Runtime, driver, headset and encoder support still determine
 which combinations work; OpenXR alone does not guarantee wireless performance.
 
 ## Checks and troubleshooting

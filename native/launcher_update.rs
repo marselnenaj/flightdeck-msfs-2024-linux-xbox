@@ -504,11 +504,7 @@ fn begin(
 ) -> Result<Value> {
     let mut s = app.lock();
     Launcher::open(&s)?;
-    if startup
-        && s.launcher_updates
-            .attempted
-            .is_some_and(|v| v.elapsed() < Duration::from_secs(1800))
-    {
+    if startup && !startup_due(&s.launcher_updates, Instant::now()) {
         return Ok(json!({"ok":true}));
     }
     let allowed = snapshot_locked(&mut s);
@@ -579,9 +575,18 @@ fn begin(
     });
     Ok(reply)
 }
+fn startup_due(state: &State, now: Instant) -> bool {
+    let failed_check = state.job["operation"] == "check" && state.job["state"] == "failed";
+    let delay = Duration::from_secs(if failed_check { 300 } else { 1800 });
+    state.worker.is_none()
+        && state
+            .attempted
+            .is_none_or(|attempt| now.saturating_duration_since(attempt) >= delay)
+}
 pub fn start(app: &Arc<Launcher>, operation: &str, check_id: Option<&str>) -> Result<Value> {
     begin(app, operation, check_id, false)
 }
+
 pub fn check_on_startup(app: &Arc<Launcher>) -> Result<Value> {
     begin(app, "check", None, true)
 }
@@ -648,4 +653,33 @@ pub fn restart(app: &Launcher, port: u16) -> Result<Value> {
     u.restart = Some(child);
     u.job = json!({"id":uuid::Uuid::new_v4().simple().to_string(),"operation":"restart","state":"running","phase":"restart","can_cancel":false,"message":"Flightdeck wird neu geöffnet …","error":""});
     Ok(json!({"ok":true,"job":u.job}))
+}
+
+#[cfg(test)]
+mod retry_tests {
+    use super::*;
+
+    #[test]
+    fn automatic_checks_retry_failure_after_five_minutes_and_success_after_thirty() {
+        let started = Instant::now();
+        let mut state = State {
+            attempted: Some(started),
+            job: json!({"operation":"check","state":"failed"}),
+            ..State::default()
+        };
+        assert!(!startup_due(&state, started + Duration::from_secs(299)));
+        assert!(startup_due(&state, started + Duration::from_secs(300)));
+        for job in [
+            json!({"operation":"check","state":"complete"}),
+            json!({"operation":"check","state":"cancelled"}),
+            json!({"operation":"install","state":"failed"}),
+        ] {
+            state.job = job;
+            assert!(!startup_due(&state, started + Duration::from_secs(1799)));
+            assert!(startup_due(&state, started + Duration::from_secs(1800)));
+        }
+        state.job = json!({"operation":"check","state":"failed"});
+        state.worker = Some(Arc::new(AtomicBool::new(false)));
+        assert!(!startup_due(&state, started + Duration::from_secs(3600)));
+    }
 }

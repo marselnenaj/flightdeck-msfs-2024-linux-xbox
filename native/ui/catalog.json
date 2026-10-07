@@ -959,5 +959,12 @@
   "Öffnet den separaten Fenix-Manager zum Installieren, Aktualisieren und Verwalten von Liveries.": "Opens the separate Fenix manager to install, update and manage liveries.",
   "Übergeordneten Speicherort wählen": "Choose parent folder",
   "Übernimmt den von FSDT angelegten Start mit MSFS. Prüfe anschließend das GSX-Menü und die Bodendienste im Simulator.": "Enables the startup entry created by FSDT for MSFS. Then check the GSX menu and ground services in the simulator.",
-  "Übersicht": "Overview"
+  "Übersicht": "Overview",
+  "Fenix-App erkannt · Flugzeug noch nicht installiert": "Fenix app detected · Aircraft not installed yet",
+  "Schritt 2 von 4: Öffne die vorhandene Fenix-App und installiere dort dein Flugzeug. Schließe die App danach vollständig.": "Step 2 of 4: Open the existing Fenix app and install your aircraft there. Then close the app completely.",
+  "Fenix-App öffnen": "Open Fenix app",
+  "Falls du die Fenix-App neu installieren möchtest, kannst du weiterhin die offizielle Installer-EXE auswählen.": "To reinstall the Fenix app, you can still select the official installer EXE.",
+  "Installer erneut ausführen": "Run installer again",
+  "Fenix-App reparieren": "Repair Fenix app",
+  "Führt den Einrichtungsschritt der vorhandenen Fenix-App erneut aus. Dein Flugzeug wird dabei nicht installiert.": "Reruns setup for the existing Fenix app. This does not install your aircraft."
 }

@@ -38,6 +38,9 @@ pub fn launch(app: &Arc<Launcher>) -> Result<Value> {
     start(app, None)
 }
 pub fn action(app: &Arc<Launcher>, action: &str, data: &Value) -> Result<Value> {
+    if action == "retry" && cloud_sync::automatic(&app.lock())["error_code"] == "unsafe_session" {
+        return recover(app, data);
+    }
     if action == "cancel-auto" {
         let id = string(data, "request_id")?;
         let s = app.lock();
@@ -59,6 +62,51 @@ pub fn action(app: &Arc<Launcher>, action: &str, data: &Value) -> Result<Value> 
         "Diese Cloud-Aktion ist nicht verfügbar.",
     )?;
     start(app, Some((action, data)))
+}
+fn recover(app: &Arc<Launcher>, data: &Value) -> Result<Value> {
+    let mut state = app.lock();
+    Launcher::idle(&mut state)?;
+    let status = cloud_sync::automatic(&state);
+    crate::error::require(
+        status["state"] == "attention"
+            && status["error_code"] == "unsafe_session"
+            && status["can_retry"] == true
+            && data["request_id"]
+                .as_str()
+                .is_some_and(|id| status["request_id"] == id),
+        "Dieser Cloud-Vorgang ist nicht mehr aktuell. Bitte den Status neu laden.",
+    )?;
+    let ctx = app.reserve_locked(&mut state, "cloud-auto", "recover", true)?;
+    state.cloud_data.auto_runtime = state.runtime.clone();
+    state.cloud_data.review = None;
+    state.cloud_data.binding = None;
+    state.cloud = status;
+    state.cloud["state"] = json!("syncing");
+    state.cloud["phase"] = json!("recovery");
+    state.cloud["request_id"] = json!(ctx.id);
+    state.cloud["message"] =
+        json!("Vorherige Spielsitzung wird geprüft und lokale Spielstände werden gesichert …");
+    drop(state);
+    let id = ctx.id.clone();
+    std::thread::spawn(move || {
+        let result =
+            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| -> cloud::Result<Value> {
+                guard::recover(ctx.root()?, &ctx.lease()?)
+            }))
+            .unwrap_or_else(|_| Err(Failure::new("unsafe_session")));
+        match result {
+            Ok(recovery) => set(
+                &ctx,
+                "idle",
+                "Die vorherige Sitzung ist beendet und lokale Spielstände sind gesichert. Der Simulator kann wieder gestartet werden.",
+                json!({"phase":null,"request_id":null,"error_code":null,"error_details":{},"conflict":false,"summary":null,"recovery":recovery}),
+            ),
+            Err(error) => attention(&ctx, "before_start", Attention { error, plan: None }),
+        }
+        ctx.launcher
+            .finish(&ctx, Ok(json!({"state":"complete"})), false);
+    });
+    Ok(json!({"ok":true,"recovery_only":true,"request_id":id}))
 }
 fn start(app: &Arc<Launcher>, action: Option<(&str, &Value)>) -> Result<Value> {
     // Validation and reservation form one critical section; another request
@@ -187,7 +235,7 @@ fn start(app: &Arc<Launcher>, action: Option<(&str, &Value)>) -> Result<Value> {
 fn attention(ctx: &Context, phase: &str, error: Attention) {
     let code = error.error.code;
     let message = if code == "unsafe_session" {
-        "Die vorherige Spielsitzung wurde unerwartet unterbrochen. Bitte Linux neu starten, bevor Flightdeck die Spielstände erneut verwendet."
+        "Die vorherige Spielsitzung ist noch nicht freigegeben. Erneut versuchen prüft, ob alle zugehörigen Prozesse beendet sind, und sichert die lokalen Spielstände."
     } else if error.plan.is_some() {
         "Auf diesem Rechner und in der Cloud gibt es unterschiedliche Änderungen. Welchen Stand möchtest du verwenden?"
     } else if matches!(code, "authentication" | "auth_required" | "unauthorized") {

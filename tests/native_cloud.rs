@@ -764,6 +764,7 @@ fn session_journal_needs_exact_revision_and_real_readback_receipt() {
 fn process_guard_retains_same_boot_interruption_and_validates_old_markers() {
     use flightdeck::cloud_process_guard as guard;
     let root = runtime();
+    files::private_dir(&root.path().join("local/msfs-prefix")).expect("prefix");
     let lease = files::Lease::acquire(&root.path().join("private/play.lock"), true).expect("lease");
     guard::check(root.path(), &lease.0).expect("clean");
     guard::mark(root.path(), &lease.0).expect("mark");

@@ -112,7 +112,8 @@ fn run(input: Value) -> Result<Value> {
         }
         "vr" => Ok(json!(vr::prepare(
             &synthetic(&input)?,
-            serde_json::from_value(input["environment"].clone())?
+            serde_json::from_value(input["environment"].clone())?,
+            &cancel
         )?)),
         "proton-info" => {
             let root = path(&input, "root")?;

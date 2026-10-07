@@ -9,12 +9,13 @@ mocked request is not evidence that a feature works in the simulator.
 | Location | Responsibility |
 | --- | --- |
 | `native/` | Rust backend, CLI, desktop service, installer and runtime helpers |
+| `native/ui/` | Native Rust/iced desktop, using the authenticated local API |
 | `native/games.rs`, `native/components.rs` | Simulator identities and checked runtime updates |
 | `native/fenix.rs`, `native/framework_maintenance.rs`, `native/gsx.rs` | Add-on setup, automatic .NET repair and recovery |
 | `native/cloud_*.rs` | Cloud protocol, comparison, transactions and automatic sync |
 | `tests/fixtures/legacy-python/` | Frozen synthetic pre-migration contracts, with source provenance |
 | `examples/runtime-lab.rs` | Rust driver for isolated hardware and C++ save interchange probes |
-| `ui/` | Browser interface, using the local API |
+| `ui/` | Shared artwork, icons and fonts for the native desktop |
 | `compat/runtime/` | Native Wine/GDK bridge, asynchronous results and local saves |
 | `compat/patches/` | Changes against the pinned WineGDK and Xodus sources |
 | `compat/upstreams.lock.json` | Upstream revisions, checksums and license identification |
@@ -102,7 +103,7 @@ implementation; no Python engine is copied into Flightdeck.
    files; it does not independently validate a published GitHub asset.
 3. Verify the release can be downloaded without GitHub authentication and its
    SHA-256 matches `compat/fenix/release.json`. Run the native add-on/framework/Proton tests,
-   installer checks and the UI/browser flow tests.
+   installer checks and the native UI interaction tests.
 4. Update the English/German add-on guides and changelog, then include the
    integration in the next Flightdeck source/full package. Publishing the patch
    alone does not update an already installed Flightdeck launcher.

@@ -519,6 +519,52 @@ fn launch_acknowledges_immediately_and_keeps_feedback_until_status_arrives() {
     assert_eq!(app.launch_label(), "Stop simulator");
 }
 #[test]
+fn native_stop_click_keeps_shutdown_feedback_until_the_game_has_exited()
+-> Result<(), Box<dyn std::error::Error>> {
+    let mut app = fixture();
+    app.language = Language::En;
+    app.client = Some(flightdeck_ui::Client::new(
+        1,
+        "synthetic-session-0000000000000000".into(),
+    )?);
+    app.snapshot.get_mut("status").expect("status")["game"] =
+        json!({"state":"running","managed":true,"can_start":false,"can_stop":true});
+    let request = app.request(&Action::Stop).expect("managed stop request");
+    assert_eq!(request.path, "stop");
+    assert_eq!(request.runtime, "/synthetic/msfs2024");
+    let mut ui = iced_test::Simulator::with_size(settings(), Size::new(1280.0, 900.0), app.view());
+    ui.click("Stop simulator")?;
+    let action = ui.into_messages().next().expect("stop button action");
+    assert!(matches!(action, Message::Action(Action::Stop)));
+    let _ = app.update(action);
+    assert!(app.pending);
+    assert_eq!(app.launch_label(), "Stopping simulator …");
+    assert_eq!(app.launch_state(), "Stopping simulator …");
+    assert!(app.launch_message().is_none());
+
+    let _ = app.update(Message::Completed(1, Action::Stop, Ok(json!({"ok":true}))));
+    assert!(!app.pending);
+    assert_eq!(app.launch_label(), "Stopping simulator …");
+    assert_eq!(app.launch_state(), "Stopping simulator …");
+    let mut snapshot = app.snapshot.clone();
+    snapshot.get_mut("status").expect("status")["game"] =
+        json!({"state":"stopping","managed":true,"can_start":false,"can_stop":false});
+    let _ = app.update(Message::Loaded(1, Ok(snapshot)));
+    assert_eq!(app.launch_label(), "Stopping simulator …");
+    assert_eq!(app.launch_state(), "Stopping simulator …");
+    assert!(app.launch_note().contains("processes to close"));
+    assert!(app.launch_message().is_none());
+
+    let _ = app.update(Message::Loaded(1, Ok(fixture().snapshot)));
+    assert_eq!(app.launch_label(), "Start simulator");
+    assert_eq!(app.launch_state(), "Ready to start");
+    assert!(matches!(
+        app.launch_message(),
+        Some(Message::Action(Action::Launch))
+    ));
+    Ok(())
+}
+#[test]
 fn tabs_keep_cached_data_and_connectivity_while_refreshing() {
     let mut app = fixture();
     for page in [Page::Mods, Page::Setup, Page::Overview] {
@@ -540,6 +586,65 @@ fn existing_unready_edition_is_selected_instead_of_opening_a_new_installation() 
     let _request = app.update(Message::Select(Edition::Msfs2020));
     assert!(app.pending);
     assert_eq!(app.page, Page::Overview);
+}
+#[test]
+fn inactive_cloud_attention_explains_blocked_launch_and_allows_another_simulator()
+-> Result<(), Box<dyn std::error::Error>> {
+    for (language, blocked) in [
+        (Language::De, "Start blockiert"),
+        (Language::En, "Launch blocked"),
+    ] {
+        let mut app = fixture();
+        app.language = language;
+        app.client = Some(flightdeck_ui::Client::new(
+            1,
+            "synthetic-session-0000000000000000".into(),
+        )?);
+        let reason = "The previous simulator session was interrupted.";
+        app.snapshot.get_mut("status").expect("status")["cloud"] = json!({
+            "state":"attention", "enabled":true, "error_code":"unsafe_session",
+            "message":reason, "can_retry":false, "can_cancel":false,
+            "can_play_local":false, "can_signin":false
+        });
+        app.snapshot.get_mut("status").expect("status")["versions"]["msfs2020"] =
+            json!({"installed":true,"ready":true,"path":"/synthetic/msfs2020"});
+        assert!(app.request(&Action::Launch).is_none());
+        assert!(app.request(&Action::Select(Edition::Msfs2020)).is_some());
+        assert_eq!(app.launch_label(), blocked);
+        assert!(app.launch_state().starts_with(blocked));
+        assert_eq!(app.launch_note(), reason);
+        let mut ui =
+            iced_test::Simulator::with_size(settings(), Size::new(1280.0, 900.0), app.view());
+        ui.click(blocked)?;
+        assert!(ui.into_messages().next().is_none());
+        let mut ui =
+            iced_test::Simulator::with_size(settings(), Size::new(1280.0, 900.0), app.view());
+        ui.click("MSFS 2020")?;
+        let action = ui.into_messages().next().expect("edition switch");
+        assert!(matches!(action, Message::Select(Edition::Msfs2020)));
+        let _ = app.update(action);
+        assert!(app.pending);
+        assert_eq!(app.edition, Edition::Msfs2024);
+    }
+    Ok(())
+}
+#[test]
+fn simulator_selection_remains_locked_during_active_sessions_and_work() {
+    for state in ["syncing", "playing"] {
+        let mut app = fixture();
+        app.snapshot.get_mut("status").expect("status")["cloud"]["state"] = json!(state);
+        assert!(app.request(&Action::Select(Edition::Msfs2020)).is_none());
+    }
+    for state in ["starting", "running", "stopping", "external", "unknown"] {
+        let mut app = fixture();
+        app.snapshot.get_mut("status").expect("status")["cloud"]["state"] = json!("attention");
+        app.snapshot.get_mut("status").expect("status")["game"]["state"] = json!(state);
+        assert!(app.request(&Action::Select(Edition::Msfs2020)).is_none());
+    }
+    let mut app = fixture();
+    app.snapshot.get_mut("status").expect("status")["cloud"]["state"] = json!("attention");
+    app.snapshot.get_mut("status").expect("status")["setup"]["busy"] = json!(true);
+    assert!(app.request(&Action::Select(Edition::Msfs2020)).is_none());
 }
 #[test]
 #[ignore = "Explicit native screenshot capture into build/native-ui"]
@@ -592,6 +697,8 @@ fn capture_all_native_screens() -> Result<(), Box<dyn std::error::Error>> {
         ("unconfigured", Language::En, 1.0),
         ("fenix-legacy", Language::En, 1.0),
         ("fenix-ready", Language::En, 1.0),
+        ("fenix-manager-en", Language::En, 1.0),
+        ("fenix-manager-de", Language::De, 1.0),
         ("proton-choices", Language::En, 1.0),
         ("mod-removal", Language::De, 1.0),
         ("mod-link-removal", Language::En, 1.0),
@@ -621,6 +728,25 @@ fn capture_all_native_screens() -> Result<(), Box<dyn std::error::Error>> {
                                 app.snapshot.get_mut("fenix").expect("fenix")["configured"] =
                                     json!(false);
                             }
+                            let _ = app.update(Message::Toggle(Disclosure::Fenix));
+                        }
+                        "fenix-manager-en" | "fenix-manager-de" => {
+                            app.page = Page::Mods;
+                            app.snapshot.insert("fenix", json!({
+                                "state":"installed", "runtime_path":"/synthetic/msfs2024",
+                                "installed":true, "manager_installed":true,
+                                "fenix_installed":false, "settings_ready":false,
+                                "configured":false, "idle":true, "can_change":true,
+                                "can_restore":true, "can_repair_installer":true,
+                                "job":{
+                                    "state":"failed", "operation":"installer",
+                                    "message":if language == Language::De {
+                                        "Der vorherige Fenix-Installationsschritt ist fehlgeschlagen (synthetischer Test)."
+                                    } else {
+                                        "The previous Fenix install hook failed (synthetic test)."
+                                    }
+                                }
+                            }));
                             let _ = app.update(Message::Toggle(Disclosure::Fenix));
                         }
                         "mod-removal" | "mod-link-removal" => {
@@ -655,10 +781,16 @@ fn capture_all_native_screens() -> Result<(), Box<dyn std::error::Error>> {
             )
             .settings(settings())
             .theme(|_: &App| theme());
+        // Keep all setup steps and the failed-hook job message in these captures.
+        let height = if name.starts_with("fenix-manager-") {
+            3000.0
+        } else {
+            900.0
+        };
         let screenshot = iced_test::screenshot(
             &application,
             &theme(),
-            Size::new(1280.0, 900.0),
+            Size::new(1280.0, height),
             scale,
             Duration::from_millis(80),
         );
@@ -666,7 +798,7 @@ fn capture_all_native_screens() -> Result<(), Box<dyn std::error::Error>> {
             directory.join(format!("{name}.png")),
             &screenshot.rgba,
             (1280.0 * scale) as u32,
-            (900.0 * scale) as u32,
+            (height * scale) as u32,
             image::ColorType::Rgba8,
         )?;
     }

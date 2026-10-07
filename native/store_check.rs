@@ -176,6 +176,12 @@ pub fn event(raw: &[u8], rows: &mut [Value], allowed: &[&str]) -> bool {
     *row = value;
     true
 }
+fn check_failure(raw: &[u8]) -> Option<&'static str> {
+    let value = cloud::json(raw).ok()?;
+    ["error", "timeout"]
+        .into_iter()
+        .find(|code| value == json!({"stage":"check","state":"failed","code":code}))
+}
 fn pending(ctx: &Context, allowed: &[&str], code: &str) {
     let mut s = ctx.launcher.lock();
     if let Some(rows) = s
@@ -266,6 +272,9 @@ pub fn check_process(
                             if !valid {
                                 return Ok("error");
                             }
+                            if let Some(code) = check_failure(&pending_bytes[..end]) {
+                                return Ok(code);
+                            }
                             pending_bytes.drain(..=end);
                         }
                         if pending_bytes.len() > 1024 {
@@ -292,6 +301,56 @@ pub fn check_process(
     let result = result?;
     cleanup?;
     Ok(result)
+}
+fn completed(ctx: &Context, stages: &[&str], outcome: &Result<()>) -> (Value, bool) {
+    if outcome.is_err() {
+        pending(
+            ctx,
+            stages,
+            if ctx.cancel.load(Ordering::Acquire) {
+                "cancelled"
+            } else {
+                "error"
+            },
+        );
+    }
+    let mut job = ctx.launcher.job("store-check");
+    if let Some(rows) = job["steps"].as_array_mut() {
+        for row in rows.iter_mut() {
+            if matches!(row["state"].as_str(), Some("running" | "pending")) {
+                row["state"] = json!(if ctx.cancel.load(Ordering::Acquire) {
+                    "cancelled"
+                } else {
+                    "skipped"
+                });
+                row["code"] = json!(if ctx.cancel.load(Ordering::Acquire) {
+                    "cancelled"
+                } else {
+                    "incomplete"
+                });
+            }
+        }
+        let states: BTreeSet<_> = rows.iter().filter_map(|r| r["state"].as_str()).collect();
+        let state = if ctx.cancel.load(Ordering::Acquire) {
+            "cancelled"
+        } else if outcome.is_err() || states.contains("failed") {
+            "failed"
+        } else if states == ["passed"].into() {
+            "passed"
+        } else {
+            "incomplete"
+        };
+        job["state"] = json!(state);
+    }
+    job["finished_at"] = json!(files::now());
+    let success =
+        outcome.is_ok() && job["state"] == "passed" && !ctx.cancel.load(Ordering::Acquire);
+    (job, success)
+}
+fn retry_allowed_after_finish(ctx: &Context, success: bool) -> bool {
+    // finish() releases the active job under the same mutex used by cancel().
+    // Recheck afterward so an accepted cancellation during completion wins.
+    success && !ctx.cancel.load(Ordering::Acquire) && ctx.launcher.lock().runtime == ctx.runtime
 }
 pub fn start(
     app: &Arc<Launcher>,
@@ -351,57 +410,28 @@ pub fn start(
         .unwrap_or(Err(Error::Invalid(
             "Die Store-Prüfung wurde unerwartet beendet.",
         )));
-        if outcome.is_err() {
-            pending(
-                &ctx,
-                &stages,
-                if ctx.cancel.load(Ordering::Acquire) {
-                    "cancelled"
-                } else {
-                    "error"
-                },
-            );
-        }
-        let mut job = ctx.launcher.job("store-check");
-        if let Some(rows) = job["steps"].as_array_mut() {
-            for row in rows.iter_mut() {
-                if matches!(row["state"].as_str(), Some("running" | "pending")) {
-                    row["state"] = json!(if ctx.cancel.load(Ordering::Acquire) {
-                        "cancelled"
-                    } else {
-                        "skipped"
-                    });
-                    row["code"] = json!(if ctx.cancel.load(Ordering::Acquire) {
-                        "cancelled"
-                    } else {
-                        "incomplete"
-                    });
-                }
-            }
-            let states: BTreeSet<_> = rows.iter().filter_map(|r| r["state"].as_str()).collect();
-            let state = if states == ["passed"].into() {
-                "passed"
-            } else if ctx.cancel.load(Ordering::Acquire) {
-                "cancelled"
-            } else if states.contains("failed") {
-                "failed"
-            } else {
-                "incomplete"
-            };
-            job["state"] = json!(state);
-        }
-        job["finished_at"] = json!(files::now());
-        let success = job["state"] == "passed" && !ctx.cancel.load(Ordering::Acquire);
+        let (job, success) = completed(&ctx, &stages, &outcome);
         ctx.launcher.finish(&ctx, Ok(job), false);
-        let same_runtime = ctx.launcher.lock().runtime == ctx.runtime;
-        if success
+        if retry_allowed_after_finish(&ctx, success)
             && let Some(id) = request_id
-            && same_runtime
         {
             let _ = crate::cloud_auto::action(&ctx.launcher, "retry", &json!({"request_id":id}));
         }
     });
     Ok(json!({"ok":true,"job":app.job("store-check")}))
+}
+fn process_result(ctx: &Context, allowed: &[&str], code: &str) -> Result<()> {
+    pending(
+        ctx,
+        allowed,
+        if code == "available" {
+            "incomplete"
+        } else {
+            code
+        },
+    );
+    // Completed stage evidence cannot establish success after the helper fails.
+    crate::error::require(code == "available", "Die Store-Prüfung ist fehlgeschlagen.")
 }
 fn run(ctx: &Context, language: &str, recover: bool) -> Result<()> {
     let root = ctx.root()?;
@@ -458,15 +488,7 @@ fn run(ctx: &Context, language: &str, recover: bool) -> Result<()> {
                 &ONLINE,
                 Duration::from_secs(125),
             )?;
-            pending(
-                ctx,
-                &ONLINE,
-                if code == "available" {
-                    "incomplete"
-                } else {
-                    code
-                },
-            );
+            process_result(ctx, &ONLINE, code)?;
         }
     }
     if !recover && !ctx.cancel.load(Ordering::Acquire) {
@@ -482,15 +504,102 @@ fn run(ctx: &Context, language: &str, recover: bool) -> Result<()> {
             &["window"],
             Duration::from_secs(95),
         )?;
-        pending(
-            ctx,
-            &["window"],
-            if code == "available" {
-                "incomplete"
-            } else {
-                code
-            },
-        );
+        process_result(ctx, &["window"], code)?;
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // Exercise the real bounded helper protocol and the worker's exact
+    // completion/retry decision without logging in or contacting cloud storage.
+    #[test]
+    fn passed_rows_do_not_authorize_cloud_retry_after_helper_failure() {
+        for (tail, expected) in [
+            ("raise SystemExit(0)", "passed"),
+            ("raise SystemExit(7)", "failed"),
+            ("import time;time.sleep(30)", "failed"),
+            ("print('private-token',flush=True)", "failed"),
+            (
+                "print('{\"stage\":\"check\",\"state\":\"failed\",\"code\":\"timeout\"}',flush=True)",
+                "failed",
+            ),
+        ] {
+            let temp = tempfile::tempdir().expect("temporary runtime");
+            let root = temp.path().join("runtime");
+            files::private_dir(&root.join("private")).expect("private directory");
+            let app = Launcher::new(temp.path().join("state"), None).expect("launcher");
+            app.lock().runtime = Some(root);
+            let ctx = app
+                .reserve("store-check", "recover", true)
+                .expect("reservation");
+            ctx.update(json!({"steps":[{"stage":"account","state":"pending","code":"checking"}]}));
+            let body = format!(
+                "print('{{\"stage\":\"account\",\"state\":\"passed\",\"code\":\"local_session\"}}',flush=True)\n{tail}"
+            );
+            let outcome = check_process(
+                &ctx,
+                Command::new("python3").args(["-c", &body]),
+                b"",
+                &["account"],
+                Duration::from_millis(400),
+            )
+            .and_then(|code| process_result(&ctx, &["account"], code));
+            let (job, retry) = completed(&ctx, &["account"], &outcome);
+            assert_eq!(
+                job["steps"][0]["state"], "passed",
+                "reported account evidence is preserved"
+            );
+            assert_eq!(job["state"], expected, "helper tail: {tail}");
+            assert_eq!(retry, expected == "passed", "cloud retry gate: {tail}");
+            assert!(!job.to_string().contains("private-token"));
+            app.finish(&ctx, Ok(job), false);
+        }
+    }
+
+    #[test]
+    fn cleanup_errors_and_late_cancellation_prevent_retry_after_passed_rows() {
+        let temp = tempfile::tempdir().expect("temporary runtime");
+        let root = temp.path().join("runtime");
+        files::private_dir(&root.join("private")).expect("private directory");
+        let app = Launcher::new(temp.path().join("state"), None).expect("launcher");
+        app.lock().runtime = Some(root);
+        let ctx = app
+            .reserve("store-check", "recover", true)
+            .expect("reservation");
+        ctx.update(json!({"steps":[{"stage":"account","state":"passed","code":"local_session"}]}));
+        let cleanup_failure =
+            Err(std::io::Error::from(std::io::ErrorKind::PermissionDenied).into());
+        let (job, retry) = completed(&ctx, &["account"], &cleanup_failure);
+        assert_eq!(job["state"], "failed");
+        assert!(!retry);
+        ctx.cancel.store(true, Ordering::Release);
+        let (job, retry) = completed(&ctx, &["account"], &Ok(()));
+        assert_eq!(job["state"], "cancelled");
+        assert!(!retry);
+        app.finish(&ctx, Ok(job), false);
+    }
+
+    #[test]
+    fn accepted_cancellation_between_completion_and_finish_prevents_cloud_retry() {
+        let temp = tempfile::tempdir().expect("temporary runtime");
+        let root = temp.path().join("runtime");
+        files::private_dir(&root.join("private")).expect("private directory");
+        let app = Launcher::new(temp.path().join("state"), None).expect("launcher");
+        app.lock().runtime = Some(root);
+        let ctx = app
+            .reserve("store-check", "recover", true)
+            .expect("reservation");
+        ctx.update(json!({"steps":[{"stage":"account","state":"passed","code":"local_session"}]}));
+        let (job, success) = completed(&ctx, &["account"], &Ok(()));
+        assert!(success);
+        // This is the real cancellation entry point and the previously exposed
+        // interleaving; no timing assumption or production test hook is needed.
+        app.cancel("store-check", &ctx.id).expect("accepted cancel");
+        app.finish(&ctx, Ok(job), false);
+        assert!(!retry_allowed_after_finish(&ctx, success));
+        assert!(app.cancel("store-check", &ctx.id).is_err());
+    }
 }

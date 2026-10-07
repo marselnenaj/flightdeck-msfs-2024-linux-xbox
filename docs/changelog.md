@@ -1,5 +1,44 @@
 # Changes and release status
 
+## Unreleased
+
+These changes are in source only. The published installer remains 0.2.5.
+
+- Allow edition switching while idle even when cloud saves need attention.
+  Keep switching blocked during synchronization and running work.
+- Add **Check session** for an interrupted session: verify that its processes
+  have ended and back up local saves before releasing the launch block.
+  This action does not start the simulator or upload saves.
+- Recover a stale, disconnected Xodus socket before launch while preserving
+  sockets still owned by a running service.
+- Make disabled controls and blocked launch states visibly distinct. Show an
+  abnormal simulator exit with retry guidance instead of reporting readiness.
+  Keep **Stopping simulator…** visible until the stop completes, and finish
+  cleanup of orphaned Wine services only within the stopped runtime's profile.
+- Honor Stop during startup preparation before spawning the service or simulator.
+- Check for launcher and simulator updates periodically in the background,
+  retry failed or deferred checks, and show their status on the overview.
+  Completed, cancelled or failed update jobs no longer suppress newer checks.
+- Format release notes with headings, lists, code blocks and explicit links in
+  a scrollable panel. Keep update downloads under the user's control.
+- Recognize the FenixApp manager separately from the aircraft. Add **Repair
+  Fenix app** for retrying its official install hook with the existing Wine/.NET
+  compatibility settings, bounded execution and cancellation.
+- Include validated Fenix attempt results in support diagnostics so a generic
+  hook warning can be investigated without exporting raw logs or account data.
+- Keep the interrupted-session guard when runtime-bound processes remain after
+  the supervisor exits; do not begin cloud backup or upload in that state.
+- Refuse nested mounted directories during managed tree removal, including bind
+  mounts on the same filesystem, so removing a mod cannot traverse their contents.
+- Preserve Store-check failures even when individual stages already passed.
+  A failed helper process no longer enables automatic cloud retry.
+- Use the detected Store region on first setup while preserving a later manual
+  choice. Honor cancellation during VR preparation before changing its settings.
+- Avoid serializing an existing local save a second time during cloud export.
+- Shorten both README versions and add a documentation index. Update NVIDIA's
+  normal-rendering status to user-confirmed, retaining known limitations such
+  as missing startup video and separate validation requirements for VR/features.
+
 ## 0.2.5 — 5 October 2026
 
 - Keep existing MSFS editions selectable when they need repair. Apply pending

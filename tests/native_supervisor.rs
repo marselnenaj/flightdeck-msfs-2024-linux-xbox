@@ -5,7 +5,14 @@ use flightdeck::{files, process};
 use serde_json::json;
 use std::{
     fs,
-    os::{fd::AsRawFd, unix::fs::PermissionsExt},
+    io::{Read, Write},
+    os::{
+        fd::AsRawFd,
+        unix::{
+            fs::{MetadataExt, PermissionsExt},
+            net::UnixListener,
+        },
+    },
     path::{Path, PathBuf},
     process::{Command, Stdio},
     sync::atomic::AtomicBool,
@@ -174,4 +181,144 @@ fn stopping_the_owned_supervisor_flushes_service_and_releases_the_profile() {
     assert!(!status.success());
     assert!(root.join("private/service-stopped").exists());
     files::Lease::acquire(&root.join("private/play.lock"), false).unwrap();
+}
+
+fn socket_path(root: &Path, base: &Path) -> PathBuf {
+    let digest = files::sha256(root.as_os_str().as_encoded_bytes());
+    let directory = base
+        .join("sockets")
+        .join(format!("flightdeck-{}", &digest[..16]));
+    files::private_dir(&directory).unwrap();
+    directory.join("xodus.sock")
+}
+
+#[test]
+fn stopping_during_socket_preparation_never_starts_service_or_game() {
+    for signal in [rustix::process::Signal::TERM, rustix::process::Signal::INT] {
+        for ready in [true, false] {
+            let temp = tempfile::tempdir().unwrap();
+            let root = fixture(temp.path());
+            let path = socket_path(&root, temp.path());
+            let listener = UnixListener::bind(&path).unwrap();
+            listener.set_nonblocking(true).unwrap();
+            let mut child = process::spawn(&mut command(&root, temp.path()), None).unwrap();
+            let deadline = Instant::now() + Duration::from_secs(5);
+            let mut stream = loop {
+                match listener.accept() {
+                    Ok((stream, _)) => break stream,
+                    Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
+                        assert!(Instant::now() < deadline);
+                        assert!(child.try_wait().unwrap().is_none());
+                        std::thread::sleep(Duration::from_millis(10));
+                    }
+                    Err(error) => panic!("accepting supervisor probe: {error}"),
+                }
+            };
+            stream
+                .set_read_timeout(Some(Duration::from_secs(1)))
+                .unwrap();
+            let mut request = vec![0; 8 + b"MSFS launcher probe".len()];
+            stream.read_exact(&mut request).unwrap();
+            // The supervisor has installed both handlers and is blocked in its
+            // synchronous probe. Deliver Stop before allowing that probe to end.
+            rustix::process::kill_process(
+                rustix::process::Pid::from_raw(child.id() as i32).unwrap(),
+                signal,
+            )
+            .unwrap();
+            if ready {
+                request[4] = 2;
+                stream.write_all(&request).unwrap();
+            }
+            // Without a response this leaves a disconnected socket, so the
+            // supervisor would otherwise reclaim it and spawn a new service.
+            drop(listener);
+            drop(stream);
+            let status =
+                process::wait(&mut child, Duration::from_secs(20), &AtomicBool::new(false))
+                    .unwrap();
+            assert_eq!(
+                status.code(),
+                Some(if signal == rustix::process::Signal::TERM {
+                    143
+                } else {
+                    130
+                }),
+                "signal={signal:?}, existing service ready={ready}"
+            );
+            for entry in fs::read_dir(root.join("private")).unwrap() {
+                let entry = entry.unwrap();
+                if entry.file_name().as_encoded_bytes().starts_with(b"run-") {
+                    // These files precede spawn, so even a child killed before
+                    // its first Python instruction cannot conceal a regression.
+                    assert!(!entry.path().join("service.log").exists());
+                    assert!(!entry.path().join("game.log").exists());
+                    assert!(!entry.path().join("xodus-wine-launch").exists());
+                }
+            }
+            assert!(!root.join("private/game-started").exists());
+            assert!(!root.join("private/service-stopped").exists());
+            files::Lease::acquire(&root.join("private/play.lock"), false).unwrap();
+        }
+    }
+}
+
+#[test]
+fn stale_owned_socket_is_replaced_before_launching_the_service() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = fixture(temp.path());
+    let path = socket_path(&root, temp.path());
+    drop(UnixListener::bind(&path).unwrap());
+    let mut child = process::spawn(&mut command(&root, temp.path()), None).unwrap();
+    let status =
+        process::wait(&mut child, Duration::from_secs(20), &AtomicBool::new(false)).unwrap();
+    assert_eq!(status.code(), Some(7));
+    assert!(root.join("private/game-started").exists());
+    assert!(root.join("private/service-stopped").exists());
+    assert!(!path.exists());
+    files::Lease::acquire(&root.join("private/play.lock"), false).unwrap();
+}
+
+#[test]
+fn live_unresponsive_socket_is_preserved_and_blocks_launch() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = fixture(temp.path());
+    let path = socket_path(&root, temp.path());
+    let listener = UnixListener::bind(&path).unwrap();
+    let before = path.symlink_metadata().unwrap();
+    let mut child = process::spawn(&mut command(&root, temp.path()), None).unwrap();
+    let status =
+        process::wait(&mut child, Duration::from_secs(5), &AtomicBool::new(false)).unwrap();
+    assert_eq!(status.code(), Some(1));
+    let after = path.symlink_metadata().unwrap();
+    assert_eq!((before.dev(), before.ino()), (after.dev(), after.ino()));
+    assert!(!root.join("private/game-started").exists());
+    assert!(!root.join("private/service-stopped").exists());
+    files::Lease::acquire(&root.join("private/play.lock"), false).unwrap();
+    drop(listener);
+}
+
+#[test]
+fn bound_socket_before_listen_is_preserved_and_blocks_launch() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = fixture(temp.path());
+    let path = socket_path(&root, temp.path());
+    let mut owner = Command::new("python3").args(["-c", "import socket,sys,time; s=socket.socket(socket.AF_UNIX,socket.SOCK_STREAM); s.bind(sys.argv[1]); time.sleep(10)"]).arg(&path).spawn().unwrap();
+    let deadline = Instant::now() + Duration::from_secs(5);
+    while !path.exists() {
+        assert!(Instant::now() < deadline);
+        std::thread::sleep(Duration::from_millis(10));
+    }
+    let before = path.symlink_metadata().unwrap();
+    let mut child = process::spawn(&mut command(&root, temp.path()), None).unwrap();
+    let status =
+        process::wait(&mut child, Duration::from_secs(5), &AtomicBool::new(false)).unwrap();
+    let after = path.symlink_metadata();
+    let _ = owner.kill();
+    let _ = owner.wait();
+    assert_eq!(status.code(), Some(1));
+    let after = after.unwrap();
+    assert_eq!((before.dev(), before.ino()), (after.dev(), after.ino()));
+    assert!(!root.join("private/game-started").exists());
+    assert!(!root.join("private/service-stopped").exists());
 }

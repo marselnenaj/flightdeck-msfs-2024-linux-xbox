@@ -13,7 +13,7 @@ use std::{
     os::{
         fd::AsRawFd,
         unix::{
-            fs::MetadataExt,
+            fs::{FileTypeExt, MetadataExt},
             net::UnixStream,
             process::{CommandExt, ExitStatusExt},
         },
@@ -208,6 +208,68 @@ pub fn socket_ready(path: &Path) -> bool {
     })()
     .unwrap_or(false)
 }
+/// Reclaim only a disconnected socket in this runtime's private socket folder.
+/// A protocol timeout or unexpected response is not evidence of a stale listener.
+fn prepare_service_socket(root: &Path, folder: &Path, lease: &File) -> Result<bool> {
+    let private = files::directory(&root.join("private"), true)?;
+    crate::cloud_fs::lease(&private, lease)?;
+    let directory = files::directory(folder, true)?;
+    let path = folder.join("xodus.sock");
+    let before = match path.symlink_metadata() {
+        Ok(value) => value,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(false),
+        Err(error) => return Err(error.into()),
+    };
+    require(
+        before.file_type().is_socket() && before.uid() == files::uid() && before.nlink() == 1,
+        "The existing Xodus socket is not owned by this launcher session.",
+    )?;
+    if socket_ready(&path) {
+        return Ok(true);
+    }
+    require(
+        UnixStream::connect(&path)
+            .is_err_and(|error| error.kind() == std::io::ErrorKind::ConnectionRefused),
+        "An Xodus socket exists but is not accepting connections.",
+    )?;
+    // connect() also refuses a live socket between bind() and listen(). Only a
+    // filesystem remnant with no bound kernel socket is safe to reclaim.
+    let sockets = files::read_public(Path::new("/proc/net/unix"), 16 * 1024 * 1024)?;
+    let bound = sockets
+        .split(|byte| *byte == b'\n')
+        .skip(1)
+        .any(|mut line| {
+            for _ in 0..7 {
+                line = line.trim_ascii_start();
+                let Some(end) = line.iter().position(u8::is_ascii_whitespace) else {
+                    return false;
+                };
+                line = &line[end..];
+            }
+            line.trim_ascii_start() == path.as_os_str().as_encoded_bytes()
+        });
+    require(
+        !bound,
+        "An Xodus socket is still owned by a running service.",
+    )?;
+    let after = path.symlink_metadata()?;
+    require(
+        after.file_type().is_socket()
+            && after.uid() == files::uid()
+            && (
+                before.dev(),
+                before.ino(),
+                before.ctime(),
+                before.ctime_nsec(),
+            ) == (after.dev(), after.ino(), after.ctime(), after.ctime_nsec()),
+        "The Xodus socket changed while checking the previous session.",
+    )?;
+    crate::cloud_fs::same(folder, &directory, true)?;
+    crate::cloud_fs::lease(&private, lease)?;
+    rustix::fs::unlinkat(&directory, "xodus.sock", rustix::fs::AtFlags::empty())?;
+    directory.sync_all()?;
+    Ok(false)
+}
 pub fn inherited_lease(root: &Path, number: i32) -> Result<File> {
     let file = inherited_fd::duplicate(number)?;
     files::directory(&root.join("private"), true)?;
@@ -278,10 +340,8 @@ impl Drop for Session<'_> {
             {
                 companions.extend(gsx::COMPANIONS);
             }
-            if wine_processes::stop(self.root, &companions).is_err() {
-                eprintln!(
-                    "Some add-on companions could not be closed; check the private launcher log."
-                );
+            if let Err(error) = wine_processes::stop(self.root, &companions) {
+                eprintln!("Windows process cleanup did not finish: {error}");
             }
         }
         if let Some(service) = &mut self.service {
@@ -289,7 +349,33 @@ impl Drop for Session<'_> {
         }
     }
 }
+async fn pending_stop(
+    term: &mut tokio::signal::unix::Signal,
+    interrupt: &mut tokio::signal::unix::Signal,
+) -> Option<u8> {
+    // Synchronous preparation can leave a signal in Tokio's OS pipe. Give the
+    // reactor a turn before allowing a spawn; an immediately ready fallback or
+    // just polling recv() would miss that signal. Prefer Stop if both are ready.
+    tokio::select! {
+        biased;
+        _ = term.recv() => Some(143),
+        _ = interrupt.recv() => Some(130),
+        _ = tokio::time::sleep(Duration::from_millis(1)) => None,
+    }
+}
 pub fn run(root: &Path, lease: Option<i32>) -> Result<u8> {
+    // Install termination handlers before synchronous prefix/environment work.
+    // Pending Stop requests are consumed before either child can start.
+    let executor = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()?;
+    let (mut term, mut interrupt) = {
+        let _entered = executor.enter();
+        (
+            tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())?,
+            tokio::signal::unix::signal(tokio::signal::unix::SignalKind::interrupt())?,
+        )
+    };
     let root = root.canonicalize()?;
     let _lease = if let Some(number) = lease {
         inherited_lease(&root, number)?
@@ -314,11 +400,13 @@ pub fn run(root: &Path, lease: Option<i32>) -> Result<u8> {
         service: None,
         game: None,
     };
-    tokio::runtime::Builder::new_current_thread().enable_all().build()?.block_on(async{
-        let mut term=tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())?;let mut interrupt=tokio::signal::unix::signal(tokio::signal::unix::SignalKind::interrupt())?;
-        if !socket_ready(&socket_dir.join("xodus.sock")){require(!files::exists(&socket_dir.join("xodus.sock")),"An Xodus socket exists but is not accepting connections.")?;let log=process::log(&run.join("service.log"))?;let mut command=Command::new(root.join("bin/xodus-service"));command.env_clear().envs(&env).env("XDG_RUNTIME_DIR",&socket_dir).stdin(Stdio::null()).stdout(log.try_clone()?).stderr(log).process_group(0);session.service=Some(process::spawn(&mut command,None)?);
+    executor.block_on(async{
+        let service_ready=prepare_service_socket(&root,&socket_dir,&_lease)?;
+        if let Some(code)=pending_stop(&mut term,&mut interrupt).await{return Ok(code);}
+        if !service_ready{let log=process::log(&run.join("service.log"))?;let mut command=Command::new(root.join("bin/xodus-service"));command.env_clear().envs(&env).env("XDG_RUNTIME_DIR",&socket_dir).stdin(Stdio::null()).stdout(log.try_clone()?).stderr(log).process_group(0);session.service=Some(process::spawn(&mut command,None)?);
             let end=Instant::now()+Duration::from_secs(60);loop{if socket_ready(&socket_dir.join("xodus.sock")){break;}require(Instant::now()<end&&session.service.as_mut().is_some_and(|v|v.try_wait().is_ok_and(|v|v.is_none())),"Xodus service did not start. See the private service log.")?;tokio::select!{_ = term.recv()=>return Ok(143),_ = interrupt.recv()=>return Ok(130),_ = tokio::time::sleep(Duration::from_millis(200))=>{}}}
         }
+        if let Some(code)=pending_stop(&mut term,&mut interrupt).await{return Ok(code);}
         // The self-contained native launcher acts as the Xodus exec target. Its
         // executable-name dispatch supplies the runtime without a shell script.
         let helper=run.join("xodus-wine-launch");std::os::unix::fs::symlink(std::env::current_exe()?,&helper)?;
@@ -358,7 +446,7 @@ pub fn spawn_reserved(ctx: &Context) -> Result<Value> {
                     .into_owned(),
             );
         }
-        Ok((vr::prepare(root, environment)?, report))
+        Ok((vr::prepare(root, environment, &ctx.cancel)?, report))
     })();
     let (mut environment, report) = match prepared {
         Ok(value) => value,

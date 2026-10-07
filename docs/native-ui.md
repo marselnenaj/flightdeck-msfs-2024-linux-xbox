@@ -27,6 +27,41 @@ in Git history (`v0.2.2:ui/`); it is no longer duplicated in the working tree.
 Python remains only in maintainer build/test tools. The
 Windows add-ons themselves still require their own .NET/Wine components.
 
+## Upcoming session and control fixes (source only)
+
+The following changes are not in the published 0.2.5 installer.
+
+When cloud saves need attention but no operation is running, the overview can
+switch between installed MSFS editions. Starting the affected edition remains
+blocked until its warning is resolved. Synchronization, recovery and running
+work continue to prevent edition switching.
+
+An interrupted session shows **Sitzung prüfen / Check session** beside the launch
+button. This checks that the previous session's processes have ended and backs
+up local saves before clearing the block. It does not start the game or upload
+saves. While the check runs, the button shows its progress and launch and edition
+selection remain unavailable. If a check or backup fails, the block stays in
+place and the reason remains visible.
+
+Disabled controls have a muted appearance. A blocked launch shows a warning
+instead of a ready checkmark. An abnormal simulator exit shows a failure hint
+and directs users to Diagnostics; the launch button remains available to retry
+when other checks pass. Normal exits and controlled stops do not show this
+failure hint. **Stopping simulator…** remains visible until stopping finishes.
+Cleanup can terminate orphaned Wine services in the stopped runtime's own
+profile, with bounded waits and repeated checks that no applications remain.
+
+Startup also replaces a stale Xodus socket left after its service has ended.
+Flightdeck checks ownership and the runtime lease before removal; a socket
+still bound by a process or a live service that does not respond is preserved.
+
+Regression checks cover real pointer actions, recovery progress, retryable
+failures, disabled-control pixels and cached page/size changes with the software
+renderer. Backend tests cover save-preserving recovery, stale versus live
+sockets and Wine cleanup without terminating another profile or an active
+application. These checks do not establish a fix for an unspecified rendering
+glitch or for simulator graphics.
+
 ## Edition detection and responsiveness in 0.2.5
 
 Installed editions remain selectable when a readiness check fails. Previously,
@@ -78,49 +113,57 @@ not uninstall them. See [add-on instructions](addons.md).
 
 ## Fenix install-hook warning
 
-The reported screenshot says that file installation completed but the
-application install hook failed. That is a Velopack warning about the application's
-post-install command; a zero exit code from the outer installer is insufficient
-to declare success. See the upstream [hook failure discussion](https://github.com/velopack/velopack/issues/297).
+“Application install hook failed” means that the official application's
+post-install command failed; an outer installer exit of zero does not establish
+success. [Velopack hook behavior](https://github.com/velopack/velopack/issues/297).
+The warning can have different causes.
 
-A local Fenix 1.0.286 log reproduced this warning with an ICU symbol-loading
-failure. Flightdeck already supplied .NET compatibility variables to its own
-Unix child processes. It now also persists `DOTNET_SYSTEM_GLOBALIZATION_USENLS=1`
-and `DOTNET_ReadyToRun=0` in **that Wine profile's** `HKCU\Environment`, before
-starting Fenix. This covers later Windows shortcut/Explorer launches and detached
-installer children. The Microsoft [globalization setting](https://learn.microsoft.com/en-us/dotnet/core/run-time-config/globalization)
-selects Windows NLS instead of ICU; the [runtime environment options](https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-environment-variables)
-document the ReadyToRun switch. Host environment files are unchanged.
+Since 0.2.3, Flightdeck sets `DOTNET_SYSTEM_GLOBALIZATION_USENLS=1` and
+`DOTNET_ReadyToRun=0` in both its scoped Wine launch environment and that profile's
+`HKCU\Environment`. This addresses the reproduced ICU symbol-loading failure and
+covers detached Windows children. The [globalization setting](https://learn.microsoft.com/en-us/dotnet/core/run-time-config/globalization)
+selects Windows NLS; the [runtime options](https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-environment-variables)
+document ReadyToRun. Flightdeck waits for detached installer children and checks
+only the current invocation's log slice.
 
-Flightdeck also waits for installer children after the bootstrapper exits,
-instead of immediately cleaning them up. Close all Fenix windows when finished,
-or use **Fenix beenden / Stop Fenix**. It checks only the new part of the local
-log for failed, timed-out or unfinished install/update hooks. An old failed log
-entry does not turn a successful retry into a failure.
+**Upcoming, source only:** Flightdeck distinguishes the detected **FenixApp
+manager** from the installed **Fenix aircraft**. The former can exist after a failed
+hook. **Repair Fenix app** validates the contained app and its `sq.version`, reapplies
+the settings above and reruns the official `--veloapp-install` command with a
+bounded timeout and cancellation. It does not reinstall the aircraft or reset the
+Wine profile. Success enables continuing setup in the official manager; it does
+not establish activation or working aircraft systems.
 
-An explicit, isolated test passed the real official FenixApp 1.0.286
-`--veloapp-install` hook with both compatibility variables removed from the Unix
-launch environment. The variables persisted in the Wine registry were sufficient
-in that test. It used a new prefix and copied application/runtime code, without
-accounts, activated profiles, games or existing-prefix changes. This verifies
-the known ICU failure; the screenshot alone cannot establish whether the remote
-user encountered the same cause. It does not validate Fenix activation or a flight.
+Diagnostics include the latest recorded Fenix attempt independently of the
+simulator log: operation, timestamps, validated package version, runner category,
+exit codes and finite failure signatures. Raw logs, paths and account data are
+excluded. Missing evidence stays unknown; a new attempt replaces the old result.
 
-Reproduce with locally available official application/runtime code and a compatible
-runner; the output directory must not already exist:
+Validation used official FenixApp 1.0.286 in isolated, account-free profiles:
+
+- A fresh full bootstrapper install with `--silent` and newly installed .NET,
+  Visual C++ and WebView2 completed its install hook successfully.
+- Removing the .NET settings reproduced ICU failure with exit code 3. Reapplying
+  them and rerunning the hook succeeded with exit code 0, including when the Unix
+  overrides were removed and only the registry supplied them.
+- The actual backend repair action completed against that official application
+  and persisted its successful versioned result in the isolated runtime.
+
+These checks do not diagnose every remote install-hook failure or validate
+activation and simulator flights. To reproduce with official local app/runtime
+code, use a compatible runner and a new output directory for each check:
 
 ```sh
 FLIGHTDECK_TEST_RUNNER="$RUNNER" \
 FLIGHTDECK_TEST_FENIX_APP="$FENIX_APP_CURRENT" \
 FLIGHTDECK_TEST_DOTNET="$DOTNET_DIRECTORY" \
 FLIGHTDECK_TEST_OUTPUT="$PWD/build/fenix-hook-check" \
-cargo test --locked --test native_live_fenix -- --ignored --nocapture
+cargo test --locked --test native_live_fenix \
+  official_fenix_hook_with_persisted_wine_environment -- --ignored --nocapture
 ```
 
-For a user who sees this warning, retry the official EXE through **Mods → Fenix →
-Installer starten** using this build and finish by closing its windows. The
-compatibility settings are applied automatically; resetting the whole profile is
-not required for the verified ICU case.
+The separate `official_fenix_hook_failure_is_repaired_by_persisted_compatibility_settings`
+check exercises failure and recovery; give it a different, unused output directory.
 
 ## Verification
 

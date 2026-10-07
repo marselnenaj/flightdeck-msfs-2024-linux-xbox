@@ -912,7 +912,10 @@ pub fn export_local<'a>(
         raw_digest: raw_digest(raw.as_deref()),
         content_digest: digest(&state)?,
         generation: state.generation,
-        encoded: raw.unwrap_or(encode(&state)?),
+        encoded: match raw {
+            Some(raw) => raw,
+            None => encode(&state)?,
+        },
         local,
     })
 }
