@@ -3,7 +3,6 @@ name: Publish a verified native release
 on:
   push:
     branches: [main]
-    paths: [Cargo.toml]
 
 permissions:
   contents: read
@@ -26,7 +25,7 @@ jobs:
           ref: ${{ github.sha }}
           fetch-depth: 2
           persist-credentials: false
-      - name: Require the exact release subject and a changed stable Cargo version
+      - name: Require the exact release subject and an unpublished stable version
         id: commit
         run: python3 scripts/release.py gate
 

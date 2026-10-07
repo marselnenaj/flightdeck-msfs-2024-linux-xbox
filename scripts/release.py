@@ -67,9 +67,10 @@ def eligible():
     if head != os.environ.get("GITHUB_SHA"):
         return False
     subject = run(["git", "log", "-1", "--format=%s"]).stdout.strip()
-    before = run(["git", "show", "HEAD^:Cargo.toml"]).stdout
-    return (subject == f"Release Flightdeck {version()}"
-            and tomllib.loads(before)["package"]["version"] != version())
+    # A failed pre-publication check can be corrected by a new release commit
+    # without incrementing an unpublished version. A real tag is never reused.
+    current = version()
+    return subject == f"Release Flightdeck {current}" and not tag_refs(f"v{current}")
 
 
 def checksum(path):

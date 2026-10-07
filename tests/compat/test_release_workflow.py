@@ -26,22 +26,32 @@ def result(stdout="", returncode=0, stderr=""):
 
 
 class ReleaseWorkflow(unittest.TestCase):
-    def test_gate_requires_push_main_exact_subject_and_a_changed_stable_version(self):
+    def test_gate_requires_push_main_exact_commit_subject_and_an_absent_tag(self):
         environment = {"GITHUB_EVENT_NAME": "push", "GITHUB_REF": "refs/heads/main",
                        "GITHUB_REPOSITORY": release.REPOSITORY, "GITHUB_SHA": COMMIT}
         with patch.dict(os.environ, environment), patch.object(release, "version", return_value="0.2.6"):
-            for subject, previous, accepted in [
-                ("Release Flightdeck 0.2.6", "0.2.5", True),
-                ("Release Flightdeck 0.2.6 extra", "0.2.5", False),
-                ("Release Flightdeck 0.2.6", "0.2.6", False),
+            for subject, head, refs, accepted in [
+                ("Release Flightdeck 0.2.6", COMMIT, "", True),
+                ("Release Flightdeck 0.2.6 extra", COMMIT, "", False),
+                ("Release Flightdeck 0.2.5", COMMIT, "", False),
+                ("Release Flightdeck 0.2.6", "b" * 40, "", False),
+                ("Release Flightdeck 0.2.6", COMMIT, f"{COMMIT}\trefs/tags/v0.2.6", False),
             ]:
-                with self.subTest(subject=subject, previous=previous), patch.object(release, "run", side_effect=[
-                    result(COMMIT), result(subject), result(f'[package]\nversion = "{previous}"')
-                ]):
+                with self.subTest(subject=subject, head=head, refs=refs), \
+                        patch.object(release, "run", side_effect=[result(head), result(subject)]), \
+                        patch.object(release, "tag_refs", return_value=refs) as tags:
                     self.assertEqual(release.eligible(), accepted)
-            with patch.dict(os.environ, GITHUB_EVENT_NAME="pull_request"), patch.object(release, "run") as command:
-                self.assertFalse(release.eligible())
-                command.assert_not_called()
+                    if head == COMMIT and subject == "Release Flightdeck 0.2.6":
+                        tags.assert_called_once_with("v0.2.6")
+                    else:
+                        tags.assert_not_called()
+            for key, value in [("GITHUB_EVENT_NAME", "pull_request"),
+                               ("GITHUB_REF", "refs/heads/another"),
+                               ("GITHUB_REPOSITORY", "another/repository")]:
+                with self.subTest(key=key), patch.dict(os.environ, {key: value}), \
+                        patch.object(release, "run") as command:
+                    self.assertFalse(release.eligible())
+                    command.assert_not_called()
 
     def test_archive_rejects_links_and_traversal_before_writing(self):
         with tempfile.TemporaryDirectory() as temporary:
