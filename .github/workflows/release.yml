@@ -99,7 +99,7 @@ jobs:
             --output build/release-assets
           python3 scripts/source-release.py --output "build/release-assets/flightdeck-source-${RELEASE_VERSION}.tar.gz"
           python3 scripts/release.py unpack --archive build/release-assets/Flightdeck-Linux-x86_64.tar.gz --output build/release-current
-      - name: Test actual installation, service handoff and rollback against published 0.2.5
+      - name: Test actual installation, service handoff and rollback against published 0.2.6
         run: |
           python3 scripts/check-native-package.py \
             --package build/release-current/flightdeck-linux \

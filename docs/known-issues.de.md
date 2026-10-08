@@ -2,8 +2,8 @@
 
 [English](known-issues.md) · [Dokumentation](index.md)
 
-Stand: 8. Oktober 2026, für die stabile Version **0.2.6**.
-Siehe [Änderungsübersicht](changelog.md#026--8-october-2026).
+Stand: 8. Oktober 2026, für die stabile Version **0.2.7**.
+Siehe [Änderungsübersicht](changelog.md#027--8-october-2026).
 
 - **NVIDIA:** Die normale MSFS-2024-Darstellung ist durch Nutzertests bestätigt.
   Kleinere Probleme bleiben möglich, etwa ein fehlendes oder schwarzes Startvideo.
@@ -13,11 +13,19 @@ Siehe [Änderungsübersicht](changelog.md#026--8-october-2026).
 - **Fenix-Installation:** Bei „application install hook failed“ können bereits
   FenixApp-Dateien vorhanden sein, obwohl die Einrichtung nicht abgeschlossen ist.
   Ein reproduzierter ICU-/.NET-Fall ist reparierbar; die allgemeine Meldung allein
-  verrät die Ursache nicht. In 0.2.6 den Installer schließen und **Mods →
-  Fenix → Fenix-App reparieren** verwenden. Dies wiederholt den offiziellen Einrichtungsschritt der vorhandenen
+  verrät die Ursache nicht. Den Installer schließen und **Mods → Fenix →
+  Fenix-App reparieren** verwenden, eingeführt in 0.2.6. Wenn verfügbar, erscheint
+  die Reparatur in 0.2.7 nach fehlgeschlagenem Hook direkt als nächster Schritt,
+  sonst unter **Verwalten & reparieren**. Dies wiederholt den offiziellen
+  Einrichtungsschritt der vorhandenen
   App; die Diagnose erfasst den letzten Versuch. Eine erkannte FenixApp bestätigt
   weder die Flugzeuginstallation noch die Aktivierung.
   [Fenix einrichten](addons.de.md#fenix-a320-einrichten) · [Prüfumfang](native-ui.md#fenix-install-hook-warning).
+- **GSX Pro:** Experimentell. Der offizielle FSDT-Installer wurde in einem
+  isolierten Wine-Profil geprüft. Lizenzierte Installation, Aktivierung,
+  Couatl/SimConnect, Menü im Simulator und Bodendienste bleiben unbestätigt.
+  **GSX lokal eingerichtet · Funktion unbestätigt** beschreibt nur die lokale
+  Einrichtung. [Prüfgrenzen und Einrichtung](addons.de.md#gsx-pro-einrichten-experimentell).
 - **Unterbrochene Sitzungen und Schaltflächen:** In 0.2.6 beheben die sichere
   Sitzungsprüfung, Reparatur verwaister Dienst-Sockets und korrigierte Anzeigen
   für Start, Stop und Simulatorauswahl Startblockaden nach unterbrochenen

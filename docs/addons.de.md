@@ -38,9 +38,9 @@ Die allgemeine Mod-Liste zeigt den Bestand und öffnet den Ordner.
 Für Fenix und die experimentelle GSX-Pro-Integration gibt es eigene Abläufe,
 derzeit nur für MSFS 2024.
 
-Die unten beschriebene vereinfachte Add-on-Ansicht gehört zur aktuellen
-Quellversion. Die veröffentlichte Version 0.2.6 zeigt Einrichtungsschritte und
-zusätzliche Aktionen noch gemeinsam an.
+Flightdeck 0.2.7 zeigt für jedes Add-on einen hervorgehobenen nächsten Schritt.
+Erkannte Komponenten bleiben sichtbar; zusätzliche Aktionen stehen unter
+**Verwalten & reparieren**.
 
 ## Community-Mod deinstallieren
 

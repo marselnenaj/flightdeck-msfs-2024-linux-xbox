@@ -37,8 +37,8 @@ settings and liveries before replacing a package. The general Community inventor
 Fenix and the experimental GSX Pro integration have separate setup workflows
 below, currently for MSFS 2024 only.
 
-The simplified add-on view described below is in the current source version.
-Published 0.2.6 still shows the setup steps and additional actions together.
+Flightdeck 0.2.7 shows one highlighted next action for each add-on. Detected
+components remain visible; additional actions are under **Manage & repair**.
 
 ## Uninstall a Community add-on
 

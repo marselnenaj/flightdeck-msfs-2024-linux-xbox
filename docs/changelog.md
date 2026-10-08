@@ -1,5 +1,26 @@
 # Changes and release status
 
+## 0.2.7 — 8 October 2026
+
+Stable release with full installer and corresponding source archives.
+Existing 0.1.22 and native 0.2.1–0.2.6 launchers can use the in-app updater.
+
+- Simplify Fenix and GSX setup to one highlighted next action. Summarize detected
+  components and put additional installer, repair and recovery options under
+  **Manage & repair** instead of repeating every completed setup step.
+- Show current failures and progress beside the next action. Offer Fenix app
+  repair after a failed install hook; retain explicit reinstallation when the
+  manager is missing but the Fenix companion is present.
+- Bind Fenix job history to the selected simulator installation and hide stale
+  add-on feedback after a profile change or connection failure.
+- Describe Fenix completion as local configuration. File detection does not
+  verify an aircraft installation, account activation or license.
+- Keep GSX explicitly experimental and its simulator functionality unconfirmed.
+  Require each local prerequisite before reporting setup complete, and keep
+  running jobs distinct from completed setup. This release does not establish
+  licensed GSX operation, Couatl/SimConnect connectivity or working ground services.
+- Update the English and German add-on guides to match the simplified controls.
+
 ## 0.2.6 — 8 October 2026
 
 Stable release with full installer and corresponding source archives.

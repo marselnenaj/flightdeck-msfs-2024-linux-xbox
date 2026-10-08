@@ -1,4 +1,4 @@
-# Native desktop and add-on management (0.2.6)
+# Native desktop and add-on management (0.2.7)
 
 All six Flightdeck views now use Rust and iced 0.14: overview, setup, updates,
 saves, mods and diagnostics. The previous artwork, Manrope font, icons, colors
@@ -26,6 +26,33 @@ only shared artwork, font and icon assets. The old web implementation is availab
 in Git history (`v0.2.2:ui/`); it is no longer duplicated in the working tree.
 Python remains only in maintainer build/test tools. The
 Windows add-ons themselves still require their own .NET/Wine components.
+
+## Compact add-on controls in 0.2.7
+
+Fenix and GSX show the current status, detected components and one highlighted
+next action. Completed setup steps no longer repeat their full instructions
+and controls. Repair, reinstallation, updates and restore tools remain under
+**Manage & repair**. A missing Fenix manager can still be reinstalled when the
+companion runtime is present. An eligible repair appears directly after a failed
+Fenix install hook.
+
+Current setup errors and running operations appear beside the next action.
+Feedback is bound to the selected runtime; unavailable or stale snapshots cannot
+show another profile's old job or enable its actions. Running applications retain
+their permitted stop control. Existing runtime, idle and confirmation checks
+continue to govern every action.
+
+**Fenix locally configured** describes the local patch, runtime files and
+settings, without confirming an aircraft package, license or functioning cockpit.
+GSX always shows that simulator functionality is unconfirmed, including after
+local setup. FSDT installer checks do not validate licensed GSX installation,
+activation, Couatl/SimConnect, the in-game menu or ground services.
+
+State and pointer-action regressions cover these distinctions, missing managers,
+blocked actions and foreign or stale snapshots. `capture_addon_states` renders
+eight Fenix/GSX states in German and English at 750 × 900 and 1280 × 900 using
+the production software renderer. These captures do not exercise paid add-ons
+or a running simulator. See the [add-on guide](addons.md) for the setup flow.
 
 ## Session and control fixes in 0.2.6
 
@@ -127,7 +154,7 @@ document ReadyToRun. Flightdeck waits for detached installer children and checks
 only the current invocation's log slice.
 
 **In 0.2.6:** Flightdeck distinguishes the detected **FenixApp
-manager** from the installed **Fenix aircraft**. The former can exist after a failed
+manager** from the **Fenix companion runtime files**. The former can exist after a failed
 hook. **Repair Fenix app** validates the contained app and its `sq.version`, reapplies
 the settings above and reruns the official `--veloapp-install` command with a
 bounded timeout and cancellation. It does not reinstall the aircraft or reset the
