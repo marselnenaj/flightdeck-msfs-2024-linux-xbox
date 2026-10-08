@@ -361,6 +361,30 @@ mod tests {
     #[test]
     fn repair_validates_package_then_runs_only_official_hook_with_scoped_settings() {
         use std::{os::unix::fs::PermissionsExt, sync::atomic::AtomicBool};
+        const CHILD: &str = "FLIGHTDECK_TEST_FENIX_REPAIR_CHILD";
+        if std::env::var_os(CHILD).is_none() {
+            // Other tests can fork while this fixture writes its synthetic Wine
+            // executable. Their inherited writable FD survives until exec and
+            // can cause ETXTBSY even after atomic() closes the original handle.
+            // Create and execute the fixture in a single-test child instead.
+            let (status, output) = crate::process::output_status(
+                std::process::Command::new(std::env::current_exe().expect("test executable"))
+                    .args([
+                        "--exact",
+                        "fenix_installer::tests::repair_validates_package_then_runs_only_official_hook_with_scoped_settings",
+                        "--test-threads=1",
+                    ])
+                    .env(CHILD, "1"),
+                Duration::from_secs(20),
+                65536,
+                &AtomicBool::new(false),
+            )
+            .expect("isolated repair fixture");
+            let output = String::from_utf8_lossy(&output);
+            assert!(status.success(), "{output}");
+            assert!(output.contains("test result: ok. 1 passed;"), "{output}");
+            return;
+        }
         let temp = tempfile::tempdir().expect("fixture");
         let prefix = temp.path().join("prefix");
         let current = prefix.join("drive_c/users/steamuser/AppData/Local/FenixApp/current");
