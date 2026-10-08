@@ -13,9 +13,21 @@ pub(crate) struct AddonProgress {
 }
 
 pub(crate) fn fenix(data: &Value, status: &Value) -> AddonProgress {
+    if !data["_error"].is_null() {
+        return AddonProgress {
+            title: "Fenix-Status derzeit nicht verfügbar",
+            detail: "Lade den Status neu, bevor du die Einrichtung änderst.",
+            steps: Vec::new(),
+            next: 0,
+            ready: false,
+            busy: "",
+        };
+    }
     let patched = data["state"] == "installed" && yes(data, "installed");
-    let aircraft = patched && yes(data, "fenix_installed");
-    let settings = aircraft && yes(data, "settings_ready");
+    // Fenix.exe and settings files are local installation evidence. Neither
+    // establishes an installed Community aircraft, an account or a valid license.
+    let companion = patched && yes(data, "fenix_installed");
+    let settings = companion && yes(data, "settings_ready");
     let ready = settings && yes(data, "configured");
     let supported =
         ["available", "installed"].contains(&s(data, "state")) || yes(data, "can_retry");
@@ -23,7 +35,7 @@ pub(crate) fn fenix(data: &Value, status: &Value) -> AddonProgress {
         0
     } else if settings {
         4
-    } else if aircraft {
+    } else if companion {
         3
     } else if patched {
         2
@@ -39,37 +51,35 @@ pub(crate) fn fenix(data: &Value, status: &Value) -> AddonProgress {
         busy: "",
     };
     if supported {
-        progress.steps = vec![patched, aircraft, settings, ready];
+        progress.steps = vec![patched, companion, settings, ready];
         progress.title = if ready {
-            "Fenix ist startbereit"
+            "Fenix lokal eingerichtet"
         } else if next == 2 && yes(data, "manager_installed") {
-            "Fenix-App erkannt · Flugzeug noch nicht installiert"
+            "Fenix-App erkannt · Einrichtung unvollständig"
         } else {
             "Einrichtung noch nicht abgeschlossen"
         };
         progress.detail = match next {
             0 => {
-                "Starte MSFS 2024 ganz normal in Flightdeck. Fenix startet automatisch mit dem Spiel und wird beim Beenden mit geschlossen."
+                "Die lokale Einrichtung ist abgeschlossen. Anmeldung und Lizenz prüft Fenix selbst."
             }
             1 => {
-                "Schritt 1 von 4: Richte zuerst den Linux-Patch ein. Flightdeck lädt das geprüfte Paket automatisch herunter."
+                "Richte zuerst den Linux-Patch ein. Flightdeck lädt das geprüfte Paket automatisch herunter."
             }
             2 if yes(data, "manager_installed") => {
-                "Schritt 2 von 4: Öffne die vorhandene Fenix-App und installiere dort dein Flugzeug. Schließe die App danach vollständig."
+                "Öffne die vorhandene Fenix-App und vervollständige dort die Installation. Schließe die App danach."
             }
-            2 => {
-                "Schritt 2 von 4: Lade den offiziellen Fenix-Installer herunter, wähle die EXE aus und installiere dein Flugzeug."
-            }
-            3 => {
-                "Schritt 3 von 4: Öffne Fenix, melde dich an und schließe das Programm danach vollständig."
-            }
+            2 => "Lade den offiziellen Fenix-Installer herunter und wähle die EXE aus.",
+            3 => "Öffne Fenix, melde dich dort an und schließe das Programm danach.",
             _ => {
-                "Schritt 4 von 4: Schließe Fenix und klicke auf „Einrichtung abschließen“. Damit werden Anzeigen und automatischer Start eingerichtet."
+                "Schließe Fenix und übernimm die Einstellungen für Anzeigen und automatischen Start."
             }
         };
         if yes(data, "can_retry") {
+            progress.ready = false;
+            progress.next = 1;
             progress.title = "Einrichtung kann automatisch repariert werden";
-            progress.detail = "Klicke auf „Einrichtung reparieren“. Flightdeck prüft und repariert .NET im kopierten Profil. Ein PC-Neustart oder manuelles Wiederherstellen ist dafür nicht nötig.";
+            progress.detail = "Repariere zuerst die Linux-Einrichtung. Flightdeck prüft .NET im kopierten Profil.";
         }
     } else if data["state"] == "legacy" {
         progress.title = "Vorhandene Fenix-Einrichtung";
@@ -109,56 +119,57 @@ pub(crate) fn fenix(data: &Value, status: &Value) -> AddonProgress {
 }
 
 pub(crate) fn gsx(data: &Value) -> AddonProgress {
-    let steps = vec![
-        yes(data, "prepared"),
-        yes(data, "package_installed"),
-        yes(data, "configured"),
-    ];
+    let current = data["_error"].is_null();
+    let supported = current && data["state"] == "available";
+    let prepared = supported && yes(data, "prepared");
+    let package = prepared && yes(data, "package_installed");
+    let configured = package && yes(data, "startup_found") && yes(data, "configured");
+    let steps = vec![prepared, package, configured];
     let next = steps.iter().position(|v| !v).map(|i| i + 1).unwrap_or(0);
     let mut progress = AddonProgress {
         title: "GSX-Status wird geladen …",
         detail: "",
         steps: Vec::new(),
         next,
-        ready: next == 0,
+        // This means local setup only; the backend has no simulator or license proof.
+        ready: configured,
         busy: "",
     };
-    if data["state"] == "available" {
+    if !current {
+        progress.title = "GSX-Status derzeit nicht verfügbar";
+    } else if supported {
         progress.title = if next == 0 {
-            "GSX eingerichtet · Flugtest ausstehend"
+            "GSX lokal eingerichtet · Funktion unbestätigt"
         } else {
             "GSX-Einrichtung"
         };
         progress.detail = match next {
-            0 => {
-                "Starte MSFS und prüfe das GSX-Menü sowie die Bodendienste. Der Flugbetrieb unter Linux ist noch nicht bestätigt."
-            }
-            1 => {
-                "Schritt 1 von 3: Flightdeck lädt den geprüften FSDT-Installer und richtet .NET in einer Profilkopie ein."
-            }
-            2 => {
-                "Schritt 2 von 3: Installiere und aktiviere GSX im offiziellen FSDT-Installer. Schließe ihn danach vollständig."
-            }
+            0 => "Öffne MSFS und prüfe das GSX-Menü und die Bodendienste.",
+            1 => "Bereite den FSDT-Installer und .NET in einer Profilkopie vor.",
+            2 => "Installiere und aktiviere GSX im FSDT-Installer. Schließe ihn danach.",
             _ if yes(data, "startup_found") => {
-                "Schritt 3 von 3: Übernimm den von FSDT angelegten automatischen Start."
+                "Übernimm den von FSDT angelegten automatischen Start."
             }
-            _ => {
-                "Schritt 3 von 3: Die FSDT-Starteinstellung fehlt. Führe im FSDT-Installer ein Update aus und prüfe erneut."
-            }
+            _ => "Die FSDT-Starteinstellung fehlt. Öffne den Installer für ein Update.",
         };
         progress.steps = steps;
     } else if yes(data, "can_recover") {
         progress.title = "GSX-Einrichtung unterbrochen";
-        progress.detail = "Stelle zuerst das bisherige Windows-Profil wieder her. Danach kannst du die Vorbereitung erneut starten.";
+        progress.detail = "Stelle zuerst das bisherige Windows-Profil wieder her.";
     } else if data["state"].is_string() {
         progress.title = "GSX ist für diese Installation nicht verfügbar";
     }
-    if data["job"]["state"] == "running" {
-        progress.title = "GSX-Einrichtung läuft …";
-        progress.detail = if data["job"]["operation"] == "open" {
-            "Der FSDT-Installer ist geöffnet. Beende laufende Downloads und schließe ihn danach."
+    if current && data["job"]["state"] == "running" {
+        progress.ready = false;
+        progress.title = if yes(&data["job"], "stopping") {
+            "FSDT wird beendet …"
         } else {
-            "Bitte warte, bis der aktuelle Schritt abgeschlossen ist."
+            "GSX-Einrichtung läuft …"
+        };
+        progress.detail = if data["job"]["operation"] == "open" && !yes(&data["job"], "stopping") {
+            "Der FSDT-Installer ist geöffnet. Schließe ihn nach dem Download."
+        } else {
+            "Warte, bis der aktuelle Schritt abgeschlossen ist."
         };
     }
     progress
@@ -261,5 +272,99 @@ pub(crate) fn game_update(data: &Value) -> &'static str {
         "Deine Spielversion ist aktuell"
     } else {
         "Noch nicht nach Updates gesucht"
+    }
+}
+
+#[cfg(test)]
+mod addon_tests {
+    use super::{fenix, gsx};
+    use serde_json::{Value, json};
+
+    #[test]
+    fn fenix_local_completion_and_manager_detection_do_not_claim_license_or_aircraft() {
+        let mut data = json!({"state":"installed", "installed":true,
+            "fenix_installed":true, "manager_installed":true,
+            "settings_ready":true, "configured":true});
+        let status = json!({"game":{"state":"stopped"}});
+        let complete = fenix(&data, &status);
+        assert!(complete.ready);
+        assert_eq!(complete.title, "Fenix lokal eingerichtet");
+        assert!(complete.detail.contains("Lizenz prüft Fenix selbst"));
+        assert_eq!(complete.steps, [true, true, true, true]);
+        data["fenix_installed"] = json!(false);
+        let manager = fenix(&data, &status);
+        assert!(!manager.ready);
+        assert_eq!(manager.next, 2);
+        assert_eq!(manager.steps, [true, false, false, false]);
+        assert_eq!(
+            manager.title,
+            "Fenix-App erkannt · Einrichtung unvollständig"
+        );
+        assert!(!manager.title.contains("Flugzeug"));
+    }
+
+    #[test]
+    fn fenix_stale_active_and_legacy_states_are_not_managed_completion() {
+        let mut data = json!({"state":"installed", "installed":true,
+            "fenix_installed":true, "settings_ready":true, "configured":true});
+        data["_error"] = json!("offline");
+        let stale = fenix(&data, &Value::Null);
+        assert!(!stale.ready);
+        assert!(stale.steps.is_empty());
+        data["_error"] = Value::Null;
+        data["job"] = json!({"state":"running", "operation":"open"});
+        assert!(!fenix(&data, &Value::Null).ready);
+        data["job"] = Value::Null;
+        data["state"] = json!("legacy");
+        let legacy = fenix(&data, &Value::Null);
+        assert!(!legacy.ready);
+        assert!(legacy.steps.is_empty());
+        assert_eq!(legacy.title, "Vorhandene Fenix-Einrichtung");
+    }
+
+    #[test]
+    fn gsx_requires_each_local_prerequisite_and_never_claims_simulator_validation() {
+        for flags in 0..16 {
+            let prepared = flags & 1 != 0;
+            let package = flags & 2 != 0;
+            let startup = flags & 4 != 0;
+            let configured = flags & 8 != 0;
+            let progress = gsx(&json!({"state":"available", "prepared":prepared,
+                "package_installed":package, "startup_found":startup, "configured":configured}));
+            assert_eq!(
+                progress.steps,
+                [
+                    prepared,
+                    prepared && package,
+                    prepared && package && startup && configured
+                ]
+            );
+            assert_eq!(progress.ready, flags == 15);
+            if progress.ready {
+                assert!(progress.title.contains("Funktion unbestätigt"));
+            }
+        }
+    }
+
+    #[test]
+    fn gsx_unsupported_stale_or_active_cannot_be_ready() {
+        let mut data = json!({"state":"available", "prepared":true,
+            "package_installed":true, "startup_found":true, "configured":true});
+        data["state"] = json!("unavailable");
+        assert!(!gsx(&data).ready);
+        assert!(gsx(&data).steps.is_empty());
+        data["state"] = json!("available");
+        data["_error"] = json!("offline");
+        assert!(!gsx(&data).ready);
+        assert!(gsx(&data).steps.is_empty());
+        data["_error"] = Value::Null;
+        data["job"] = json!({"state":"running", "operation":"open"});
+        assert!(!gsx(&data).ready);
+        data["job"]["stopping"] = json!(true);
+        let stopping = gsx(&data);
+        assert!(!stopping.ready);
+        assert_eq!(stopping.title, "FSDT wird beendet …");
+
+        assert!(!gsx(&Value::Null).ready);
     }
 }

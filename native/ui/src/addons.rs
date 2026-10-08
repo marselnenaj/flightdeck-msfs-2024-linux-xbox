@@ -1,60 +1,112 @@
 use crate::*;
-use iced::widget::column;
+use iced::widget::{column, progress_bar};
 use model::Action::*;
 
 impl App {
-    fn addon_step<'a>(
-        &self,
-        index: usize,
-        done: bool,
-        next: bool,
-        title: &str,
-        content: Column<'a, Message>,
-    ) -> Element<'a, Message> {
-        let state = if done {
-            "Erledigt"
-        } else if next {
-            "Als Nächstes"
-        } else {
-            "Noch offen"
-        };
-        let color = if done || next {
-            self.edition.accent()
-        } else {
-            MUTED
-        };
-        container(
-            row![
-                label(
-                    if done {
-                        "✓".into()
-                    } else {
-                        index.to_string()
-                    },
-                    20.0,
-                    Weight::Bold,
-                    color
-                )
-                .width(28),
-                column![
-                    label(self.t(state).to_string(), 12.0, Weight::Semibold, color),
-                    label(self.t(title).to_string(), 18.0, Weight::Semibold, INK),
-                    content
-                ]
-                .spacing(10)
-                .width(Length::Fill)
-            ]
-            .spacing(16),
-        )
-        .padding(18)
-        .width(Length::Fill)
-        .style(move |_| {
-            container::Style::default().background(BG).border(Border {
-                color: if next { color } else { LINE },
-                width: 1.0,
-                radius: 12.0.into(),
-            })
-        })
+    fn addon_action<'a>(&self, title: &str, action: model::Action) -> Element<'a, Message> {
+        let message = self.request(&action).map(|_| Message::Action(action));
+        self.control(title, message, true)
+    }
+
+    fn addon_facts<'a>(&self, facts: &[(&str, bool)]) -> Element<'a, Message> {
+        let mut items = row![].spacing(10);
+        for (name, detected) in facts {
+            items = items.push(
+                container(label(
+                    format!("{} {}", if *detected { "✓" } else { "–" }, name),
+                    12.0,
+                    Weight::Medium,
+                    MUTED,
+                ))
+                .padding([6, 10])
+                .style(|_| {
+                    container::Style::default().background(BG).border(Border {
+                        color: LINE,
+                        width: 1.0,
+                        radius: 6.0.into(),
+                    })
+                }),
+            );
+        }
+        items.wrap().into()
+    }
+
+    // Only the current runtime's validated snapshot may supply feedback. Keep
+    // the last error and live progress beside the next action; full checks are
+    // available in the management section below.
+    fn addon_feedback<'a>(&self, data: &Value) -> Element<'a, Message> {
+        let mut content = column![].spacing(8);
+        for key in ["message", "unavailable_reason", "error", "startup_error"] {
+            if !s(data, key).is_empty() && !(key == "message" && data["state"] == "legacy") {
+                content = content.push(self.paragraph(s(data, key).to_string()));
+            }
+        }
+        let job = &data["job"];
+        if job["state"] == "failed" || model::active(job) {
+            if job["state"] == "failed" {
+                content = content.push(label(
+                    self.tr("Letzter Vorgang fehlgeschlagen", "Last operation failed"),
+                    13.0,
+                    Weight::Semibold,
+                    iced::color!(0xff9199),
+                ));
+            }
+            for key in ["message", "error"] {
+                if !s(job, key).is_empty() && (key != "error" || job["error"] != job["message"]) {
+                    content = content.push(self.paragraph(s(job, key).to_string()));
+                }
+            }
+            if model::active(job) {
+                let transfer = &job["transfer"];
+                if !transfer.is_null() {
+                    content = content.push(self.paragraph(format!(
+                        "{} / {}",
+                        model::bytes(model::number(&transfer["received_bytes"])),
+                        if model::number(&transfer["total_bytes"]) > 0 {
+                            model::bytes(model::number(&transfer["total_bytes"]))
+                        } else {
+                            "?".into()
+                        }
+                    )));
+                }
+                let progress = model::transfer_progress(transfer).or_else(|| {
+                    job["progress"]
+                        .as_f64()
+                        .filter(|v| v.is_finite())
+                        .map(|v| v.clamp(0.0, 100.0) as f32)
+                });
+                if let Some(progress) = progress {
+                    content = content.push(progress_bar(0.0..=100.0, progress));
+                }
+            }
+        }
+        content.into()
+    }
+
+    fn fenix_installer(&self, manager: bool) -> Element<'_, Message> {
+        column![
+            self.help_link(
+                "Offiziellen Installer im Fenix-Konto herunterladen",
+                HelpLink::FenixInstaller
+            ),
+            self.input(
+                "Fenix-Installer-Datei",
+                "installer_path",
+                "/home/…/FenixInstaller.exe",
+                Some(FenixPick("installer"))
+            ),
+            self.control(
+                if manager {
+                    "Installer erneut ausführen"
+                } else {
+                    "Installer starten"
+                },
+                self.request(&Fenix("installer"))
+                    .map(|_| Message::Action(Fenix("installer"))),
+                !manager,
+            ),
+        ]
+        .spacing(12)
         .into()
     }
 
@@ -63,167 +115,249 @@ impl App {
         let current = self.fresh("fenix") && s(raw, "runtime_path") == self.runtime();
         let data = if current { raw } else { &Value::Null };
         let progress = presentation::fenix(data, self.status());
-        let mut content = column![
-            self.paragraph(self.t("Richte die getesteten Fenix-Korrekturen ein und installiere dein Flugzeug mit dem offiziellen Installer.").to_string()),
-            self.paragraph(self.t("MSFS 2024 · CPU-Anzeigen · Legacy-Readouts · Eigene Fenix-Lizenz erforderlich. Wetterradar ist im CPU-Modus nicht verfügbar.").to_string()),
-            label(self.t(progress.title).to_string(), 18.0, Weight::Semibold, if progress.ready { self.edition.accent() } else { INK }),
-            self.paragraph(self.t(progress.detail).to_string()),
-        ].spacing(16);
-        if progress.ready {
-            content =
-                content.push(self.link(self.t("Zur Übersicht und MSFS starten"), Page::Overview));
-        }
-        if !progress.busy.is_empty() {
-            content = content.push(self.paragraph(self.t(progress.busy).to_string()));
-        }
-        if yes(data, "fenix_installed")
-            || yes(data, "manager_installed")
-            || yes(data, "fenix_running")
-        {
-            let mut controls = vec![];
-            if data["state"] == "legacy" || (yes(data, "configured") && yes(data, "settings_ready"))
-            {
-                controls.push(("Fenix öffnen", Fenix("open")));
+        let manager = yes(data, "manager_installed");
+        let active = model::active(&data["job"]);
+        let failed_hook = data["job"]["state"] == "failed"
+            && ["installer", "repair"].contains(&s(&data["job"], "operation"))
+            && yes(data, "can_repair_installer");
+        let supported = !progress.steps.is_empty() || data["state"] == "legacy";
+        let mut content = column![].spacing(14);
+        if current {
+            content = content.push(self.addon_feedback(data));
+            if !progress.busy.is_empty() {
+                content = content.push(self.paragraph(self.t(progress.busy).to_string()));
             }
-            controls.push(("Fenix beenden", Fenix("stop")));
-            content = content
-                .push(
-                    self.paragraph(
-                        self.t(if yes(data, "fenix_running") {
-                            "Fenix läuft"
+            if active || yes(data, "fenix_running") {
+                if progress.busy.is_empty() {
+                    content = content.push(self.paragraph(self.t(progress.detail).to_string()));
+                }
+                if yes(data, "can_stop") {
+                    content = content.push(self.addon_action("Fenix beenden", Fenix("stop")));
+                }
+            } else if supported {
+                content = content.push(label(
+                    self.tr(
+                        if progress.ready && !failed_hook {
+                            "Einrichtung abgeschlossen"
                         } else {
-                            "Fenix ist beendet"
-                        })
-                        .to_string(),
+                            "Als Nächstes"
+                        },
+                        if progress.ready && !failed_hook {
+                            "Setup complete"
+                        } else {
+                            "Next step"
+                        },
                     ),
-                )
-                .push(self.actions(&controls));
-        }
-        if data["state"] == "legacy" {
-            content = content.push(self.paragraph(self.t("Deine vorhandenen lokalen Korrekturen bleiben aktiv. Eine automatische Übernahme in das neue Paket ist noch nicht vorgesehen.").to_string()));
-        }
-        for (index, done) in progress.steps.iter().copied().enumerate() {
-            let (title, body) = match index {
-                0 => ("Kompatibilität einrichten", column![
-                    self.paragraph(self.t("Erstellt eine eigene Runner-Kopie, sichert das Windows-Profil und installiert bei Bedarf Microsoft .NET.").to_string()),
-                    self.action(if yes(data,"can_retry") { "Einrichtung reparieren" } else if yes(data,"update_available") { "Patch aktualisieren" } else { "Patch einrichten" }, Fenix("install"))]),
-                1 => {
-                    let manager = yes(data, "manager_installed");
-                    let mut body = column![self.paragraph(self.t(if manager {
-                        "Schritt 2 von 4: Öffne die vorhandene Fenix-App und installiere dort dein Flugzeug. Schließe die App danach vollständig."
+                    13.0,
+                    Weight::Semibold,
+                    self.edition.accent(),
+                ));
+                if failed_hook {
+                    content = content
+                        .push(self.paragraph(self.t("Führt den Einrichtungsschritt der vorhandenen Fenix-App erneut aus. Dein Flugzeug wird dabei nicht installiert.").to_string()))
+                        .push(self.addon_action("Fenix-App reparieren", Fenix("repair")));
+                } else {
+                    content = content.push(self.paragraph(self.t(progress.detail).to_string()));
+                    if progress.ready {
+                        content = content.push(self.control(
+                            "Zur Übersicht und MSFS starten",
+                            Some(Message::Navigate(Page::Overview)),
+                            true,
+                        ));
+                    } else if data["state"] == "legacy" {
+                        if yes(data, "fenix_installed") {
+                            content =
+                                content.push(self.addon_action("Fenix öffnen", Fenix("open")));
+                        } else if manager {
+                            content = content
+                                .push(self.addon_action("Fenix-App öffnen", Fenix("manager")));
+                        }
                     } else {
-                        "Schritt 2 von 4: Lade den offiziellen Fenix-Installer herunter, wähle die EXE aus und installiere dein Flugzeug."
-                    }).to_string())];
-                    if manager {
-                        let mut controls = vec![("Fenix-App öffnen", Fenix("manager"))];
-                        if yes(data, "can_repair_installer") {
-                            controls.push(("Fenix-App reparieren", Fenix("repair")));
-                        }
-                        body = body.push(self.actions(&controls));
-                        if yes(data, "can_repair_installer") {
-                            body = body.push(self.paragraph(self.t("Führt den Einrichtungsschritt der vorhandenen Fenix-App erneut aus. Dein Flugzeug wird dabei nicht installiert.").to_string()));
-                        }
-                        body = body.push(self.paragraph(self.t("Falls du die Fenix-App neu installieren möchtest, kannst du weiterhin die offizielle Installer-EXE auswählen.").to_string()));
+                        content = match progress.next {
+                            1 => content.push(self.addon_action(
+                                if yes(data, "can_retry") {
+                                    "Einrichtung reparieren"
+                                } else {
+                                    "Patch einrichten"
+                                },
+                                Fenix("install"),
+                            )),
+                            2 if manager => content
+                                .push(self.addon_action("Fenix-App öffnen", Fenix("manager"))),
+                            2 => content.push(self.fenix_installer(false)),
+                            3 => content.push(self.addon_action("Fenix öffnen", Fenix("open"))),
+                            _ => content.push(
+                                self.addon_action("Einrichtung abschließen", Fenix("configure")),
+                            ),
+                        };
                     }
-                    ("Fenix installieren", body
-                        .push(self.help_link("Offiziellen Installer im Fenix-Konto herunterladen", HelpLink::FenixInstaller))
-                        .push(self.input("Fenix-Installer-Datei", "installer_path", "/home/…/FenixInstaller.exe", Some(FenixPick("installer"))))
-                        .push(self.action(if manager { "Installer erneut ausführen" } else { "Installer starten" }, Fenix("installer"))))
-                },
-                2 => ("Fenix öffnen und anmelden", column![
-                    self.paragraph(self.t("Melde dich in Fenix an und schließe das Programm danach vollständig. Deine Anmeldung und Lizenz prüft Fenix selbst.").to_string()),
-                    self.paragraph(self.t("Falls @ mit AltGr+Q nicht klappt: Strg+Alt+Q probieren oder @ kopieren und mit Strg+V einfügen.").to_string()),
-                    self.action("Fenix öffnen",Fenix("open"))]),
-                _ => ("Anzeigen und automatischer Start", column![
-                    self.paragraph(self.t("Stellt CPU-Anzeigen, Legacy-Readouts und den automatischen Fenix-Start ein.").to_string()),
-                    self.action(if progress.ready { "Einstellungen erneut anwenden" } else { "Einrichtung abschließen" }, Fenix("configure"))]),
-            };
-            content = content.push(self.addon_step(
-                index + 1,
-                done,
-                progress.next == index + 1,
-                title,
-                body.spacing(12),
+                }
+            } else if yes(data, "can_restore") {
+                content = content
+                    .push(self.paragraph(self.t(progress.detail).to_string()))
+                    .push(self.addon_action("Patch rückgängig machen", Fenix("restore")));
+            }
+            if supported {
+                content = content.push(self.addon_facts(&[
+                    (
+                        self.tr("Linux-Patch", "Linux patch"),
+                        yes(data, "installed") || data["state"] == "legacy",
+                    ),
+                    (self.tr("Fenix-App", "Fenix app"), manager),
+                    (
+                        self.tr("Fenix-Dateien", "Fenix files"),
+                        yes(data, "fenix_installed"),
+                    ),
+                    (
+                        self.tr("Anzeigen & Autostart", "Displays & auto-start"),
+                        yes(data, "configured"),
+                    ),
+                ]));
+            }
+            content = content.push(self.paragraph(self.tr("MSFS 2024 · CPU-Anzeigen ohne Wetterradar. Eine eigene Fenix-Lizenz ist erforderlich.", "MSFS 2024 · CPU displays without weather radar. Requires your own Fenix license.")));
+            let mut manage = column![].spacing(14);
+            let mut actions = vec![];
+            if manager && !(progress.next == 2 && !failed_hook && !active) {
+                actions.push(("Installer & Liveries", Fenix("manager")));
+            }
+            if yes(data, "fenix_installed") && progress.ready {
+                actions.push(("Fenix öffnen", Fenix("open")));
+            }
+            if yes(data, "can_repair_installer") && !failed_hook {
+                actions.push(("Fenix-App reparieren", Fenix("repair")));
+            }
+            if yes(data, "configured") {
+                actions.push(("Einstellungen erneut anwenden", Fenix("configure")));
+            }
+            if yes(data, "update_available") {
+                actions.push(("Patch aktualisieren", Fenix("install")));
+            }
+            for (title, action) in actions {
+                let message = self.request(&action).map(|_| Message::Action(action));
+                manage = manage.push(self.control(title, message, false));
+            }
+            let installer_is_next =
+                progress.next == 2 && !manager && !active && !yes(data, "fenix_running");
+            if yes(data, "installed") && !installer_is_next {
+                manage = manage
+                    .push(self.paragraph(
+                        self.tr("Fenix-App neu installieren", "Reinstall the Fenix app"),
+                    ))
+                    .push(self.fenix_installer(true));
+            }
+            manage = manage.push(self.job("fenix"))
+                .push(self.disclosure(Disclosure::FenixAdvanced, "Lokales Patch-Paket und Wiederherstellung", "", column![
+                    self.input("Entpacktes Release (leer = geprüfter Download)", "bundle_path", self.tr("Automatisch herunterladen", "Download automatically"), Some(FenixPick("bundle"))),
+                    self.paragraph(self.t("Die Wiederherstellung verwendet das Profil von vor dem Patch. Das neuere Profil bleibt als Sicherung erhalten.").to_string()),
+                    self.action("Patch rückgängig machen", Fenix("restore")),
+                ].spacing(14)))
+                .push(self.help_link("Projekt und Anleitung", HelpLink::FenixProject));
+            content = content.push(self.disclosure(
+                Disclosure::FenixManage,
+                self.tr("Verwalten & reparieren", "Manage & repair"),
+                "",
+                manage,
             ));
+        } else {
+            content = content.push(self.paragraph(self.tr("Der Status dieser Installation ist noch nicht verfügbar. Lade ihn erneut, bevor du die Einrichtung fortsetzt.", "The status of this installation is not available yet. Refresh before continuing setup.")));
         }
-        let mut manager_controls = row![self.action("Installer & Liveries", Fenix("manager"))];
-        if progress.steps.is_empty() && yes(data, "can_repair_installer") {
-            manager_controls =
-                manager_controls.push(self.action("Fenix-App reparieren", Fenix("repair")));
-            content = content.push(self.paragraph(self.t("Führt den Einrichtungsschritt der vorhandenen Fenix-App erneut aus. Dein Flugzeug wird dabei nicht installiert.").to_string()));
-        }
-        content = content.push(self.job("fenix"))
-            .push(manager_controls.push(self.refresh_button()).spacing(10).wrap())
-            .push(self.paragraph(self.t("Öffnet den separaten Fenix-Manager zum Installieren, Aktualisieren und Verwalten von Liveries.").to_string()))
-            .push(self.disclosure(Disclosure::FenixAdvanced,"Lokales Patch-Paket und Wiederherstellung","",column![
-                self.input("Entpacktes Release (leer = geprüfter Download)","bundle_path",self.tr("Automatisch herunterladen","Download automatically"),Some(FenixPick("bundle"))),
-                self.paragraph(self.t("Die Wiederherstellung verwendet das Profil von vor dem Patch. Das neuere Profil bleibt als Sicherung erhalten.").to_string()),
-                self.action("Patch rückgängig machen",Fenix("restore"))].spacing(16)));
-        content = content.push(self.help_link("Projekt und Anleitung", HelpLink::FenixProject));
+        content = content.push(self.refresh_button());
         self.disclosure(Disclosure::Fenix, "Fenix A320", progress.title, content)
     }
 
     fn gsx_card(&self) -> Element<'_, Message> {
         let raw = self.data("gsx");
-        let data = if self.fresh("gsx") && s(raw, "runtime_path") == self.runtime() {
-            raw
-        } else {
-            &Value::Null
-        };
+        let current = self.fresh("gsx") && s(raw, "runtime_path") == self.runtime();
+        let data = if current { raw } else { &Value::Null };
         let progress = presentation::gsx(data);
-        let mut content = column![self.paragraph(self.t(progress.detail).to_string())].spacing(16);
-        let titles = [
-            "FSDT-Installer vorbereiten",
-            "GSX installieren und aktivieren",
-            "Automatischen GSX-Start einrichten",
-        ];
-        let descriptions = [
-            "Flightdeck lädt den geprüften Installer und richtet .NET ein. Das bisherige Windows-Profil bleibt als Sicherung erhalten.",
-            "Wähle GSX Pro im FSDT-Installer, installiere es und aktiviere deine Lizenz. Schließe den Installer nach dem Download.",
-            "Übernimmt den von FSDT angelegten Start mit MSFS. Prüfe anschließend das GSX-Menü und die Bodendienste im Simulator.",
-        ];
-        let actions = [
-            (
-                if yes(data, "prepared") {
-                    "FSDT-Installer reparieren"
+        let active = model::active(&data["job"]);
+        let mut content = column![
+            label(self.tr("Funktion im Simulator unbestätigt", "Simulator functionality unconfirmed"), 15.0, Weight::Semibold, iced::color!(0xf5c873)),
+            self.paragraph(self.tr("Flightdeck kann FSDT vorbereiten und den Autostart einrichten. Lizenz, GSX-Menü und Bodendienste sind unter Linux noch nicht verifiziert.", "Flightdeck can prepare FSDT and configure auto-start. Licensing, the GSX menu and ground services have not been verified on Linux.")),
+        ].spacing(14);
+        if current {
+            content = content.push(self.addon_feedback(data));
+            content = content.push(self.paragraph(self.t(progress.detail).to_string()));
+            if active || yes(data, "manager_running") {
+                if yes(data, "can_stop") {
+                    content = content.push(self.addon_action("FSDT schließen", Gsx("stop")));
+                }
+            } else if yes(data, "can_recover") {
+                content = content
+                    .push(self.addon_action("GSX-Vorbereitung wiederherstellen", Gsx("recover")));
+            } else if data["state"] == "available" {
+                let (title, action) = match progress.next {
+                    1 => ("FSDT vorbereiten", Gsx("prepare")),
+                    3 if yes(data, "startup_found") => {
+                        ("Automatischen Start einrichten", Gsx("configure"))
+                    }
+                    _ => ("FSDT-Installer öffnen", Gsx("open")),
+                };
+                if data["idle"] == false
+                    || yes(data, "busy")
+                    || !["", "stopped"].contains(&s(&self.status()["game"], "state"))
+                {
+                    content = content.push(self.paragraph(self.tr(
+                        "Beende MSFS oder die laufende Einrichtung, bevor du GSX änderst.",
+                        "Close MSFS or the running setup before making changes to GSX.",
+                    )));
+                }
+                if progress.ready {
+                    content = content.push(self.control(
+                        "Zur Übersicht und MSFS starten",
+                        Some(Message::Navigate(Page::Overview)),
+                        true,
+                    ));
                 } else {
-                    "FSDT vorbereiten"
-                },
-                Gsx("prepare"),
-            ),
-            ("FSDT-Installer öffnen", Gsx("open")),
-            ("Automatischen Start einrichten", Gsx("configure")),
-        ];
-        for (index, done) in progress.steps.iter().copied().enumerate() {
-            content = content.push(
-                self.addon_step(
-                    index + 1,
-                    done,
-                    progress.next == index + 1,
-                    titles[index],
-                    column![
-                        self.paragraph(self.t(descriptions[index]).to_string()),
-                        self.action(actions[index].0, actions[index].1.clone())
-                    ]
-                    .spacing(12),
-                ),
-            );
+                    content = content.push(self.addon_action(title, action));
+                }
+            }
+            if data["state"] == "available" {
+                content = content.push(self.addon_facts(&[
+                    (
+                        self.tr("FSDT vorbereitet", "FSDT prepared"),
+                        yes(data, "prepared"),
+                    ),
+                    (
+                        self.tr("GSX-Dateien", "GSX files"),
+                        yes(data, "package_installed"),
+                    ),
+                    (
+                        self.tr("Autostart eingerichtet", "Auto-start configured"),
+                        yes(data, "configured"),
+                    ),
+                ]));
+            }
+            let mut manage = column![].spacing(14);
+            if yes(data, "prepared") {
+                if progress.ready || active || (progress.next == 3 && yes(data, "startup_found")) {
+                    manage = manage.push(self.action("FSDT-Installer öffnen", Gsx("open")));
+                }
+                manage = manage.push(
+                    self.control(
+                        "FSDT-Installer reparieren",
+                        self.request(&Gsx("prepare"))
+                            .map(|_| Message::Action(Gsx("prepare"))),
+                        false,
+                    ),
+                );
+            }
+            if yes(data, "configured") {
+                manage = manage.push(self.action("GSX-Autostart ausschalten", Gsx("disable")));
+            }
+            manage = manage
+                .push(self.job("gsx"))
+                .push(self.help_link("GSX bei FSDreamTeam", HelpLink::Gsx));
+            content = content.push(self.disclosure(
+                Disclosure::GsxManage,
+                self.tr("Verwalten & reparieren", "Manage & repair"),
+                "",
+                manage,
+            ));
+        } else {
+            content = content.push(self.paragraph(self.tr("Der Status dieser Installation ist noch nicht verfügbar. Lade ihn erneut, bevor du die Einrichtung fortsetzt.", "The status of this installation is not available yet. Refresh before continuing setup.")));
         }
-        let mut controls = vec![];
-        if yes(data, "manager_running") {
-            controls.push(("FSDT schließen", Gsx("stop")));
-        }
-        if yes(data, "configured") {
-            controls.push(("GSX-Autostart ausschalten", Gsx("disable")));
-        }
-        if yes(data, "can_recover") {
-            controls.push(("GSX-Vorbereitung wiederherstellen", Gsx("recover")));
-        }
-        content = content
-            .push(self.job("gsx"))
-            .push(self.actions(&controls))
-            .push(self.refresh_button());
-        content = content.push(self.help_link("GSX bei FSDreamTeam", HelpLink::Gsx));
+        content = content.push(self.refresh_button());
         self.disclosure(Disclosure::Gsx, "GSX Pro", progress.title, content)
     }
 
@@ -308,7 +442,7 @@ impl App {
         }
         column![self.heading(self.t("Deine Add-ons").to_string()),
             self.paragraph(self.t("Öffne die Einrichtung eines Add-ons oder verwalte unten deinen Community-Ordner.").to_string()),
-            self.fenix_card(),self.gsx_card(),inventory,
+            self.fenix_card(),self.gsx_card(),self.card("Community-Ordner", inventory),
             self.paragraph(self.tr("Fenix und GSX vollständig deinstallieren: Öffne den jeweiligen offiziellen Installer oben. Das Entfernen eines Community-Eintrags entfernt keine Windows-Begleitprogramme.","To fully uninstall Fenix or GSX, open its official installer above. Removing a Community entry does not uninstall Windows companion applications.")),
             self.paragraph(self.t("Diese Liste zeigt Dateien im Community-Ordner. Sie bestätigt weder eine Lizenz noch die Kompatibilität eines Add-ons mit MSFS oder Linux.").to_string())].spacing(16).into()
     }

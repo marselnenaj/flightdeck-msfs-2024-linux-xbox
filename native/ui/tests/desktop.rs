@@ -75,13 +75,13 @@ fn managed_fenix_readiness_requires_the_patch_and_configuration()
     app.page = Page::Mods;
     app.language = Language::En;
     let mut ui = iced_test::Simulator::with_size(settings(), Size::new(960.0, 900.0), app.view());
-    ui.find("Fenix is ready to fly")?;
+    ui.find("Fenix locally configured")?;
     drop(ui);
     app.snapshot.get_mut("fenix").expect("fenix")["configured"] = json!(false);
     let _ = app.update(Message::Toggle(Disclosure::Fenix));
-    let mut ui = iced_test::Simulator::with_size(settings(), Size::new(960.0, 3000.0), app.view());
+    let mut ui = iced_test::Simulator::with_size(settings(), Size::new(960.0, 900.0), app.view());
     ui.find("Setup is not complete yet")?;
-    assert!(ui.find("Fenix is ready to fly").is_err());
+    assert!(ui.find("Fenix locally configured").is_err());
     ui.click("Finish setup")?;
     assert!(matches!(
         ui.into_messages().next(),
@@ -781,12 +781,8 @@ fn capture_all_native_screens() -> Result<(), Box<dyn std::error::Error>> {
             )
             .settings(settings())
             .theme(|_: &App| theme());
-        // Keep all setup steps and the failed-hook job message in these captures.
-        let height = if name.starts_with("fenix-manager-") {
-            3000.0
-        } else {
-            900.0
-        };
+        // Capture the actual viewport; the current action and error must fit.
+        let height = 900.0;
         let screenshot = iced_test::screenshot(
             &application,
             &theme(),

@@ -26,18 +26,18 @@ fn existing_manager_opens_without_repeating_the_installer_download()
     for language in [Language::De, Language::En] {
         let app = manager_only(language);
         let mut ui =
-            iced_test::Simulator::with_size(settings(), Size::new(960.0, 3000.0), app.view());
+            iced_test::Simulator::with_size(settings(), Size::new(960.0, 900.0), app.view());
         ui.find(if language == Language::De {
-            "Fenix-App erkannt · Flugzeug noch nicht installiert"
+            "Fenix-App erkannt · Einrichtung unvollständig"
         } else {
-            "Fenix app detected · Aircraft not installed yet"
+            "Fenix app detected · Setup incomplete"
         })?;
         ui.find("Installer hook failed")?;
         assert!(
             ui.find(if language == Language::De {
-                "Fenix ist startbereit"
+                "Fenix lokal eingerichtet"
             } else {
-                "Fenix is ready to fly"
+                "Fenix locally configured"
             })
             .is_err()
         );
@@ -71,11 +71,12 @@ fn existing_manager_keeps_explicit_installer_and_runtime_guards()
 -> Result<(), Box<dyn std::error::Error>> {
     let mut app = manager_only(Language::En);
     assert!(app.request(&Action::Fenix("installer")).is_none());
+    let _ = app.update(Message::Toggle(Disclosure::FenixManage));
     let _ = app.update(Message::Field(
         "installer_path",
         "/synthetic/FenixInstaller.exe".into(),
     ));
-    let mut ui = iced_test::Simulator::with_size(settings(), Size::new(960.0, 3000.0), app.view());
+    let mut ui = iced_test::Simulator::with_size(settings(), Size::new(960.0, 900.0), app.view());
     ui.click("Run installer again")?;
     assert!(matches!(
         ui.into_messages().next(),
@@ -89,13 +90,14 @@ fn existing_manager_keeps_explicit_installer_and_runtime_guards()
         "/synthetic/FenixInstaller.exe"
     );
 
+    let _ = app.update(Message::Toggle(Disclosure::FenixManage));
     app.snapshot.get_mut("fenix").expect("fenix")["can_change"] = json!(false);
-    let mut ui = iced_test::Simulator::with_size(settings(), Size::new(960.0, 3000.0), app.view());
+    let mut ui = iced_test::Simulator::with_size(settings(), Size::new(960.0, 900.0), app.view());
     ui.click("Open Fenix app")?;
     assert!(ui.into_messages().next().is_none());
     assert!(app.request(&Action::Fenix("manager")).is_none());
     app.snapshot.get_mut("fenix").expect("fenix")["runtime_path"] = json!("/synthetic/msfs2020");
-    let mut ui = iced_test::Simulator::with_size(settings(), Size::new(960.0, 3000.0), app.view());
+    let mut ui = iced_test::Simulator::with_size(settings(), Size::new(960.0, 900.0), app.view());
     assert!(ui.find("Open Fenix app").is_err());
     Ok(())
 }
@@ -104,7 +106,7 @@ fn existing_manager_keeps_explicit_installer_and_runtime_guards()
 fn missing_manager_still_offers_the_official_installer() -> Result<(), Box<dyn std::error::Error>> {
     let mut app = manager_only(Language::En);
     app.snapshot.get_mut("fenix").expect("fenix")["manager_installed"] = json!(false);
-    let mut ui = iced_test::Simulator::with_size(settings(), Size::new(960.0, 3000.0), app.view());
+    let mut ui = iced_test::Simulator::with_size(settings(), Size::new(960.0, 900.0), app.view());
     ui.find("Run installer")?;
     assert!(ui.find("Open Fenix app").is_err());
     assert!(app.request(&Action::Fenix("manager")).is_none());
@@ -119,7 +121,7 @@ fn repair_is_an_explicit_action_for_a_verified_existing_app()
         assert!(app.request(&Action::Fenix("repair")).is_none());
         app.snapshot.get_mut("fenix").expect("fenix")["can_repair_installer"] = json!(true);
         let mut ui =
-            iced_test::Simulator::with_size(settings(), Size::new(960.0, 3000.0), app.view());
+            iced_test::Simulator::with_size(settings(), Size::new(960.0, 900.0), app.view());
         ui.find(if language == Language::De {
             "Führt den Einrichtungsschritt der vorhandenen Fenix-App erneut aus. Dein Flugzeug wird dabei nicht installiert."
         } else {
@@ -143,5 +145,57 @@ fn repair_is_an_explicit_action_for_a_verified_existing_app()
         app.snapshot.get_mut("fenix").expect("fenix")["can_change"] = json!(false);
         assert!(app.request(&Action::Fenix("repair")).is_none());
     }
+    Ok(())
+}
+
+#[test]
+fn missing_manager_can_be_reinstalled_without_losing_existing_fenix_runtime()
+-> Result<(), Box<dyn std::error::Error>> {
+    let mut app = common::localized_fixture(Language::En);
+    app.page = Page::Mods;
+    app.snapshot.get_mut("fenix").expect("fenix")["manager_installed"] = json!(false);
+    let _ = app.update(Message::Toggle(Disclosure::Fenix));
+    let _ = app.update(Message::Toggle(Disclosure::FenixManage));
+    assert!(app.request(&Action::Fenix("manager")).is_none());
+    assert!(app.request(&Action::Fenix("installer")).is_none());
+    let _ = app.update(Message::Field(
+        "installer_path",
+        "/synthetic/FenixInstaller.exe".into(),
+    ));
+    let mut ui = iced_test::Simulator::with_size(settings(), Size::new(1280.0, 1800.0), app.view());
+    ui.find("Fenix locally configured")?;
+    ui.click("Run installer again")?;
+    assert!(matches!(
+        ui.into_messages().next(),
+        Some(Message::Action(Action::Fenix("installer")))
+    ));
+    let request = app
+        .request(&Action::Fenix("installer"))
+        .expect("explicit reinstall allowed");
+    assert_eq!(request.body["runtime_path"], "/synthetic/msfs2024");
+    assert_eq!(
+        request.body["installer_path"],
+        "/synthetic/FenixInstaller.exe"
+    );
+    app.snapshot.get_mut("fenix").expect("fenix")["runtime_path"] = json!("/synthetic/another");
+    assert!(app.request(&Action::Fenix("installer")).is_none());
+    Ok(())
+}
+
+#[test]
+fn current_detection_error_is_visible_before_opening_management()
+-> Result<(), Box<dyn std::error::Error>> {
+    let mut app = common::localized_fixture(Language::En);
+    app.page = Page::Mods;
+    app.snapshot.insert(
+        "fenix",
+        json!({"state":"unavailable", "runtime_path":"/synthetic/msfs2024",
+        "message":"Synthetic prerequisite could not be detected", "can_change":false}),
+    );
+    let _ = app.update(Message::Toggle(Disclosure::Fenix));
+    let mut ui = iced_test::Simulator::with_size(settings(), Size::new(750.0, 900.0), app.view());
+    ui.find("Synthetic prerequisite could not be detected")?;
+    assert!(app.request(&Action::Fenix("install")).is_none());
+    assert!(app.request(&Action::Fenix("installer")).is_none());
     Ok(())
 }

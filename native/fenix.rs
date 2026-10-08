@@ -802,7 +802,13 @@ pub fn snapshot(app: &Launcher) -> Value {
             s.active.is_some() || Launcher::external(&s),
             s.process.is_some(),
             s.closing,
-            s.jobs.get("fenix").cloned().unwrap_or(Value::Null),
+            s.jobs
+                .get("fenix")
+                .cloned()
+                .filter(|j| {
+                    j["runtime_path"].as_str() == s.runtime.as_ref().and_then(|p| p.to_str())
+                })
+                .unwrap_or(Value::Null),
         )
     };
     let mut value = json!({"state":"unavailable","version":bundle::manifest(None).ok().map(|v|v["version"].clone()),"configured":false,"installed":false,"fenix_installed":false,"can_restore":false,"can_retry":false,"manager_installed":false,"idle":false,"message":"Zuerst MSFS 2024 in Flightdeck einrichten.","job":job,"runtime_path":root,"busy":busy||owned,"fenix_running":false,"can_stop":false,"can_change":false,"project":"https://github.com/marselnenaj/fenix-a320-linux-patch"});

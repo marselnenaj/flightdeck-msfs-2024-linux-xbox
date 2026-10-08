@@ -32,6 +32,37 @@ fn fixture(base: &Path) -> (PathBuf, std::sync::Arc<Launcher>) {
 }
 
 #[test]
+fn fenix_job_history_follows_the_selected_runtime_without_erasing_other_profiles() {
+    let temp = tempfile::tempdir().unwrap();
+    let (root, app) = fixture(&temp.path().join("first"));
+    let (other, _) = fixture(&temp.path().join("second"));
+    for selected in [&root, &other] {
+        write(
+            &selected.join("private/fenix-compat.json"),
+            b"{\"format\":1}",
+        );
+    }
+    for state in ["complete", "failed", "cancelled"] {
+        let job = json!({"id":"previous-fenix-job","operation":"installer","state":state,"runtime_path":root,"message":"Retained result from the first profile"});
+        app.lock().jobs.insert("fenix".into(), job.clone());
+        assert_eq!(fenix::snapshot(&app)["job"], job);
+
+        app.configure(other.to_str().unwrap()).unwrap();
+        let snapshot = fenix::snapshot(&app);
+        assert_eq!(snapshot["runtime_path"], json!(other));
+        assert!(snapshot["job"].is_null(), "foreign job leaked: {snapshot}");
+        assert_eq!(app.job("fenix"), job);
+
+        app.configure(root.to_str().unwrap()).unwrap();
+        assert_eq!(fenix::snapshot(&app)["job"], job);
+    }
+    app.lock()
+        .jobs
+        .insert("fenix".into(), json!({"state":"failed"}));
+    assert!(fenix::snapshot(&app)["job"].is_null());
+}
+
+#[test]
 fn fenix_repair_stop_cancels_the_owned_hook_and_preserves_the_profile() {
     use std::time::{Duration, Instant};
     let temp = tempfile::tempdir().unwrap();

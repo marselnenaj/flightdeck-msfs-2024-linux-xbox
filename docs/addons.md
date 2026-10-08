@@ -37,6 +37,9 @@ settings and liveries before replacing a package. The general Community inventor
 Fenix and the experimental GSX Pro integration have separate setup workflows
 below, currently for MSFS 2024 only.
 
+The simplified add-on view described below is in the current source version.
+Published 0.2.6 still shows the setup steps and additional actions together.
+
 ## Uninstall a Community add-on
 
 Close the simulator and other setup tasks. In **Mods**, choose **Review
@@ -80,18 +83,19 @@ running simulator has not yet been established by this test.
 
 ### GSX Pro (experimental)
 
-In **0.1.19**, **Mods → GSX Pro** opens preparation and setup in three steps.
-Other add-on cards remain collapsed. The official FSDT installer has been tested
-with native .NET 4.8 in a separate MSFS 2024 Wine profile, including opening,
-closing and releasing the runtime. GSX installation, activation, Couatl/SimConnect,
-the in-game menu and ground services still need testing with a licensed copy.
+Open **Mods → GSX Pro** and follow the highlighted next step. Completed steps
+remain summarized; additional actions are under the collapsed **Manage & repair**
+section. Close MSFS, Fenix and other Windows applications in the selected profile
+before setup. MSFS 2024 must have been started once to create its package configuration.
+
+GSX remains experimental. The official FSDT installer has been tested with native
+.NET 4.8 in a separate MSFS 2024 Wine profile, including opening, closing and
+releasing the runtime. GSX installation, activation, Couatl/SimConnect, the in-game
+menu and ground services have not been verified with a licensed copy.
 
 Starting with 0.1.20, FSDT setup uses the active Proton version and its installed
 files carry forward when switching runners. Recover interrupted GSX preparation
 before switching Proton versions.
-
-Start MSFS 2024 once to create its package configuration, then close the simulator,
-Fenix and other Windows applications in that profile.
 
 1. **Prepare FSDT** downloads the SHA-256-pinned official installer, copies the
    Windows profile and installs .NET 4.8 if needed. Flightdeck registers FSDT's
@@ -100,14 +104,14 @@ Fenix and other Windows applications in that profile.
 2. **Open FSDT installer**, select GSX Pro and follow FSDT's installation and
    activation. Check that the simulator and Community path match the selected
    Flightdeck installation. Let downloads finish, then close the installer or
-   select **Close FSDT** in Flightdeck. FSDT manages its package links; do not copy
+   use Flightdeck's close action. FSDT manages its package links; do not copy
    its entire installation into Community manually.
 3. **Set up automatic startup** becomes available after Flightdeck detects the
    GSX Community package and FSDT's Couatl entry in `exe.xml`. It enables that
    existing entry, preserving FSDT's arguments and other add-ons. If the entry is
    missing, update through FSDT and reload the status. Start MSFS and test the GSX
-   menu and ground services. **GSX configured · Flight test pending** confirms
-   local setup only, not license validity or Linux compatibility.
+   menu and ground services. **GSX locally configured · Functionality unconfirmed**
+   confirms local setup only, not license validity or Linux compatibility.
 
 GSX is paid software. According to the [official GSX manual](https://www.fsdreamteam.com/gsx_manual_msfs.pdf),
 installation requires a GSX license or an eligible activated FSDT airport. The
@@ -115,13 +119,17 @@ latter enables use at FSDT airports and a limited trial at KSFO, LIMC and EDDM.
 Preparing FSDT in Flightdeck does not unlock GSX. Purchases and activation stay
 with [FSDreamTeam](https://www.fsdreamteam.com/products_gsxpro.html).
 
-**Disable GSX autostart** changes only the Couatl entry; it does not uninstall
-packages. With GSX startup configured, Flightdeck also closes the named Couatl
+**Open FSDT installer** appears as the current next step or under **Manage & repair**,
+depending on setup progress. The latter also contains FSDT repair and autostart
+controls. **Disable GSX autostart** changes only the
+Couatl entry; it does not uninstall packages. With GSX startup configured,
+Flightdeck also closes the named Couatl
 companions in that profile at game exit, crash or stop. Other profiles and FSDT's
 installer remain outside that session cleanup.
 
-If preparation is interrupted, game launch remains blocked until **Recover GSX
-preparation** restores the previous profile. Completed preparation keeps a
+If preparation is interrupted, **Recover GSX preparation** appears directly as
+the next action. It restores the previous profile; game launch remains blocked
+until recovery completes. Completed preparation keeps a
 `local/msfs-prefix.before-gsx-*` backup. Recovery is for an interrupted
 preparation, not for undoing a later GSX installation. Diagnostic logs are in
 `private/gsx-setup-*.log` and `private/gsx-manager.log`. If FSDT replaces its
@@ -130,22 +138,10 @@ pin has been reviewed and updated. No FSDT or Microsoft binaries are bundled.
 
 ### Fenix A320
 
-The official installer can report **“application install hook failed”** after
-extracting the FenixApp manager. Flightdeck applies the existing ICU/.NET
-workaround when the EXE is started through **Mods → Fenix → Start installer**.
-This workaround is also present in 0.2.5. Close all installer windows before retrying.
-
-**In 0.2.6:** If FenixApp is detected, **Open Fenix app** continues
-installation in that manager. **Repair Fenix app** reruns its official setup hook
-when metadata is valid, without resetting the profile. Then reopen the manager to
-install your aircraft. If repair still fails, prepare a new diagnostic report;
-it includes the latest Fenix result. A detected manager or successful hook alone
-does not mean that the aircraft is installed or activated.
-[Verification and limits](native-ui.md#fenix-install-hook-warning).
-
-Open **Mods → Fenix A320** to use the optional compatibility installer in
-Flightdeck **0.1.4**. Update older launchers using the [full package](install.md).
-The same patch is also available through the
+Open **Mods → Fenix A320** and follow the highlighted next step. Flightdeck
+summarizes completed steps instead of presenting every setup action at once.
+Additional actions are under **Manage & repair**; **Local patch bundle and
+restore** is further below. The same patch is also available through the
 [standalone patch installer](https://github.com/marselnenaj/fenix-a320-linux-patch/releases).
 
 It supports MSFS 2024 with the pinned Xodus Wine runner. It creates an independent
@@ -153,28 +149,30 @@ runner/profile, keeps a backup, verifies release hashes and configures CPU displ
 Legacy readouts and Fenix autostart. Run MSFS 2024 once to create its user settings,
 then close MSFS and all Fenix applications before setup.
 
-Existing preview.1/preview.2 patch installations update automatically before opening Fenix
-with this launcher. **Update patch** also starts the update directly. Aircraft,
-settings and the original restore point are retained; Fenix need not be reinstalled.
-
 1. Choose **Install patch**. Flightdeck downloads the Linux ZIP from the public
    Fenix patch GitHub release and verifies its SHA-256. Native Microsoft .NET
    Framework 4.8 is installed when needed. Flightdeck checks both 32-bit and
    64-bit CLR startup, completes pending Wine restart work and automatically
    repairs an incomplete installation. If MSI repair leaves missing files,
    Flightdeck makes one final reinstall attempt inside the copied profile.
-2. Download the official installer from your [Fenix account](https://fenixsim.com/dashboard/),
-   select its EXE and choose **Run installer**. Complete its normal prerequisite and
-   aircraft installation in the selected simulator profile, then close the installer.
+2. If **Open Fenix app** is offered, continue installation in the detected manager.
+   Otherwise download the official installer from your
+   [Fenix account](https://fenixsim.com/dashboard/), select its EXE and choose
+   **Start installer**. Complete the prerequisites and aircraft installation in
+   the selected simulator profile, then close the manager or installer.
 3. Choose **Open Fenix**, sign in/activate normally, then close the application
    or use **Stop Fenix** in Flightdeck.
-4. Choose **Finish setup**. When the green **Fenix is ready to fly** message
-   appears, return to the overview and start MSFS normally.
+4. Choose **Finish setup** to configure CPU displays, Legacy readouts and autostart.
+   Once local setup is complete, return to the overview and start MSFS normally.
 
-Flightdeck marks completed steps and highlights the next action. Finishing the
-official installer alone does not complete setup. If a Windows application is
-still open, quit the Fenix installer and Fenix completely; the panel refreshes
-automatically. Fenix itself checks your sign-in and license. On a German keyboard,
+**Fenix locally configured** confirms Flightdeck's settings only. It does not confirm
+your Fenix license, activation or functioning cockpit. Fenix checks sign-in and
+licensing; verify the aircraft in MSFS. A detected manager or successful install
+hook alone does not establish that the aircraft is installed.
+
+Finishing the official installer alone does not complete setup. If a Windows
+application is still open, quit the Fenix installer and Fenix completely; the
+panel refreshes automatically. On a German keyboard,
 if `AltGr+Q` does not enter `@` in its login window, try `Ctrl+Alt+Q` or paste `@`
 with `Ctrl+V`.
 
@@ -182,6 +180,23 @@ with `Ctrl+V`.
 Fenix, its helpers and the official manager, and waits before unlocking the
 next setup step. It is disabled while MSFS or an installer is running. Complete
 any installation or livery download in the official manager before stopping it.
+
+Use **Manage & repair** for patch updates, reapplying settings and reinstalling
+the official app. Manager and repair actions appear there when they are not
+already the current next step.
+Existing preview.1/preview.2 patches update automatically before opening Fenix; **Update
+patch** also starts that update directly. Aircraft, settings and the original
+restore point are retained.
+
+If the official installer reports **“application install hook failed”**, close
+all installer windows first. Starting its EXE through Flightdeck applies the
+existing ICU/.NET workaround, also present in 0.2.5. After a failed installer or
+repair, **Repair Fenix app** appears directly as the next action when repair is
+available. It reruns the official hook with valid package metadata, without
+resetting the profile. Otherwise the available repair action is under
+**Manage & repair**. Reopen the manager afterwards.
+If repair fails, prepare a new diagnostic report containing the latest Fenix
+result. [Verification and limits](native-ui.md#fenix-install-hook-warning).
 
 After setup, Fenix starts automatically with MSFS; you do not need to start it
 separately. Flightdeck closes the session's Fenix companions after normal exit,
@@ -197,16 +212,19 @@ No GitHub login is needed for the public patch download. Download and activation
 of the purchased aircraft use the official Fenix software and your Fenix account.
 
 For a local copy, extract the **Linux installer ZIP** and select the directory
-containing `bundle.json` under **Local patch bundle and restore**. A GitHub source
-checkout or the source-only archive lacks the Wine payload. Leaving this field
+containing `bundle.json` under **Local patch bundle and restore**, below
+**Manage & repair**. A GitHub source checkout or the source-only archive lacks
+the Wine payload. Leaving this field
 blank uses the verified download/cache. The standalone `install.sh` provides the
 same setup without Flightdeck's panel and needs Python Tk for its graphical UI;
 the Flightdeck panel does not require Tk.
 
 #### Liveries
 
-**Installer & Liveries** opens the already installed official manager for
-aircraft installation, updates and liveries. **Open Fenix** opens the main Fenix application.
+The installed official manager opens through **Open Fenix app** in the current
+setup step or **Installer & Liveries** under **Manage & repair**. It handles
+aircraft installation, updates and liveries. **Open Fenix** opens the main Fenix
+application.
 Close the simulator and other Fenix applications first. The button becomes
 available when Flightdeck detects that manager in the selected Wine profile.
 Choose liveries for the exact aircraft, engine and wing variant. A321 liveries do
@@ -243,7 +261,8 @@ and block automatic replacement. Disabled steps can also mean MSFS, Fenix or ano
 running, or the previous step has not finished. Close those applications and use
 **Reload status**. The official installer step also needs a selected EXE.
 
-**Restore original profile** restores the pre-patch runner, scripts and Windows
+**Restore original profile** under **Local patch bundle and restore** restores
+the pre-patch runner, scripts and Windows
 profile. Settings and packages added inside the profile after patch installation
 stay in the retained newer profile; they are not merged into the restored one.
 External Community packages and
