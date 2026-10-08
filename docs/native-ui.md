@@ -166,6 +166,22 @@ simulator log: operation, timestamps, validated package version, runner category
 exit codes and finite failure signatures. Raw logs, paths and account data are
 excluded. Missing evidence stays unknown; a new attempt replaces the old result.
 
+**Unreleased:** Install and repair commands discard inherited host .NET runtime
+paths, dependency/loading overrides and startup hooks before launching Wine. In
+a controlled test with official FenixApp 1.0.286, an invalid inherited
+`DOTNET_STARTUP_HOOKS` caused exit 82 before the application hook ran. The same
+input succeeds with exit 0 through the updated Wine environment. This establishes
+one preventable cause, not the cause of every reported exit 82. Prefix registry
+values are separate and are not cleared by this filter.
+
+Diagnostics now retain up to eight recognized .NET exception type identifiers
+and the CLR exception code only when explicitly observed in the current log.
+Messages, stack traces and paths stay local. Exit 82 alone remains `hook_nonzero`.
+The latest validated failed attempt remains visible after a launcher restart;
+a failed repair leads to diagnostics before another attempt. The green
+**Fenix Linux patch** check validates that patch, not the official app's install
+hook.
+
 Validation used official FenixApp 1.0.286 in isolated, account-free profiles:
 
 - A fresh full bootstrapper install with `--silent` and newly installed .NET,
@@ -188,6 +204,12 @@ FLIGHTDECK_TEST_OUTPUT="$PWD/build/fenix-hook-check" \
 cargo test --locked --test native_live_fenix \
   official_fenix_hook_with_persisted_wine_environment -- --ignored --nocapture
 ```
+
+To exercise the inherited-environment regression, set
+`DOTNET_STARTUP_HOOKS='C:\flightdeck-repro\missing.dll'` on that test command and
+use another fresh output directory. The application should still exit 0. Keep
+these opt-in checks in an isolated process and network namespace; they need only
+the cached official files and do not perform activation or login.
 
 The separate `official_fenix_hook_failure_is_repaired_by_persisted_compatibility_settings`
 check exercises failure and recovery; give it a different, unused output directory.

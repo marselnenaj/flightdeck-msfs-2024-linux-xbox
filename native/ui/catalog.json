@@ -998,5 +998,9 @@
   "Die Verbindung zum Linux-Desktop konnte nicht geöffnet werden. Bitte Flightdeck in der aktuellen X11-/Wayland-Sitzung starten und deren Display-Bibliotheken prüfen.": "Could not connect to the Linux desktop. Start Flightdeck in the current X11/Wayland session and check its display libraries.",
   "Die Softwaredarstellung des Flightdeck-Fensters konnte nicht initialisiert werden. Bitte die X11-/Wayland-Bibliotheken der Desktop-Sitzung prüfen.": "Could not initialize software rendering for the Flightdeck window. Check the desktop session’s X11/Wayland libraries.",
   "Flightdeck konnte seine Hintergrundaufgaben nicht starten. Bitte freie Systemressourcen und Prozesslimits prüfen.": "Flightdeck could not start its background tasks. Check available system resources and process limits.",
-  "Der Start mit WAYLAND_SOCKET wird nicht unterstützt, da Flightdeck mehrere Desktop-Prozesse verwendet. Bitte über das Anwendungsmenü oder ein Terminal der Sitzung starten.": "Launching with WAYLAND_SOCKET is not supported because Flightdeck uses multiple desktop processes. Start it from the application menu or a terminal in the session."
+  "Der Start mit WAYLAND_SOCKET wird nicht unterstützt, da Flightdeck mehrere Desktop-Prozesse verwendet. Bitte über das Anwendungsmenü oder ein Terminal der Sitzung starten.": "Launching with WAYLAND_SOCKET is not supported because Flightdeck uses multiple desktop processes. Start it from the application menu or a terminal in the session.",
+  "Fenix-Linux-Patch": "Fenix Linux patch",
+  "Fenix-Reparatur fehlgeschlagen": "Fenix repair failed",
+  "Diagnose öffnen": "Open diagnostics",
+  "Die letzte Reparatur ist fehlgeschlagen. Prüfe den Diagnosebericht, bevor du einen weiteren Versuch startest.": "The last repair failed. Review the diagnostics before trying again."
 }

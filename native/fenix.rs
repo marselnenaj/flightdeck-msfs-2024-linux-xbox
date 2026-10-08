@@ -547,6 +547,12 @@ fn invocation_log(
         match &result {
             Ok(hooks) => {
                 attempt.evidence_complete = true;
+                attempt.managed_exception_types = hooks
+                    .managed_exception_types
+                    .iter()
+                    .map(|kind| (*kind).into())
+                    .collect();
+                attempt.clr_exception_code = hooks.clr_exception_code.map(Into::into);
                 if let Some(kind) = hooks.hook {
                     attempt.hook = Some(kind.into());
                 }
@@ -558,6 +564,17 @@ fn invocation_log(
                 }
                 if let Some(failure) = hooks.failure() {
                     attempt.failure = Some(failure.into());
+                }
+                // A direct repair reports its exit status outside Velopack's
+                // log. Associate only observed exception symbols with that
+                // failure; evidence_complete describes reading, not causality.
+                if hooks.has_managed_exception()
+                    && matches!(
+                        attempt.failure.as_deref(),
+                        Some("hook_nonzero" | "hook_failed" | "hook_incomplete")
+                    )
+                {
+                    attempt.failure = Some("managed_exception".into());
                 }
             }
             Err(error) => {
@@ -571,6 +588,7 @@ fn invocation_log(
     }
     result
 }
+
 fn windows_app(ctx: &Context, operation: &str, data: &Value) -> Result<()> {
     let root = ctx.root()?;
     let mut attempt = if ["installer", "manager", "repair"].contains(&operation) {
@@ -811,8 +829,26 @@ pub fn snapshot(app: &Launcher) -> Value {
                 .unwrap_or(Value::Null),
         )
     };
-    let mut value = json!({"state":"unavailable","version":bundle::manifest(None).ok().map(|v|v["version"].clone()),"configured":false,"installed":false,"fenix_installed":false,"can_restore":false,"can_retry":false,"manager_installed":false,"idle":false,"message":"Zuerst MSFS 2024 in Flightdeck einrichten.","job":job,"runtime_path":root,"busy":busy||owned,"fenix_running":false,"can_stop":false,"can_change":false,"project":"https://github.com/marselnenaj/fenix-a320-linux-patch"});
+    let mut value = json!({"state":"unavailable","version":bundle::manifest(None).ok().map(|v|v["version"].clone()),"configured":false,"installed":false,"fenix_installed":false,"can_restore":false,"can_retry":false,"manager_installed":false,"idle":false,"message":"Zuerst MSFS 2024 in Flightdeck einrichten.","job":job,"last_attempt":null,"runtime_path":root,"busy":busy||owned,"fenix_running":false,"can_stop":false,"can_change":false,"project":"https://github.com/marselnenaj/fenix-a320-linux-patch"});
     if let Some(root) = root {
+        // Jobs are intentionally transient. Keep only the selected runtime's
+        // validated, structured evidence visible after a service restart too.
+        value["last_attempt"] = crate::fenix_diagnostics::load(&root);
+        // A terminal in-memory job can belong to an older invocation. Compare
+        // parsed timestamps here, without making the UI parse backend dates.
+        let job_time = job["completed_at"]
+            .as_str()
+            .or_else(|| job["started_at"].as_str())
+            .and_then(|time| chrono::DateTime::parse_from_rfc3339(time).ok());
+        let attempt_time = value["last_attempt"]["completed_at"]
+            .as_str()
+            .or_else(|| value["last_attempt"]["started_at"].as_str())
+            .and_then(|time| chrono::DateTime::parse_from_rfc3339(time).ok());
+        value["last_attempt_superseded"] = json!(
+            job_time
+                .zip(attempt_time)
+                .is_some_and(|(job, attempt)| job >= attempt)
+        );
         let result = (|| -> Result<()> {
             validate(&root, true)?;
             let prefix = root.join("local/msfs-prefix");
@@ -982,4 +1018,96 @@ pub fn pick(app: &Launcher, data: &Value) -> Result<Value> {
     } else {
         json!({"ok":true,"cancelled":true})
     })
+}
+
+#[cfg(test)]
+mod invocation_log_tests {
+    use super::*;
+    use std::io::Write;
+
+    #[test]
+    fn direct_repair_exit_82_needs_current_log_evidence_for_managed_classification() {
+        let root = tempfile::tempdir().expect("fixture");
+        let prefix = root.path().join("prefix");
+        let runner = root.path().join("runner");
+        files::private_dir(&root.path().join("private")).expect("private evidence directory");
+        fs::create_dir_all(prefix.join("drive_c/windows/system32")).expect("prefix");
+        fs::create_dir(&runner).expect("runner");
+        let path = root.path().join("hook.log");
+        let cancel = std::sync::atomic::AtomicBool::new(false);
+        let mut wine = Wine::new(&prefix, &runner, &path, &cancel).expect("log-only Wine fixture");
+        writeln!(
+            wine.log,
+            "Unhandled exception. System.DllNotFoundException: old private path"
+        )
+        .expect("old log");
+        let offset = wine.log.metadata().expect("metadata").len();
+        writeln!(wine.log, "No exception information in this invocation").expect("current log");
+        let begin = || {
+            let mut value = crate::fenix_diagnostics::begin(root.path(), "repair", "flightdeck")
+                .expect("attempt");
+            value.failure = Some("hook_nonzero".into());
+            value.hook_exit_code = Some(82);
+            value.process_exit_code = Some(82);
+            Some(value)
+        };
+        let mut attempt = begin();
+        invocation_log(&wine, &path, offset, &mut attempt).expect("current log only");
+        let evidence = attempt.expect("attempt");
+        assert_eq!(evidence.failure.as_deref(), Some("hook_nonzero"));
+        assert!(evidence.evidence_complete);
+        assert!(evidence.managed_exception_types.is_empty());
+        assert!(evidence.clr_exception_code.is_none());
+
+        writeln!(wine.log, "Unhandled exception. System.ArgumentException: PRIVATE_STARTUP_HOOK\n ---> System.IO.FileNotFoundException: PRIVATE_PATH").expect("exception headers");
+        let mut attempt = begin();
+        invocation_log(&wine, &path, offset, &mut attempt).expect("exception evidence");
+        let mut evidence = attempt.expect("attempt");
+        assert_eq!(evidence.failure.as_deref(), Some("managed_exception"));
+        assert_eq!(
+            evidence.managed_exception_types,
+            [
+                "System.ArgumentException",
+                "System.IO.FileNotFoundException"
+            ]
+        );
+        evidence.status = "failed".into();
+        evidence.completed_at = Some(files::now());
+        crate::fenix_diagnostics::save(root.path(), &evidence).expect("persisted evidence");
+        let saved = crate::fenix_diagnostics::load(root.path());
+        assert_eq!(saved["failure"], "managed_exception");
+        assert_eq!(saved["evidence_complete"], true);
+        assert!(!saved.to_string().contains("PRIVATE_"));
+
+        // A successful direct repair may have handled an exception. Keep the
+        // observed symbols without turning that successful exit into failure.
+        let mut attempt = begin();
+        if let Some(value) = &mut attempt {
+            value.failure = None;
+            value.hook_exit_code = Some(0);
+            value.process_exit_code = Some(0);
+        }
+        invocation_log(&wine, &path, offset, &mut attempt).expect("handled exception evidence");
+        let mut evidence = attempt.expect("attempt");
+        assert!(evidence.failure.is_none());
+        assert!(!evidence.managed_exception_types.is_empty());
+        evidence.status = "succeeded".into();
+        evidence.completed_at = Some(files::now());
+        crate::fenix_diagnostics::save(root.path(), &evidence).expect("successful direct repair");
+        assert_eq!(
+            crate::fenix_diagnostics::load(root.path())["status"],
+            "succeeded"
+        );
+
+        let offset = wine.log.metadata().expect("metadata").len();
+        wine.log
+            .write_all(&[b'x'; 4097])
+            .expect("oversized new line");
+        let mut attempt = begin();
+        assert!(invocation_log(&wine, &path, offset, &mut attempt).is_err());
+        let evidence = attempt.expect("attempt");
+        assert_eq!(evidence.failure.as_deref(), Some("log_too_large"));
+        assert!(!evidence.evidence_complete);
+        assert!(evidence.managed_exception_types.is_empty());
+    }
 }

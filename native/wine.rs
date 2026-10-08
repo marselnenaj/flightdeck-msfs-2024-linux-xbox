@@ -18,8 +18,37 @@ pub const DOTNET_COMPATIBILITY: &[(&str, &str)] = &[
     ("DOTNET_SYSTEM_GLOBALIZATION_USENLS", "1"),
     ("DOTNET_ReadyToRun", "0"),
 ];
+// Windows tools must resolve their runtimes and assemblies inside the managed
+// profile, not through a Linux SDK's inherited paths or startup hooks. Keep
+// unrelated runtime tuning and diagnostics intact; registry settings are separate.
+const HOST_DOTNET_OVERRIDES: &[&str] = &[
+    "DOTNET_ROOT",
+    "DOTNET_ROOT(x86)",
+    "DOTNET_ROOT_X86",
+    "DOTNET_ROOT_X64",
+    "DOTNET_ROOT_ARM64",
+    "DOTNET_HOST_PATH",
+    "DOTNET_STARTUP_HOOKS",
+    "DOTNET_ADDITIONAL_DEPS",
+    "DOTNET_SHARED_STORE",
+    "DOTNET_SERVICING",
+    "DOTNET_BUNDLE_EXTRACT_BASE_DIR",
+    "DOTNET_ROLL_FORWARD",
+    "DOTNET_ROLL_FORWARD_TO_PRERELEASE",
+    "DOTNET_ROLL_FORWARD_ON_NO_CANDIDATE_FX",
+    "DOTNET_MULTILEVEL_LOOKUP",
+    "DOTNET_RUNTIME_ID",
+];
 pub fn environment(prefix: &Path, runner: &Path) -> BTreeMap<String, String> {
-    let mut env: BTreeMap<_, _> = std::env::vars()
+    environment_from(prefix, runner, std::env::vars())
+}
+fn environment_from(
+    prefix: &Path,
+    runner: &Path,
+    inherited: impl IntoIterator<Item = (String, String)>,
+) -> BTreeMap<String, String> {
+    let mut env: BTreeMap<_, _> = inherited
+        .into_iter()
         .filter(|(key, _)| {
             ![
                 "WINE_DLL_FILE_MAP",
@@ -30,6 +59,10 @@ pub fn environment(prefix: &Path, runner: &Path) -> BTreeMap<String, String> {
                 "WINELOADERNOEXEC",
             ]
             .contains(&key.as_str())
+                // Wine passes these names to case-insensitive Windows lookups.
+                && !HOST_DOTNET_OVERRIDES
+                    .iter()
+                    .any(|name| key.eq_ignore_ascii_case(name))
         })
         .collect();
     for (key, value) in [
@@ -247,5 +280,90 @@ impl crate::framework_repair::SetupWine for StagedWine<'_> {
             self.wine.cancel,
         )?;
         String::from_utf8(bytes).map_err(|_| Error::Invalid("Invalid Windows installer listing."))
+    }
+}
+
+#[cfg(test)]
+mod environment_tests {
+    use super::*;
+
+    fn scoped(values: &[(&str, &str)]) -> BTreeMap<String, String> {
+        environment_from(
+            Path::new("/managed/prefix"),
+            Path::new("/managed/runner"),
+            values
+                .iter()
+                .map(|(key, value)| ((*key).to_owned(), (*value).to_owned())),
+        )
+    }
+
+    #[test]
+    fn windows_tools_ignore_inherited_dotnet_loading_overrides() {
+        let inherited = [
+            ("DOTNET_ROOT", "/usr/share/dotnet"),
+            ("DOTNET_ROOT(x86)", "/linux/dotnet-x86"),
+            ("DOTNET_ROOT_X86", "/linux/dotnet-x86"),
+            ("DOTNET_ROOT_X64", "/linux/dotnet-x64"),
+            ("DOTNET_ROOT_ARM64", "/linux/dotnet-arm64"),
+            ("DOTNET_HOST_PATH", "/usr/bin/dotnet"),
+            ("DOTNET_STARTUP_HOOKS", r"C:\flightdeck-repro\missing.dll"),
+            ("dotnet_startup_hooks", "/linux/instrumentation.dll"),
+            ("DotNet_Root_X64", "/linux/other-dotnet"),
+            ("DOTNET_ADDITIONAL_DEPS", "/linux/deps.json"),
+            ("DOTNET_SHARED_STORE", "/linux/shared-store"),
+            ("DOTNET_SERVICING", "/linux/servicing"),
+            ("DOTNET_BUNDLE_EXTRACT_BASE_DIR", "/linux/bundles"),
+            ("DOTNET_ROLL_FORWARD", "Disable"),
+            ("DOTNET_ROLL_FORWARD_TO_PRERELEASE", "1"),
+            ("DOTNET_ROLL_FORWARD_ON_NO_CANDIDATE_FX", "0"),
+            ("DOTNET_MULTILEVEL_LOOKUP", "0"),
+            ("DOTNET_RUNTIME_ID", "linux-x64"),
+        ];
+        let env = scoped(&inherited);
+        for (key, _) in inherited {
+            assert!(!env.contains_key(key), "inherited {key} reached Windows");
+        }
+    }
+
+    #[test]
+    fn windows_tools_preserve_unrelated_graphics_media_and_runtime_settings() {
+        let inherited = [
+            ("__NV_PRIME_RENDER_OFFLOAD", "1"),
+            ("__GL_SHADER_DISK_CACHE_PATH", "/graphics/cache"),
+            ("VK_ICD_FILENAMES", "/graphics/driver.json"),
+            ("GST_PLUGIN_PATH", "/media/plugins"),
+            ("LD_LIBRARY_PATH", "/native/libraries"),
+            ("DOTNET_EnableDiagnostics", "1"),
+            ("DOTNET_GCHeapHardLimit", "40000000"),
+            ("COMPlus_TieredCompilation", "0"),
+            ("COREHOST_TRACE", "1"),
+            ("COREHOST_TRACEFILE", r"C:\diagnostics\host.log"),
+            ("DOTNET_ROOT_EXTRA", "app-specific-value"),
+        ];
+        let env = scoped(&inherited);
+        for (key, value) in inherited {
+            assert_eq!(env.get(key).map(String::as_str), Some(value), "{key}");
+        }
+    }
+
+    #[test]
+    fn windows_tools_keep_profile_and_compatibility_environment() {
+        let env = scoped(&[
+            ("WINEPREFIX", "/other/prefix"),
+            ("WINELOADER", "/other/wine"),
+            ("WINEDLLPATH", "/other/libraries"),
+            ("DOTNET_SYSTEM_GLOBALIZATION_USENLS", "0"),
+            ("DOTNET_ReadyToRun", "1"),
+            ("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS", "--example-option"),
+        ]);
+        assert_eq!(env["WINEPREFIX"], "/managed/prefix");
+        assert!(!env.contains_key("WINELOADER"));
+        assert!(!env.contains_key("WINEDLLPATH"));
+        assert_eq!(env["DOTNET_SYSTEM_GLOBALIZATION_USENLS"], "1");
+        assert_eq!(env["DOTNET_ReadyToRun"], "0");
+        assert_eq!(
+            env["WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS"],
+            "--example-option --disable-features=HideCursorWhileTyping"
+        );
     }
 }

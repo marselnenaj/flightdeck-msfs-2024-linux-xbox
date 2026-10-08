@@ -2,6 +2,30 @@ use crate::*;
 use iced::widget::{column, progress_bar};
 use model::Action::*;
 
+fn fenix_hook_failure(data: &Value) -> Option<&str> {
+    let job = &data["job"];
+    // A persisted running record is not evidence that an app is still alive.
+    // Current work takes precedence over the previous invocation's result.
+    if model::active(job) || yes(data, "fenix_running") {
+        return None;
+    }
+    let attempt = &data["last_attempt"];
+    if (attempt.is_null() || yes(data, "last_attempt_superseded"))
+        && ["installer", "repair"].contains(&s(job, "operation"))
+    {
+        if job["state"] == "failed" {
+            return Some(s(job, "operation"));
+        }
+        if job["state"] == "complete" {
+            return None;
+        }
+    }
+    (attempt["scope"] == "latest_recorded_attempt"
+        && attempt["status"] == "failed"
+        && ["installer", "repair"].contains(&s(attempt, "operation")))
+    .then(|| s(attempt, "operation"))
+}
+
 impl App {
     fn addon_action<'a>(&self, title: &str, action: model::Action) -> Element<'a, Message> {
         let message = self.request(&action).map(|_| Message::Action(action));
@@ -117,13 +141,21 @@ impl App {
         let progress = presentation::fenix(data, self.status());
         let manager = yes(data, "manager_installed");
         let active = model::active(&data["job"]);
-        let failed_hook = data["job"]["state"] == "failed"
-            && ["installer", "repair"].contains(&s(&data["job"], "operation"))
-            && yes(data, "can_repair_installer");
+        let failure = fenix_hook_failure(data);
+        let failed_repair = failure == Some("repair");
+        let offer_repair = failure == Some("installer") && yes(data, "can_repair_installer");
         let supported = !progress.steps.is_empty() || data["state"] == "legacy";
         let mut content = column![].spacing(14);
         if current {
             content = content.push(self.addon_feedback(data));
+            if failure.is_some() && data["job"]["state"] != "failed" {
+                content = content.push(label(
+                    self.tr("Letzter Vorgang fehlgeschlagen", "Last operation failed"),
+                    13.0,
+                    Weight::Semibold,
+                    iced::color!(0xff9199),
+                ));
+            }
             if !progress.busy.is_empty() {
                 content = content.push(self.paragraph(self.t(progress.busy).to_string()));
             }
@@ -137,12 +169,12 @@ impl App {
             } else if supported {
                 content = content.push(label(
                     self.tr(
-                        if progress.ready && !failed_hook {
+                        if progress.ready && failure.is_none() {
                             "Einrichtung abgeschlossen"
                         } else {
                             "Als Nächstes"
                         },
-                        if progress.ready && !failed_hook {
+                        if progress.ready && failure.is_none() {
                             "Setup complete"
                         } else {
                             "Next step"
@@ -152,7 +184,18 @@ impl App {
                     Weight::Semibold,
                     self.edition.accent(),
                 ));
-                if failed_hook {
+                if failed_repair {
+                    content = content
+                        .push(self.paragraph(self.tr(
+                            "Die letzte Reparatur ist fehlgeschlagen. Prüfe den Diagnosebericht, bevor du einen weiteren Versuch startest.",
+                            "The last repair failed. Review the diagnostics before trying again.",
+                        )))
+                        .push(self.control(
+                            "Diagnose öffnen",
+                            Some(Message::Navigate(Page::Diagnostics)),
+                            true,
+                        ));
+                } else if offer_repair {
                     content = content
                         .push(self.paragraph(self.t("Führt den Einrichtungsschritt der vorhandenen Fenix-App erneut aus. Dein Flugzeug wird dabei nicht installiert.").to_string()))
                         .push(self.addon_action("Fenix-App reparieren", Fenix("repair")));
@@ -217,13 +260,13 @@ impl App {
             content = content.push(self.paragraph(self.tr("MSFS 2024 · CPU-Anzeigen ohne Wetterradar. Eine eigene Fenix-Lizenz ist erforderlich.", "MSFS 2024 · CPU displays without weather radar. Requires your own Fenix license.")));
             let mut manage = column![].spacing(14);
             let mut actions = vec![];
-            if manager && !(progress.next == 2 && !failed_hook && !active) {
+            if manager && !(progress.next == 2 && !offer_repair && !failed_repair && !active) {
                 actions.push(("Installer & Liveries", Fenix("manager")));
             }
             if yes(data, "fenix_installed") && progress.ready {
                 actions.push(("Fenix öffnen", Fenix("open")));
             }
-            if yes(data, "can_repair_installer") && !failed_hook {
+            if yes(data, "can_repair_installer") && !offer_repair {
                 actions.push(("Fenix-App reparieren", Fenix("repair")));
             }
             if yes(data, "configured") {
@@ -236,8 +279,11 @@ impl App {
                 let message = self.request(&action).map(|_| Message::Action(action));
                 manage = manage.push(self.control(title, message, false));
             }
-            let installer_is_next =
-                progress.next == 2 && !manager && !active && !yes(data, "fenix_running");
+            let installer_is_next = progress.next == 2
+                && !manager
+                && !active
+                && !failed_repair
+                && !yes(data, "fenix_running");
             if yes(data, "installed") && !installer_is_next {
                 manage = manage
                     .push(self.paragraph(
@@ -262,7 +308,16 @@ impl App {
             content = content.push(self.paragraph(self.tr("Der Status dieser Installation ist noch nicht verfügbar. Lade ihn erneut, bevor du die Einrichtung fortsetzt.", "The status of this installation is not available yet. Refresh before continuing setup.")));
         }
         content = content.push(self.refresh_button());
-        self.disclosure(Disclosure::Fenix, "Fenix A320", progress.title, content)
+        self.disclosure(
+            Disclosure::Fenix,
+            "Fenix A320",
+            if failed_repair {
+                "Fenix-Reparatur fehlgeschlagen"
+            } else {
+                progress.title
+            },
+            content,
+        )
     }
 
     fn gsx_card(&self) -> Element<'_, Message> {

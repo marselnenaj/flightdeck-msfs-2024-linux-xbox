@@ -676,5 +676,9 @@
   "GTK 3 (libgtk-3.so.0, 64 Bit) kann nicht geladen werden. Bitte die GTK-3-Laufzeitbibliotheken einschließlich ihrer Abhängigkeiten installieren oder den Bibliothekspfad prüfen.": "GTK 3 (libgtk-3.so.0, 64-bit) cannot be loaded. Install the GTK 3 runtime libraries and their dependencies, or check the library path.",
   "WebKitGTK 4.1 (libwebkit2gtk-4.1.so.0, 64 Bit) kann nicht geladen werden. Bitte die WebKitGTK-4.1-Laufzeitbibliotheken einschließlich ihrer Abhängigkeiten installieren oder den Bibliothekspfad prüfen.": "WebKitGTK 4.1 (libwebkit2gtk-4.1.so.0, 64-bit) cannot be loaded. Install the WebKitGTK 4.1 runtime libraries and their dependencies, or check the library path.",
   "OpenSSL 3 (libssl.so.3 und libcrypto.so.3, 64 Bit) kann nicht geladen werden. Bitte die OpenSSL-3-Laufzeitbibliotheken installieren oder den Bibliothekspfad prüfen.": "OpenSSL 3 (libssl.so.3 and libcrypto.so.3, 64-bit) cannot be loaded. Install the OpenSSL 3 runtime libraries, or check the library path.",
-  "Der Vulkan-Loader (libvulkan.so.1, 64 Bit) kann nicht geladen werden. Bitte den Vulkan-Loader installieren oder den Bibliothekspfad prüfen. Der Grafiktreiber wird separat geprüft.": "The Vulkan loader (libvulkan.so.1, 64-bit) cannot be loaded. Install the Vulkan loader, or check the library path. The graphics driver is checked separately."
+  "Der Vulkan-Loader (libvulkan.so.1, 64 Bit) kann nicht geladen werden. Bitte den Vulkan-Loader installieren oder den Bibliothekspfad prüfen. Der Grafiktreiber wird separat geprüft.": "The Vulkan loader (libvulkan.so.1, 64-bit) cannot be loaded. Install the Vulkan loader, or check the library path. The graphics driver is checked separately.",
+  "Fenix-Linux-Patch": "Fenix Linux patch",
+  "Fenix-Reparatur fehlgeschlagen": "Fenix repair failed",
+  "Diagnose öffnen": "Open diagnostics",
+  "Die letzte Reparatur ist fehlgeschlagen. Prüfe den Diagnosebericht, bevor du einen weiteren Versuch startest.": "The last repair failed. Review the diagnostics before trying again."
 }

@@ -62,6 +62,72 @@ fn current_failure_survives_reload_and_retry_replaces_older_evidence() {
 }
 
 #[test]
+fn earlier_schema_one_attempts_without_exception_fields_remain_readable() {
+    let root = fixture();
+    let mut original = serde_json::to_value(failed(root.path())).expect("evidence");
+    original
+        .as_object_mut()
+        .expect("object")
+        .remove("managed_exception_types");
+    original
+        .as_object_mut()
+        .expect("object")
+        .remove("clr_exception_code");
+    files::atomic_json(&record(root.path()), &original).expect("earlier schema one");
+    let evidence = fd::load(root.path());
+    assert_eq!(evidence["failure"], "hook_nonzero");
+    assert_eq!(evidence["managed_exception_types"], json!([]));
+    assert!(evidence["clr_exception_code"].is_null());
+    let mut retry = fd::begin(root.path(), "repair", "flightdeck").expect("retry");
+    retry.status = "failed".into();
+    retry.completed_at = Some(files::now());
+    retry.hook_exit_code = Some(82);
+    retry.failure = Some("hook_nonzero".into());
+    fd::save(root.path(), &retry).expect("new attempt");
+    assert_eq!(fd::load(root.path())["failure"], "hook_nonzero");
+}
+
+#[test]
+fn managed_exception_report_contains_only_fixed_symbols_not_messages_or_stack_paths() {
+    let root = fixture();
+    let mut attempt = failed(root.path());
+    attempt.hook_exit_code = Some(82);
+    attempt.failure = Some("managed_exception".into());
+    attempt.managed_exception_types = vec![
+        "System.TypeInitializationException".into(),
+        "System.IO.FileNotFoundException".into(),
+    ];
+    attempt.clr_exception_code = Some("e0434352".into());
+    fd::save(root.path(), &attempt).expect("observed symbols");
+    files::atomic(&root.path().join("private/fenix-app.log"), b"Unhandled exception. System.IO.FileNotFoundException: PRIVATE_EXCEPTION_MESSAGE C:\\private\\account@example.test.dll\n").expect("private log");
+    let state = tempfile::tempdir().expect("state");
+    let app = Launcher::new(state.path().join("state"), None).expect("launcher");
+    app.lock().runtime = Some(root.path().into());
+    let data = json!({"category":"installation","description":"The Fenix hook failed.","runtime_path":root.path()});
+    let result = problem_reports::prepare(&app, &data).expect("draft");
+    let evidence = &result["draft"]["report"]["diagnostics"]["summary"]["fenix"];
+    assert_eq!(
+        evidence["managed_exception_types"],
+        json!(attempt.managed_exception_types)
+    );
+    assert_eq!(evidence["clr_exception_code"], "e0434352");
+    assert_eq!(evidence["failure"], "managed_exception");
+    assert_eq!(evidence["evidence_complete"], true);
+    let text = result.to_string();
+    for private in [
+        "PRIVATE_EXCEPTION_MESSAGE",
+        "account@example.test",
+        "C:\\private",
+    ] {
+        assert!(!text.contains(private));
+    }
+    let persisted = problem_reports::read(&app.state_dir.join("problem-report.json"))
+        .expect("read draft")
+        .expect("draft");
+    assert_eq!(persisted, result["draft"]);
+}
+
+#[test]
 fn support_draft_includes_only_selected_runtime_structured_fenix_evidence() {
     let root = fixture();
     failed(root.path());
@@ -125,6 +191,43 @@ fn record_reader_rejects_unknown_fields_private_strings_and_invalid_types() {
         ("hook_exit_code", json!("3 PRIVATE_CODE_MARKER")),
         ("process_exit_code", json!(4294967296u64)),
         ("evidence_complete", json!("true")),
+        (
+            "managed_exception_types",
+            json!(["Private.CustomerException"]),
+        ),
+        (
+            "managed_exception_types",
+            json!(["System.IO.FileNotFoundException: PRIVATE_MESSAGE"]),
+        ),
+        (
+            "managed_exception_types",
+            json!(["System.Exception", "System.Exception"]),
+        ),
+        (
+            "managed_exception_types",
+            json!([
+                "System.Exception",
+                "System.ArgumentException",
+                "System.ArgumentNullException",
+                "System.ArgumentOutOfRangeException",
+                "System.BadImageFormatException",
+                "System.DllNotFoundException",
+                "System.EntryPointNotFoundException",
+                "System.InvalidOperationException",
+                "System.IO.IOException"
+            ]),
+        ),
+        (
+            "managed_exception_types",
+            json!(["System.Exception".repeat(300)]),
+        ),
+        ("managed_exception_types", json!("System.Exception")),
+        ("managed_exception_types", Value::Null),
+        ("clr_exception_code", json!("0xe0434352")),
+        ("clr_exception_code", json!("e0434352 PRIVATE_CODE_MARKER")),
+        ("clr_exception_code", json!("c0000005")),
+        ("clr_exception_code", json!(82)),
+        ("failure", json!("managed_exception")),
         ("schema", json!(2)),
         ("started_at", json!("2026-02-30T00:00:00Z")),
         ("completed_at", json!("2020-01-01T00:00:00Z")),

@@ -204,9 +204,22 @@ fehlgeschlagenen Installer oder Reparaturversuch erscheint **Fenix-App repariere
 direkt als nächste Aktion, sofern die Reparatur verfügbar ist. Sie wiederholt den
 offiziellen Einrichtungsschritt mit gültigen Paketdaten, ohne das Profil
 zurückzusetzen. Ansonsten steht die verfügbare Reparaturaktion unter
-**Verwalten & reparieren**. Anschließend den Manager erneut öffnen. Scheitert die Reparatur,
-enthält ein neuer Diagnosebericht den aktuellen Fenix-Befund.
+**Verwalten & reparieren**. Anschließend den Manager erneut öffnen. Scheitert die Reparatur
+erneut, einen neuen Diagnosebericht erstellen und
+`<Runtime-Ordner>/private/fenix-app.log` prüfen. Der ICU-Fix behebt eine bekannte
+Ursache; die allgemeine Hook-Meldung und Exitcode 82 benennen keine eindeutige
+Ursache. Die Fehlerzeilen des aktuellen Versuchs ohne Kontodaten oder Tokens
+weitergeben, statt unverändert erneut zu reparieren. Der grüne Fenix-Check
+bestätigt den Linux-Patch, nicht den erfolgreichen App-Hook.
 [Prüfumfang](native-ui.md#fenix-install-hook-warning).
+
+Im noch unveröffentlichten Launcher bleibt ein gespeicherter Hook-Fehler nach
+erneutem Öffnen sichtbar. Nach einer fehlgeschlagenen Reparatur führt der nächste
+Schritt zu **Diagnose öffnen**; ein weiterer Reparaturversuch bleibt unter
+**Verwalten & reparieren** verfügbar. Windows-Installer und Reparatur übernehmen
+außerdem keine geerbten Linux-.NET-Ladepfade oder Startup-Hooks mehr. Der Bericht
+erfasst erkannte Ausnahmetypen, keine rohen Fehlermeldungen. Damit sind nicht alle
+möglichen Ursachen von Exitcode 82 geklärt.
 
 Nach der Einrichtung startet Fenix automatisch mit MSFS. Du musst es nicht
 separat öffnen. Beim normalen Spielende, einem Absturz oder **Stoppen** beendet

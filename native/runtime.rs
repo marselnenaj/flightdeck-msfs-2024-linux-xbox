@@ -116,7 +116,7 @@ pub fn checks(root: Option<&Path>) -> Vec<Value> {
             (
                 "fenix-linux-patch.json",
                 "fenix_setup",
-                "Fenix-Einrichtung",
+                "Fenix-Linux-Patch",
                 "Fenix-Einrichtung unvollständig. Unter Mods reparieren oder wiederherstellen.",
             ),
             (

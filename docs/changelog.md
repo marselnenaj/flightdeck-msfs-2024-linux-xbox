@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- Prevent inherited Linux .NET loading/runtime overrides from reaching Windows
+  installer and repair commands. A controlled startup-hook override reproduced
+  Fenix App 1.0.286 exit 82; the same hook succeeds without that override. This
+  addresses that failure path, not every possible cause of exit 82.
+- Retain the latest recorded Fenix hook failure in the interface after reopening
+  the launcher. A failed repair points to diagnostics instead of prioritizing
+  another identical retry. Label the Linux-patch check separately from app setup.
+- Include recognized managed exception types and an explicitly logged CLR
+  exception code in Fenix diagnostics, without raw third-party messages or paths.
+  An exit code by itself remains an unknown hook failure.
 - Explain installer startup failures caused by an unsupported architecture,
   older glibc, a missing loader or unavailable libraries before invoking the
   native installer. Keep the optional probe bounded and show German or English
