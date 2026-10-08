@@ -443,6 +443,10 @@ mod recovery_tests {
         files::private_dir(&root.join("private")).expect("private");
         let lease = files::Lease::acquire(&root.join("private/play.lock"), true).expect("lease");
         crate::cloud_process_guard::mark(&root, &lease.0).expect("fence");
+        // This fixture models a fully exited owner. A concurrent test's fork can
+        // retain a CLOEXEC descriptor until exec, so closing alone is not enough.
+        rustix::fs::flock(&lease.0, rustix::fs::FlockOperation::Unlock)
+            .expect("release synthetic owner");
         drop(lease);
         let app = Launcher::new(temp.path().join("launcher"), None).expect("launcher");
         let mut state = app.lock();
