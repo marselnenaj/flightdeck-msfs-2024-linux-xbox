@@ -38,7 +38,7 @@ Die allgemeine Mod-Liste zeigt den Bestand und öffnet den Ordner.
 Für Fenix und die experimentelle GSX-Pro-Integration gibt es eigene Abläufe,
 derzeit nur für MSFS 2024.
 
-Flightdeck 0.2.7 zeigt für jedes Add-on einen hervorgehobenen nächsten Schritt.
+Seit 0.2.7 zeigt Flightdeck für jedes Add-on einen hervorgehobenen nächsten Schritt.
 Erkannte Komponenten bleiben sichtbar; zusätzliche Aktionen stehen unter
 **Verwalten & reparieren**.
 
@@ -200,26 +200,30 @@ ursprüngliche Wiederherstellungspunkt bleiben erhalten.
 Meldet der offizielle Installer **„application install hook failed“**, zuerst
 alle Installer-Fenster schließen. Beim Start seiner EXE über Flightdeck greift
 der vorhandene ICU-/.NET-Fix, der bereits in 0.2.5 enthalten ist. Nach einem
-fehlgeschlagenen Installer oder Reparaturversuch erscheint **Fenix-App reparieren**
-direkt als nächste Aktion, sofern die Reparatur verfügbar ist. Sie wiederholt den
-offiziellen Einrichtungsschritt mit gültigen Paketdaten, ohne das Profil
-zurückzusetzen. Ansonsten steht die verfügbare Reparaturaktion unter
-**Verwalten & reparieren**. Anschließend den Manager erneut öffnen. Scheitert die Reparatur
-erneut, einen neuen Diagnosebericht erstellen und
-`<Runtime-Ordner>/private/fenix-app.log` prüfen. Der ICU-Fix behebt eine bekannte
-Ursache; die allgemeine Hook-Meldung und Exitcode 82 benennen keine eindeutige
-Ursache. Die Fehlerzeilen des aktuellen Versuchs ohne Kontodaten oder Tokens
-weitergeben, statt unverändert erneut zu reparieren. Der grüne Fenix-Check
-bestätigt den Linux-Patch, nicht den erfolgreichen App-Hook.
-[Prüfumfang](native-ui.md#fenix-install-hook-warning).
+fehlgeschlagenen Installer erscheint **Fenix-App reparieren** als nächste Aktion,
+sofern die Reparatur verfügbar ist. Sie wiederholt den offiziellen
+Einrichtungsschritt mit gültigen Paketdaten, ohne das Profil zurückzusetzen.
+Nach erfolgreicher Reparatur den Manager erneut öffnen.
 
-Im noch unveröffentlichten Launcher bleibt ein gespeicherter Hook-Fehler nach
-erneutem Öffnen sichtbar. Nach einer fehlgeschlagenen Reparatur führt der nächste
-Schritt zu **Diagnose öffnen**; ein weiterer Reparaturversuch bleibt unter
-**Verwalten & reparieren** verfügbar. Windows-Installer und Reparatur übernehmen
-außerdem keine geerbten Linux-.NET-Ladepfade oder Startup-Hooks mehr. Der Bericht
-erfasst erkannte Ausnahmetypen, keine rohen Fehlermeldungen. Damit sind nicht alle
-möglichen Ursachen von Exitcode 82 geklärt.
+In **0.2.8** bleibt der zuletzt protokollierte fehlgeschlagene Versuch nach einem
+Launcher-Neustart sichtbar. Nach einer fehlgeschlagenen Reparatur führt der
+nächste Schritt zu **Diagnose öffnen**. Vor einem weiteren Versuch einen aktuellen
+Bericht erstellen; eine verfügbare Reparatur bleibt unter **Verwalten & reparieren**.
+Fehlt der Manager oder lässt er sich nicht eindeutig erkennen, kann dort auch
+der offizielle Installer ausgewählt werden. Der grüne Check **Fenix-Linux-Patch**
+bestätigt nur den Linux-Patch, nicht den erfolgreichen App-Hook. Ein neuer
+protokollierter Versuch ersetzt das vorherige Ergebnis.
+
+Version 0.2.8 filtert geerbte Linux-.NET-Ladepfade, Ladeoptionen und Startup-Hooks
+vor Windows-Installer und Reparatur. Im kontrollierten Test mit offizieller
+FenixApp 1.0.286 verursachte ein ungültiger geerbter `DOTNET_STARTUP_HOOKS` Exitcode
+82; dieselbe Eingabe bestand nach dem Filtern mit Exitcode 0. Diese reproduzierte
+Ursache ist damit behoben. Dass gemeldete Exit-82-Fehler bei Nutzern dadurch
+behoben sind, ist noch nicht bestätigt. Exitcode 82 allein benennt keine Ursache.
+Diagnoseberichte enthalten erkannte Ausnahmetypen und einen ausdrücklich
+beobachteten CLR-Code, keine rohen Fehlermeldungen;
+`<Runtime-Ordner>/private/fenix-app.log` bleibt lokal.
+[Prüfumfang](native-ui.md#fenix-install-hook-warning).
 
 Nach der Einrichtung startet Fenix automatisch mit MSFS. Du musst es nicht
 separat öffnen. Beim normalen Spielende, einem Absturz oder **Stoppen** beendet

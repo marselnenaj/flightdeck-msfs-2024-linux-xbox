@@ -20,18 +20,18 @@ of MSFS 2024 or 2020** through Wine/Proton. Sign in with your Microsoft account,
 download the licensed game and start it from the native Rust desktop application.
 Windows, the Xbox app and a previous MSFS installation are not required.
 
-**Current stable release: [Flightdeck 0.2.7](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.2.7).**
+**Current stable release: [Flightdeck 0.2.8](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.2.8).**
 The launcher, installer and updater need no Python.
 
-**New in 0.2.7:** Fenix and GSX show the next setup step with errors at the top;
-additional maintenance actions stay in the collapsed **Manage & repair** section.
-Licensed GSX operation in the simulator remains unconfirmed.
+**New in 0.2.8:** Fenix filters inherited .NET settings that caused exit 82 in an
+isolated test. Repair errors stay visible after restart, and Linux prerequisite
+checks and desktop startup improve. Other exit-82 causes still need their own evidence.
 See the [changelog](docs/changelog.md) and [add-on guide](docs/addons.md).
 
 ## Get started
 
 1. Download **Flightdeck-Linux-x86_64.tar.gz** from the
-   [0.2.7 release](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.2.7),
+   [0.2.8 release](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.2.8),
    extract it and open **Install Flightdeck.desktop**. Your file manager may ask
    you to trust this local launcher. Alternatively, run `./install.sh` there.
 2. Choose **Install MSFS**, select 2024 or 2020 and a destination, then
@@ -49,9 +49,9 @@ a Wayland or X11 desktop and a Linux Secret Service keyring. The full runtime
 also needs GTK 3, WebKitGTK 4.1, OpenSSL 3 and GStreamer Good/Bad/Libav plugins;
 the launcher also needs liblzma, libgcc_s and libxkbcommon, plus the selected
 Wayland/X11 libraries. Setup checks missing prerequisites.
-An unreleased packaged candidate passed launcher checks on Ubuntu 24.04, Debian
-13, Fedora 44, Arch Linux and openSUSE Tumbleweed on 8 October 2026. See the
-[Linux test matrix](docs/install.md#linux-test-matrix-unreleased) for the tested scope.
+Launcher checks passed on Ubuntu 24.04, Debian 13, Fedora 44, Arch Linux and
+openSUSE Tumbleweed on 8 October 2026. See the
+[Linux test matrix](docs/install.md#linux-test-matrix) for the tested scope.
 These container checks do not establish simulator or GPU-driver compatibility.
 [Requirements and installation options](docs/install.md)
 

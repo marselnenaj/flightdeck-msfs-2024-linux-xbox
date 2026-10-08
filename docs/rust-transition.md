@@ -1,13 +1,13 @@
 # Python-to-Rust transition update
 
-**0.2.7 is the current GitHub Latest release.** The native launcher and Python
+**0.2.8 is the current GitHub Latest release.** The native launcher and Python
 transition version **0.1.22** discover
 it through their existing update interface.
-Versions 0.2.1–0.2.6 update directly using **Updates → Flightdeck**, followed by
+Versions 0.2.1–0.2.7 update directly using **Updates → Flightdeck**, followed by
 **Restart Flightdeck now**.
 
 Users still on **0.1.21 or earlier** should run the full
-[0.2.7 installer](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.2.7)
+[0.2.8 installer](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.2.8)
 once. Their in-app updater reads `/releases/latest` and only accepts Python
 packages; it cannot install the native archive now offered by that endpoint.
 The full installer retains launcher settings, game installations and the
@@ -17,7 +17,7 @@ The unchanged [0.1.22 transition package](https://github.com/marselnenaj/flightd
 is still available for an explicit two-step migration:
 
 ```text
-0.1.21 → install 0.1.22 explicitly → in-app update to 0.2.7
+0.1.21 → install 0.1.22 explicitly → in-app update to 0.2.8
 ```
 
 The bridge verifies the native package before executing its installer, preserves
@@ -27,7 +27,7 @@ update discovery.
 
 The briefly published 0.2.0 was withdrawn after a public check exposed a native
 HTTP body-read panic, also present in 0.2.0-dev.1. Users of either native version
-need the complete 0.2.7 installer once; their affected updater cannot fetch its
+need the complete 0.2.8 installer once; their affected updater cannot fetch its
 own repair. Python 0.1.22 supports native packages normally. The repair
 introduced in 0.2.1 uses blocking HTTP timeouts and includes streamed/stalled-body
 regression tests.

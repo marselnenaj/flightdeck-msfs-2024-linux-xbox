@@ -1,13 +1,13 @@
 # Install the Flightdeck launcher
 
-The current stable **0.2.7** native Rust package needs no Python interpreter.
-Version 0.1.22 and native versions 0.2.1–0.2.6 can update in-app.
+The current stable **0.2.8** native Rust package needs no Python interpreter.
+Version 0.1.22 and native versions 0.2.1–0.2.7 can update in-app.
 Users of 0.1.21 or earlier should run this full
 installer once; their old updater cannot install native packages. See [update ordering](rust-transition.md),
 [changes](changelog.md) and [native status](rust-migration.md).
 
 Download **Flightdeck-Linux-x86_64.tar.gz** from the
-[0.2.7 release](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.2.7)
+[0.2.8 release](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.2.8)
 and extract it on your Linux computer. This full installer includes the six
 pinned compatibility components and their license notices. Version 0.1.22
 needs Python 3.10.12+ and the Linux libraries listed below. The native package
@@ -88,7 +88,7 @@ do not include this binary bundle and require the documented
 game files, account credentials, a game license or proprietary SDK files, and
 setup does not purchase the game.
 
-Flightdeck 0.2.7 opens a native Rust desktop window. Its local
+Flightdeck 0.2.8 opens a native Rust desktop window. Its local
 HTTP endpoint exposes only the API. Native language preferences are stored in
 `ui-preferences.json` under the launcher state directory; an explicit
 `--language de` or `--language en` overrides the saved choice. See [the native
@@ -137,10 +137,10 @@ Version 0.1.22 additionally requires Python 3.10.12+; the native package does no
 describe the platform components and advanced paths. For automatic Xbox cloud
 saves and local backups, see [cloud saves](cloud-saves.md).
 
-### Linux test matrix (unreleased)
+### Linux test matrix
 
-Linux portability improvements are in development and are **not part of the
-published 0.2.7 package**. The installer now probes the supplied executable
+**Version 0.2.8** includes the Linux portability improvements below. The
+installer probes the supplied executable
 before installation when a bounded execution tool is available. Architecture,
 glibc, loader and missing-library failures get German or English guidance;
 an available Zenity/KDialog can show the error for a graphical install.
@@ -156,6 +156,8 @@ report a next step; cancelling a file dialog remains separate from failure.
 The local container checks passed on **8 October 2026** with an internal packaged
 0.2.7 development candidate, executable SHA-256
 `0ff1be8b702fb97757d7794d99b189985dca2a1d05cf7ad801b64472b2823711`.
+These are historical candidate results, not validation of the final 0.2.8 package;
+that package must pass its release CI checks separately.
 The [test runner](../scripts/check-linux-distro.py) uses pinned base images from
 [the image manifest](../compat/linux-test-images.json). Each row covers the
 launcher only: CLI startup, installation into a fresh Unicode path, the installed
@@ -171,7 +173,7 @@ to the application's main surface, excluding window decorations.
 | Arch Linux | Passed | Passed |
 | openSUSE Tumbleweed | Passed | Passed |
 
-The candidate fixes startup in minimal images without a CA certificate store:
+The tested candidate fixed startup in minimal images without a CA certificate store:
 the desktop service client, native interface and local Fenix display client no
 longer load system trust roots for loopback HTTP. Ubuntu passed without adding
 CA certificates to the test image. External HTTPS retains normal certificate
@@ -249,19 +251,19 @@ it; users do not need to manage the HTTP service themselves.
 
 ## Update and rollback
 
-**0.2.7 is the current stable release.** Version 0.1.22 and native versions
-0.2.1–0.2.6 receive it through
+**0.2.8 is the current stable release.** Version 0.1.22 and native versions
+0.2.1–0.2.7 receive it through
 **Updates → Flightdeck**.
 
 Version 0.1.21 and earlier only understand Python update packages. Use the full
-[0.2.7 installer](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.2.7)
+[0.2.8 installer](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.2.8)
 once to update those installations while retaining their settings. Alternatively,
 install the unchanged [0.1.22 transition package](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.1.22)
-explicitly, restart, then use its updater for 0.2.7. The bridge is still available,
+explicitly, restart, then use its updater for 0.2.8. The bridge is still available,
 but is no longer automatically returned by GitHub's Latest endpoint.
 
 If you already installed 0.2.0-dev.1 or the withdrawn 0.2.0, use the complete
-0.2.7 installer once. Their native HTTP update check is defective and cannot
+0.2.8 installer once. Their native HTTP update check is defective and cannot
 download this repair; 0.1.22's updater is unaffected.
 
 Alternatively, run the **new native package's `./install.sh`** directly. The

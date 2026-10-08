@@ -1,4 +1,4 @@
-# Native desktop and add-on management (0.2.7)
+# Native desktop and add-on management (0.2.8)
 
 All six Flightdeck views now use Rust and iced 0.14: overview, setup, updates,
 saves, mods and diagnostics. The previous artwork, Manrope font, icons, colors
@@ -166,19 +166,23 @@ simulator log: operation, timestamps, validated package version, runner category
 exit codes and finite failure signatures. Raw logs, paths and account data are
 excluded. Missing evidence stays unknown; a new attempt replaces the old result.
 
-**Unreleased:** Install and repair commands discard inherited host .NET runtime
+**In 0.2.8:** Install and repair commands discard inherited host .NET runtime
 paths, dependency/loading overrides and startup hooks before launching Wine. In
 a controlled test with official FenixApp 1.0.286, an invalid inherited
 `DOTNET_STARTUP_HOOKS` caused exit 82 before the application hook ran. The same
 input succeeds with exit 0 through the updated Wine environment. This establishes
-one preventable cause, not the cause of every reported exit 82. Prefix registry
-values are separate and are not cleared by this filter.
+one preventable cause; resolution of users’ reported exit-82 failures remains
+unconfirmed. Prefix registry values are separate and are not cleared by this
+filter.
 
 Diagnostics now retain up to eight recognized .NET exception type identifiers
 and the CLR exception code only when explicitly observed in the current log.
 Messages, stack traces and paths stay local. Exit 82 alone remains `hook_nonzero`.
 The latest validated failed attempt remains visible after a launcher restart;
-a failed repair leads to diagnostics before another attempt. The green
+a failed repair leads to diagnostics before another attempt. An eligible repair
+or selection of the official installer remains under **Manage & repair**,
+including when the manager cannot be identified. Active jobs take precedence;
+an older completed job cannot hide a newer persisted failure. The green
 **Fenix Linux patch** check validates that patch, not the official app's install
 hook.
 

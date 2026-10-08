@@ -879,7 +879,7 @@ dependencies = [
 
 [[package]]
 name = "flightdeck-linux"
-version = "0.2.7"
+version = "0.2.8"
 dependencies = [
  "axum",
  "chrono",
@@ -906,7 +906,7 @@ dependencies = [
 
 [[package]]
 name = "flightdeck-ui"
-version = "0.2.7"
+version = "0.2.8"
 dependencies = [
  "iced",
  "iced_test",

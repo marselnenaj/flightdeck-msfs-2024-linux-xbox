@@ -1,14 +1,14 @@
 # Native launcher status
 
-The stable **[0.2.7 release](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.2.7)** runs the Flightdeck desktop, backend,
+The stable **[0.2.8 release](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.2.8)** runs the Flightdeck desktop, backend,
 installer, updater and runtime helpers in Rust. It retains the established
 C/C++ Wine/Store ABI components. Version 0.1.22 is the Python transition release
-and can discover 0.2.7 through its normal updater.
+and can discover 0.2.8 through its normal updater.
 Users of 0.1.21 or earlier need the full native installer or an explicit 0.1.22
 bridge installation; the current Latest endpoint no longer offers that bridge.
 The superseded
 0.2.0-dev.1 preview and withdrawn 0.2.0 release entries have been removed;
-Native versions 0.2.1–0.2.6 update through their existing updater.
+Native versions 0.2.1–0.2.7 update through their existing updater.
 The previous stable release remains available for reproducibility and rollback.
 
 Version **0.2.3** introduced the desktop migration with a native Rust
@@ -17,6 +17,12 @@ commands, existing installation records and update handoff. The old web UI is re
 persists Fenix .NET compatibility settings in the Wine profile, waits for detached
 installer children and checks install-hook failures. See [native desktop and
 Fenix verification](native-ui.md).
+
+Version **0.2.8** improves Linux library and desktop checks and removes the system
+CA-store dependency from local HTTP clients. It also filters inherited .NET host
+settings that reproduced one Fenix exit-82 failure, retains repair results across
+launcher restarts and exports only allowlisted exception identifiers. Exit 82
+alone does not establish a cause; other failures still need their own log evidence.
 
 ## Implemented contracts
 
@@ -38,7 +44,7 @@ An explicit rollback to an older Python release still needs that release's
 Python runtime; normal native operation does not.
 The Python **0.1.22 transition update** accepts native packages and
 hands the existing local service endpoint to the native launcher. The explicit bridge path is
-**0.1.21 → install 0.1.22 → in-app update to 0.2.7**. Older updaters only accept the
+**0.1.21 → install 0.1.22 → in-app update to 0.2.8**. Older updaters only accept the
 Python source layout; see the [transition instructions](rust-transition.md).
 Direct installation with the new
 full package also works. Native-to-native updates use the Rust updater. Update

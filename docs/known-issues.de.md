@@ -2,8 +2,8 @@
 
 [English](known-issues.md) · [Dokumentation](index.md)
 
-Stand: 8. Oktober 2026, für die stabile Version **0.2.7**.
-Siehe [Änderungsübersicht](changelog.md#027--8-october-2026).
+Stand: 8. Oktober 2026, für die stabile Version **0.2.8**.
+Siehe [Änderungsübersicht](changelog.md#028--8-october-2026).
 
 - **NVIDIA:** Die normale MSFS-2024-Darstellung ist durch Nutzertests bestätigt.
   Kleinere Probleme bleiben möglich, etwa ein fehlendes oder schwarzes Startvideo.
@@ -14,12 +14,15 @@ Siehe [Änderungsübersicht](changelog.md#027--8-october-2026).
   FenixApp-Dateien vorhanden sein, obwohl die Einrichtung nicht abgeschlossen ist.
   Ein reproduzierter ICU-/.NET-Fall ist reparierbar; die allgemeine Meldung allein
   verrät die Ursache nicht. Den Installer schließen und **Mods → Fenix →
-  Fenix-App reparieren** verwenden, eingeführt in 0.2.6. Wenn verfügbar, erscheint
-  die Reparatur in 0.2.7 nach fehlgeschlagenem Hook direkt als nächster Schritt,
-  sonst unter **Verwalten & reparieren**. Dies wiederholt den offiziellen
-  Einrichtungsschritt der vorhandenen
-  App; die Diagnose erfasst den letzten Versuch. Eine erkannte FenixApp bestätigt
-  weder die Flugzeuginstallation noch die Aktivierung.
+  Fenix-App reparieren** verwenden, sofern angeboten. Scheitert die Reparatur,
+  folgt **Diagnose öffnen**; weitere Reparatur oder Neuinstallation stehen unter
+  **Verwalten & reparieren**. Der zuletzt protokollierte Fehler bleibt nach einem
+  Launcher-Neustart sichtbar. Der grüne Check **Fenix-Linux-Patch** bestätigt nur
+  den Patch, nicht den App-Hook, die Flugzeuginstallation oder Aktivierung.
+  Version 0.2.8 filtert geerbte .NET-Vorgaben des Linux-Hosts: Ein kontrollierter
+  Startup-Hook-Test mit FenixApp 1.0.286 wechselte von Exitcode 82 zu 0. Dass
+  gemeldete Exit-82-Fehler bei Nutzern dadurch behoben sind, ist unbestätigt;
+  der Code allein benennt keine Ursache.
   [Fenix einrichten](addons.de.md#fenix-a320-einrichten) · [Prüfumfang](native-ui.md#fenix-install-hook-warning).
 - **GSX Pro:** Experimentell. Der offizielle FSDT-Installer wurde in einem
   isolierten Wine-Profil geprüft. Lizenzierte Installation, Aktivierung,

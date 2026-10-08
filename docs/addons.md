@@ -37,7 +37,7 @@ settings and liveries before replacing a package. The general Community inventor
 Fenix and the experimental GSX Pro integration have separate setup workflows
 below, currently for MSFS 2024 only.
 
-Flightdeck 0.2.7 shows one highlighted next action for each add-on. Detected
+Since 0.2.7, Flightdeck shows one highlighted next action for each add-on. Detected
 components remain visible; additional actions are under **Manage & repair**.
 
 ## Uninstall a Community add-on
@@ -190,25 +190,28 @@ restore point are retained.
 
 If the official installer reports **“application install hook failed”**, close
 all installer windows first. Starting its EXE through Flightdeck applies the
-existing ICU/.NET workaround, also present in 0.2.5. After a failed installer or
-repair, **Repair Fenix app** appears directly as the next action when repair is
-available. It reruns the official hook with valid package metadata, without
-resetting the profile. Otherwise the available repair action is under
-**Manage & repair**. Reopen the manager afterwards.
-If repair fails again, prepare a new diagnostic report containing the latest
-Fenix result and inspect `<runtime>/private/fenix-app.log`. The ICU workaround
-addresses one known cause; the generic hook warning and exit code 82 do not
-identify a specific cause. Share the exception lines from the failed attempt,
-with account details or tokens removed, rather than repeating repair unchanged.
-The green Fenix setup check confirms the Linux patch, not a successful app hook.
-[Verification and limits](native-ui.md#fenix-install-hook-warning).
+existing ICU/.NET workaround, also present in 0.2.5. After a failed installer,
+**Repair Fenix app** appears as the next action when repair is available. It
+reruns the official hook with valid package metadata, without resetting the
+profile. Reopen the manager after a successful repair.
 
-The unreleased launcher keeps a recorded hook failure visible after reopening
-the interface. After a failed repair, **Open diagnostics** becomes the next step;
-another repair remains available under **Manage & repair**. It also filters
-inherited Linux .NET runtime/loading overrides from Windows installer and repair
-commands and exports only recognized exception types, never raw exception text.
-This does not identify every possible cause of exit code 82.
+In **0.2.8**, the latest recorded failed attempt stays visible after a launcher
+restart. After a failed repair, **Open diagnostics** becomes the next step.
+Prepare a fresh report before trying again; an eligible repair remains under
+**Manage & repair**. If the manager is missing or cannot be identified, the
+official installer can also be selected there. The green **Fenix Linux patch**
+check confirms only the Linux patch, not a successful app hook. A new recorded
+attempt replaces the previous result.
+
+Version 0.2.8 filters inherited Linux .NET runtime/loading overrides and startup
+hooks from Windows installer and repair commands. In a controlled test with
+official FenixApp 1.0.286, an invalid inherited `DOTNET_STARTUP_HOOKS` caused
+exit 82; the same input passed with exit 0 after filtering. This fixes that
+reproduced cause, without establishing that users’ reported exit-82 failures
+are resolved. Exit 82 alone does not identify a cause. Diagnostic reports retain
+recognized exception types and an explicitly observed CLR code, never raw
+exception messages; `<runtime>/private/fenix-app.log` remains local.
+[Verification and limits](native-ui.md#fenix-install-hook-warning).
 
 After setup, Fenix starts automatically with MSFS; you do not need to start it
 separately. Flightdeck closes the session's Fenix companions after normal exit,

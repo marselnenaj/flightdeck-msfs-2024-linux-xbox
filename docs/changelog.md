@@ -1,6 +1,9 @@
 # Changes and release status
 
-## Unreleased
+## 0.2.8 — 8 October 2026
+
+Stable release with full installer and corresponding source archives.
+Existing 0.1.22 and native 0.2.1–0.2.7 launchers can use the in-app updater.
 
 - Prevent inherited Linux .NET loading/runtime overrides from reaching Windows
   installer and repair commands. A controlled startup-hook override reproduced
@@ -31,7 +34,7 @@
   candidate on 8 October 2026, including 84 API checks and the actual Wayland
   application surface. These tests do not validate MSFS, hardware graphics,
   sign-in or licensed add-ons. See the
-  [scope and current status](install.md#linux-test-matrix-unreleased).
+  [scope and current status](install.md#linux-test-matrix).
 
 ## 0.2.7 — 8 October 2026
 
