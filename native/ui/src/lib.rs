@@ -882,11 +882,13 @@ impl App {
                 .spacing(13)
                 .align_y(alignment::Vertical::Center),
             )
+            .id("launch-control")
             .center(Length::Fill),
         )
-        .width(300)
+        // Keep every localized launch/sync/stop label on one centered line.
+        .width(340)
         .height(62)
-        .padding([13, 34])
+        .padding([0, 20])
         .on_press_maybe(launch_message)
         .style(move |_, status| button::Style {
             background: Some(

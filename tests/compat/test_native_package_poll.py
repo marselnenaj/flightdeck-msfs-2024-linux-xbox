@@ -1,12 +1,16 @@
 # SPDX-License-Identifier: MIT
 """Exercise native package handoff polling against a local HTTP service."""
 import contextlib
+import fcntl
 import http.server
 import importlib.util
 import json
 from pathlib import Path
+import subprocess
+import sys
 import tempfile
 import threading
+import time
 import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -41,7 +45,69 @@ def service(answer):
         worker.join(timeout=5)
 
 
+@contextlib.contextmanager
+def install_coordinator(path):
+    child = subprocess.Popen([sys.executable, "-u", "-c", """
+import fcntl, sys
+with open(sys.argv[1], 'rb') as lock:
+    fcntl.flock(lock, fcntl.LOCK_EX)
+    print('locked', flush=True)
+    sys.stdin.buffer.read(1)
+""", str(path)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True)
+    try:
+        assert child.stdout.readline() == "locked\n"
+        yield child
+    finally:
+        child.stdin.close()
+        try:
+            child.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            child.kill()
+            child.wait(timeout=5)
+            raise
+        child.stdout.close()
+
+
 class NativePackagePoll(unittest.TestCase):
+    def test_reachable_replacement_waits_for_the_installation_coordinator(self):
+        with tempfile.TemporaryDirectory() as temporary, \
+                service(lambda path, token: (200, {"csrf_token": token, "service": {"release": "new"},
+                                                   "runtime": {"configured": False}})) as port:
+            state = Path(temporary)
+            installation = state / "installed"
+            installation.mkdir()
+            lock_path = installation / ".install.lock"
+            lock_path.touch(mode=0o600)
+            previous = {"port": port, "token": "previous", "pid": 123, "release": "old"}
+            current = {**previous, "token": "current", "pid": 456, "release": "new"}
+            (state / "desktop-service.json").write_text(json.dumps(current))
+            with install_coordinator(lock_path):
+                self.assertEqual(check.record_at(state), current)
+                self.assertIsNone(check.record_after_handoff(state, previous, installation, "new"))
+                started = time.monotonic()
+                with self.assertRaisesRegex(AssertionError, "Timed out"):
+                    check.wait_for(lambda: check.record_after_handoff(state, previous, installation, "new"),
+                                   timeout=.12)
+                self.assertLess(time.monotonic() - started, 2)
+            self.assertEqual(check.wait_for(lambda: check.record_after_handoff(state, previous, installation, "new"),
+                                            timeout=2), current)
+            # The readiness probe must release its own flock immediately.
+            with lock_path.open("rb") as lock:
+                fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                fcntl.flock(lock, fcntl.LOCK_UN)
+
+    def test_handoff_does_not_create_a_missing_installation_lock(self):
+        with tempfile.TemporaryDirectory() as temporary, \
+                service(lambda path, token: (200, {"csrf_token": token, "service": {"release": "new"},
+                                                   "runtime": {"configured": False}})) as port:
+            state = Path(temporary)
+            current = {"port": port, "token": "current", "pid": 456, "release": "new"}
+            previous = {**current, "token": "previous", "pid": 123}
+            (state / "desktop-service.json").write_text(json.dumps(current))
+            with self.assertRaisesRegex(AssertionError, "Cannot inspect"):
+                check.wait_for(lambda: check.record_after_handoff(state, previous, state, "new"))
+            self.assertFalse((state / ".install.lock").exists())
+
     def test_handoff_reloads_record_after_old_token_is_rejected(self):
         with tempfile.TemporaryDirectory() as temporary:
             state = Path(temporary)

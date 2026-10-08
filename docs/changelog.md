@@ -19,6 +19,8 @@ Existing 0.1.22 and native 0.2.1–0.2.6 launchers can use the in-app updater.
   Require each local prerequisite before reporting setup complete, and keep
   running jobs distinct from completed setup. This release does not establish
   licensed GSX operation, Couatl/SimConnect connectivity or working ground services.
+- Keep the main launch button label centered on one line during save loading,
+  startup, stopping and final save synchronization, in both interface languages.
 - Update the English and German add-on guides to match the simplified controls.
 
 ## 0.2.6 — 8 October 2026

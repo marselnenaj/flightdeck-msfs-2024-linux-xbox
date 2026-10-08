@@ -2,12 +2,14 @@
 # SPDX-License-Identifier: MIT
 """Check real native installation, service handoff and legacy rollback in isolation."""
 import argparse
+import fcntl
 import hashlib
 import http.client
 import json
 import os
 from pathlib import Path
 import signal
+import stat
 import subprocess
 import sys
 import time
@@ -66,6 +68,32 @@ def record_at(state):
     return record
 
 
+def record_after_handoff(state, previous, installation, expected=None):
+    record = record_at(state)
+    if record["token"] == previous["token"]:
+        return None
+    assert record["port"] == previous["port"], "Handoff must preserve the local service endpoint"
+    assert record["pid"] != previous["pid"]
+    if expected:
+        assert record["release"] == expected
+    # The replacement publishes its service record before the coordinator has
+    # finished verifying it. Wait for that coordinator's installation lease;
+    # do not start another mutation or retry a failed rollback in this window.
+    try:
+        descriptor = os.open(installation / ".install.lock",
+                             os.O_RDWR | os.O_CLOEXEC | os.O_NOFOLLOW | os.O_NONBLOCK)
+        with os.fdopen(descriptor, "rb") as lock:
+            assert stat.S_ISREG(os.fstat(lock.fileno()).st_mode), "Invalid installation lock"
+            try:
+                fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError:
+                return None
+            fcntl.flock(lock, fcntl.LOCK_UN)
+    except OSError as error:
+        raise AssertionError("Cannot inspect the isolated installation lock") from error
+    return record
+
+
 def main(args):
     package = args.package.resolve(strict=True)
     binary = package / "bin/flightdeck"
@@ -113,16 +141,7 @@ def main(args):
         return wait_for(lambda: record_at(state))
 
     def changed(state, previous, expected=None):
-        def check():
-            record = record_at(state)
-            if record["token"] == previous["token"]:
-                return None
-            assert record["port"] == previous["port"], "Handoff must preserve the local service endpoint"
-            assert record["pid"] != previous["pid"]
-            if expected:
-                assert record["release"] == expected
-            return record
-        return wait_for(check)
+        return wait_for(lambda: record_after_handoff(state, previous, state.parent / "installed", expected))
 
     def rollback(record, state):
         request(record, "/api/launcher-update/rollback", {})

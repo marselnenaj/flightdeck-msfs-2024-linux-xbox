@@ -192,3 +192,149 @@ fn cached_page_and_size_changes_match_a_fresh_full_render() {
         );
     }
 }
+
+fn launch_fixture(language: Language, state: &str) -> App {
+    let mut app = common::localized_fixture(language);
+    let status = app.snapshot.get_mut("status").expect("status");
+    match state {
+        "preparing" => {
+            app.client = Some(
+                flightdeck_ui::Client::new(1, "synthetic-session-0000000000000000".into())
+                    .expect("client"),
+            );
+            let _ = app.update(Message::Action(Action::Launch));
+        }
+        "loading" | "saving" | "recovery" => {
+            status["game"]["can_start"] = json!(false);
+            status["cloud"] = json!({"state":"syncing", "enabled":true,
+                "phase": match state {"saving" => "after_exit", "recovery" => "recovery", _ => "before_start"}});
+        }
+        "starting" | "running" | "stopping" => {
+            status["game"] = json!({"state":state, "managed":true, "can_start":false, "can_stop":state != "stopping"});
+        }
+        "stop-requested" => {
+            status["game"] =
+                json!({"state":"running", "managed":true, "can_start":false, "can_stop":true});
+            app.client = Some(
+                flightdeck_ui::Client::new(1, "synthetic-session-0000000000000000".into())
+                    .expect("client"),
+            );
+            let _ = app.update(Message::Action(Action::Stop));
+        }
+        "attention" => {
+            status["game"]["can_start"] = json!(false);
+            status["cloud"] = json!({"state":"attention", "enabled":true, "can_retry":true,
+                "error_code":"unsafe_session", "request_id":"synthetic-recovery"});
+        }
+        "setup" => status["runtime"]["ready"] = json!(false),
+        "ready" => {}
+        _ => panic!("unknown launch fixture"),
+    }
+    app
+}
+
+const LAUNCH_STATES: [&str; 11] = [
+    "ready",
+    "preparing",
+    "loading",
+    "starting",
+    "running",
+    "stop-requested",
+    "stopping",
+    "saving",
+    "recovery",
+    "attention",
+    "setup",
+];
+
+#[test]
+#[ignore = "writes normal-viewport launch-state comparisons with the production renderer"]
+fn capture_launch_states() -> Result<(), Box<dyn std::error::Error>> {
+    let directory = std::env::var_os("FLIGHTDECK_UI_RENDER_CAPTURE")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|| {
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../build/native-ui")
+        });
+    std::fs::create_dir_all(&directory)?;
+    for (language, code) in [(Language::De, "de"), (Language::En, "en")] {
+        for width in [750, 1280] {
+            let mut renderer = renderer();
+            let mut cache = user_interface::Cache::default();
+            for state in LAUNCH_STATES {
+                let app = launch_fixture(language, state);
+                let (pixels, next) = render(
+                    &app,
+                    Size::new(width as f32, 900.0),
+                    1.0,
+                    &mut renderer,
+                    cache,
+                );
+                cache = next;
+                image::save_buffer(
+                    directory.join(format!("launch-{state}-{code}-{width}.png")),
+                    &pixels,
+                    width,
+                    900,
+                    image::ColorType::Rgba8,
+                )?;
+            }
+        }
+    }
+    Ok(())
+}
+
+#[test]
+fn launch_labels_stay_single_line_centered_and_clean_across_state_transitions() {
+    for language in [Language::De, Language::En] {
+        for width in [750.0, 1280.0] {
+            let size = Size::new(width, 900.0);
+            let mut cached_renderer = renderer();
+            let mut cache = user_interface::Cache::default();
+            let mut reference = None;
+            for state in LAUNCH_STATES {
+                let app = launch_fixture(language, state);
+                let mut ui = iced_test::Simulator::with_size(settings(), size, app.view());
+                let control = ui
+                    .find(iced_test::selector::id("launch-control"))
+                    .expect("launch control")
+                    .bounds();
+                let expected_label = app.launch_label();
+                let label = ui
+                    .find(
+                        |candidate: iced_test::selector::Candidate<'_>| match candidate {
+                            iced_test::selector::Candidate::Text {
+                                bounds, content, ..
+                            } if content == expected_label && bounds.y >= control.y => Some(bounds),
+                            _ => None,
+                        },
+                    )
+                    .expect("label inside launch control");
+                assert!(
+                    label.height <= 27.01,
+                    "launch label wrapped: {state}, width{width}, {:?}: {label:?}",
+                    app.launch_label()
+                );
+                assert!(
+                    (label.center_y() - control.center_y()).abs() < 0.1,
+                    "launch label not centered: {state}, width{width}: {label:?} / {control:?}"
+                );
+                if let Some((y, height)) = reference {
+                    assert_eq!(
+                        (label.y, label.height),
+                        (y, height),
+                        "vertical jump in {state}, width{width}"
+                    );
+                } else {
+                    reference = Some((label.y, label.height));
+                }
+                let (cached, next) = render(&app, size, 1.0, &mut cached_renderer, cache);
+                cache = next;
+                let fresh = render(&app, size, 1.0, &mut renderer(), Default::default()).0;
+                assert_eq!(
+                    cached, fresh,
+                    "stale render after state change: {state}, width{width}"
+                );
+            }
+        }
+    }
+}
