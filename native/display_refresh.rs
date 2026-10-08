@@ -61,6 +61,16 @@ struct Api {
     client: reqwest::blocking::Client,
     prefix: PathBuf,
 }
+fn local_client() -> Result<reqwest::blocking::Client> {
+    reqwest::blocking::Client::builder()
+        // The owned Fenix endpoint is loopback HTTP, independent of system CAs.
+        .tls_certs_only(std::iter::empty())
+        .no_proxy()
+        .redirect(reqwest::redirect::Policy::none())
+        .timeout(Duration::from_secs(2))
+        .build()
+        .map_err(|_| Error::Invalid("Fenix API unavailable."))
+}
 impl Api {
     fn query(&self, query: &str) -> Result<Value> {
         require(
@@ -216,12 +226,7 @@ fn worker(root: &Path, cancel: &AtomicBool) -> Result<()> {
         }
         Err(e) => return Err(e),
     };
-    let client = reqwest::blocking::Client::builder()
-        .no_proxy()
-        .redirect(reqwest::redirect::Policy::none())
-        .timeout(Duration::from_secs(2))
-        .build()
-        .map_err(|_| Error::Invalid("Fenix API unavailable."))?;
+    let client = local_client()?;
     let api = Api {
         client,
         prefix: root.join("local/msfs-prefix"),
@@ -284,4 +289,67 @@ pub fn run(root: &Path) -> Result<()> {
         let mut term=tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())?;let mut interrupt=tokio::signal::unix::signal(tokio::signal::unix::SignalKind::interrupt())?;let stopped=Arc::clone(&cancel);let mut task=tokio::task::spawn_blocking(move||worker(&root,&stopped));
         tokio::select!{result=&mut task=>return result.map_err(|_|Error::Invalid("The display refresh helper failed."))?,_ = term.recv()=>{},_ = interrupt.recv()=>{}}cancel.store(true,Ordering::Relaxed);task.await.map_err(|_|Error::Invalid("The display refresh helper failed."))?
     })
+}
+
+#[cfg(test)]
+mod local_http_tests {
+    use super::*;
+    use std::{io::Write, net::TcpListener};
+
+    #[test]
+    fn fenix_loopback_transport_does_not_require_system_cas() {
+        const CHILD: &str = "FLIGHTDECK_TEST_EMPTY_CA_FENIX";
+        if std::env::var_os(CHILD).is_none() {
+            let temp = tempfile::tempdir().expect("CA fixture");
+            let ca = temp.path().join("empty.pem");
+            fs::write(&ca, b"").expect("empty CA file");
+            let result = Command::new(std::env::current_exe().expect("test executable"))
+                .args(["--exact", "display_refresh::local_http_tests::fenix_loopback_transport_does_not_require_system_cas", "--nocapture"])
+                .env(CHILD, "1").env("SSL_CERT_FILE", ca).env("SSL_CERT_DIR", temp.path())
+                .env("HTTP_PROXY", "http://127.0.0.1:9").env("ALL_PROXY", "http://127.0.0.1:9").env("NO_PROXY", "")
+                .env("http_proxy", "http://127.0.0.1:9").env("all_proxy", "http://127.0.0.1:9").env("no_proxy", "")
+                .status().expect("isolated Fenix HTTP test");
+            assert!(result.success(), "empty-CA child failed");
+            return;
+        }
+        assert!(reqwest::blocking::Client::builder().build().is_err());
+        let client = local_client().expect("loopback client without system CAs");
+        let listener = TcpListener::bind("127.0.0.1:0").expect("local endpoint");
+        listener.set_nonblocking(true).expect("bounded listener");
+        let address = listener.local_addr().expect("port");
+        let server = std::thread::spawn(move || {
+            let deadline = Instant::now() + Duration::from_secs(5);
+            let mut stream = loop {
+                match listener.accept() {
+                    Ok((stream, _)) => break stream,
+                    Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
+                        assert!(Instant::now() < deadline, "local request did not arrive");
+                        std::thread::sleep(Duration::from_millis(5));
+                    }
+                    Err(error) => panic!("accept failed: {error}"),
+                }
+            };
+            stream
+                .set_read_timeout(Some(Duration::from_secs(2)))
+                .expect("request deadline");
+            let mut headers = Vec::new();
+            let mut byte = [0_u8];
+            while !headers.ends_with(b"\r\n\r\n") {
+                stream.read_exact(&mut byte).expect("request");
+                headers.push(byte[0]);
+                assert!(headers.len() <= 8192);
+            }
+            stream.write_all(b"HTTP/1.1 302 Found\r\nLocation: http://127.0.0.1:9/forbidden\r\nContent-Length: 0\r\nConnection: close\r\n\r\n").expect("response");
+        });
+        let response = client
+            .get(format!("http://{address}/graphql"))
+            .send()
+            .expect("real local HTTP request");
+        assert_eq!(
+            response.status().as_u16(),
+            302,
+            "redirect must not be followed"
+        );
+        server.join().expect("local endpoint stopped");
+    }
 }

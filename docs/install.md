@@ -113,8 +113,20 @@ simulator may need more for its downloaded and streamed content.
 
 ## Linux prerequisites
 
-The full package requires Linux x86-64, glibc 2.39+, GTK3, WebKitGTK 4.1, OpenSSL 3 and a
-working Vulkan driver. GStreamer with its Good, Bad and Libav plugin sets must
+The binary package requires **Linux x86-64 with glibc 2.39 or later** and the
+glibc loader at `/lib64/ld-linux-x86-64.so.2`. Older glibc releases, aarch64 and
+an unmodified musl-only system cannot run this package. A newer distribution
+name alone does not prove that its required libraries are installed.
+
+| Component | Host requirements |
+| --- | --- |
+| Native launcher | `liblzma.so.5`, `libgcc_s.so.1`, glibc and its math library; libxkbcommon and the Wayland/X11 libraries for the selected desktop |
+| Microsoft sign-in and runtime helpers | GTK 3 (`libgtk-3.so.0`), WebKitGTK 4.1 (`libwebkit2gtk-4.1.so.0`), OpenSSL 3 (`libssl.so.3`, `libcrypto.so.3`) and their dependencies |
+| Simulator graphics | Vulkan loader (`libvulkan.so.1`) and a working compatible GPU driver |
+| Account storage | A graphical session with D-Bus and a Linux Secret Service keyring |
+| Online services | A working network connection and the distribution's CA certificate store |
+
+GStreamer with its Good, Bad and Libav plugin sets must
 provide `qtdemux`, `h264parse` and `avdec_h264` for the simulator's video playback.
 Setup checks these plugins before starting the new installation. Install missing
 components through your distribution's software manager; package names vary.
@@ -124,6 +136,50 @@ Version 0.1.22 additionally requires Python 3.10.12+; the native package does no
 [Runtime documentation](runtime.md) and [build instructions](../BUILDING.md)
 describe the platform components and advanced paths. For automatic Xbox cloud
 saves and local backups, see [cloud saves](cloud-saves.md).
+
+### Linux test matrix (unreleased)
+
+Linux portability improvements are in development and are **not part of the
+published 0.2.7 package**. The installer now probes the supplied executable
+before installation when a bounded execution tool is available. Architecture,
+glibc, loader and missing-library failures get German or English guidance;
+an available Zenity/KDialog can show the error for a graphical install.
+Missing optional probe tools do not block an otherwise working installation.
+
+Setup checks the exact 64-bit runtime libraries by loading them in a bounded
+helper, instead of relying on `ldconfig` cache entries. This checks their
+dependencies and honors the inherited library search path. Loading the Vulkan
+loader does not validate a GPU driver. GStreamer checks keep the configured
+plugin paths and use a disposable registry. Desktop and file-dialog failures
+report a next step; cancelling a file dialog remains separate from failure.
+
+The local container checks passed on **8 October 2026** with an internal packaged
+0.2.7 development candidate, executable SHA-256
+`0ff1be8b702fb97757d7794d99b189985dca2a1d05cf7ad801b64472b2823711`.
+The [test runner](../scripts/check-linux-distro.py) uses pinned base images from
+[the image manifest](../compat/linux-test-images.json). Each row covers the
+launcher only: CLI startup, installation into a fresh Unicode path, the installed
+command, 84 local API checks, and uninstall. Window checks use software rendering
+under virtual X11 and headless Wayland; the Wayland check requires a buffer commit
+to the application's main surface, excluding window decorations.
+
+| Container distribution | CLI / installation / API | X11 / Wayland window |
+| --- | --- | --- |
+| Ubuntu 24.04 | Passed | Passed |
+| Debian 13 | Passed | Passed |
+| Fedora 44 | Passed | Passed |
+| Arch Linux | Passed | Passed |
+| openSUSE Tumbleweed | Passed | Passed |
+
+The candidate fixes startup in minimal images without a CA certificate store:
+the desktop service client, native interface and local Fenix display client no
+longer load system trust roots for loopback HTTP. Ubuntu passed without adding
+CA certificates to the test image. External HTTPS retains normal certificate
+verification and still needs the distribution's CA store.
+
+No simulator, Microsoft account, game download, licensed add-on or hardware GPU
+is exercised by these tests. Passing them does not certify full MSFS support on
+that distribution, physical Wayland/X11 desktops or a particular GPU driver.
 
 ## Language
 

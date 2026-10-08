@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-//! Linux Vulkan/OpenXR ABI boundary, invoked only by a bounded child process.
+//! Linux library/Vulkan/OpenXR ABI boundary, invoked only by a bounded child process.
 //! The caller never loads a driver in the HTTP service. All structures contain
 //! C integers/pointers only. Output arrays are fixed-size or explicitly bounded.
 #![allow(unsafe_code)]
@@ -12,6 +12,39 @@ use std::{
 };
 type Handle = *mut c_void;
 const FAILURE: &str = "Der native Treiber konnte nicht initialisiert werden.";
+pub const HOST_LIBRARIES: [(&str, &str); 5] = [
+    ("gtk3", "libgtk-3.so.0"),
+    ("webkitgtk41", "libwebkit2gtk-4.1.so.0"),
+    ("openssl3", "libssl.so.3"),
+    ("crypto3", "libcrypto.so.3"),
+    ("vulkan1", "libvulkan.so.1"),
+];
+
+/// Run only in the bounded native-probe child: library constructors may run.
+/// Use the dynamic loader's real search path and resolve dependent symbols now.
+/// Do not expose loader errors, which may contain private paths.
+pub fn host() -> Value {
+    let mut loaded = Vec::new();
+    let libraries: serde_json::Map<String, Value> = HOST_LIBRARIES
+        .iter()
+        .map(|(id, soname)| {
+            // SAFETY: no foreign functions or symbols are called. Keep every
+            // handle alive until all dependency checks have finished.
+            let result = unsafe {
+                libloading::os::unix::Library::open(
+                    Some(*soname),
+                    libloading::os::unix::RTLD_NOW | libloading::os::unix::RTLD_LOCAL,
+                )
+            };
+            let available = result.is_ok();
+            if let Ok(library) = result {
+                loaded.push(library);
+            }
+            ((*id).into(), json!(available))
+        })
+        .collect();
+    json!({"schema":1,"libraries":libraries})
+}
 #[repr(C)]
 struct VkApp {
     kind: u32,

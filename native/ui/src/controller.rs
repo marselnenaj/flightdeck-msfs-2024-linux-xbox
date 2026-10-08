@@ -636,7 +636,7 @@ impl App {
                         self.notice = Some(format!("{}: {path}", self.tr("Gespeichert", "Saved")))
                     }
                     Ok(None) => {}
-                    Err(error) => self.notice = Some(error),
+                    Err(error) => self.notice = Some(self.t(&error).to_string()),
                 }
             }
             Message::Dismiss => self.notice = None,
@@ -894,10 +894,17 @@ impl App {
 }
 
 async fn export(contents: String, filename: &'static str) -> Result<Option<String>, String> {
+    use crate::platform::{DIALOG_FAILED, DIALOG_TIMEOUT, EXPORT_FAILED, selected_path};
+    use std::os::unix::fs::PermissionsExt;
     use std::process::Stdio;
     let available = |name: &str| {
-        std::env::var_os("PATH")
-            .is_some_and(|paths| std::env::split_paths(&paths).any(|p| p.join(name).is_file()))
+        std::env::var_os("PATH").is_some_and(|paths| {
+            std::env::split_paths(&paths).any(|p| {
+                p.join(name)
+                    .metadata()
+                    .is_ok_and(|m| m.is_file() && m.permissions().mode() & 0o111 != 0)
+            })
+        })
     };
     let mut command = if available("zenity") {
         let mut c = tokio::process::Command::new("zenity");
@@ -925,21 +932,12 @@ async fn export(contents: String, filename: &'static str) -> Result<Option<Strin
             .output(),
     )
     .await
-    .map_err(|_| "Dateiauswahl abgebrochen: Zeitlimit erreicht".to_string())?
-    .map_err(|e| e.to_string())?;
-    if !output.status.success() {
+    .map_err(|_| DIALOG_TIMEOUT.to_string())?
+    .map_err(|_| DIALOG_FAILED.to_string())?;
+    let Some(path) = selected_path(output.status.code(), &output.stdout).map_err(str::to_owned)?
+    else {
         return Ok(None);
-    }
-    if output.stdout.len() > 8192 {
-        return Err("Ungültiger Speicherpfad".into());
-    }
-    let path = String::from_utf8(output.stdout)
-        .map_err(|e| e.to_string())?
-        .trim()
-        .to_string();
-    if !std::path::Path::new(&path).is_absolute() || path.contains(['\n', '\r']) {
-        return Err("Ungültiger Speicherpfad".into());
-    }
+    };
     // create_new rejects existing files and symlinks; export never overwrites.
     use tokio::io::AsyncWriteExt;
     let mut file = tokio::fs::OpenOptions::new()
@@ -948,11 +946,13 @@ async fn export(contents: String, filename: &'static str) -> Result<Option<Strin
         .mode(0o600)
         .open(&path)
         .await
-        .map_err(|e| format!("{e}. Bitte einen neuen Dateinamen auswählen."))?;
+        .map_err(|_| EXPORT_FAILED.to_string())?;
     file.write_all(contents.as_bytes())
         .await
-        .map_err(|e| e.to_string())?;
-    file.sync_all().await.map_err(|e| e.to_string())?;
+        .map_err(|_| EXPORT_FAILED.to_string())?;
+    file.sync_all()
+        .await
+        .map_err(|_| EXPORT_FAILED.to_string())?;
     Ok(Some(path))
 }
 async fn open_draft(uri: String) -> Result<Option<String>, String> {

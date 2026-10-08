@@ -49,9 +49,13 @@ Spielversionen. Die angezeigte Größe des Basisspiel-Downloads ist nur ein Teil
 Das Binärpaket benötigt Linux x86-64 mit **glibc 2.39+**, Vulkan-Treiber,
 einen Wayland- oder X11-Desktop und einen Linux-Secret-Service-Schlüsselbund.
 Zur vollständigen Runtime gehören außerdem GTK 3, WebKitGTK 4.1, OpenSSL 3 und
-GStreamer Good/Bad/Libav; das native Fenster benötigt libxkbcommon.
-Setup prüft fehlende Voraussetzungen. Arch Linux wurde getestet;
-andere Distributionen benötigen eigene Prüfungen.
+GStreamer Good/Bad/Libav. Der Launcher benötigt außerdem liblzma, libgcc_s,
+libxkbcommon und die Bibliotheken des verwendeten Wayland-/X11-Desktops.
+Setup prüft fehlende Voraussetzungen. Ein noch unveröffentlichter Paketkandidat
+bestand am 8. Oktober 2026 die Launcher-Prüfungen auf Ubuntu 24.04, Debian 13,
+Fedora 44, Arch Linux und openSUSE Tumbleweed. Der geprüfte Umfang steht in der
+[Linux-Testmatrix](install.md#linux-test-matrix-unreleased).
+Diese Containerprüfungen bestätigen keine Simulator- oder Grafiktreiber-Kompatibilität.
 [Voraussetzungen und Installationsoptionen](install.md)
 
 Aktualisiere den Launcher über **Updates → Flightdeck** oder den vollständigen

@@ -28,7 +28,7 @@ struct Arguments {
     language: Option<String>,
     #[arg(long)]
     refresh_components: bool,
-    #[arg(long, hide=true, value_parser=["graphics","vr","nvidia-directory","hip"])]
+    #[arg(long, hide=true, value_parser=["host","graphics","vr","nvidia-directory","hip"])]
     native_probe: Option<String>,
     #[command(subcommand)]
     command: Option<Command>,
@@ -288,6 +288,7 @@ fn main() -> ExitCode {
     }
     if let Some(probe) = arguments.native_probe.as_deref() {
         let result = match probe {
+            "host" => Ok(flightdeck::native_probe::host()),
             "graphics" => flightdeck::native_probe::graphics(),
             "vr" => Ok(flightdeck::native_probe::vr()),
             "hip" => std::env::var_os("FLIGHTDECK_HIP_LIBRARY")
@@ -304,13 +305,13 @@ fn main() -> ExitCode {
         };
     }
     if arguments.command.is_none() {
+        let graphical = desktop_requested(&arguments);
         let result = (|| -> Result<()> {
             let state_dir = arguments
                 .state_dir
                 .clone()
                 .unwrap_or_else(|| files::xdg("XDG_STATE_HOME", ".local/state").join("flightdeck"));
-            if !arguments.no_browser && !arguments.desktop_service && !arguments.refresh_components
-            {
+            if graphical {
                 return flightdeck::desktop::start(
                     &state_dir,
                     arguments.runtime.as_deref(),
@@ -369,7 +370,13 @@ fn main() -> ExitCode {
         return match result {
             Ok(()) => ExitCode::SUCCESS,
             Err(error) => {
-                eprintln!("Flightdeck: {error}");
+                if graphical {
+                    flightdeck::cli::error_dialog(&error, &language);
+                }
+                eprintln!(
+                    "Flightdeck: {}",
+                    flightdeck::i18n::text(&error.to_string(), &language)
+                );
                 ExitCode::FAILURE
             }
         };
@@ -392,6 +399,15 @@ fn main() -> ExitCode {
         }
     }
 }
+
+fn desktop_requested(arguments: &Arguments) -> bool {
+    arguments.command.is_none()
+        && !arguments.no_browser
+        && !arguments.desktop_service
+        && !arguments.refresh_components
+        && arguments.native_probe.is_none()
+}
+
 fn finish(result: Result<()>, language: Option<&str>) -> ExitCode {
     match result {
         Ok(()) => ExitCode::SUCCESS,
@@ -401,6 +417,36 @@ fn finish(result: Result<()>, language: Option<&str>) -> ExitCode {
                 flightdeck::i18n::text(&error.to_string(), language.unwrap_or("en"))
             );
             ExitCode::FAILURE
+        }
+    }
+}
+
+#[cfg(test)]
+mod desktop_error_tests {
+    use super::*;
+
+    #[test]
+    fn desktop_errors_are_visible_only_for_graphical_launcher_entrypoints() {
+        for args in [vec!["flightdeck"], vec!["flightdeck", "--desktop"]] {
+            assert!(desktop_requested(
+                &Arguments::try_parse_from(args).expect("GUI arguments")
+            ));
+        }
+        for args in [
+            vec!["flightdeck", "--no-browser"],
+            vec!["flightdeck", "--desktop-service"],
+            vec!["flightdeck", "--refresh-components"],
+            vec!["flightdeck", "--native-probe", "graphics"],
+            vec![
+                "flightdeck",
+                "runtime-check",
+                "--runtime",
+                "/synthetic/runtime",
+            ],
+        ] {
+            assert!(!desktop_requested(
+                &Arguments::try_parse_from(args).expect("non-GUI arguments")
+            ));
         }
     }
 }

@@ -976,16 +976,7 @@ pub fn pick(app: &Launcher, data: &Value) -> Result<Value> {
             })
             .arg(files::home());
     }
-    let path = process::output(
-        &mut command,
-        Duration::from_secs(120),
-        4098,
-        &AtomicBool::new(false),
-    )
-    .ok()
-    .and_then(|v| String::from_utf8(v).ok())
-    .map(|v| v.trim_end_matches(['\r', '\n']).to_string())
-    .filter(|v| !v.is_empty() && v.len() <= 4096 && Path::new(v).is_absolute());
+    let path = crate::dialog::select(&mut command, Duration::from_secs(120))?;
     Ok(if let Some(path) = path {
         json!({"ok":true,"path":path})
     } else {

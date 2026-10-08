@@ -15,7 +15,7 @@ use std::{
     fs,
     path::{Path, PathBuf},
     process::{Command, Stdio},
-    sync::{Arc, atomic::AtomicBool},
+    sync::Arc,
     time::Duration,
 };
 pub fn path_input(value: &str, exists: bool) -> Result<PathBuf> {
@@ -225,6 +225,75 @@ pub fn prepare(plan: &Value, ctx: &Context, xdg: Option<&Path>) -> Result<PathBu
     }
     result
 }
+const HOST_PROBE_FAILED: &str = "Die Linux-Bibliotheken konnten nicht geprüft werden. Die isolierte Prüfung ist fehlgeschlagen oder hat nicht rechtzeitig geantwortet.";
+fn host_libraries(result: Result<Value>) -> Result<()> {
+    let value = result.map_err(|error| match error {
+        Error::Cancelled => Error::Cancelled,
+        _ => Error::Invalid(HOST_PROBE_FAILED),
+    })?;
+    require(
+        value["schema"] == 1
+            && value["libraries"].as_object().is_some_and(|rows| {
+                rows.len() == crate::native_probe::HOST_LIBRARIES.len()
+                    && crate::native_probe::HOST_LIBRARIES
+                        .iter()
+                        .all(|(id, _)| rows.get(*id).is_some_and(Value::is_boolean))
+            }),
+        HOST_PROBE_FAILED,
+    )?;
+    for (id, message) in [
+        (
+            "gtk3",
+            "GTK 3 (libgtk-3.so.0, 64 Bit) kann nicht geladen werden. Bitte die GTK-3-Laufzeitbibliotheken einschließlich ihrer Abhängigkeiten installieren oder den Bibliothekspfad prüfen.",
+        ),
+        (
+            "webkitgtk41",
+            "WebKitGTK 4.1 (libwebkit2gtk-4.1.so.0, 64 Bit) kann nicht geladen werden. Bitte die WebKitGTK-4.1-Laufzeitbibliotheken einschließlich ihrer Abhängigkeiten installieren oder den Bibliothekspfad prüfen.",
+        ),
+        (
+            "openssl3",
+            "OpenSSL 3 (libssl.so.3 und libcrypto.so.3, 64 Bit) kann nicht geladen werden. Bitte die OpenSSL-3-Laufzeitbibliotheken installieren oder den Bibliothekspfad prüfen.",
+        ),
+        (
+            "crypto3",
+            "OpenSSL 3 (libssl.so.3 und libcrypto.so.3, 64 Bit) kann nicht geladen werden. Bitte die OpenSSL-3-Laufzeitbibliotheken installieren oder den Bibliothekspfad prüfen.",
+        ),
+        (
+            "vulkan1",
+            "Der Vulkan-Loader (libvulkan.so.1, 64 Bit) kann nicht geladen werden. Bitte den Vulkan-Loader installieren oder den Bibliothekspfad prüfen. Der Grafiktreiber wird separat geprüft.",
+        ),
+    ] {
+        require(value["libraries"][id] == true, message)?;
+    }
+    Ok(())
+}
+fn session_present(
+    display: Option<&std::ffi::OsStr>,
+    wayland: Option<&std::ffi::OsStr>,
+    bus: Option<&std::ffi::OsStr>,
+) -> bool {
+    let present = |value: Option<&std::ffi::OsStr>| value.is_some_and(|v| !v.is_empty());
+    (present(display) || present(wayland)) && present(bus)
+}
+fn media_command(program: &Path, plugin: &str, registry: &Path) -> Command {
+    let mut command = Command::new(program);
+    // Match the plugin paths inherited by the simulator, including wrapped
+    // installations. Only registry caches belong to this disposable probe.
+    for (key, _) in std::env::vars_os() {
+        if key.as_encoded_bytes().starts_with(b"GST_REGISTRY") {
+            command.env_remove(key);
+        }
+    }
+    command
+        .arg(plugin)
+        .env("GST_REGISTRY", registry)
+        .env("GST_REGISTRY_1_0", registry)
+        .env("GST_DEBUG", "0")
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null());
+    command
+}
 pub fn preflight_install(data: &Value, ctx: &Context) -> Result<Value> {
     require(
         bootstrap::availability()["available"] == true,
@@ -242,8 +311,11 @@ pub fn preflight_install(data: &Value, ctx: &Context) -> Result<Value> {
         "Für die Erstinstallation werden mindestens 100 GiB freier Speicherplatz benötigt. Bitte einen anderen Speicherort wählen.",
     )?;
     require(
-        (std::env::var_os("DISPLAY").is_some() || std::env::var_os("WAYLAND_DISPLAY").is_some())
-            && std::env::var_os("DBUS_SESSION_BUS_ADDRESS").is_some(),
+        session_present(
+            std::env::var_os("DISPLAY").as_deref(),
+            std::env::var_os("WAYLAND_DISPLAY").as_deref(),
+            std::env::var_os("DBUS_SESSION_BUS_ADDRESS").as_deref(),
+        ),
         "Flightdeck bitte aus der grafischen Linux-Sitzung starten, damit die Microsoft-Anmeldung und der Schlüsselbund verfügbar sind.",
     )?;
     let lock = resources::json("compat/bootstrap.lock.json")?;
@@ -271,43 +343,12 @@ pub fn preflight_install(data: &Value, ctx: &Context) -> Result<Value> {
         parts(observed)? >= parts(string(&lock["native"], "minimum_glibc")?)?,
         "Dieses Laufzeitpaket benötigt eine neuere glibc-Version. Bitte ein passendes Linux-System verwenden.",
     )?;
-    let ldconfig = process::which("ldconfig").unwrap_or_else(|| PathBuf::from("/sbin/ldconfig"));
-    let libs = process::output(
-        Command::new(ldconfig).arg("-p"),
-        Duration::from_secs(5),
-        1024 * 1024,
-        &ctx.cancel,
-    )?;
-    let libs = String::from_utf8_lossy(&libs);
-    require(
-        [
-            "libwebkit2gtk-4.1.so",
-            "libgtk-3.so",
-            "libssl.so",
-            "libvulkan.so",
-        ]
-        .iter()
-        .all(|name| libs.contains(name)),
-        "Für die Anmeldung oder Grafik fehlen Linux-Bibliotheken. Bitte WebKitGTK 4.1, GTK3, OpenSSL und Vulkan über die Softwareverwaltung installieren.",
-    )?;
+    host_libraries(crate::graphics::child("host", None, &ctx.cancel, 5))?;
     let media=process::which("gst-inspect-1.0").ok_or(Error::Invalid("Für die Videoprüfung fehlt gst-inspect-1.0. Bitte die GStreamer-Werkzeuge über die Softwareverwaltung installieren."))?;
     let work = tx::new_directory(&ctx.launcher.state_dir, ".media-check-")?;
     let result: Result<()> = (|| {
         for plugin in ["qtdemux", "h264parse", "avdec_h264"] {
-            let mut c = Command::new(&media);
-            for (key, _) in std::env::vars() {
-                if key.starts_with("GST_PLUGIN_") || key.starts_with("GST_REGISTRY") {
-                    c.env_remove(key);
-                }
-            }
-            c.arg(plugin)
-                .env("GST_PLUGIN_PATH", "")
-                .env("GST_PLUGIN_PATH_1_0", "")
-                .env("GST_REGISTRY_1_0", work.join("registry.bin"))
-                .env("GST_DEBUG", "0")
-                .stdin(Stdio::null())
-                .stdout(Stdio::null())
-                .stderr(Stdio::null());
+            let mut c = media_command(&media, plugin, &work.join("registry.bin"));
             require(
                 process::run(&mut c, Duration::from_secs(5), &ctx.cancel)?.success(),
                 "Für die Videowiedergabe fehlen GStreamer-Module. Bitte GStreamer Good, Bad und Libav über die Softwareverwaltung installieren.",
@@ -376,7 +417,7 @@ pub fn suggested_market() -> String {
     String::new()
 }
 pub fn picker() -> Option<(&'static str, PathBuf)> {
-    if std::env::var_os("DISPLAY").is_none() && std::env::var_os("WAYLAND_DISPLAY").is_none() {
+    if crate::desktop::check_session().is_err() {
         return None;
     }
     ["zenity", "kdialog"]
@@ -630,22 +671,109 @@ pub fn pick(app: &Launcher, data: &Value, locale: &str) -> Result<Value> {
             .arg(folder)
             .args(["--title", title]);
     }
-    let result = process::output(
-        &mut command,
-        Duration::from_secs(120),
-        4098,
-        &AtomicBool::new(false),
-    );
-    let path = result
-        .ok()
-        .and_then(|v| String::from_utf8(v).ok())
-        .map(|v| v.trim_end_matches(['\r', '\n']).to_string())
-        .filter(|v| {
-            !v.is_empty() && v.len() <= 4096 && Path::new(v).is_absolute() && Path::new(v).is_dir()
-        });
+    let path = crate::dialog::select(&mut command, Duration::from_secs(120))?;
     Ok(if let Some(path) = path {
+        require(
+            Path::new(&path).is_dir(),
+            flightdeck_ui::platform::DIALOG_INVALID,
+        )?;
         json!({"ok":true,"cancelled":false,"field":field,"path":path})
     } else {
         json!({"ok":true,"cancelled":true,"field":field})
     })
+}
+
+#[cfg(test)]
+mod host_tests {
+    use super::*;
+    use std::ffi::OsStr;
+
+    fn ready() -> Value {
+        json!({"schema":1,"libraries":{"gtk3":true,"webkitgtk41":true,"openssl3":true,"crypto3":true,"vulkan1":true}})
+    }
+    #[test]
+    fn library_results_fail_closed_with_specific_dependency_and_cancellation() {
+        assert!(host_libraries(Ok(ready())).is_ok());
+        for (id, soname) in crate::native_probe::HOST_LIBRARIES {
+            let mut value = ready();
+            value["libraries"][id] = json!(false);
+            let error = host_libraries(Ok(value)).expect_err("unloadable library");
+            assert!(error.to_string().contains(soname), "{id}: {error}");
+        }
+        for value in [json!({}), json!({"schema":1,"libraries":{}}), {
+            let mut value = ready();
+            value["libraries"]["openssl3"] = json!("true");
+            value
+        }] {
+            assert_eq!(
+                host_libraries(Ok(value))
+                    .expect_err("invalid probe")
+                    .to_string(),
+                HOST_PROBE_FAILED
+            );
+        }
+        assert_eq!(
+            host_libraries(Err(Error::Invalid("child failure")))
+                .expect_err("child failed")
+                .to_string(),
+            HOST_PROBE_FAILED
+        );
+        assert!(matches!(
+            host_libraries(Err(Error::Cancelled)),
+            Err(Error::Cancelled)
+        ));
+    }
+    #[test]
+    fn empty_display_or_session_bus_does_not_pass_preflight() {
+        let value = |text| Some(OsStr::new(text));
+        assert!(session_present(
+            value(":0"),
+            None,
+            value("unix:path=fixture")
+        ));
+        assert!(session_present(
+            None,
+            value("wayland-0"),
+            value("unix:path=fixture")
+        ));
+        for (display, wayland, bus) in [
+            (None, None, value("unix:path=fixture")),
+            (value(""), value(""), value("unix:path=fixture")),
+            (value(":0"), None, value("")),
+            (None, value("wayland-0"), None),
+        ] {
+            assert!(!session_present(display, wayland, bus));
+        }
+    }
+    #[test]
+    fn media_probe_inherits_plugin_paths_and_isolates_both_registry_names() {
+        let registry = Path::new("/synthetic/private/registry.bin");
+        let command = media_command(Path::new("gst-inspect-1.0"), "h264parse", registry);
+        let changes: BTreeMap<_, _> = command.get_envs().collect();
+        for name in [
+            "GST_PLUGIN_PATH",
+            "GST_PLUGIN_PATH_1_0",
+            "GST_PLUGIN_SYSTEM_PATH",
+            "GST_PLUGIN_SYSTEM_PATH_1_0",
+            "GST_PLUGIN_SCANNER",
+        ] {
+            assert!(
+                !changes.contains_key(OsStr::new(name)),
+                "must inherit {name}"
+            );
+        }
+        for name in ["GST_REGISTRY", "GST_REGISTRY_1_0"] {
+            assert_eq!(
+                changes.get(OsStr::new(name)),
+                Some(&Some(registry.as_os_str()))
+            );
+        }
+        for (name, _) in std::env::vars_os()
+            .filter(|(name, _)| name.as_encoded_bytes().starts_with(b"GST_REGISTRY"))
+        {
+            if name != "GST_REGISTRY" && name != "GST_REGISTRY_1_0" {
+                assert_eq!(changes.get(name.as_os_str()), Some(&None));
+            }
+        }
+    }
 }

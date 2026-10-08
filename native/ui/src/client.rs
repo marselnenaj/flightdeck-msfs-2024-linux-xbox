@@ -55,6 +55,8 @@ impl Client {
         }
         Ok(Self {
             http: reqwest::Client::builder()
+                // Fixed loopback HTTP needs no system CA store; HTTPS trusts no roots.
+                .tls_certs_only(std::iter::empty())
                 .no_proxy()
                 .redirect(reqwest::redirect::Policy::none())
                 .connect_timeout(Duration::from_secs(3))

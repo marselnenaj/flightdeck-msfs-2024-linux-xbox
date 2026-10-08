@@ -1,0 +1,27 @@
+{
+  "ubuntu": {
+    "name": "Ubuntu 24.04",
+    "image": "ubuntu:24.04@sha256:534baea6a22c03a63003dbc8dbe78fe34bc0d7e595d9a9dc9834884ff530eb55",
+    "install": "apt-get update && apt-get install -y --no-install-recommends python3 liblzma5 libgcc-s1 libxkbcommon0 libxkbcommon-x11-0 libx11-6 libxcursor1 libxi6 libxrandr2 libxrender1 libxext6 xvfb x11-utils weston dbus-daemon && rm -rf /var/lib/apt/lists/*"
+  },
+  "debian": {
+    "name": "Debian 13",
+    "image": "debian:13-slim@sha256:a29215f6a35e51e22adffa17f89e9d2ef06214e64a2bad10d765c46aea49f11f",
+    "install": "apt-get update && apt-get install -y --no-install-recommends python3 liblzma5 libgcc-s1 libxkbcommon0 libxkbcommon-x11-0 libx11-6 libxcursor1 libxi6 libxrandr2 libxrender1 libxext6 xvfb x11-utils weston dbus-daemon && rm -rf /var/lib/apt/lists/*"
+  },
+  "fedora": {
+    "name": "Fedora 44",
+    "image": "registry.fedoraproject.org/fedora:44@sha256:ba35579e107f26a4c2c000390fb3ff549f3858a9584a6b5a35f7fa51f54de309",
+    "install": "dnf install -y python3 xz-libs libgcc libxkbcommon libxkbcommon-x11 libX11 libXcursor libXi libXrandr libXrender libXext xorg-x11-server-Xvfb xwininfo weston dbus-daemon && dnf clean all"
+  },
+  "arch": {
+    "name": "Arch Linux",
+    "image": "archlinux:base@sha256:4e77cf2ea5f410e6f8be5abf93ccf17ce2436e87a138c167208356711a405dbd",
+    "install": "pacman -Syu --noconfirm --needed python xz gcc-libs libxkbcommon libxkbcommon-x11 libx11 libxcursor libxi libxrandr libxrender libxext xorg-server-xvfb xorg-xwininfo weston dbus && pacman -Scc --noconfirm"
+  },
+  "opensuse": {
+    "name": "openSUSE Tumbleweed",
+    "image": "opensuse/tumbleweed:latest@sha256:97141fa37703661c2a0f6fdcb6a0b29050b54bdef26869493323b9f6b1a8d6df",
+    "install": "zypper --non-interactive install --no-recommends python3 liblzma5 libgcc_s1 libxkbcommon0 libxkbcommon-x11-0 libX11-6 libXcursor1 libXi6 libXrandr2 libXrender1 libXext6 xorg-x11-server-Xvfb xwininfo weston dbus-1 && zypper clean --all"
+  }
+}

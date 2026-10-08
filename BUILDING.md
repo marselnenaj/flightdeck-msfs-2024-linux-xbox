@@ -113,6 +113,28 @@ Package `build/native-baseline/target/release/flightdeck-rust` in place of the
 host release binary. The build mounts source, toolchain and registry read-only,
 runs without network and writes only to the explicit build output.
 
+### Linux distribution checks
+
+The main CI workflow tests its packaged launcher on Ubuntu 24.04, Debian 13,
+Fedora 44, Arch Linux and openSUSE Tumbleweed. To reproduce one matrix entry
+with Docker and an extracted package:
+
+```sh
+python3 scripts/check-linux-distro.py --distribution ubuntu \
+  --package build/native-package/flightdeck-linux \
+  --output build/linux-check-ubuntu
+```
+
+Choose a new output directory for each run. Base images are pinned in
+`compat/linux-test-images.json`; package installation uses the distribution's
+current repositories and needs network access. The actual launcher test runs
+as the invoking non-root user with no network, host display, GPU or credentials.
+It verifies installation into a path containing spaces and Unicode, the local
+HTTP contract, an X11 window, a Wayland buffer commit and uninstallation.
+Logs and the tested binary/image identities are saved in the output directory.
+These checks cover launcher portability, not simulator, graphics-driver,
+Microsoft sign-in or add-on compatibility.
+
 ### Python transition package (0.1.22)
 
 The bridge is already published and remains available to older installations.

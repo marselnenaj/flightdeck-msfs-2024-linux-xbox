@@ -4,6 +4,7 @@ mod client;
 mod controller;
 mod model;
 mod pages;
+pub mod platform;
 mod presentation;
 mod release_notes;
 mod setup_page;

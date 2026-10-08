@@ -1,5 +1,28 @@
 # Changes and release status
 
+## Unreleased
+
+- Explain installer startup failures caused by an unsupported architecture,
+  older glibc, a missing loader or unavailable libraries before invoking the
+  native installer. Keep the optional probe bounded and show German or English
+  guidance in an available graphical error dialog.
+- Check exact runtime libraries by loading them in an isolated helper instead
+  of matching `ldconfig` cache text. Retain configured GStreamer plugin paths
+  while keeping the test registry separate from the user's cache.
+- Report unavailable desktop sessions and failed or timed-out file dialogs
+  clearly; distinguish a cancelled picker from an execution failure.
+- Fix startup without a system CA certificate store by keeping the desktop
+  service client, native interface and local Fenix display client independent
+  of TLS trust roots for loopback HTTP. External HTTPS keeps normal certificate
+  verification and its CA-store requirement.
+- Add a container test matrix for launcher installation, local API and software
+  X11/Wayland windows on Ubuntu 24.04, Debian 13, Fedora 44, Arch Linux and
+  openSUSE Tumbleweed. All five passed locally with the packaged development
+  candidate on 8 October 2026, including 84 API checks and the actual Wayland
+  application surface. These tests do not validate MSFS, hardware graphics,
+  sign-in or licensed add-ons. See the
+  [scope and current status](install.md#linux-test-matrix-unreleased).
+
 ## 0.2.7 — 8 October 2026
 
 Stable release with full installer and corresponding source archives.

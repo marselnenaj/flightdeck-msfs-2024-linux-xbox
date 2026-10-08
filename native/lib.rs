@@ -22,6 +22,7 @@ pub mod cloud_write;
 pub mod components;
 pub mod desktop;
 pub mod diagnostics;
+pub mod dialog;
 pub mod display_refresh;
 pub mod error;
 pub mod fenix;

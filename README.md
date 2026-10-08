@@ -47,8 +47,12 @@ versions. The displayed base-game download size is only part of that storage.
 The binary package requires Linux x86-64 with **glibc 2.39+**, Vulkan drivers,
 a Wayland or X11 desktop and a Linux Secret Service keyring. The full runtime
 also needs GTK 3, WebKitGTK 4.1, OpenSSL 3 and GStreamer Good/Bad/Libav plugins;
-the native window needs libxkbcommon. Setup checks missing prerequisites.
-Arch Linux has been tested; other distributions need separate validation.
+the launcher also needs liblzma, libgcc_s and libxkbcommon, plus the selected
+Wayland/X11 libraries. Setup checks missing prerequisites.
+An unreleased packaged candidate passed launcher checks on Ubuntu 24.04, Debian
+13, Fedora 44, Arch Linux and openSUSE Tumbleweed on 8 October 2026. See the
+[Linux test matrix](docs/install.md#linux-test-matrix-unreleased) for the tested scope.
+These container checks do not establish simulator or GPU-driver compatibility.
 [Requirements and installation options](docs/install.md)
 
 Install newer launchers through **Updates → Flightdeck** or their full installer.

@@ -86,6 +86,8 @@ pub fn write_record(root: &Path, service: &Service) -> Result<()> {
 pub fn request(record: &Value, path: &str, data: Option<&Value>) -> Option<Value> {
     let port = record["port"].as_u64()?;
     let client = reqwest::blocking::Client::builder()
+        // Fixed loopback HTTP needs no system CA store; HTTPS trusts no roots.
+        .tls_certs_only(std::iter::empty())
         .no_proxy()
         .redirect(reqwest::redirect::Policy::none())
         .timeout(Duration::from_secs(5))
@@ -253,13 +255,35 @@ pub fn language(root: &Path, explicit: Option<&str>) -> String {
     let saved = files::json::<Value>(&root.join("ui-preferences.json"), 4096).ok();
     crate::cli::locale(explicit.or_else(|| saved.as_ref().and_then(|v| v["language"].as_str())))
 }
-pub fn open_interface(root: &Path, record: &Value, language: Option<&str>) -> Result<String> {
+fn session_environment(
+    display: Option<&std::ffi::OsStr>,
+    wayland: Option<&std::ffi::OsStr>,
+    socket: Option<&std::ffi::OsStr>,
+) -> Result<()> {
+    // WAYLAND_SOCKET is one already-connected descriptor, consumed by the
+    // toolkit. It cannot safely serve the UI, persistent service and dialogs.
+    // wayland-client prioritizes it even when WAYLAND_DISPLAY is also present.
     require(
-        ["DISPLAY", "WAYLAND_DISPLAY"]
-            .iter()
-            .any(|key| std::env::var_os(key).is_some_and(|v| !v.is_empty())),
-        "Das native Flightdeck-Fenster konnte nicht geöffnet werden. Starte Flightdeck in einer X11- oder Wayland-Sitzung.",
+        socket.is_none(),
+        "Der Start mit WAYLAND_SOCKET wird nicht unterstützt, da Flightdeck mehrere Desktop-Prozesse verwendet. Bitte über das Anwendungsmenü oder ein Terminal der Sitzung starten.",
     )?;
+    require(
+        [display, wayland]
+            .into_iter()
+            .flatten()
+            .any(|v| !v.is_empty()),
+        "Das native Flightdeck-Fenster konnte nicht geöffnet werden. Starte Flightdeck in einer X11- oder Wayland-Sitzung.",
+    )
+}
+pub fn check_session() -> Result<()> {
+    session_environment(
+        std::env::var_os("DISPLAY").as_deref(),
+        std::env::var_os("WAYLAND_DISPLAY").as_deref(),
+        std::env::var_os("WAYLAND_SOCKET").as_deref(),
+    )
+}
+pub fn open_interface(root: &Path, record: &Value, language: Option<&str>) -> Result<String> {
+    check_session()?;
     let client = flightdeck_ui::Client::new(
         record["port"]
             .as_u64()
@@ -284,11 +308,31 @@ pub fn open_interface(root: &Path, record: &Value, language: Option<&str>) -> Re
             record["token"].as_str().unwrap_or("").to_string(),
         )
     });
-    flightdeck_ui::run(client, if language == "en" {flightdeck_ui::Language::En} else {flightdeck_ui::Language::De}, Some(connector))
-        .map_err(|_| Error::Invalid("Das native Flightdeck-Fenster konnte nicht geöffnet werden. Starte Flightdeck in einer X11- oder Wayland-Sitzung."))?;
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        flightdeck_ui::run(
+            client,
+            if language == "en" {
+                flightdeck_ui::Language::En
+            } else {
+                flightdeck_ui::Language::De
+            },
+            Some(connector),
+        )
+    }));
+    match result {
+        Ok(result) => result
+            .map_err(|error| Error::Invalid(flightdeck_ui::platform::startup_error(&error)))?,
+        Err(payload) => {
+            if let Some(message) = flightdeck_ui::platform::startup_panic(payload.as_ref()) {
+                return Err(Error::Invalid(message));
+            }
+            std::panic::resume_unwind(payload);
+        }
+    }
     Ok("native".into())
 }
 pub fn start(root: &Path, runtime: Option<&str>, port: u16, language: Option<&str>) -> Result<()> {
+    check_session()?;
     let root = state_directory(root)?;
     let record = ensure_service(&root, runtime, port)?;
     open_interface(&root, &record, language)?;
@@ -405,4 +449,27 @@ pub fn installed_handoff(
         });
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod session_tests {
+    use super::*;
+    use std::ffi::OsStr;
+
+    #[test]
+    fn desktop_session_needs_a_reconnectable_display_not_an_inherited_socket() {
+        assert!(session_environment(Some(OsStr::new(":1")), None, None).is_ok());
+        assert!(session_environment(None, Some(OsStr::new("wayland-1")), None).is_ok());
+        assert!(session_environment(None, None, None).is_err());
+        assert!(session_environment(Some(OsStr::new("")), Some(OsStr::new("")), None).is_err());
+        for socket in ["7", "", "invalid"] {
+            let error = session_environment(
+                Some(OsStr::new(":1")),
+                Some(OsStr::new("wayland-1")),
+                Some(OsStr::new(socket)),
+            )
+            .expect_err("one connected FD must not be shared by UI and service");
+            assert!(error.to_string().contains("WAYLAND_SOCKET"));
+        }
+    }
 }

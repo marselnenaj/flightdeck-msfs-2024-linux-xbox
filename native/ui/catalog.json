@@ -990,5 +990,13 @@
   "Die FSDT-Starteinstellung fehlt. Öffne den Installer für ein Update.": "The FSDT startup entry is missing. Open the installer to update it.",
   "Stelle zuerst das bisherige Windows-Profil wieder her.": "Restore the previous Windows profile first.",
   "Der FSDT-Installer ist geöffnet. Schließe ihn nach dem Download.": "The FSDT installer is open. Close it after the download.",
-  "Warte, bis der aktuelle Schritt abgeschlossen ist.": "Wait for the current step to finish."
+  "Warte, bis der aktuelle Schritt abgeschlossen ist.": "Wait for the current step to finish.",
+  "Der Dateidialog konnte nicht gestartet oder abgeschlossen werden. Bitte die Desktop-Sitzung und Zenity/KDialog prüfen oder den Pfad direkt eingeben.": "The file dialog could not start or finish. Check the desktop session and Zenity/KDialog, or enter the path directly.",
+  "Der Dateidialog hat nicht rechtzeitig geantwortet. Bitte erneut öffnen oder den Pfad direkt eingeben.": "The file dialog did not respond in time. Open it again or enter the path directly.",
+  "Der Dateidialog hat keinen gültigen absoluten Pfad geliefert. Bitte den Pfad direkt eingeben.": "The file dialog did not return a valid absolute path. Enter the path directly.",
+  "Der Bericht konnte nicht gespeichert werden. Bitte einen neuen Dateinamen und einen beschreibbaren Ordner wählen.": "The report could not be saved. Choose a new filename and a writable folder.",
+  "Die Verbindung zum Linux-Desktop konnte nicht geöffnet werden. Bitte Flightdeck in der aktuellen X11-/Wayland-Sitzung starten und deren Display-Bibliotheken prüfen.": "Could not connect to the Linux desktop. Start Flightdeck in the current X11/Wayland session and check its display libraries.",
+  "Die Softwaredarstellung des Flightdeck-Fensters konnte nicht initialisiert werden. Bitte die X11-/Wayland-Bibliotheken der Desktop-Sitzung prüfen.": "Could not initialize software rendering for the Flightdeck window. Check the desktop session’s X11/Wayland libraries.",
+  "Flightdeck konnte seine Hintergrundaufgaben nicht starten. Bitte freie Systemressourcen und Prozesslimits prüfen.": "Flightdeck could not start its background tasks. Check available system resources and process limits.",
+  "Der Start mit WAYLAND_SOCKET wird nicht unterstützt, da Flightdeck mehrere Desktop-Prozesse verwendet. Bitte über das Anwendungsmenü oder ein Terminal der Sitzung starten.": "Launching with WAYLAND_SOCKET is not supported because Flightdeck uses multiple desktop processes. Start it from the application menu or a terminal in the session."
 }
