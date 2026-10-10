@@ -50,8 +50,10 @@ blocks launch after an interrupted commit; **Return to Flightdeck environment**
 recovers it. Close MSFS and all profile applications before switching.
 
 Fenix uses a separate overlay compiled for each exact supported Wine build.
-The first additional builds are Experimental `experimental-11.0-20260924-x86_64`
-and CachyOS `cachyos-10.0-sunset-slr`. The menu marks compatible versions and
+The additional builds are Experimental `experimental-11.0-20260924-x86_64`,
+CachyOS `cachyos-10.0-sunset-slr` and CachyOS `cachyos-11.0-20261005-slr`. The
+last one passed the overlay's regression probes and a fresh profile setup; its
+switch inside Flightdeck has not been run with the simulator. The menu marks compatible versions and
 Flightdeck applies their patch automatically. An unknown or modified Wine build
 is rejected before switching a Fenix installation. Known legacy Fenix profiles
 can migrate without reinstalling aircraft. GSX setup and its official installer

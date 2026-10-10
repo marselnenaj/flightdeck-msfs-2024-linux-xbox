@@ -595,7 +595,7 @@ fn windows_app(ctx: &Context, operation: &str, data: &Value) -> Result<()> {
         let runner = match bundle::runner_variant(&root.join("runner"), true) {
             Ok(None) => "flightdeck",
             Ok(Some(ref variant)) if variant == "experimental-11" => "experimental",
-            Ok(Some(ref variant)) if variant == "cachyos-10" => "cachyos",
+            Ok(Some(ref variant)) if variant.starts_with("cachyos-") => "cachyos",
             _ => "unknown",
         };
         Some(crate::fenix_diagnostics::begin(root, operation, runner)?)

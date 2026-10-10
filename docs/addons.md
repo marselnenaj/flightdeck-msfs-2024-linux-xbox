@@ -218,7 +218,7 @@ separately. Flightdeck closes the session's Fenix companions after normal exit,
 a game crash or **Stop**, with a bounded fallback for stuck processes. The
 official Fenix installer and other Wine profiles are excluded from that cleanup.
 
-Flightdeck uses patch **0.1.0-preview.3**. Newer patch versions are adopted
+Flightdeck uses patch **0.1.0-preview.5**. Newer patch versions are adopted
 through a Flightdeck update; the launcher does not independently check for the
 latest Fenix patch on GitHub. Supported earlier patches update to Flightdeck's
 included version when opening Fenix, its installer or manager, or finishing setup.

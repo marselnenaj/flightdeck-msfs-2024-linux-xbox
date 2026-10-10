@@ -1,5 +1,12 @@
 # Changes and release status
 
+## Unreleased
+
+- Use Fenix patch **0.1.0-preview.5**. Its Flightdeck and earlier Proton
+  overlays are identical to preview.4; verified preview.4 installations update
+  without reinstalling Fenix. The patch adds an overlay for CachyOS Proton
+  `cachyos-11.0-20261005-slr`, which the Proton menu now marks as compatible.
+
 ## 0.2.8 — 8 October 2026
 
 Stable release with full installer and corresponding source archives.
