@@ -58,6 +58,15 @@ die neu gebauten Bibliotheken nicht; verwende für die Korrektur den vollständi
 
 ## Verbleibende Probleme melden
 
+Beim gemeldeten MSFS-2024-Startabsturz unter Nobara mit RTX 5080
+[bestätigt der Melder den Betrieb mit einer anderen Proton-Version, etwa Proton-GE](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/issues/3#issuecomment-6348916712).
+Wähle eine installierte Alternative unter **Einrichtung → Proton-Version (experimentell)**;
+siehe [Proton-Auswahl](runtime.md#experimental-proton-selection).
+Der Absturz mit dem Standard-Runner Xodus bleibt ungeklärt. Die genauen
+funktionierenden Proton- und Flightdeck-Versionen sind noch unbekannt; die
+Umgehung gilt als Nutzerrückmeldung für diese Konfiguration, nicht als Bestätigung
+für jede NVIDIA-GPU oder jeden Treiber.
+
 Das Startvideo kann fehlen oder schwarz bleiben, obwohl Menü, Karte und Cockpit
 normal dargestellt werden. Treiberspezifische Probleme sind weiterhin möglich.
 Bleibt auch die 3D-Hauptansicht schwarz, melde das getrennt mit Flightdeck-Version,

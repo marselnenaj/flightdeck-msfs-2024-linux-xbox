@@ -55,6 +55,14 @@ not contain the rebuilt libraries; use the full installer for this correction.
 
 ## Remaining issues and reporting
 
+For the MSFS 2024 launch crash reported on Nobara with an RTX 5080,
+[the reporter confirms that an alternative Proton such as Proton-GE works](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/issues/3#issuecomment-6348916712).
+Select an installed alternative under **Setup → Proton version (experimental)**;
+see [Proton selection](runtime.md#experimental-proton-selection).
+The default Xodus crash remains unresolved. The exact working Proton and
+Flightdeck versions are still unknown, so this is a reported workaround for
+that setup, not confirmation for every NVIDIA GPU or driver.
+
 The startup video may be missing or black even when the menu, map and cockpit
 render normally. Driver-specific problems can still occur. If the main 3D view
 also stays black, report that separately with the Flightdeck version, GPU,

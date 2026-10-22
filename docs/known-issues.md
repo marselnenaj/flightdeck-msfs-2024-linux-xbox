@@ -2,16 +2,17 @@
 
 [Deutsch](known-issues.de.md) · [Documentation](index.md)
 
-Status: 21 October 2026, covering the stable **0.2.14** release.
-See the [release changes](changelog.md#0214--21-october-2026).
+Status: 22 October 2026, covering the stable **0.2.17** release.
+See the [release changes](changelog.md#0217--22-october-2026).
 
 - **NVIDIA:** Normal MSFS 2024 rendering is confirmed by user testing. Smaller
   issues remain possible, including a missing or black startup video. This does
   not qualify every GPU/driver combination, VR or NVIDIA's optional features.
   Version 0.2.13 prefers software H.264 decoding and fixes codec selection for
-  supported Proton builds. The RTX 5080 crash reported in
-  [issue #3](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/issues/3)
-  still needs confirmation on the affected machine.
+  supported Proton builds. For the Nobara/RTX 5080 launch crash, the reporter
+  [confirms that an alternative Proton such as Proton-GE works](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/issues/3#issuecomment-6348916712).
+  The default Xodus crash remains unresolved; the working Proton and Flightdeck
+  versions have not yet been supplied.
   If the main map or cockpit is also black, report it separately.
   [Graphics setup and reporting](graphics.md).
 - **Alternate Proton:** Version 0.2.14 repairs Xbox sign-in error
