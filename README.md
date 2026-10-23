@@ -20,20 +20,20 @@ of MSFS 2024 or 2020** through Wine/Proton. Sign in with your Microsoft account,
 download the licensed game and start it from the native Rust desktop application.
 Windows, the Xbox app and a previous MSFS installation are not required.
 
-**Current stable release: [Flightdeck 0.2.17](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.2.17).**
+**Current stable release: [Flightdeck 0.2.18](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.2.18).**
 The launcher, installer and updater need no Python.
 
-**New in 0.2.17:** Fenix patch preview.9 fixes a Direct2D geometry memory leak.
-Fenix setup prepares the .NET 10 Desktop Runtime required by the v3 installer
-and explicitly guides you through installing the aircraft. Full-flight
-compatibility remains unvalidated; the separate simulator display freeze is
-still unexplained.
+**New in 0.2.18:** Experimental Fenix v3 support through patch preview.10.
+The official installer, login and cockpit displays were checked with Fenix
+3.0.0.7454 on the pinned Xodus runner. One observed Wine startup assertion remains
+unexplained; full-flight stability is unvalidated. The reported Nobara/RTX 5080
+workaround using an alternate Proton is now documented.
 See the [changelog](docs/changelog.md).
 
 ## Get started
 
 1. Download **Flightdeck-Linux-x86_64.tar.gz** from the
-   [0.2.17 release](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.2.17),
+   [0.2.18 release](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.2.18),
    extract it and open **Install Flightdeck.desktop**. Your file manager may ask
    you to trust this local launcher. Alternatively, run `./install.sh` there.
 2. Choose **Install MSFS**, select 2024 or 2020 and a destination, then
@@ -91,8 +91,9 @@ operation, physical VR headsets and cross-device cloud-save gameplay still need
 validation. Marketplace session errors and incomplete DLC/purchase coverage
 remain documented separately. Installed files alone do not prove activation or
 working aircraft systems.
-Fenix preview.9 retains GPU display sharing for the pinned Xodus and Proton 11
-runners, with a CPU fallback, and fixes a Direct2D geometry memory leak.
+Fenix preview.10 retains GPU display sharing for the pinned Xodus and Proton 11
+runners, with a CPU fallback, and includes the Direct2D memory-leak fix.
+Fenix v3 remains experimental; see the [tested scope](docs/addons.md#compatibility-and-recovery).
 [Known issues](docs/known-issues.md) · [Add-on scope](docs/addons.md) ·
 [Marketplace scope](docs/marketplace-collections.md)
 

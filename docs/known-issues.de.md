@@ -2,8 +2,8 @@
 
 [English](known-issues.md) · [Dokumentation](index.md)
 
-Stand: 22. Oktober 2026, für die stabile Version **0.2.17**.
-Siehe [Änderungsübersicht](changelog.md#0217--22-october-2026).
+Stand: 23. Oktober 2026, für die stabile Version **0.2.18**.
+Siehe [Änderungsübersicht](changelog.md#0218--23-october-2026).
 
 - **NVIDIA:** Die normale MSFS-2024-Darstellung ist durch Nutzertests bestätigt.
   Kleinere Probleme bleiben möglich, etwa ein fehlendes oder schwarzes Startvideo.
@@ -22,6 +22,14 @@ Siehe [Änderungsübersicht](changelog.md#0217--22-october-2026).
   [Issue #4](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/issues/4).
 - **VSync:** Die in Issue #4 gemeldete Überschreitung der 48-FPS-Grenze bei
   einem Drittel der Bildwiederholrate eines 144-Hz-Monitors bleibt ungeprüft.
+- **Fenix v3:** Patch preview.10 ist experimentell. Offizielle Installation,
+  Anmeldung und Cockpitanzeigen wurden mit Fenix 3.0.0.7454 unter Xodus geprüft.
+  Ein Start scheiterte an Wines `create_view`-Assertion; sechs spätere Starts,
+  davon fünf warme Neustarts der Fenix-Dienste, reproduzierten sie nicht. Ursache,
+  Stabilität über vollständige Flüge und das frühere Einfrieren der Anzeigen
+  bleiben ungeklärt. Andere Runner bestehen passende native Modultests, sind
+  aber nicht im echten v3-Cockpit geprüft.
+  [Prüfablauf und Grenzen](https://github.com/marselnenaj/fenix-a320-linux-patch/blob/v0.1.0-preview.10/docs/fenix-v3.md).
 - **Fenix-Installation:** Bei „application install hook failed“ können bereits
   FenixApp-Dateien vorhanden sein, obwohl die Einrichtung nicht abgeschlossen ist.
   Ein reproduzierter ICU-/.NET-Fall ist reparierbar; die allgemeine Meldung allein

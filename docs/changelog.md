@@ -1,5 +1,30 @@
 # Changes and release status
 
+## 0.2.18 — 23 October 2026
+
+Stable launcher release with the experimental Fenix patch preview.10.
+Existing native launchers can use the in-app updater. Close MSFS and Fenix,
+update Flightdeck, then open Fenix under **Mods** to update an earlier patch.
+Installing Flightdeck itself does not install the aircraft.
+
+- Adopt [Fenix patch 0.1.0-preview.10](https://github.com/marselnenaj/fenix-a320-linux-patch/releases/tag/v0.1.0-preview.10).
+  Fix Wine compatibility paths used by the new official installer, image
+  validation, volume/current-directory lookup and scoped cryptographic APIs.
+  Original vendor executables and authentication are unchanged. Verified
+  preview.9 installations retain the aircraft, renderer preferences and restore
+  point when updating; the earlier Direct2D memory-leak fix is retained.
+- Check official Installer 1.0.359, login and working cockpit displays with Fenix
+  3.0.0.7454, MSFS 2024 1.8.16.0 and Xodus 11.0 / 7c0b4354, using GPU displays
+  and Legacy readouts. **Fenix v3 remains experimental:** one startup hit
+  Wine's `create_view` assertion. A later fresh production-payload start and
+  five warm backend restarts did not reproduce it; its cause remains unknown.
+  Full flights, long-session stability, NVIDIA and real v3 cockpits on other
+  runners remain unvalidated. See the [test sequence and limits](https://github.com/marselnenaj/fenix-a320-linux-patch/blob/v0.1.0-preview.10/docs/fenix-v3.md).
+- Document the [Nobara/RTX 5080 workaround from issue #3](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/issues/3#issuecomment-6348916712):
+  the reporter can launch with an alternate Proton such as Proton-GE. This is
+  a user-confirmed workaround; the default Xodus exit-84 crash remains
+  unresolved and its working alternate version has not yet been specified.
+
 ## 0.2.17 — 22 October 2026
 
 Stable launcher release with Fenix patch preview.9. Existing native launchers

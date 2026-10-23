@@ -110,6 +110,23 @@ Flightdeck.
    integration in the next Flightdeck source/full package. Publishing the patch
    alone does not update an already installed Flightdeck launcher.
 
+For a release-payload regression check, supply the current public ZIP, the
+preceding public ZIP and a JSON object mapping `xodus` and every manifest
+variant to its original runner directory:
+
+```sh
+FLIGHTDECK_TEST_FENIX_ARCHIVE=/path/to/current-linux.zip \
+FLIGHTDECK_TEST_FENIX_PREVIOUS_ARCHIVE=/path/to/previous-linux.zip \
+FLIGHTDECK_TEST_FENIX_RUNNERS=/path/to/original-runners.json \
+cargo test --locked --test native_fenix_release -- --ignored --nocapture
+```
+
+This explicitly enabled test uses the production archive reader and overlay
+code with isolated runner files. It checks the preceding module hashes,
+replacement of prefix DLL links and preservation of original runners. It
+starts no Wine process and does not qualify the complete installation
+transaction, the official application or simulator stability.
+
 The native launcher implements the installer contract in Rust. The installer
 extracts only fixed Wine/window-helper payloads named in the manifest and
 deploys current launcher-owned scripts; downloaded Python code is not imported.

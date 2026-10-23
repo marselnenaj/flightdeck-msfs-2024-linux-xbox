@@ -130,7 +130,9 @@ The optional Wine overlay is downloaded from
 only when requested, with its ZIP hash checked against `compat/fenix/release.json`
 and its payload files checked against `compat/fenix/bundle.json`.
 
-Patch **0.1.0-preview.3** contains eleven replacement Wine modules, MIT window, MCDU refresh
+Patch **0.1.0-preview.10** contains twenty replacement Wine/graphics modules
+for Xodus and each pinned Proton 11 build, or sixteen for the CPU-only CachyOS
+Proton 10 build. It also contains MIT window, MCDU refresh
 and dependency-extraction helpers and launch integration, plus complete Wine sources, patches and build
 instructions. The derived Wine components retain LGPL-2.1-or-later. That ZIP and
 its corresponding-source archive are separate from Flightdeck's six native

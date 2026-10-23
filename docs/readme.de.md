@@ -21,20 +21,20 @@ Microsoft-Konto an, lade das lizenzierte Spiel herunter und starte es über die
 native Rust-Oberfläche. Windows, die Xbox-App und eine bestehende MSFS-Installation
 sind dafür nicht erforderlich.
 
-**Aktuelle stabile Version: [Flightdeck 0.2.17](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.2.17).**
+**Aktuelle stabile Version: [Flightdeck 0.2.18](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.2.18).**
 Launcher, Installer und Updater benötigen kein Python.
 
-**Neu in 0.2.17:** Fenix-Patch preview.9 behebt einen Direct2D-Speicherverlust.
-Die Einrichtung installiert die vom v3-Installer benötigte .NET 10 Desktop
-Runtime und führt ausdrücklich durch die Flugzeuginstallation. Vollständige
-Flüge bleiben ungeprüft; die Ursache für das separate Einfrieren der
-Simulatoranzeigen ist weiterhin ungeklärt.
+**Neu in 0.2.18:** Experimentelle Fenix-v3-Unterstützung mit Patch preview.10.
+Offizieller Installer, Anmeldung und Cockpitanzeigen wurden mit Fenix 3.0.0.7454
+unter dem festgelegten Xodus-Runner geprüft. Ein beobachteter Wine-Startabbruch
+bleibt ungeklärt; vollständige Flüge sind ungeprüft. Der gemeldete Workaround
+für Nobara/RTX 5080 mit einer anderen Proton-Version ist jetzt dokumentiert.
 [Änderungsübersicht](changelog.md)
 
 ## Loslegen
 
 1. Lade **Flightdeck-Linux-x86_64.tar.gz** aus der
-   [0.2.17-Veröffentlichung](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.2.17),
+   [0.2.18-Veröffentlichung](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.2.18),
    entpacke es und öffne **Install Flightdeck.desktop**. Eventuell musst du den
    lokalen Starter im Dateimanager freigeben. Alternativ dort `./install.sh` ausführen.
 2. Wähle **MSFS installieren**, die Edition 2024 oder 2020 und einen Zielordner.
@@ -96,8 +96,9 @@ VR-Headsets und geräteübergreifendes Spielen mit Cloud-Saves stehen noch aus.
 Marketplace-Sitzungsfehler und unvollständig geprüfte DLC-/Kauffunktionen sind
 separat dokumentiert. Vorhandene Dateien bestätigen weder Aktivierung noch
 funktionierende Flugzeugsysteme.
-Fenix preview.9 behält GPU-Anzeigen für die festgelegten Xodus- und
-Proton-11-Versionen mit CPU-Rückfall bei und behebt einen Direct2D-Speicherverlust.
+Fenix preview.10 behält GPU-Anzeigen für die festgelegten Xodus- und
+Proton-11-Versionen mit CPU-Rückfall sowie die Direct2D-Speicherkorrektur bei.
+Fenix v3 bleibt experimentell; siehe den [Prüfumfang](addons.de.md#kompatibilität-und-wiederherstellung).
 [Bekannte Probleme](known-issues.de.md) · [Add-on-Umfang](addons.de.md) ·
 [Marketplace-Umfang](marketplace-collections.md)
 

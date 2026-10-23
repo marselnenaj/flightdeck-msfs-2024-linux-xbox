@@ -2,8 +2,8 @@
 
 [Deutsch](known-issues.de.md) · [Documentation](index.md)
 
-Status: 22 October 2026, covering the stable **0.2.17** release.
-See the [release changes](changelog.md#0217--22-october-2026).
+Status: 23 October 2026, covering the stable **0.2.18** release.
+See the [release changes](changelog.md#0218--23-october-2026).
 
 - **NVIDIA:** Normal MSFS 2024 rendering is confirmed by user testing. Smaller
   issues remain possible, including a missing or black startup video. This does
@@ -22,6 +22,13 @@ See the [release changes](changelog.md#0217--22-october-2026).
   [Issue #4](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/issues/4).
 - **VSync:** The one-third-refresh-rate limit exceeding 48 FPS on a 144 Hz
   screen, also reported in issue #4, remains unverified.
+- **Fenix v3:** Patch preview.10 is experimental. Official installation, login
+  and cockpit displays were checked on Xodus with Fenix 3.0.0.7454. One startup
+  hit Wine's `create_view` assertion; six later starts, including five warm
+  backend restarts, did not reproduce it. The cause, full-flight stability and
+  the earlier simulator display freeze remain unresolved. Other runners have
+  matching native module tests, but no real v3 cockpit qualification.
+  [Test sequence and limits](https://github.com/marselnenaj/fenix-a320-linux-patch/blob/v0.1.0-preview.10/docs/fenix-v3.md).
 - **Fenix installation:** The message “application install hook failed” can
   leave FenixApp files present without completing setup. A reproduced ICU/.NET
   case is repairable; the generic warning alone does not identify the cause.
