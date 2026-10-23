@@ -107,6 +107,8 @@ pub fn game_environment(root: &Path, mut env: Environment) -> Result<Environment
             "WINE_DWRITE_UNHINTED_OUTLINES",
             "DOTNET_SYSTEM_GLOBALIZATION_USENLS",
             "DOTNET_ReadyToRun",
+            "PROTON_NO_NTSYNC",
+            "WINE_DISABLE_FAST_SYNC",
             "WINE_FENIX_HELPER_WINDOWS",
         ] {
             if let Some(value) = crate::wine::environment(&prefix, &root.join("runner")).remove(key)
@@ -164,6 +166,7 @@ pub fn game_environment(root: &Path, mut env: Environment) -> Result<Environment
     );
     Ok(env)
 }
+
 pub fn socket_ready(path: &Path) -> bool {
     (|| -> std::io::Result<bool> {
         let mut stream = UnixStream::connect(path)?;
@@ -483,4 +486,38 @@ pub fn spawn_reserved(ctx: &Context) -> Result<Value> {
     record["state"] = json!("spawned");
     graphics_diagnostics::save_launch(root, &record);
     Ok(json!({"ok":true}))
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used)]
+mod fenix_environment_tests {
+    use super::*;
+
+    #[test]
+    fn fenix_game_and_helpers_select_the_same_server_synchronization() {
+        let temp = tempfile::tempdir().unwrap();
+        let root = temp.path();
+        files::private_dir(&root.join("private")).unwrap();
+        files::atomic_json(
+            &root.join("private/runtime.json"),
+            &serde_json::json!({"market": "AT"}),
+        )
+        .unwrap();
+        let input = Environment::from([("DXVK_HUD".into(), "fps".into())]);
+        let plain = game_environment(root, input.clone()).unwrap();
+        assert!(!plain.contains_key("PROTON_NO_NTSYNC"));
+        files::atomic_json(
+            &root.join(fenix::MARKER),
+            &serde_json::json!({"state": "installed"}),
+        )
+        .unwrap();
+        let game = game_environment(root, input).unwrap();
+        let helper =
+            crate::wine::environment(&root.join("local/msfs-prefix"), &root.join("runner"));
+        for key in ["PROTON_NO_NTSYNC", "WINE_DISABLE_FAST_SYNC"] {
+            assert_eq!(game[key], "1", "{key}");
+            assert_eq!(game[key], helper[key], "{key}");
+        }
+        assert_eq!(game["DXVK_HUD"], "fps");
+    }
 }

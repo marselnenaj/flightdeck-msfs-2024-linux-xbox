@@ -69,6 +69,8 @@ fn environment_from(
         ("WINEARCH", "win64"),
         ("WINEESYNC", "0"),
         ("WINEFSYNC", "0"),
+        // Wine 11 uses this switch; CachyOS 10 uses WINE_DISABLE_FAST_SYNC.
+        ("PROTON_NO_NTSYNC", "1"),
         ("WINEDEBUG", "-all"),
         ("WINE_DISABLE_FAST_SYNC", "1"),
         (
@@ -361,6 +363,8 @@ mod environment_tests {
         assert!(!env.contains_key("WINEDLLPATH"));
         assert_eq!(env["DOTNET_SYSTEM_GLOBALIZATION_USENLS"], "1");
         assert_eq!(env["DOTNET_ReadyToRun"], "0");
+        assert_eq!(env["PROTON_NO_NTSYNC"], "1");
+        assert_eq!(env["WINE_DISABLE_FAST_SYNC"], "1");
         assert_eq!(
             env["WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS"],
             "--example-option --disable-features=HideCursorWhileTyping"
