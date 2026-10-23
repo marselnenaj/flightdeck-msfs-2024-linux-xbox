@@ -6,9 +6,9 @@
   synchronization on the pinned Wine 11 generation with `PROTON_NO_NTSYNC=1`,
   retaining the separate CachyOS 10 fast-sync switch. Previously the Wine 11
   backend depended on whether the host exposed `/dev/ntsync`. This aligns
-  starts with the tested backend; it is not yet a confirmed fix for the
-  NVIDIA Display/Gateway failures in
-  [Fenix #7](https://github.com/marselnenaj/fenix-a320-linux-patch/issues/7#issuecomment-6361986275).
+  starts with the tested backend. The reporter confirmed that disabling
+  ntsync leaves both NVIDIA Display/Gateway failures unchanged in
+  [Fenix #7](https://github.com/marselnenaj/fenix-a320-linux-patch/issues/7#issuecomment-6362571590).
 - Prepare the matching integration for the Fenix patch 0.1.0 candidate,
   including its exact ZIP checksum and preview.10 upgrade snapshots. This
   draft pin refers to an unpublished candidate and must not be released
