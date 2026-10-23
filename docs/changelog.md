@@ -9,11 +9,10 @@
   starts with the tested backend. The reporter confirmed that disabling
   ntsync leaves both NVIDIA Display/Gateway failures unchanged in
   [Fenix #7](https://github.com/marselnenaj/fenix-a320-linux-patch/issues/7#issuecomment-6362571590).
-- Prepare the matching integration for the Fenix patch 0.1.0 candidate,
-  including its exact ZIP checksum and preview.10 upgrade snapshots. This
-  draft pin refers to an unpublished candidate and must not be released
-  before that exact patch archive is public. Production Flightdeck 0.2.18
-  continues to pin preview.10; no regular Fenix release is implied here.
+- Keep the Fenix integration pinned to the public preview.10 archive while
+  the regular 0.1.0 patch release is prepared. Its future manifest and
+  verified candidate assets are retained in the unpublished Fenix release
+  draft; adopting them requires publication of the exact final archive.
 
 ## 0.2.18 — 23 October 2026
 
