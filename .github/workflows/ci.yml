@@ -38,7 +38,7 @@ jobs:
           cp target/debug/flightdeck-tools build/flightdeck-tools
           build/flightdeck-tools source-check
       - name: Native format, filesystem and concurrency tests
-        run: build/flightdeck-tools native-tests
+        run: bash scripts/native-ci-tests.sh build/flightdeck-tools native-tests
       - name: Native HTTP contract and developer probes
         run: |
           cargo +1.98.0 build --locked --bin flightdeck-rust --example runtime-lab

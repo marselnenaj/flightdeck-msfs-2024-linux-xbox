@@ -22,18 +22,13 @@ Microsoft-Konto an, lade das lizenzierte Spiel herunter und starte es über die
 native Rust-Oberfläche. Windows, die Xbox-App und eine bestehende MSFS-Installation
 sind dafür nicht erforderlich.
 
-**Aktuelle stabile Version: [Flightdeck 0.2.29](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.2.29).**
+**Aktuelle stabile Version: [Flightdeck 0.3.0](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.3.0).**
 Launcher, Installer und Updater benötigen kein Python.
 
-**Neu in 0.2.29:** Unterbrochene Fenix-Updates lassen sich erneut starten;
-installierte Flugzeuge und Einstellungen bleiben erhalten. Einrichtungsfehler
-bleiben unter Updates sichtbar. Bei einer fehlgeschlagenen .NET-Verbindung
-startet Flightdeck den Wine-Prozess des kopierten Profils neu.
-Siehe [Änderungen](changelog.md).
-
-**In Entwicklung:** Steam-Auswahl für MSFS 2020/2024 und Fenix-Einrichtung als
-Beta. Die [Steam-Anleitung](steam.de.md) beschreibt den neuen Ablauf; diese
-Funktionen gehören noch nicht zum stabilen Download 0.2.29.
+**Neu in 0.3.0:** Steam-MSFS 2020/2024 lässt sich neben Xbox-Installationen
+auswählen. Fenix verwendet den gemeinsamen Rust-Code des eigenständigen
+Installers. Steam-Unterstützung ist Beta; echte Simulatorflüge müssen Tester
+noch bestätigen. Siehe [Steam-Anleitung](steam.de.md) und [Änderungen](changelog.md).
 
 In der [Flightdeck-Community auf Discord](https://discord.gg/fAhHR2DkqN) kannst du
 Fragen stellen, dein Linux-Setup teilen und an Flightdeck mitarbeiten.
@@ -45,7 +40,7 @@ hinter Flightdeck. Im Launcher gibt es außerdem eine eigene **Credits**-Seite.
 ## Loslegen
 
 1. Lade **Flightdeck-Linux-x86_64.tar.gz** aus der
-   [0.2.29-Veröffentlichung](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.2.29),
+   [0.3.0-Veröffentlichung](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.3.0),
    entpacke es und öffne **Install Flightdeck.desktop**. Eventuell musst du den
    lokalen Starter im Dateimanager freigeben. Alternativ dort `./install.sh` ausführen.
 2. Wähle **MSFS installieren**, die Edition 2024 oder 2020 und einen Zielordner.

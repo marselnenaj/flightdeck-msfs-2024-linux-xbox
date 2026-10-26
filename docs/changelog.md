@@ -1,6 +1,6 @@
 # Changes and release status
 
-## Unreleased — Steam beta
+## 0.3.0 — 26 October 2026
 
 - Detect MSFS 2020 and 2024 in native, Flatpak and Snap Steam libraries. Select
   Xbox and Steam installations separately, preserving the existing Xbox config

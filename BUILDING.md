@@ -12,7 +12,9 @@ Build with Rust/Cargo 1.98 and `woff2_decompress` (Debian/Ubuntu package `woff2`
 Linux development packages include `libxkbcommon-dev`, `libwayland-dev`,
 `libx11-dev`, `libxrandr-dev`, `libxi-dev` and `pkg-config`. The Steam process-
 namespace regression also requires `bwrap` (package `bubblewrap`) and permitted
-unprivileged user namespaces on the test host:
+unprivileged user namespaces on the test host. On the disposable Ubuntu GitHub
+runner, `scripts/native-ci-tests.sh` temporarily permits UID-map creation and
+restores the original AppArmor namespace setting after the suite:
 
 ```sh
 cargo build --locked

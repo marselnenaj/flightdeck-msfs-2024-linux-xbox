@@ -90,8 +90,8 @@ listed in [the provenance notes](../compat/THIRD_PARTY_NOTICES.md).
 ### Fenix patch releases
 
 The separate [Fenix patch repository](https://github.com/marselnenaj/fenix-a320-linux-patch)
-owns the Wine overlay and standalone installer. Flightdeck implements the
-installer contract in Rust. The maintainer tool's `probe sync-fenix` command
+owns the Wine overlay and standalone installer. Flightdeck implements Xbox transactions in Rust and uses the pinned shared Rust
+engine for Steam installations. The maintainer tool's `probe sync-fenix` command
 imports only the payload and release manifests and license. Review protocol
 changes against the Rust implementation; no Python engine is copied into
 Flightdeck.

@@ -21,17 +21,13 @@ of MSFS 2024 or 2020** through Wine/Proton. Sign in with your Microsoft account,
 download the licensed game and start it from the native Rust desktop application.
 Windows, the Xbox app and a previous MSFS installation are not required.
 
-**Current stable release: [Flightdeck 0.2.29](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.2.29).**
+**Current stable release: [Flightdeck 0.3.0](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.3.0).**
 The launcher, installer and updater need no Python.
 
-**New in 0.2.29:** Interrupted Fenix updates can be retried while retaining the
-installed aircraft and settings. Setup failures stay visible on the Updates page,
-and a failed .NET connection resets the staging Wine server before retrying.
-See the [changelog](docs/changelog.md).
-
-**In development:** Steam MSFS 2020/2024 selection and Fenix integration are
-being added as a beta. See the [Steam guide](docs/steam.md); these features are
-not part of the 0.2.29 stable download.
+**New in 0.3.0:** Select Steam MSFS 2020/2024 alongside Xbox installations and
+manage Fenix through the shared standalone Rust engine. Steam support is beta;
+actual simulator flights still need tester qualification. See the
+[Steam guide](docs/steam.md) and [changelog](docs/changelog.md).
 
 Join the [Flightdeck Discord community](https://discord.gg/fAhHR2DkqN) to ask
 questions, share your Linux setup and help develop Flightdeck. For reproducible
@@ -43,7 +39,7 @@ projects behind Flightdeck. The launcher also has a **Credits** page.
 ## Get started
 
 1. Download **Flightdeck-Linux-x86_64.tar.gz** from the
-   [0.2.29 release](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.2.29),
+   [0.3.0 release](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.3.0),
    extract it and open **Install Flightdeck.desktop**. Your file manager may ask
    you to trust this local launcher. Alternatively, run `./install.sh` there.
 2. Choose **Install MSFS**, select 2024 or 2020 and a destination, then

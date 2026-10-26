@@ -67,7 +67,7 @@ jobs:
         run: |
           cargo fmt --all -- --check
           cargo clippy --locked --workspace --all-targets -- -D warnings
-          build/flightdeck-tools native-tests
+          bash scripts/native-ci-tests.sh build/flightdeck-tools native-tests
           build/flightdeck-tools source-check
       - name: Check native HTTP contract and render both UI languages
         run: |

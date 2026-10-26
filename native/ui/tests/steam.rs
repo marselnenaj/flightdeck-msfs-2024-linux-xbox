@@ -16,7 +16,7 @@ fn fixture(language: Language, state: &str) -> App {
         {"id":"steam2024","name":"Microsoft Flight Simulator 2024 · Steam","source":"steam","available":true,"context":"steam:2024:revision"},
         {"id":"steam2020","name":"Microsoft Flight Simulator 2020 · Steam (Flatpak)","source":"steam","available":true,"context":"steam:2020:revision"}]}));
     app.snapshot.insert("fenix",json!({"source":"steam","runtime_path":"steam:2024:revision","state":if state=="available"||state=="first-launch"{"available"}else{"installed"},"installed":!["available","first-launch"].contains(&state),"version":"0.1.1","installed_version":"0.1.1","fenix_installed":true,"manager_installed":true,"settings_ready":true,"configured":false,"idle":true,"can_change":state!="first-launch","can_check_updates":true,"can_restore":true,"tool_selected":false,"steam_running":state=="steam-running","can_repair_installer":true,"patch_update":{"state":"complete"},"job":if state=="failed"{json!({"state":"failed","operation":"repair","error":"Typed setup failure"})}else{json!(null)}}));
-    app.snapshot.insert("launcher-update",json!({"managed":true,"installed_version":"0.2.29","latest_version":"0.2.29","can_check":true,"can_install":false,"job":{"state":"complete"}}));
+    app.snapshot.insert("launcher-update",json!({"managed":true,"installed_version":env!("CARGO_PKG_VERSION"),"latest_version":env!("CARGO_PKG_VERSION"),"can_check":true,"can_install":false,"job":{"state":"complete"}}));
     app.page = Page::Mods;
     app
 }

@@ -2,7 +2,7 @@
 
 [Overview and quick start](../README.md) · [Deutsch](readme.de.md) · [Discord community](https://discord.gg/fAhHR2DkqN)
 
-This documentation covers the current stable release, **0.2.29**. The
+This documentation covers the current stable release, **0.3.0**. The
 [changelog](changelog.md) records its changes and earlier releases.
 Hardware reports describe the tested setup, not universal compatibility.
 
@@ -26,7 +26,7 @@ Hardware reports describe the tested setup, not universal compatibility.
 
 ## Development and releases
 
-- [Steam beta](steam.md) · [Deutsch](steam.de.md): installation selection,
+- [Steam beta in 0.3.0](steam.md) · [Deutsch](steam.de.md): installation selection,
   Fenix, storefront boundaries and the remaining real-simulator test scope.
 
 - [Build and test](../BUILDING.md): toolchains, native UI checks, compatibility
