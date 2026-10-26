@@ -13,7 +13,10 @@ use std::{
     time::Instant,
 };
 fn metadata() -> Value {
-    json!({"draft":false,"prerelease":false,"tag_name":"v0.3.0","body":"Release notes","assets":[{"name":update::ASSET,"digest":format!("sha256:{}","a".repeat(64)),"size":1234,"state":"uploaded","browser_download_url":format!("{}/releases/download/v0.3.0/{}",update::PROJECT,update::ASSET)}]})
+    metadata_at("0.3.0")
+}
+fn metadata_at(version: &str) -> Value {
+    json!({"draft":false,"prerelease":false,"tag_name":format!("v{version}"),"body":"Release notes","assets":[{"name":update::ASSET,"digest":format!("sha256:{}","a".repeat(64)),"size":1234,"state":"uploaded","browser_download_url":format!("{}/releases/download/v{version}/{}",update::PROJECT,update::ASSET)}]})
 }
 #[test]
 fn prepared_clients_choose_the_newest_stable_release_independently_of_legacy_latest() {
@@ -270,12 +273,22 @@ fn oversized_headers_and_broken_gzip_are_rejected_before_unbounded_output() {
 fn discovery_never_reserves_a_game_and_cancellation_is_bound_to_its_job() {
     let t = tempfile::tempdir().unwrap();
     let app = Launcher::new(t.path().join("state"), None).unwrap();
+    let current = update::version(flightdeck::VERSION).unwrap();
+    let newer = format!(
+        "{}.{}.{}",
+        current[0],
+        current[1],
+        current[2].checked_add(1).unwrap()
+    );
     {
         let mut s = app.lock();
         s.launcher_updates.attempted = Some(Instant::now());
-        s.launcher_updates.release = update::release_metadata(&metadata()).unwrap();
+        s.launcher_updates.release =
+            update::release_metadata(&metadata_at(flightdeck::VERSION)).unwrap();
         s.launcher_updates.check_id = Some("fresh-check".into());
     }
+    assert_eq!(update::snapshot(&app)["update_available"], false);
+    app.lock().launcher_updates.release = update::release_metadata(&metadata_at(&newer)).unwrap();
     assert_eq!(startup_updates::check(&app).unwrap(), json!({"ok":true}));
     assert!(app.lock().active.is_none());
     let view = update::snapshot(&app);
