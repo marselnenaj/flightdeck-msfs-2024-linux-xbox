@@ -1,5 +1,13 @@
 {
   "packages": {
+    "fenix-patch@0.1.1": {
+      "path": "compat/LICENSES/rust/fenix-884bddebad31-MIT.txt",
+      "revision": "884bddebad316f130ed0f8df4dedf7342c6c3fbf",
+      "selected_license": "MIT",
+      "sha256": "037dd0f2ed88ab580b7ac6a5d7fde0bbf5206b7c988e5f8ea7c25778df8fe585",
+      "spdx": "MIT",
+      "url": "https://raw.githubusercontent.com/marselnenaj/fenix-a320-linux-patch/884bddebad316f130ed0f8df4dedf7342c6c3fbf/LICENSE"
+    },
     "iced_core@0.14.0": {
       "path": "compat/LICENSES/rust/iced-3997291f318a-MIT.txt",
       "revision": "3997291f318a8bc06fa522f5579836fb3feb94df",

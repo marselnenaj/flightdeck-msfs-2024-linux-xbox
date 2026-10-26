@@ -43,6 +43,10 @@ fn server() -> Server {
         json!("/synthetic/Steam/proton-cachyos");
     snapshot.extend(fixture.discoveries);
     snapshot.insert("setup/discover", json!({"runtimes":[]}));
+    snapshot.insert(
+        "installations",
+        json!({"installations":[],"selected_id":null,"can_select":true}),
+    );
     let socket = TcpListener::bind("127.0.0.1:0").expect("local fixture");
     socket.set_nonblocking(true).expect("nonblocking");
     let port = socket.local_addr().expect("port").port();

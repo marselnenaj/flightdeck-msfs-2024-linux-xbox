@@ -407,7 +407,7 @@ impl App {
                 guide_row("database","Verbinden","Bei der Neuinstallation meldest du dich mit deinem Microsoft-Konto an. Flightdeck lädt deine lizenzierte Spielversion."),separator(),
                 guide_row("play","Simulator starten","Danach startest du deinen Simulator direkt aus Flightdeck.")].spacing(20));
             row![container(self.setup_form()).width(Length::FillPortion(23)),container(guide).width(Length::FillPortion(10))].spacing(22).into()
-        })).into()
+        })).push(self.installations_card()).into()
     }
     fn proton_card(&self) -> Element<'_, Message> {
         let data = self.data("proton");

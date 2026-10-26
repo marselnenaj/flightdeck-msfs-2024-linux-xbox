@@ -29,6 +29,10 @@ installed aircraft and settings. Setup failures stay visible on the Updates page
 and a failed .NET connection resets the staging Wine server before retrying.
 See the [changelog](docs/changelog.md).
 
+**In development:** Steam MSFS 2020/2024 selection and Fenix integration are
+being added as a beta. See the [Steam guide](docs/steam.md); these features are
+not part of the 0.2.29 stable download.
+
 Join the [Flightdeck Discord community](https://discord.gg/fAhHR2DkqN) to ask
 questions, share your Linux setup and help develop Flightdeck. For reproducible
 bugs, use [GitHub Issues](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/issues).

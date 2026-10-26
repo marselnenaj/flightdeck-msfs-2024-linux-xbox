@@ -64,7 +64,7 @@ impl App {
         let heavy =
             self.poll_interval() == Duration::from_secs(10) || self.poll_count.is_multiple_of(5);
         self.poll_count = self.poll_count.wrapping_add(1);
-        let mut keys = vec!["setup", "launcher-update"];
+        let mut keys = vec!["setup", "launcher-update", "installations"];
         match self.page {
             Page::Overview => keys.push("game-update"),
             Page::Setup => {
@@ -394,6 +394,11 @@ impl App {
                                 self.connect_after_check =
                                     value["job"]["id"].as_str().map(str::to_string);
                             }
+                            Action::XboxSetup => {
+                                self.page = Page::Setup;
+                                self.forms.text.insert("mode", "install".into());
+                                self.forms.text.remove("destination_path");
+                            }
                             Action::Launcher("restart") => {
                                 self.restarting = true;
                                 return iced::exit();
@@ -719,7 +724,12 @@ impl App {
         self.proton_active = Some(active);
     }
     pub fn launch_label(&self) -> &str {
-        if self.pending_action == Some(Action::Launch) {
+        if self.status()["game"]["state"] == "starting" && self.is_steam() {
+            self.tr(
+                "Steam startet den Simulator …",
+                "Steam is starting the simulator …",
+            )
+        } else if self.pending_action == Some(Action::Launch) {
             self.tr("Start wird vorbereitet …", "Preparing launch …")
         } else if self.pending_action == Some(Action::Stop)
             || self.status()["game"]["state"] == "stopping"
@@ -785,6 +795,15 @@ impl App {
         note.into()
     }
     fn launch_note_text(&self) -> &str {
+        if self.is_steam() {
+            if !s(&self.status()["game"], "message").is_empty() {
+                return s(&self.status()["game"], "message");
+            }
+            return self.tr(
+                "Start und Spielupdates werden von Steam verwaltet.",
+                "Steam manages game launch and updates.",
+            );
+        }
         if self.pending_action == Some(Action::Launch) {
             self.tr(
                 "Dein Start wurde angefordert. Flightdeck bereitet den Simulator vor.",

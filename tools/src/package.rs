@@ -179,18 +179,31 @@ pub fn notices(root: &Path, metadata: &Path, tree: &str) -> Result<(Vec<u8>, Val
                 .and_then(|packages| packages.get(format!("{name}@{package_version}")))
                 .filter(|pinned| pinned["spdx"].is_string() && pinned["spdx"] == package["license"])
                 .ok_or_else(|| Failure(format!("Missing dependency license text: {name}")))?;
-            let revision = strict_json(
-                &read_regular(&folder.join(".cargo_vcs_info.json"), 16384)?,
-                "Crate revision",
-                16384,
-            )?;
+            let revision = if let Some(source) =
+                package["source"].as_str().filter(|s| s.starts_with("git+"))
+            {
+                source
+                    .rsplit_once('#')
+                    .map(|(_, revision)| revision.to_string())
+            } else {
+                strict_json(
+                    &read_regular(&folder.join(".cargo_vcs_info.json"), 16384)?,
+                    "Crate revision",
+                    16384,
+                )?["git"]["sha1"]
+                    .as_str()
+                    .map(str::to_string)
+            };
             let path = root.join(pinned["path"].as_str().unwrap_or_default());
             let inside = fs::canonicalize(&path).is_ok_and(|path| {
                 fs::canonicalize(root.join("compat/LICENSES/rust"))
                     .is_ok_and(|base| path.starts_with(base))
             });
             require(
-                revision.get("git").map(|git| &git["sha1"]) == Some(&pinned["revision"])
+                revision.as_deref() == pinned["revision"].as_str()
+                    && revision
+                        .as_ref()
+                        .is_some_and(|r| r.len() == 40 && r.bytes().all(|b| b.is_ascii_hexdigit()))
                     && pinned["revision"].is_string()
                     && inside
                     && Some(digest(&read_regular(&path, 1024 * 1024)?).as_str())

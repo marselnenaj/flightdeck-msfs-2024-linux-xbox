@@ -2,7 +2,7 @@ use crate::*;
 use iced::widget::{column, progress_bar};
 use model::Action::*;
 
-fn fenix_hook_failure(data: &Value) -> Option<&str> {
+pub(crate) fn fenix_hook_failure(data: &Value) -> Option<&str> {
     let job = &data["job"];
     // A persisted running record is not evidence that an app is still alive.
     // Current work takes precedence over the previous invocation's result.
@@ -105,7 +105,19 @@ impl App {
             )));
         }
         if yes(data, "update_available") {
-            manage = manage.push(self.paragraph(format!("{}: {}. {}", self.tr("Neuer Fenix-Patch", "New Fenix patch"), s(data, "version"), self.tr("Wird vor dem nächsten MSFS- oder Fenix-Start automatisch installiert. MSFS und Fenix vorher schließen.", "Installs automatically before the next MSFS or Fenix launch. Close MSFS and Fenix first."))));
+            let note = if self.is_steam() {
+                self.tr(
+                    "Beende Steam, MSFS und Fenix und wähle „Patch aktualisieren“.",
+                    "Close Steam, MSFS and Fenix, then choose Update patch.",
+                )
+            } else {
+                self.tr("Wird vor dem nächsten MSFS- oder Fenix-Start automatisch installiert. MSFS und Fenix vorher schließen.", "Installs automatically before the next MSFS or Fenix launch. Close MSFS and Fenix first.")
+            };
+            manage = manage.push(self.paragraph(format!(
+                "{}: {}. {note}",
+                self.tr("Neuer Fenix-Patch", "New Fenix patch"),
+                s(data, "version")
+            )));
         }
         manage = manage.push(
             self.control(
@@ -152,7 +164,7 @@ impl App {
     // Only the current runtime's validated snapshot may supply feedback. Keep
     // the last error and live progress beside the next action; full checks are
     // available in the management section below.
-    fn addon_feedback<'a>(&self, data: &Value) -> Element<'a, Message> {
+    pub(crate) fn addon_feedback<'a>(&self, data: &Value) -> Element<'a, Message> {
         let mut content = column![].spacing(8);
         for key in ["message", "unavailable_reason", "error", "startup_error"] {
             if !s(data, key).is_empty() && !(key == "message" && data["state"] == "legacy") {
@@ -538,7 +550,7 @@ impl App {
         self.disclosure(Disclosure::Gsx, "GSX Pro", progress.title, content)
     }
 
-    pub(crate) fn mods_page(&self) -> Element<'_, Message> {
+    pub(crate) fn community_card(&self) -> Element<'_, Message> {
         let mods = self.data("mods");
         let mut inventory = column![
             row![
@@ -603,11 +615,13 @@ impl App {
                         ("id", "Ordner"),
                         ("status", "Status"),
                     ],
-                ))
-                .push(self.action(
+                ));
+            if yes(mods, "can_remove") {
+                inventory = inventory.push(self.action(
                     "Deinstallation prüfen",
                     ModsPreview(s(item, "id").to_string()),
                 ));
+            }
         }
         if yes(mods, "limited") {
             inventory = inventory.push(
@@ -617,9 +631,12 @@ impl App {
                 ),
             );
         }
+        self.card("Community-Ordner", inventory)
+    }
+    pub(crate) fn mods_page(&self) -> Element<'_, Message> {
         column![self.heading(self.t("Deine Add-ons").to_string()),
             self.paragraph(self.t("Öffne die Einrichtung eines Add-ons oder verwalte unten deinen Community-Ordner.").to_string()),
-            self.fenix_card(),self.gsx_card(),self.card("Community-Ordner", inventory),
+            self.fenix_card(),self.gsx_card(),self.community_card(),
             self.paragraph(self.tr("Fenix und GSX vollständig deinstallieren: Öffne den jeweiligen offiziellen Installer oben. Das Entfernen eines Community-Eintrags entfernt keine Windows-Begleitprogramme.","To fully uninstall Fenix or GSX, open its official installer above. Removing a Community entry does not uninstall Windows companion applications.")),
             self.paragraph(self.t("Diese Liste zeigt Dateien im Community-Ordner. Sie bestätigt weder eine Lizenz noch die Kompatibilität eines Add-ons mit MSFS oder Linux.").to_string())].spacing(16).into()
     }

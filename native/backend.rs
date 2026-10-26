@@ -22,6 +22,11 @@ pub struct Active {
     pub pause: Arc<AtomicBool>,
 }
 pub struct State {
+    pub installations: crate::installations::Registry,
+    pub steam: Option<crate::installations::Installation>,
+    pub steam_session: Option<crate::steam_session::Session>,
+    pub(crate) steam_helpers: Option<crate::steam_companions::Session>,
+    pub steam_notice: String,
     pub runtime: Option<PathBuf>,
     pub known: BTreeMap<String, PathBuf>,
     pub process: Option<Child>,
@@ -125,6 +130,7 @@ impl Launcher {
     pub fn new(state_dir: PathBuf, selected: Option<&str>) -> Result<Arc<Self>> {
         files::private_dir(&state_dir)?;
         let state_dir = state_dir.canonicalize()?;
+        crate::installations::recover(&state_dir)?;
         let mut runtime = None;
         let mut known = BTreeMap::new();
         if let Ok(value) = runtime::value(&state_dir.join("config.json")) {
@@ -148,9 +154,49 @@ impl Launcher {
             known.insert(game.id().into(), root.clone());
         }
         let installation_report = crate::setup_diagnostics::load(&state_dir);
+        let mut installations = crate::installations::load(&state_dir)?;
+        let mut migrated = false;
+        for path in known.values().chain(runtime.iter()) {
+            if let Ok(game) = Game::for_runtime(path)
+                && !installations.entries.iter().any(
+                    |i| matches!(&i.source,crate::installations::Source::Xbox{path:p} if p==path),
+                )
+            {
+                installations
+                    .entries
+                    .push(crate::installations::Installation::new(
+                        game,
+                        crate::installations::Source::Xbox { path: path.clone() },
+                    )?);
+                migrated = true;
+            }
+        }
+        if installations.selected.is_none()
+            && let Some(path) = &runtime
+        {
+            installations.selected = installations
+                .entries
+                .iter()
+                .find(|i| matches!(&i.source,crate::installations::Source::Xbox{path:p} if p==path))
+                .map(|i| i.id.clone());
+            migrated = true;
+        }
+        if migrated {
+            crate::installations::save(&state_dir, &installations)?;
+        }
+        let steam = installations
+            .entries
+            .iter()
+            .find(|i| Some(&i.id) == installations.selected.as_ref() && i.steam())
+            .cloned();
         let app = Arc::new(Self {
             state_dir,
             state: Mutex::new(State {
+                installations,
+                steam,
+                steam_session: None,
+                steam_helpers: None,
+                steam_notice: String::new(),
                 runtime,
                 known,
                 process: None,
@@ -182,8 +228,12 @@ impl Launcher {
         self.state.lock().unwrap_or_else(|e| e.into_inner())
     }
     pub fn root(&self) -> Result<PathBuf> {
-        self.lock()
-            .runtime
+        let s = self.lock();
+        require(
+            s.steam.is_none(),
+            "Diese Aktion gehört zur Xbox-Installation. Für Steam die Steam-Verwaltung verwenden.",
+        )?;
+        s.runtime
             .clone()
             .ok_or(Error::Invalid("Zuerst eine Runtime auswählen."))
     }
@@ -198,7 +248,23 @@ impl Launcher {
             }
         }
     }
+    pub fn context(s: &State) -> String {
+        s.steam.as_ref().map(|i| i.context()).unwrap_or_else(|| {
+            s.runtime
+                .as_ref()
+                .map(|p| p.to_string_lossy().into_owned())
+                .unwrap_or_default()
+        })
+    }
     pub fn external(s: &State) -> bool {
+        if let Some(item) = &s.steam {
+            return s
+                .steam_session
+                .as_ref()
+                .is_some_and(|v| !v.seen && v.requested.elapsed().as_secs() < 180)
+                || s.steam_helpers.as_ref().is_some_and(|h| !h.finished())
+                || crate::steam_session::running(item).unwrap_or(true);
+        }
         let Some(root) = &s.runtime else {
             return false;
         };
@@ -229,12 +295,6 @@ impl Launcher {
             "Die Einrichtung benötigt ein beendetes Spiel und darf nur einmal laufen.",
         )
     }
-    fn persist(&self, s: &State) -> Result<()> {
-        files::atomic_json(
-            &self.state_dir.join("config.json"),
-            &json!({"schema":1,"runtime_path":s.runtime,"runtimes":s.known}),
-        )
-    }
     pub fn configure(&self, path: &str) -> Result<Value> {
         let selected = runtime::validate(path)?;
         let mut s = self.lock();
@@ -243,10 +303,26 @@ impl Launcher {
         if let Ok(game) = Game::for_runtime(&selected) {
             known.insert(game.id().into(), selected.clone());
         }
-        files::atomic_json(
-            &self.state_dir.join("config.json"),
+
+        let item = crate::installations::Installation::new(
+            Game::for_runtime(&selected)?,
+            crate::installations::Source::Xbox {
+                path: selected.clone(),
+            },
+        )?;
+        let mut registry = s.installations.clone();
+        registry.entries.retain(|i| i.id != item.id);
+        registry.selected = Some(item.id.clone());
+        registry.entries.push(item);
+        crate::installations::commit_selection(
+            &self.state_dir,
+            &registry,
             &json!({"schema":1,"runtime_path":selected,"runtimes":known}),
         )?;
+        s.installations = registry;
+        s.steam = None;
+        s.steam_session = None;
+        s.steam_helpers = None;
         s.runtime = Some(selected);
         s.known = known;
         s.exit_code = None;
@@ -266,18 +342,22 @@ impl Launcher {
             drop(s);
             return self.configure(path);
         }
-        let previous = s.known.insert(game.id().into(), selected);
-        if let Err(error) = self.persist(&s) {
-            match previous {
-                Some(path) => {
-                    s.known.insert(game.id().into(), path);
-                }
-                None => {
-                    s.known.remove(game.id());
-                }
-            }
-            return Err(error);
-        }
+        let mut known = s.known.clone();
+        known.insert(game.id().into(), selected.clone());
+        let item = crate::installations::Installation::new(
+            game,
+            crate::installations::Source::Xbox { path: selected },
+        )?;
+        let mut registry = s.installations.clone();
+        registry.entries.retain(|i| i.id != item.id);
+        registry.entries.push(item);
+        crate::installations::commit_selection(
+            &self.state_dir,
+            &registry,
+            &json!({"schema":1,"runtime_path":s.runtime,"runtimes":known}),
+        )?;
+        s.known = known;
+        s.installations = registry;
         Ok(json!({"ok":true}))
     }
     pub fn select_game(&self, id: &str) -> Result<Value> {
@@ -305,6 +385,9 @@ impl Launcher {
         Ok(json!({"ok":true}))
     }
     pub fn status(&self) -> Value {
+        if self.lock().steam.is_some() {
+            return crate::steam::status(self);
+        }
         let mut s = self.lock();
         Self::poll(&mut s);
         let checks = runtime::checks(s.runtime.as_deref());
@@ -352,7 +435,11 @@ impl Launcher {
         needs_runtime: bool,
     ) -> Result<Context> {
         Self::idle(s)?;
-        let root = s.runtime.clone();
+        let root = if s.steam.is_some() {
+            None
+        } else {
+            s.runtime.clone()
+        };
         require(
             !needs_runtime || root.is_some(),
             "Zuerst eine Runtime auswählen.",
@@ -371,7 +458,13 @@ impl Launcher {
         let id = uuid::Uuid::new_v4().simple().to_string();
         let cancel = Arc::new(AtomicBool::new(false));
         let pause = Arc::new(AtomicBool::new(false));
-        s.jobs.insert(kind.into(),json!({"id":id,"operation":operation,"state":"running","runtime_path":root,"message":"Vorgang wird vorbereitet …","started_at":files::now()}));
+        let job_context = if let Some(item) = &s.steam {
+            json!(item.context())
+        } else {
+            json!(root)
+        };
+        let installation_id = s.steam.as_ref().map(|i| i.id.clone());
+        s.jobs.insert(kind.into(),json!({"id":id,"operation":operation,"state":"running","runtime_path":job_context,"installation_id":installation_id,"message":"Vorgang wird vorbereitet …","started_at":files::now()}));
         s.active = Some(Active {
             id: id.clone(),
             kind: kind.into(),
@@ -546,11 +639,24 @@ impl Launcher {
         let game = Game::for_runtime(&root)?;
         let mut known = s.known.clone();
         known.insert(game.id().into(), root.clone());
-        files::atomic_json(
-            &self.state_dir.join("config.json"),
+        let item = crate::installations::Installation::new(
+            game,
+            crate::installations::Source::Xbox { path: root.clone() },
+        )?;
+        let mut registry = s.installations.clone();
+        registry.entries.retain(|i| i.id != item.id);
+        registry.selected = Some(item.id.clone());
+        registry.entries.push(item);
+        crate::installations::commit_selection(
+            &self.state_dir,
+            &registry,
             &json!({"schema":1,"runtime_path":root,"runtimes":known}),
         )?;
+        s.installations = registry;
         s.runtime = Some(root);
+        s.steam = None;
+        s.steam_session = None;
+        s.steam_helpers = None;
         s.known = known;
         s.exit_code = None;
         Ok(())

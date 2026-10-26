@@ -5,6 +5,7 @@ use std::{collections::BTreeMap, time::Duration};
 pub const RESOURCES: &[&str] = &[
     "status",
     "setup",
+    "installations",
     "game-update",
     "launcher-update",
     "cloud-saves",

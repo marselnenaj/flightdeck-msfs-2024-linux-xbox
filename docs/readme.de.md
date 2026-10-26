@@ -31,6 +31,10 @@ bleiben unter Updates sichtbar. Bei einer fehlgeschlagenen .NET-Verbindung
 startet Flightdeck den Wine-Prozess des kopierten Profils neu.
 Siehe [Änderungen](changelog.md).
 
+**In Entwicklung:** Steam-Auswahl für MSFS 2020/2024 und Fenix-Einrichtung als
+Beta. Die [Steam-Anleitung](steam.de.md) beschreibt den neuen Ablauf; diese
+Funktionen gehören noch nicht zum stabilen Download 0.2.29.
+
 In der [Flightdeck-Community auf Discord](https://discord.gg/fAhHR2DkqN) kannst du
 Fragen stellen, dein Linux-Setup teilen und an Flightdeck mitarbeiten.
 Reproduzierbare Fehler bitte über [GitHub Issues](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/issues) melden.

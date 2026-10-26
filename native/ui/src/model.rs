@@ -76,6 +76,10 @@ pub enum Action {
     Launch,
     Stop,
     Select(Edition),
+    SelectInstallation(String),
+    SteamOpen,
+    AddSteamRoot,
+    XboxSetup,
     Backup,
     Graphics,
     VrSave,
@@ -119,6 +123,7 @@ impl Default for Forms {
                 ("graphics", "auto".into()),
                 ("vr", "off".into()),
                 ("proton", "default".into()),
+                ("steam_client", "native".into()),
                 ("category", "installation".into()),
             ]),
             flags: BTreeMap::from([("keep_data", true)]),
@@ -169,6 +174,37 @@ impl App {
             return None;
         }
         let status = self.status();
+        if self.is_steam()
+            && matches!(
+                action,
+                Backup
+                    | Graphics
+                    | VrSave
+                    | VrCheck
+                    | SetupCheck
+                    | SetupStart
+                    | SetupControl(_)
+                    | Pick(_)
+                    | Game(_)
+                    | Cloud(_)
+                    | Automatic(_)
+                    | Gsx(_)
+                    | Proton
+                    | ProtonDefault
+                    | ProtonCancel
+                    | Maintenance(_)
+                    | MaintenanceStart
+                    | MaintenanceDiscard
+                    | Store(_)
+                    | Report
+                    | ReportDiscard
+                    | ModsPreview(_)
+                    | ModsRemove
+                    | ModsDiscard
+            )
+        {
+            return None;
+        }
         let root = self.runtime();
         let configured = yes(&status["runtime"], "configured");
         let idle = self.idle();
@@ -180,6 +216,29 @@ impl App {
                 body = json!({"language":language});
                 ("preferences", ["de", "en"].contains(language))
             }
+            SelectInstallation(id) => {
+                let data = self.data("installations");
+                let item = data["installations"]
+                    .as_array()?
+                    .iter()
+                    .find(|i| s(i, "id") == id)?;
+                body = json!({"installation_id":id,"binding":item["context"]});
+                (
+                    "installations/select",
+                    idle && self.fresh("installations")
+                        && yes(data, "can_select")
+                        && yes(item, "available"),
+                )
+            }
+            XboxSetup => ("installations/xbox-setup", safe_idle),
+            SteamOpen => ("steam/open", self.is_steam() && !self.reserved()),
+            AddSteamRoot => {
+                body = json!({"steam_root":self.forms.get("steam_root"),"client":self.forms.get("steam_client")});
+                (
+                    "installations/add-steam-root",
+                    safe_idle && !self.forms.get("steam_root").trim().is_empty(),
+                )
+            }
             Launch => (
                 "launch",
                 safe_idle
@@ -189,7 +248,8 @@ impl App {
             ),
             Stop => (
                 "stop",
-                yes(&status["game"], "managed") && yes(&status["game"], "can_stop"),
+                (yes(&status["game"], "managed") || self.is_steam())
+                    && yes(&status["game"], "can_stop"),
             ),
             Select(edition) => {
                 body = json!({"game_id":edition.id()});
@@ -409,10 +469,37 @@ impl App {
                 let data = self.data(if fenix { "fenix" } else { "gsx" });
                 let enabled = self.fresh(if fenix { "fenix" } else { "gsx" })
                     && s(data, "runtime_path") == root;
-                let change = enabled && safe_idle && yes(data, "can_change");
+                let change = enabled
+                    && safe_idle
+                    && yes(data, "can_change")
+                    && !(self.is_steam()
+                        && yes(data, "steam_running")
+                        && [
+                            "install",
+                            "configure",
+                            "restore",
+                            "installer",
+                            "select",
+                            "repair",
+                        ]
+                        .contains(op));
                 body = json!({"runtime_path":root});
                 if fenix {
                     match *op {
+                        "cancel" if self.is_steam() => {
+                            body["job_id"] = data["job"]["id"].clone();
+                            (
+                                "fenix/cancel",
+                                enabled && yes(data, "can_cancel") && active(&data["job"]),
+                            )
+                        }
+                        "select" => (
+                            "fenix/select",
+                            self.is_steam()
+                                && change
+                                && yes(data, "installed")
+                                && data["tool_selected"] != true,
+                        ),
                         "migrate" => (
                             "fenix/migrate",
                             change && data["state"] == "legacy" && yes(data, "migration_required"),

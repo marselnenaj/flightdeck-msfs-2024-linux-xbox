@@ -347,10 +347,12 @@ fn main() -> ExitCode {
                 );
                 return Ok(());
             }
-            if matches!(
-                flightdeck::components::state(launcher.lock().runtime.as_deref()),
-                "pending" | "interrupted" | "current"
-            ) && let Err(error) = flightdeck::components::refresh(&launcher)
+            if !flightdeck::steam::selected(&launcher)
+                && matches!(
+                    flightdeck::components::state(launcher.lock().runtime.as_deref()),
+                    "pending" | "interrupted" | "current"
+                )
+                && let Err(error) = flightdeck::components::refresh(&launcher)
             {
                 eprintln!(
                     "Flightdeck: {}",

@@ -1,5 +1,26 @@
 # Changes and release status
 
+## Unreleased — Steam beta
+
+- Detect MSFS 2020 and 2024 in native, Flatpak and Snap Steam libraries. Select
+  Xbox and Steam installations separately, preserving the existing Xbox config
+  for rollback. Bind actions to the selected installation and profile generation.
+- Launch through the matching Steam client and observe the actual simulator,
+  including external starts. Keep Xbox setup, Store updates and Xbox cloud sync
+  out of Steam profiles. Steam retains game downloads, updates and synchronization.
+- Use the pinned shared Fenix Rust engine for Steam setup, patch updates,
+  compatibility-tool selection, display configuration and restoration. Reuse
+  tools across supported profiles and keep cleanup confined to the selected game.
+- Add Steam pages, installation selection, Community-folder discovery and typed
+  Fenix setup diagnostics in English and German. Retain independent patch release
+  metadata and show current failures and cancellation controls.
+- Forward Steam's Windows-version requirement during .NET preparation. Preserve
+  JSON report hashes, strict decoding and canonical maintainer output after
+  enabling the shared engine's dependency features.
+- Validate synthetic profile lifecycles, HTTP source boundaries, both-language
+  rendering and an offline real-Wine setup → patch update → official Fenix hook →
+  restore sequence. Real Steam simulator flights still require tester validation.
+
 ## 0.2.29 — 26 October 2026
 
 - Recover interrupted Fenix update preparation by validating the preceding

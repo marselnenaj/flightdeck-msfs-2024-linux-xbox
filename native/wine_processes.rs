@@ -158,7 +158,32 @@ impl Processes {
                     return Ok(None);
                 };
                 use std::os::unix::ffi::OsStrExt;
-                if Path::new(std::ffi::OsStr::from_bytes(prefix)).canonicalize()? != self.prefix {
+                let prefix = Path::new(std::ffi::OsStr::from_bytes(prefix));
+                // Flatpak and pressure-vessel can bind a different directory at
+                // the same pathname. Compare the directory seen by the process,
+                // before considering the host's interpretation of that string.
+                let wanted = self.prefix.metadata()?;
+                let observed = prefix
+                    .strip_prefix("/")
+                    .ok()
+                    .and_then(|relative| entry.path().join("root").join(relative).metadata().ok());
+                let matches = match observed {
+                    Some(actual) => {
+                        actual.is_dir()
+                            && [actual.dev(), actual.ino()] == [wanted.dev(), wanted.ino()]
+                    }
+                    None => {
+                        let same_namespace = entry
+                            .path()
+                            .join("ns/mnt")
+                            .metadata()
+                            .ok()
+                            .zip(std::fs::metadata("/proc/self/ns/mnt").ok())
+                            .is_some_and(|(a, b)| [a.dev(), a.ino()] == [b.dev(), b.ino()]);
+                        same_namespace && prefix.canonicalize().is_ok_and(|p| p == self.prefix)
+                    }
+                };
+                if !matches {
                     return Ok(None);
                 }
                 let raw = files::read_public(&entry.path().join("cmdline"), 1024 * 1024)?;
@@ -277,6 +302,24 @@ pub fn idle(prefix: &Path) -> Result<()> {
         "Close MSFS, Fenix and all installers for this profile first.",
     )
 }
+/// Signal retained identities in one profile; never Steam or other games.
+pub fn terminate_named(prefix: &Path, names: &[&str], timeout: Duration) -> Result<()> {
+    let mut processes = Processes::new(prefix)?;
+    for handle in processes.handles.values() {
+        if names.contains(&handle.name.as_str()) && alive(&handle.fd) {
+            pidfd_send_signal(&handle.fd, Signal::TERM)?;
+        }
+    }
+    let deadline = Instant::now() + timeout;
+    while processes.any(Some(names)) && Instant::now() < deadline {
+        std::thread::sleep(Duration::from_millis(50));
+        processes.collect()?;
+    }
+    require(
+        !processes.any(Some(names)),
+        "Der Prozess läuft noch. Bitte den Simulator oder Fenix direkt beenden.",
+    )
+}
 
 /// A cached runner may be used with a prefix outside this runtime. Do not
 /// reclaim it merely because the runtime's current prefix is idle.
@@ -361,7 +404,10 @@ pub fn status(prefix: &Path) -> (bool, bool) {
         .unwrap_or((false, false))
 }
 pub fn stop(root: &Path, names: &[&str]) -> Result<()> {
-    let mut processes = Processes::new(&root.join("local/msfs-prefix"))?;
+    stop_prefix(&root.join("local/msfs-prefix"), &root.join("runner"), names)
+}
+pub fn stop_prefix(prefix: &Path, runner: &Path, names: &[&str]) -> Result<()> {
+    let mut processes = Processes::new(prefix)?;
     processes.check_game()?;
     if processes.any(Some(names)) {
         let named: Vec<_> = processes
@@ -373,13 +419,13 @@ pub fn stop(root: &Path, names: &[&str]) -> Result<()> {
             .map(|v| v.name.clone())
             .collect();
         if !named.is_empty() {
-            let mut c = Command::new(crate::runtime::wine(&root.join("runner")));
+            let mut c = Command::new(crate::runtime::wine(runner));
             c.arg("taskkill.exe");
             for name in named {
                 c.args(["/IM", &name]);
             }
             c.env_clear()
-                .envs(wine::environment(&processes.prefix, &root.join("runner")))
+                .envs(wine::environment(&processes.prefix, runner))
                 .stdin(Stdio::null())
                 .stdout(Stdio::null())
                 .stderr(Stdio::null());

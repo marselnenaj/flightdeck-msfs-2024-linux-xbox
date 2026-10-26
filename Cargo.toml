@@ -20,6 +20,7 @@ name = "flightdeck-rust"
 path = "native/main.rs"
 
 [dependencies]
+fenix-patch = { git = "https://github.com/marselnenaj/fenix-a320-linux-patch", rev = "884bddebad316f130ed0f8df4dedf7342c6c3fbf" }
 flightdeck-ui = { path = "native/ui" }
 tar = "0.4"
 flate2 = "1"
@@ -37,7 +38,7 @@ clap = { version = "4.6.6", features = ["derive"] }
 hex = "0.4.3"
 rustix = { version = "1.1.4", features = ["fs", "process", "pipe", "event", "stdio"] }
 serde = { version = "1.0.229", features = ["derive"] }
-serde_json = "1"
+serde_json = { version = "1", features = ["preserve_order", "arbitrary_precision", "raw_value"] }
 sha2 = "0.10.9"
 uuid = { version = "1.26.0", features = ["v4"] }
 

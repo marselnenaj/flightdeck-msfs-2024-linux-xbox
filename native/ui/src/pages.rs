@@ -520,6 +520,9 @@ impl App {
         )
     }
     pub(crate) fn page_view(&self) -> Element<'_, Message> {
+        if self.is_steam() && !matches!(self.page, Page::Updates | Page::Credits) {
+            return self.steam_page();
+        }
         match self.page {
             Page::Setup => self.setup_page(),
             Page::Updates => self.updates_page(),
@@ -531,6 +534,9 @@ impl App {
         }
     }
     pub(crate) fn overview_details(&self, width: f32, _compact: bool) -> Element<'_, Message> {
+        if self.is_steam() {
+            return self.steam_page();
+        }
         let updates = self.card(
             "Updates",
             column![
@@ -902,6 +908,25 @@ impl App {
         } else {
             self.t(presentation::launcher_update(launcher)).into()
         };
+        if self.is_steam() {
+            return column![
+                self.heading(self.tr(
+                    "Updates für Flightdeck & Simulator",
+                    "Flightdeck & simulator updates"
+                )),
+                self.update_panel(
+                    self.t("Flightdeck · GitHub-Releases"),
+                    "refresh",
+                    &launcher_title,
+                    launcher,
+                    launcher_view
+                ),
+                self.steam_page(),
+                self.steam_fenix_card()
+            ]
+            .spacing(20)
+            .into();
+        }
         let mut game_actions = vec![];
         if !active(&game["job"]) {
             game_actions.push(if yes(game, "auth_required") {
@@ -1180,11 +1205,12 @@ impl App {
         .spacing(20)
         .into()
     }
-    fn diagnostic_summary<'a>(&self, summary: &Value) -> Element<'a, Message> {
+    pub(crate) fn diagnostic_summary<'a>(&self, summary: &Value) -> Element<'a, Message> {
         let mut out = Column::new().spacing(14);
         for (key, title) in [
             ("graphics", "Grafik und Vulkan"),
             ("proton", "Proton-Version"),
+            ("fenix", "Fenix-Einrichtung"),
             ("audio", "Audio und Medien"),
             ("vr", "Virtual Reality"),
             ("cloud_sync", "Xbox-Cloud-Abgleich"),

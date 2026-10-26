@@ -17,6 +17,9 @@ pub const PACKAGES: [(&str, &str, &str); 2] = [
         "0a3a390c47e639d0f7fc65b21195fee6b7f65b066f80f70c60fab191d14b7e40",
     ),
 ];
+pub const INSTALLER_OVERRIDES: &str = "fusion=b;winemenubuilder.exe=d";
+// Wine exposes the low byte of Windows ERROR_SUCCESS_REBOOT_REQUIRED (3010).
+pub const INSTALLER_EXIT_CODES: &[i32] = &[0, 194];
 pub trait SetupWine {
     fn prefix(&self) -> &Path;
     fn run(&mut self, args: &[String], installer: bool, timeout: Duration) -> Result<()>;
@@ -85,8 +88,8 @@ fn installer(wine: &mut impl SetupWine, package: &Path, args: &[&str]) -> Result
     command.extend(args.iter().map(|v| (*v).into()));
     wine.run(&command, true, Duration::from_secs(1800))
 }
-fn install40(wine: &mut impl SetupWine, package: &Path) -> Result<()> {
-    windows(wine, "winxp")?;
+fn install40(wine: &mut impl SetupWine, package: &Path, first_version: &str) -> Result<()> {
+    windows(wine, first_version)?;
     installer(wine, package, &["/q", "/c:install.exe /q /norestart"])?;
     restart(wine)
 }
@@ -94,9 +97,21 @@ const NEWER: &str =
     "A newer .NET Framework is installed; the pinned 4.8 package cannot repair it safely.";
 pub fn prepare(
     wine: &mut impl SetupWine,
+    obtain: impl FnMut(&str, &str, &str) -> Result<PathBuf>,
+    progress: impl FnMut(&str),
+) -> Result<()> {
+    prepare_with_version(wine, obtain, progress, "winxp")
+}
+pub fn prepare_with_version(
+    wine: &mut impl SetupWine,
     mut obtain: impl FnMut(&str, &str, &str) -> Result<PathBuf>,
     mut progress: impl FnMut(&str),
+    first_version: &str,
 ) -> Result<()> {
+    require(
+        ["winxp", "win7"].contains(&first_version),
+        "Invalid .NET preparation version.",
+    )?;
     if framework::status(wine.prefix()).ready {
         settings(wine)?;
     }
@@ -155,7 +170,7 @@ pub fn prepare(
     let result = (|| {
         let initial = framework::status(wine.prefix());
         if !initial.x86.clr && !initial.x64.clr {
-            install40(wine, &packages[0])?;
+            install40(wine, &packages[0], first_version)?;
         }
         settings(wine)?;
         windows(wine, "win7")?;
@@ -175,7 +190,7 @@ pub fn prepare(
                         installer(wine, &packages[1], &["/uninstall", "/q", "/norestart"])?;
                         restart(wine)?;
                     }
-                    install40(wine, &packages[0])?;
+                    install40(wine, &packages[0], first_version)?;
                     settings(wine)?;
                     windows(wine, "win7")?;
                 }

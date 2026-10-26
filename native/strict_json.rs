@@ -67,10 +67,40 @@ impl<'de> Deserialize<'de> for Strict {
                 Ok(Strict(Value::Object(v)))
             }
         }
-        d.deserialize_any(V)
+        let raw = Box::<serde_json::value::RawValue>::deserialize(d)?;
+        let mut parser = serde_json::Deserializer::from_str(raw.get());
+        match raw.get().as_bytes().first() {
+            Some(b'{') => parser.deserialize_map(V).map_err(de::Error::custom),
+            Some(b'[') => parser.deserialize_seq(V).map_err(de::Error::custom),
+            _ => {
+                let value: Value = serde_json::from_str(raw.get()).map_err(de::Error::custom)?;
+                if value
+                    .as_number()
+                    .is_some_and(|number| !number.as_f64().is_some_and(f64::is_finite))
+                {
+                    return Err(de::Error::custom("Non-finite JSON number"));
+                }
+                Ok(Strict(value))
+            }
+        }
     }
 }
 pub(crate) fn decode(bytes: &[u8]) -> serde_json::Result<Value> {
+    // Inspect real object/array syntax through RawValue, so serde_json's
+    // private number map tokens cannot be mistaken for actual object members.
     let Strict(value) = serde_json::from_slice(bytes)?;
     Ok(value)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn numbers_remain_numbers_and_private_looking_objects_remain_objects() {
+        let value=decode(br#"{"float":0.125,"integer":18446744073709551615,"literal":{"$serde_json::private::Number":"1.5"}}"#).expect("JSON");
+        assert_eq!(value["float"].as_f64(), Some(0.125));
+        assert_eq!(value["integer"].as_u64(), Some(u64::MAX));
+        assert!(value["literal"].is_object());
+        assert!(decode(br#"{"nested":{"a":1.5,"a":2.5}}"#).is_err());
+    }
 }

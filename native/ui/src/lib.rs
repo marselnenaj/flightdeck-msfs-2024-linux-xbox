@@ -9,6 +9,7 @@ pub mod platform;
 mod presentation;
 mod release_notes;
 mod setup_page;
+mod steam;
 pub use client::{Client, Request, Snapshot};
 use iced::{Subscription, Task};
 pub use model::Action;
@@ -130,6 +131,7 @@ pub enum Disclosure {
     Report,
     Diagnostics,
     LauncherRollback,
+    Installations,
 }
 impl Disclosure {
     fn group(self) -> Option<u8> {
@@ -382,9 +384,22 @@ impl App {
                 )
                 .push(Space::new().height(15));
         }
+        if self.page != Page::Setup
+            && self.data("installations")["installations"]
+                .as_array()
+                .is_some_and(|items| items.iter().any(|i| i["source"] == "steam"))
+        {
+            main = main
+                .push(self.installation_picker())
+                .push(Space::new().height(15));
+        }
         if self.page == Page::Overview {
             main = main
-                .push(self.edition_picker())
+                .push(if self.is_steam() {
+                    Space::new().height(0).into()
+                } else {
+                    self.edition_picker()
+                })
                 .push(Space::new().height(15))
                 .push(self.hero(content_width, compact, hero_height))
                 .push(Space::new().height(20))
@@ -1013,7 +1028,11 @@ impl App {
                 ),
             Space::new().height(7),
             label(
-                self.tr("Xbox-PC-Version · Linux", "Xbox PC version · Linux"),
+                if self.is_steam() {
+                    self.tr("Steam-Version · Linux", "Steam version · Linux")
+                } else {
+                    self.tr("Xbox-PC-Version · Linux", "Xbox PC version · Linux")
+                },
                 18.0,
                 Weight::Normal,
                 iced::color!(0xbdd1e5)

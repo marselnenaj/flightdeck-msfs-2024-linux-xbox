@@ -7,6 +7,14 @@ use crate::{
 use serde_json::{Value, json};
 use std::sync::Arc;
 pub fn get(app: &Arc<Launcher>, path: &str) -> Option<Result<Value>> {
+    if path == "/api/installations" {
+        return Some(Ok(crate::installations::snapshot(app)));
+    }
+    if crate::steam::selected(app)
+        && let Some(result) = crate::steam::get(app, path)
+    {
+        return Some(result);
+    }
     Some(match path {
         "/api/status" => Ok(app.status()),
         "/api/diagnostics" => Ok(crate::diagnostics::snapshot(app)),
@@ -29,6 +37,18 @@ pub fn get(app: &Arc<Launcher>, path: &str) -> Option<Result<Value>> {
     })
 }
 pub fn post(app: &Arc<Launcher>, path: &str, data: &Value, locale: &str) -> Option<Result<Value>> {
+    if path == "/api/installations/select" {
+        return Some(crate::installations::select(app, data));
+    }
+    if path == "/api/installations/xbox-setup" {
+        return Some(crate::installations::xbox_setup(app));
+    }
+    if path == "/api/installations/add-steam-root" {
+        return Some(crate::installations::add_root(app, data));
+    }
+    if let Some(result) = crate::steam::post(app, path, data) {
+        return Some(result);
+    }
     Some(match path {
         "/api/preferences" => {
             let language = string(data, "language");

@@ -55,6 +55,9 @@ pub fn check(app: &Arc<Launcher>) -> Result<Value> {
     crate::fenix_update::check(app, false)?;
     let mut s = app.lock();
     Launcher::open(&s)?;
+    if s.steam.is_some() {
+        return Ok(json!({"ok":true,"managed_by":"steam"}));
+    }
     let Some(root) = s.runtime.clone() else {
         return Ok(json!({"ok":true}));
     };

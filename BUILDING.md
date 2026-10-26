@@ -156,17 +156,22 @@ docker build -t flightdeck-native-build:ubuntu24.04 -f scripts/native-build.Dock
 mkdir -p build/native-baseline
 flightdeck_rust_root="$(rustc --print sysroot)"
 flightdeck_registry="${CARGO_HOME:-$HOME/.cargo}/registry"
+flightdeck_git="${CARGO_HOME:-$HOME/.cargo}/git"
 docker run --rm --network none --read-only --user "$(id -u):$(id -g)" \
   --tmpfs /tmp:rw,mode=1777 --tmpfs /cargo:rw,mode=1777 \
   --mount "type=bind,src=$PWD,dst=/src,readonly" \
   --mount "type=bind,src=$PWD/build/native-baseline,dst=/build" \
   --mount "type=bind,src=$flightdeck_rust_root,dst=/opt/rust,readonly" \
   --mount "type=bind,src=$flightdeck_registry,dst=/cargo/registry,readonly" \
+  --mount "type=bind,src=$flightdeck_git,dst=/cargo/git,readonly" \
   flightdeck-native-build:ubuntu24.04 \
   cargo run --offline --locked -p flightdeck-tools -- build-native --offline
 ```
 
-Populate the Cargo registry on the host first with `cargo fetch --locked`.
+Populate the Cargo registry and Git dependency cache on the host first with
+`cargo fetch --locked`. The Steam Fenix engine is pinned to the exact Git
+revision in `Cargo.toml` and `Cargo.lock`; do not replace it with an unreviewed
+local checkout.
 Package `build/native-baseline/target/release/flightdeck-rust` in place of the
 host release binary. The build mounts source, toolchain and registry read-only,
 runs without network and writes only to the explicit build output.

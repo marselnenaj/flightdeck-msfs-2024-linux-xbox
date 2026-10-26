@@ -171,6 +171,49 @@ fn mono_registry_advertisement_without_clrs_still_bootstraps_40() {
     assert!(fake.calls.iter().any(|v| v[0] == "uninstaller"));
     assert!(framework::status(temp.path()).ready);
 }
+
+#[test]
+fn steam_keeps_its_windows7_bootstrap_policy_and_xbox_keeps_windows_xp() {
+    for first in ["win7", "winxp"] {
+        let temp = tempfile::tempdir().unwrap();
+        framework_files(temp.path(), false, false, 0);
+        let mut fake = Fake::new(temp.path());
+        if first == "win7" {
+            framework_repair::prepare_with_version(
+                &mut fake,
+                |name, _, _| Ok(PathBuf::from(name)),
+                |_| {},
+                first,
+            )
+            .unwrap();
+        } else {
+            prepare(&mut fake).unwrap();
+        }
+        let install = fake
+            .calls
+            .iter()
+            .position(|args| args[0].ends_with("dotNetFx40_Full_x86_x64.exe"))
+            .unwrap();
+        let version = fake.calls[..install]
+            .iter()
+            .rev()
+            .find(|args| args[0] == "reg" && args[2] == "Version")
+            .unwrap();
+        assert_eq!(version[3], first);
+        assert_eq!(
+            fake.calls
+                .iter()
+                .filter(|args| args[0].ends_with("csc.exe"))
+                .count(),
+            2
+        );
+        assert!(
+            fake.calls
+                .iter()
+                .any(|args| args[0] == "reg" && args[2] == "Version" && args[3] == "win10")
+        );
+    }
+}
 #[test]
 fn no_op_msi_repair_falls_back_to_a_bounded_reinstall() {
     let temp = tempfile::tempdir().unwrap();

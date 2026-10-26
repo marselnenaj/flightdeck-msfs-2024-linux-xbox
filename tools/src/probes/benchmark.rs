@@ -119,10 +119,10 @@ fn summary<T: Copy + PartialOrd + Into<f64> + Into<Value>>(samples: &[T]) -> Res
         ((low + high) / 2.0).into()
     };
     let p95 = ordered[(ordered.len() - 1).min((ordered.len() as f64 * 0.95) as usize)];
-    Ok(
-        json!({"samples": ordered.len(), "median": median, "min": Into::<Value>::into(min),
-        "p95": Into::<Value>::into(p95), "max": Into::<Value>::into(max)}),
-    )
+    let mut result = json!({"samples": ordered.len(), "median": median, "min": Into::<Value>::into(min),
+        "p95": Into::<Value>::into(p95), "max": Into::<Value>::into(max)});
+    result.sort_all_objects();
+    Ok(result)
 }
 
 /// Rust first on odd repeats and Python first on even ones, so neither

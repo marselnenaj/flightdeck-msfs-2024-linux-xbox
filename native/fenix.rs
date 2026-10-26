@@ -699,51 +699,7 @@ fn invocation_log(
     offset: u64,
     attempt: &mut Option<crate::fenix_diagnostics::Attempt>,
 ) -> Result<crate::fenix_installer::Hooks> {
-    let result = crate::fenix_installer::scan_log(path, &wine.log, offset);
-    if let Some(attempt) = attempt {
-        match &result {
-            Ok(hooks) => {
-                attempt.evidence_complete = true;
-                attempt.managed_exception_types = hooks
-                    .managed_exception_types
-                    .iter()
-                    .map(|kind| (*kind).into())
-                    .collect();
-                attempt.clr_exception_code = hooks.clr_exception_code.map(Into::into);
-                if let Some(kind) = hooks.hook {
-                    attempt.hook = Some(kind.into());
-                }
-                if let Some(code) = hooks.exit_code {
-                    attempt.hook_exit_code = Some(code);
-                }
-                if let Some(version) = &hooks.package_version {
-                    attempt.package_version = Some(version.clone());
-                }
-                if let Some(failure) = hooks.failure() {
-                    attempt.failure = Some(failure.into());
-                }
-                // A direct repair reports its exit status outside Velopack's
-                // log. Associate only observed exception symbols with that
-                // failure; evidence_complete describes reading, not causality.
-                if hooks.has_managed_exception()
-                    && matches!(
-                        attempt.failure.as_deref(),
-                        Some("hook_nonzero" | "hook_failed" | "hook_incomplete")
-                    )
-                {
-                    attempt.failure = Some("managed_exception".into());
-                }
-            }
-            Err(error) => {
-                attempt.failure = Some(match error {
-                    Error::Invalid("Das Fenix-Protokoll wurde während der Installation verändert.") => "log_changed",
-                    Error::Invalid("Das Fenix-Protokoll ist zu groß. Bitte den lokalen Installationsfehler prüfen.") => "log_too_large",
-                    _ => "log_unavailable",
-                }.into());
-            }
-        }
-    }
-    result
+    crate::fenix_diagnostics::invocation_log(&wine.log, path, offset, attempt)
 }
 
 fn windows_app(ctx: &Context, operation: &str, data: &Value) -> Result<()> {

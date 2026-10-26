@@ -99,8 +99,8 @@ const GROUPS: &[Group] = &[
             },
             Credit {
                 name: "Fenix A320 Linux Patch",
-                de: "Separate, optional installierte Linux-Anpassungen für Fenix und deren Mitwirkende.",
-                en: "Separate, optionally installed Linux adaptations for Fenix and their contributors.",
+                de: "Fenix-Linux-Patch und gemeinsam verwendeter Installer-Code; Dank an alle Mitwirkenden.",
+                en: "Fenix Linux adaptations and shared installer code; thanks to its contributors.",
                 url: "https://github.com/marselnenaj/fenix-a320-linux-patch",
             },
         ],

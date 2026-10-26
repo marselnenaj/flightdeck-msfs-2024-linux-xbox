@@ -47,7 +47,14 @@ fn environment_from(
     runner: &Path,
     inherited: impl IntoIterator<Item = (String, String)>,
 ) -> BTreeMap<String, String> {
-    let mut env: BTreeMap<_, _> = inherited
+    let mut env = inherited_environment(inherited);
+    configure_environment(prefix, runner, &mut env);
+    env
+}
+pub(crate) fn inherited_environment(
+    inherited: impl IntoIterator<Item = (String, String)>,
+) -> BTreeMap<String, String> {
+    inherited
         .into_iter()
         .filter(|(key, _)| {
             ![
@@ -64,7 +71,9 @@ fn environment_from(
                     .iter()
                     .any(|name| key.eq_ignore_ascii_case(name))
         })
-        .collect();
+        .collect()
+}
+fn configure_environment(prefix: &Path, runner: &Path, env: &mut BTreeMap<String, String>) {
     for (key, value) in [
         ("WINEARCH", "win64"),
         ("WINEESYNC", "0"),
@@ -107,7 +116,6 @@ fn environment_from(
     {
         flags.push_str(" --disable-features=HideCursorWhileTyping");
     }
-    env
 }
 pub struct Wine<'a> {
     pub prefix: PathBuf,
@@ -260,8 +268,12 @@ impl crate::framework_repair::SetupWine for StagedWine<'_> {
         self.check()?;
         self.wine.run(
             args,
-            installer.then_some("fusion=b;winemenubuilder.exe=d"),
-            if installer { &[0, 194] } else { &[0] },
+            installer.then_some(crate::framework_repair::INSTALLER_OVERRIDES),
+            if installer {
+                crate::framework_repair::INSTALLER_EXIT_CODES
+            } else {
+                &[0]
+            },
             timeout,
         )?;
         Ok(())

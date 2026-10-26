@@ -276,6 +276,105 @@ fn checks(client: &Client, work: &Path) -> Result<usize> {
     ensure!(config["runtime_path"] == text(&other));
     ensure!(post("/api/game/select", json!({"game_id": "msfs2024"}))? == 200);
     checks += 10;
+    // The same edition can be selected independently from Steam. Verify both
+    // storefront admission and stale physical-profile bindings over real HTTP.
+    let steam = work.join("Steam client");
+    let steam_game = steam.join("steamapps/common/Synthetic MSFS");
+    let steam_prefix = steam.join("steamapps/compatdata/2537590/pfx");
+    for path in [&steam_game, &steam_prefix, &steam.join("config")] {
+        directory(path)?;
+    }
+    fs::write(
+        steam.join("config/config.vdf"),
+        "\"InstallConfigStore\" {}\n",
+    )?;
+    fs::write(
+        steam.join("steamapps/appmanifest_2537590.acf"),
+        "\"AppState\" {\"appid\" \"2537590\" \"installdir\" \"Synthetic MSFS\"}",
+    )?;
+    fs::write(steam_prefix.join("system.reg"), "synthetic Steam registry")?;
+    ensure!(
+        post(
+            "/api/installations/add-steam-root",
+            json!({"steam_root":steam,"client":"native"})
+        )? == 200
+    );
+    let catalog = client.get("/api/installations")?.json();
+    let entries = catalog["installations"]
+        .as_array()
+        .ok_or_else(|| Failure("No installation inventory".into()))?;
+    let steam_item = entries
+        .iter()
+        .find(|i| i["source"] == "steam" && i["path"] == text(&steam_game))
+        .ok_or_else(|| Failure("Steam MSFS was not detected".into()))?
+        .clone();
+    let xbox_item = entries
+        .iter()
+        .find(|i| i["source"] == "xbox" && i["context"] == text(&runtime))
+        .ok_or_else(|| Failure("Xbox MSFS was lost".into()))?
+        .clone();
+    ensure!(
+        post(
+            "/api/installations/select",
+            json!({"installation_id":steam_item["id"],"binding":steam_item["context"]})
+        )? == 200
+    );
+    let selected = client.get("/api/status")?.json();
+    ensure!(selected["runtime"]["source"] == "steam" && selected["cloud"]["enabled"] == false);
+    let old_context = json!(text(&runtime)).to_string();
+    let old_headers = [
+        ("X-Flightdeck-Token", token),
+        ("X-Flightdeck-Context", old_context.as_str()),
+    ];
+    ensure!(
+        client.status(
+            "/api/fenix/select",
+            Body::Json(json!({})),
+            Some(&old_headers)
+        )? == 409
+    );
+    for path in [
+        "/api/setup/check",
+        "/api/cloud-saves/import",
+        "/api/game-update/start",
+        "/api/graphics",
+        "/api/mods/preview-remove",
+    ] {
+        ensure!(
+            post(path, json!({}))? == 409,
+            "Steam admitted an Xbox action: {path}"
+        );
+        checks += 1;
+    }
+    let steam_context = selected["runtime"]["path"].to_string();
+    fs::rename(
+        &steam_prefix,
+        steam_prefix.with_file_name("before-recreated-pfx"),
+    )?;
+    directory(&steam_prefix)?;
+    fs::write(steam_prefix.join("system.reg"), "recreated Steam registry")?;
+    let stale_headers = [
+        ("X-Flightdeck-Token", token),
+        ("X-Flightdeck-Context", steam_context.as_str()),
+    ];
+    ensure!(
+        client.status(
+            "/api/fenix/select",
+            Body::Json(json!({})),
+            Some(&stale_headers)
+        )? == 409
+    );
+    ensure!(client.get("/api/status")?.json()["setup"]["busy"] == false);
+    let legacy: Value = serde_json::from_slice(&fs::read(work.join("state/config.json"))?)?;
+    ensure!(legacy["runtime_path"] == text(&runtime));
+    ensure!(
+        post(
+            "/api/installations/select",
+            json!({"installation_id":xbox_item["id"],"binding":xbox_item["context"]})
+        )? == 200
+    );
+    ensure!(client.get("/api/status")?.json()["runtime"]["path"] == text(&runtime));
+    checks += 8;
     ensure!(
         post(
             "/api/graphics",

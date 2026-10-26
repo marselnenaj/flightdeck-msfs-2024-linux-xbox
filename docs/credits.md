@@ -25,7 +25,7 @@ English, including the compact icon navigation and without a configured game.
 - **tuxuser / eappx-rs** and **nlohmann / JSON for Modern C++**.
 - **DXVK**, **VKD3D-Proton**, GStreamer and FFmpeg, including their contributors.
 - **Rust**, **iced**, **tiny-skia** and all production Rust dependencies.
-- **Fenix A320 Linux Patch**, a separately installed optional integration.
+- **Fenix A320 Linux Patch**, the optional patch and shared Rust Steam installer engine.
 
 Project and contributor credits acknowledge their work; they do not imply
 endorsement or that every external program is bundled. Compatibility components

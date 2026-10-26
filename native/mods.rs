@@ -18,6 +18,7 @@ use std::{
     time::{Duration, Instant},
 };
 
+pub type Locations = (Vec<(PathBuf, &'static str)>, bool);
 const REMOVAL_STALE: &str =
     "Der Community-Eintrag hat sich geändert. Bitte die Deinstallation erneut prüfen.";
 #[derive(Clone)]
@@ -367,7 +368,7 @@ pub fn family(root: &Path) -> Result<Option<String>> {
     }
     Ok(Some(format!("{}_{}", identity.name, suffix)))
 }
-pub fn locations(root: &Path) -> Result<(Vec<(PathBuf, &'static str)>, bool)> {
+pub fn locations(root: &Path) -> Result<Locations> {
     let prefix = root.join("local/msfs-prefix");
     let mut candidates = Vec::new();
     let settings = root.join("private/runtime.json");
@@ -398,13 +399,18 @@ pub fn locations(root: &Path) -> Result<(Vec<(PathBuf, &'static str)>, bool)> {
             }
         }
     }
+    let (found, limited) =
+        profile_locations(&prefix, Game::for_runtime(root)?, family(root)?.as_deref())?;
+    candidates.extend(found);
+    Ok((candidates, limited))
+}
+pub fn profile_locations(prefix: &Path, game: Game, family: Option<&str>) -> Result<Locations> {
+    let mut candidates = Vec::new();
     let users = prefix.join("drive_c/users");
     if !users.is_dir() {
-        return Ok((candidates, false));
+        return Ok((Vec::new(), false));
     }
     let (profiles, limited) = children(&users, 16)?;
-    let family = family(root)?;
-    let game = Game::for_runtime(root)?;
     let pattern = regex::Regex::new(r#"(?m)^\s*InstalledPackagesPath\s+"([^"\r\n]+)"\s*$"#)
         .expect("constant UserCfg regex");
     for profile in profiles {
@@ -434,7 +440,7 @@ pub fn locations(root: &Path) -> Result<(Vec<(PathBuf, &'static str)>, bool)> {
                 paths.len() == 1,
                 "Mehrdeutiger Paketordner in der Spielkonfiguration.",
             )?;
-            let path = configured_path(&paths[0][1], &prefix)?;
+            let path = configured_path(&paths[0][1], prefix)?;
             candidates.push((case_path(&path, &["Community"])?, "usercfg"));
         }
     }
@@ -510,15 +516,31 @@ pub fn snapshot(app: &Launcher) -> Value {
     let busy = s.active.is_some() || s.closing;
     let job = s.jobs.get("mods").cloned().unwrap_or(Value::Null);
     drop(s);
+    let locations = root.as_ref().map(|root| locations(root));
+    folder_snapshot(
+        root.as_ref().map(|p| p.to_string_lossy().into_owned()),
+        locations,
+        busy,
+        removable,
+        job,
+    )
+}
+fn folder_snapshot(
+    context: Option<String>,
+    locations: Option<Result<Locations>>,
+    busy: bool,
+    removable: bool,
+    job: Value,
+) -> Value {
     let mut result = json!({"state":"unconfigured","message":"Zuerst eine Runtime einrichten oder auswählen.","folder_path":null,"source":null,"can_open":false,"mods":[],"count":0,"scanned_count":0,"limited":false});
-    result["runtime_path"] = json!(root);
+    result["runtime_path"] = json!(context);
     result["can_remove"] = json!(false);
     result["job"] = job;
-    let Some(root) = root else {
+    let Some(locations) = locations else {
         return result;
     };
     let loaded = (|| -> Result<Value> {
-        let (locations, limited) = locations(&root)?;
+        let (locations, limited) = locations?;
         let mut unique = BTreeMap::new();
         for (path, source) in locations {
             unique.insert(resolve(&path)?, source);
@@ -589,4 +611,52 @@ pub fn open_folder(app: &Launcher, data: &Value) -> Result<Value> {
     )?;
     process::open_uri(uri.as_str())?;
     Ok(json!({"ok":true,"message":"Der Community-Ordner wird im Dateimanager geöffnet."}))
+}
+
+pub fn steam_snapshot(app: &Launcher) -> Value {
+    let s = app.lock();
+    let Some(item) = s.steam.clone() else {
+        return Value::Null;
+    };
+    let busy = s.active.is_some() || s.closing;
+    drop(s);
+    let locations = item
+        .validate()
+        .and_then(|()| profile_locations(&item.prefix(), item.game, None));
+    folder_snapshot(
+        Some(item.context()),
+        Some(locations),
+        busy,
+        false,
+        Value::Null,
+    )
+}
+pub fn steam_open_folder(app: &Launcher, data: &Value) -> Result<Value> {
+    let context = {
+        let s = app.lock();
+        s.steam
+            .as_ref()
+            .map(|i| i.context())
+            .ok_or(Error::Invalid("Keine Steam-Installation ausgewählt."))?
+    };
+    require(
+        data.get("runtime_path").is_none() || data["runtime_path"] == context,
+        "Die ausgewählte Installation hat sich geändert. Bitte den Status neu laden.",
+    )?;
+    let value = steam_snapshot(app);
+    require(
+        value["can_open"] == true,
+        "Der Community-Ordner kann gerade nicht geöffnet werden.",
+    )?;
+    let path = crate::backend::string(&value, "folder_path")?;
+    let uri = reqwest::Url::from_file_path(path)
+        .map_err(|_| Error::Invalid("Ungültiger Community-Pfad."))?;
+    let s = app.lock();
+    Launcher::open(&s)?;
+    require(
+        s.active.is_none() && s.steam.as_ref().is_some_and(|i| i.context() == context),
+        "Die ausgewählte Installation hat sich geändert. Bitte den Status neu laden.",
+    )?;
+    process::open_uri(uri.as_str())?;
+    Ok(json!({"ok":true}))
 }

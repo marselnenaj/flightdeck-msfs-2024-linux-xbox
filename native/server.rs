@@ -258,12 +258,7 @@ async fn handle(State(service): State<Service>, request: Request<Body>) -> Respo
             let _admission = MUTATIONS.lock().unwrap_or_else(|e| e.into_inner());
             if let Some(expected) = context {
                 let state = app.lock();
-                if state
-                    .runtime
-                    .as_deref()
-                    .and_then(|p| p.to_str())
-                    .unwrap_or("")
-                    != expected
+                if Launcher::context(&state) != expected
                 {
                     return Some(Err(Error::Invalid(
                         "Die ausgewählte Installation hat sich geändert. Bitte den Status neu laden.",

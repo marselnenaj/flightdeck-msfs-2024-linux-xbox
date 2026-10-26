@@ -103,8 +103,8 @@ pub fn strict_json(data: &[u8], label: &str, maximum: u64) -> Result<Map<String,
     )?;
     let invalid = || Failure(format!("{label} is invalid JSON"));
     let text = std::str::from_utf8(data).map_err(|_| invalid())?;
-    let value: Strict = serde_json::from_str(text).map_err(|_| invalid())?;
-    match value.0 {
+    let Strict(value) = serde_json::from_str(text).map_err(|_| invalid())?;
+    match value {
         Value::Object(map) => Ok(map),
         _ => fail(format!("{label} must be an object")),
     }
@@ -165,13 +165,36 @@ impl<'de> serde::Deserialize<'de> for Strict {
                 Ok(Strict(Value::Object(items)))
             }
         }
-        deserializer.deserialize_any(Visitor)
+        use serde::Deserializer;
+        let raw = Box::<serde_json::value::RawValue>::deserialize(deserializer)?;
+        let mut parser = serde_json::Deserializer::from_str(raw.get());
+        match raw.get().as_bytes().first() {
+            Some(b'{') => parser
+                .deserialize_map(Visitor)
+                .map_err(serde::de::Error::custom),
+            Some(b'[') => parser
+                .deserialize_seq(Visitor)
+                .map_err(serde::de::Error::custom),
+            _ => {
+                let value: Value =
+                    serde_json::from_str(raw.get()).map_err(serde::de::Error::custom)?;
+                if value
+                    .as_number()
+                    .is_some_and(|number| !number.as_f64().is_some_and(f64::is_finite))
+                {
+                    return Err(serde::de::Error::custom("Non-finite JSON number"));
+                }
+                Ok(Strict(value))
+            }
+        }
     }
 }
 
 /// Two-space indented JSON with a final newline, keys in sorted order.
 pub fn pretty(value: &Value) -> Vec<u8> {
-    let mut text = serde_json::to_string_pretty(value).expect("JSON value");
+    let mut value = value.clone();
+    value.sort_all_objects();
+    let mut text = serde_json::to_string_pretty(&value).expect("JSON value");
     text.push('\n');
     text.into_bytes()
 }

@@ -462,12 +462,14 @@ mod tests {
         })
         .expect("report");
         let value: Value = serde_json::from_str(&report).expect("JSON");
+        let mut keys = value
+            .as_object()
+            .expect("object")
+            .keys()
+            .collect::<Vec<_>>();
+        keys.sort();
         assert_eq!(
-            value
-                .as_object()
-                .expect("object")
-                .keys()
-                .collect::<Vec<_>>(),
+            keys,
             [
                 "cases",
                 "gpu",

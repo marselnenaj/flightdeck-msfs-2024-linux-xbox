@@ -1,11 +1,7 @@
 // SPDX-License-Identifier: MIT
 //! Preserve object order when verifying existing Python support-draft hashes.
-//! This is deliberately separate from the sorted maps used by save protocols.
-use serde::{
-    Deserialize, Deserializer,
-    de::{MapAccess, SeqAccess, Visitor},
-};
-use std::fmt;
+//! Object order and arbitrary integer digits survive the shared engine's JSON
+//! features; floating-point spellings still follow the old Python encoder.
 enum Ordered {
     Null,
     Bool(bool),
@@ -15,53 +11,42 @@ enum Ordered {
     Array(Vec<Ordered>),
     Object(Vec<(String, Ordered)>),
 }
-impl<'de> Deserialize<'de> for Ordered {
-    fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
-        struct V;
-        impl<'de> Visitor<'de> for V {
-            type Value = Ordered;
-            fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
-                f.write_str("a JSON value")
-            }
-            fn visit_unit<E: serde::de::Error>(self) -> Result<Ordered, E> {
-                Ok(Ordered::Null)
-            }
-            fn visit_bool<E: serde::de::Error>(self, v: bool) -> Result<Ordered, E> {
-                Ok(Ordered::Bool(v))
-            }
-            fn visit_i64<E: serde::de::Error>(self, v: i64) -> Result<Ordered, E> {
-                Ok(Ordered::Integer(v.to_string()))
-            }
-            fn visit_u64<E: serde::de::Error>(self, v: u64) -> Result<Ordered, E> {
-                Ok(Ordered::Integer(v.to_string()))
-            }
-            fn visit_f64<E: serde::de::Error>(self, v: f64) -> Result<Ordered, E> {
-                Ok(Ordered::Float(v))
-            }
-            fn visit_str<E: serde::de::Error>(self, v: &str) -> Result<Ordered, E> {
-                Ok(Ordered::String(v.into()))
-            }
-            fn visit_string<E: serde::de::Error>(self, v: String) -> Result<Ordered, E> {
-                Ok(Ordered::String(v))
-            }
-            fn visit_seq<A: SeqAccess<'de>>(self, mut a: A) -> Result<Ordered, A::Error> {
-                let mut values = Vec::new();
-                while let Some(v) = a.next_element()? {
-                    values.push(v);
+impl Ordered {
+    fn from_value(value: serde_json::Value) -> serde_json::Result<Self> {
+        use serde_json::Value;
+        Ok(match value {
+            Value::Null => Self::Null,
+            Value::Bool(v) => Self::Bool(v),
+            Value::String(v) => Self::String(v),
+            Value::Number(v) => {
+                let raw = v.to_string();
+                if raw.contains(['.', 'e', 'E']) {
+                    Self::Float(v.as_f64().filter(|v| v.is_finite()).ok_or_else(|| {
+                        serde_json::Error::io(std::io::Error::new(
+                            std::io::ErrorKind::InvalidData,
+                            "Non-finite support report number",
+                        ))
+                    })?)
+                } else {
+                    Self::Integer(raw)
                 }
-                Ok(Ordered::Array(values))
             }
-            fn visit_map<A: MapAccess<'de>>(self, mut a: A) -> Result<Ordered, A::Error> {
-                let mut values = Vec::new();
-                while let Some((k, v)) = a.next_entry()? {
-                    values.push((k, v));
-                }
-                Ok(Ordered::Object(values))
-            }
-        }
-        d.deserialize_any(V)
+            Value::Array(values) => Self::Array(
+                values
+                    .into_iter()
+                    .map(Self::from_value)
+                    .collect::<serde_json::Result<_>>()?,
+            ),
+            Value::Object(values) => Self::Object(
+                values
+                    .into_iter()
+                    .map(|(key, value)| Ok((key, Self::from_value(value)?)))
+                    .collect::<serde_json::Result<_>>()?,
+            ),
+        })
     }
 }
+
 fn render(value: &Ordered, depth: usize, out: &mut String) -> serde_json::Result<()> {
     match value {
         Ordered::Null => out.push_str("null"),
@@ -116,15 +101,14 @@ fn render(value: &Ordered, depth: usize, out: &mut String) -> serde_json::Result
     Ok(())
 }
 pub fn encoded(value: &serde_json::Value) -> serde_json::Result<Vec<u8>> {
-    let data = serde_json::to_vec(value)?;
-    let ordered: Ordered = serde_json::from_slice(&data)?;
+    let ordered = Ordered::from_value(value.clone())?;
     let mut output = String::new();
     render(&ordered, 0, &mut output)?;
     output.push('\n');
     Ok(output.into_bytes())
 }
 pub fn report_bytes(draft: &[u8]) -> crate::Result<Vec<u8>> {
-    let ordered: Ordered = serde_json::from_slice(draft)?;
+    let ordered = Ordered::from_value(crate::strict_json::decode(draft)?)?;
     let Ordered::Object(entries) = ordered else {
         return Err(crate::Error::Invalid("Invalid support draft."));
     };

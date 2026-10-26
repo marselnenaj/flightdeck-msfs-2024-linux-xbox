@@ -387,6 +387,15 @@ pub fn installed_manifest(state: &Value, variant: Option<&str>) -> Result<Value>
 /// restart or when GitHub is offline.
 pub fn selected(ctx: &Context) -> Result<Value> {
     let mut selected = json!({"bundle":bundle::manifest(None)?,"release":resources::json("compat/fenix/release.json")?});
+    if let Some(item) = ctx.launcher.lock().steam.clone() {
+        let record = crate::steam_fenix::recorded(&ctx.launcher.state_dir, &item)?;
+        if version(string(&record, "version")?)?
+            > version(string(&selected["release"], "version")?)?
+        {
+            selected =
+                json!({"bundle":record["bundle_manifest"],"release":record["bundle_release"]});
+        }
+    }
     if let Some(root) = &ctx.runtime
         && files::exists(&root.join(fenix::MARKER))
     {
@@ -432,11 +441,18 @@ fn has_patch(root: &Path) -> bool {
 pub fn check(app: &Arc<Launcher>, force: bool) -> Result<Value> {
     let mut s = app.lock();
     Launcher::open(&s)?;
-    if !force && !s.runtime.as_ref().is_some_and(|root| has_patch(root)) {
+    if !force && s.steam.is_none() && !s.runtime.as_ref().is_some_and(|root| has_patch(root)) {
         return Ok(json!({"ok":true}));
     }
     let mut current = string(&bundle::manifest(None)?, "version")?.to_string();
-    if let Some(root) = &s.runtime
+    if let Some(item) = &s.steam {
+        current = string(
+            &crate::steam_fenix::recorded(&app.state_dir, item)?,
+            "version",
+        )?
+        .to_string();
+    }
+    if let Some(root) = s.runtime.as_ref().filter(|_| s.steam.is_none())
         && let Ok(state) = runtime::value(&root.join(fenix::MARKER))
         && state["state"] == "installed"
         && let Some(installed) = state["version"].as_str()

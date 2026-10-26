@@ -14,6 +14,14 @@ use std::{
     },
     time::{Duration, Instant},
 };
+/// Explicit paths keep Steam profiles independent of the Xbox runtime layout.
+#[derive(Clone)]
+pub struct Profile {
+    pub prefix: PathBuf,
+    pub runner: PathBuf,
+    pub library: PathBuf,
+    pub private: PathBuf,
+}
 const SERVICES: &[&str] = &[
     "fenixdisplay.exe",
     "fenixsystem.exe",
@@ -137,15 +145,15 @@ impl Api {
     }
 }
 fn refresh(
-    root: &Path,
+    profile: &Profile,
     api: &Api,
     journal: &Path,
     identity: &Identities,
     cancel: &AtomicBool,
 ) -> Result<bool> {
-    let prefix = root.join("local/msfs-prefix");
+    let prefix = &profile.prefix;
     require(
-        services(&prefix)? == *identity && owns_api(identity),
+        services(prefix)? == *identity && owns_api(identity),
         "Fenix process changed.",
     )?;
     let state = api.query(QUERY)?;
@@ -161,13 +169,13 @@ fn refresh(
         "MCDU display data not ready.",
     )?;
     let helper = prefix.join("drive_c/windows/system32/FenixMCDURefresh.exe");
-    let library = root.join("games/MSFS2024/SimConnect_internal.dll");
+    let library = &profile.library;
     require(
         helper.is_file() && library.is_file(),
         "Installed display refresh dependency unavailable.",
     )?;
     let run = |mode: &str| -> Result<()> {
-        let mut command = Command::new(runtime::wine(&root.join("runner")));
+        let mut command = Command::new(runtime::wine(&profile.runner));
         command
             .arg(&helper)
             .arg(mode)
@@ -180,7 +188,7 @@ fn refresh(
                     .parent()
                     .ok_or(Error::Invalid("Invalid display helper path."))?,
             )
-            .env("WINEPREFIX", &prefix)
+            .env("WINEPREFIX", prefix)
             .env("WINEDEBUG", "-all")
             .stdin(Stdio::null());
         for key in [
@@ -197,7 +205,7 @@ fn refresh(
         Ok(())
     };
     run("--probe")?;
-    if cancel.load(Ordering::Relaxed) || services(&prefix)? != *identity {
+    if cancel.load(Ordering::Relaxed) || services(prefix)? != *identity {
         return Ok(false);
     }
     files::atomic_json(journal, &json!({"format":1,"home":original}))?;
@@ -214,24 +222,21 @@ fn refresh(
     result.and(recovered)?;
     Ok(true)
 }
-fn worker(root: &Path, cancel: &AtomicBool) -> Result<()> {
-    if Game::for_runtime(root)? != Game::Msfs2024 {
-        return Ok(());
-    }
-    let _lease = match files::Lease::acquire(&root.join("private/fenix-display-refresh.lock"), true)
-    {
-        Ok(v) => v,
-        Err(Error::Invalid("Das Spiel oder ein anderer Runtimevorgang läuft bereits.")) => {
-            return Ok(());
-        }
-        Err(e) => return Err(e),
-    };
+pub(crate) fn worker(profile: &Profile, cancel: &AtomicBool) -> Result<()> {
+    let _lease =
+        match files::Lease::acquire(&profile.private.join("fenix-display-refresh.lock"), true) {
+            Ok(v) => v,
+            Err(Error::Invalid("Das Spiel oder ein anderer Runtimevorgang läuft bereits.")) => {
+                return Ok(());
+            }
+            Err(e) => return Err(e),
+        };
     let client = local_client()?;
     let api = Api {
         client,
-        prefix: root.join("local/msfs-prefix"),
+        prefix: profile.prefix.clone(),
     };
-    let journal = root.join("private/fenix-display-refresh.json");
+    let journal = profile.private.join("fenix-display-refresh.json");
     let mut seen = None;
     let mut completed = None;
     let mut since = Instant::now();
@@ -264,7 +269,7 @@ fn worker(root: &Path, cancel: &AtomicBool) -> Result<()> {
         if display == completed || attempts >= 3 || since.elapsed() < Duration::from_secs(8) {
             continue;
         }
-        match refresh(root, &api, &journal, &identity, cancel) {
+        match refresh(profile, &api, &journal, &identity, cancel) {
             Ok(true) => {
                 completed = display;
                 println!("Fenix: MCDU startup image refreshed; display preference restored.");
@@ -284,9 +289,18 @@ fn worker(root: &Path, cancel: &AtomicBool) -> Result<()> {
 }
 pub fn run(root: &Path) -> Result<()> {
     let root = root.canonicalize()?;
+    if Game::for_runtime(&root)? != Game::Msfs2024 {
+        return Ok(());
+    }
+    let profile = Profile {
+        prefix: root.join("local/msfs-prefix"),
+        runner: root.join("runner"),
+        library: root.join("games/MSFS2024/SimConnect_internal.dll"),
+        private: root.join("private"),
+    };
     let cancel = Arc::new(AtomicBool::new(false));
     tokio::runtime::Builder::new_current_thread().enable_all().build()?.block_on(async move{
-        let mut term=tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())?;let mut interrupt=tokio::signal::unix::signal(tokio::signal::unix::SignalKind::interrupt())?;let stopped=Arc::clone(&cancel);let mut task=tokio::task::spawn_blocking(move||worker(&root,&stopped));
+        let mut term=tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())?;let mut interrupt=tokio::signal::unix::signal(tokio::signal::unix::SignalKind::interrupt())?;let stopped=Arc::clone(&cancel);let mut task=tokio::task::spawn_blocking(move||worker(&profile,&stopped));
         tokio::select!{result=&mut task=>return result.map_err(|_|Error::Invalid("The display refresh helper failed."))?,_ = term.recv()=>{},_ = interrupt.recv()=>{}}cancel.store(true,Ordering::Relaxed);task.await.map_err(|_|Error::Invalid("The display refresh helper failed."))?
     })
 }

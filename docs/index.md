@@ -26,6 +26,9 @@ Hardware reports describe the tested setup, not universal compatibility.
 
 ## Development and releases
 
+- [Steam beta](steam.md) · [Deutsch](steam.de.md): installation selection,
+  Fenix, storefront boundaries and the remaining real-simulator test scope.
+
 - [Build and test](../BUILDING.md): toolchains, native UI checks, compatibility
   components and release packaging.
 - [Contribute](contributing.md): code ownership, isolated tests, review and
