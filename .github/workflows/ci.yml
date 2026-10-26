@@ -25,8 +25,8 @@ jobs:
           persist-credentials: false
       - name: Install pinned Rust toolchain
         run: rustup toolchain install 1.98.0 --profile minimal --component rustfmt --component clippy --component rust-docs
-      - name: Native desktop build dependencies
-        run: sudo apt-get update && sudo apt-get install -y woff2 libxkbcommon-dev libwayland-dev libx11-dev libxrandr-dev libxi-dev pkg-config
+      - name: Native desktop and namespace test dependencies
+        run: sudo apt-get update && sudo apt-get install -y bubblewrap woff2 libxkbcommon-dev libwayland-dev libx11-dev libxrandr-dev libxi-dev pkg-config
       - name: Format and lint
         run: |
           cargo +1.98.0 fmt --all -- --check

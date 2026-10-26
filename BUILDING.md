@@ -10,7 +10,9 @@ their C/C++ implementation. Maintainer build and test tooling is the Rust crate 
 
 Build with Rust/Cargo 1.98 and `woff2_decompress` (Debian/Ubuntu package `woff2`).
 Linux development packages include `libxkbcommon-dev`, `libwayland-dev`,
-`libx11-dev`, `libxrandr-dev`, `libxi-dev` and `pkg-config`:
+`libx11-dev`, `libxrandr-dev`, `libxi-dev` and `pkg-config`. The Steam process-
+namespace regression also requires `bwrap` (package `bubblewrap`) and permitted
+unprivileged user namespaces on the test host:
 
 ```sh
 cargo build --locked
