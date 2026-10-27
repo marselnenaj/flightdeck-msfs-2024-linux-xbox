@@ -36,6 +36,8 @@ const SIMLINK_DIRS: &[&str] = &[
     "drive_c/Program Files (x86)/Navigraph/Simlink",
 ];
 const SIMLINK_EXE: &str = "NavigraphSimlink.exe";
+/// Simlink's QSettings file, shared with the Charts desktop app.
+const SIMLINK_SETTINGS: &str = "AppData/Roaming/Navigraph/Charts/.settings";
 pub const HUB: &[&str] = &["navigraph hub.exe"];
 pub const SIMLINK: &[&str] = &["navigraphsimlink.exe"];
 /// Browser sign-in returns through these private URI schemes.
@@ -110,6 +112,82 @@ pub fn simlink(prefix: &Path) -> Result<Option<PathBuf>> {
         }
     }
     Ok(None)
+}
+fn simlink_settings(prefix: &Path) -> Result<Vec<PathBuf>> {
+    if !prefix.join("drive_c/users").is_dir() {
+        return Ok(Vec::new());
+    }
+    let mut found = Vec::new();
+    for user in fenix_setup::user_folders(prefix)? {
+        let path = user.join(SIMLINK_SETTINGS);
+        if path.is_file() {
+            contained(&path, prefix)?;
+            found.push(path);
+        }
+    }
+    Ok(found)
+}
+fn ini_value<'a>(text: &'a str, section: &str, key: &str) -> Option<&'a str> {
+    let mut inside = false;
+    for line in text.lines() {
+        let line = line.trim();
+        if line.starts_with('[') {
+            inside = line == format!("[{section}]");
+        } else if inside
+            && let Some((name, value)) = line.split_once('=')
+            && name.trim() == key
+        {
+            return Some(value.trim());
+        }
+    }
+    None
+}
+/// Whether Simlink holds a Navigraph sign-in. Only the presence of a refresh
+/// token is checked; no token leaves the file.
+pub fn simlink_signed_in(prefix: &Path) -> Result<bool> {
+    for path in simlink_settings(prefix)? {
+        let raw = files::read(&path, 1024 * 1024)?;
+        if ini_value(&String::from_utf8_lossy(&raw), "user", "refresh_token")
+            .is_some_and(|v| !v.is_empty())
+        {
+            return Ok(true);
+        }
+    }
+    Ok(false)
+}
+/// Simlink's settings with its own Windows login start turned off, if it was on.
+fn without_login_start(text: &str) -> Option<String> {
+    let mut inside = false;
+    let mut changed = false;
+    let mut lines = Vec::new();
+    for line in text.split_inclusive('\n') {
+        let trimmed = line.trim();
+        if trimmed.starts_with('[') {
+            inside = trimmed == "[simlink]";
+        } else if inside
+            && let Some((name, value)) = trimmed.split_once('=')
+            && name.trim() == "autostart_app"
+            && value.trim() != "0"
+        {
+            let ending = &line[line.trim_end().len()..];
+            lines.push(format!("autostart_app=0{ending}"));
+            changed = true;
+            continue;
+        }
+        lines.push(line.to_string());
+    }
+    changed.then(|| lines.concat())
+}
+/// Simlink writes itself back into Windows login startup on every start while
+/// its own setting is on; MSFS starts it through exe.xml instead.
+pub fn simlink_without_login_start(prefix: &Path) -> Result<()> {
+    for path in simlink_settings(prefix)? {
+        let raw = files::read(&path, 1024 * 1024)?;
+        if let Some(text) = without_login_start(&String::from_utf8_lossy(&raw)) {
+            files::atomic(&path, text.as_bytes())?;
+        }
+    }
+    Ok(())
 }
 /// Move Process Governor aside. Hub updates restore it, so this runs before
 /// every start; a previously disabled copy is replaced by the newer file.
@@ -575,7 +653,7 @@ pub fn snapshot(app: &Launcher) -> Value {
                 .unwrap_or(Value::Null),
         )
     };
-    let mut value = json!({"state":"unavailable","message":"","hub_installed":false,"governor_disabled":false,"simlink_installed":false,"settings_found":false,"startup":false,"handler":false,"packages":[],"hub_running":false,"simlink_running":false,"idle":false,"runtime_path":root,"job":job,"busy":busy||playing,"can_change":false,"can_stop":false});
+    let mut value = json!({"state":"unavailable","message":"","hub_installed":false,"governor_disabled":false,"simlink_installed":false,"simlink_signed_in":false,"settings_found":false,"startup":false,"handler":false,"packages":[],"hub_running":false,"simlink_running":false,"idle":false,"runtime_path":root,"job":job,"busy":busy||playing,"can_change":false,"can_stop":false});
     if let Some(root) = root {
         let result = (|| -> Result<()> {
             validate(&root)?;
@@ -587,6 +665,7 @@ pub fn snapshot(app: &Launcher) -> Value {
             value["governor_disabled"] =
                 json!(directory.as_deref().is_some_and(|d| !governor_active(d)));
             value["simlink_installed"] = json!(simlink(&prefix)?.is_some());
+            value["simlink_signed_in"] = json!(simlink_signed_in(&prefix)?);
             let folder = settings_folder(&root);
             value["settings_found"] = json!(folder.is_ok());
             value["startup"] = json!(
@@ -641,7 +720,11 @@ fn remove_run_entries(wine: &Wine, prefix: &Path) -> Result<()> {
                 .to_ascii_lowercase()
                 .starts_with(r"[software\\microsoft\\windows\\currentversion\\run]");
         } else if inside
-            && line.to_ascii_lowercase().contains("navigraph-hub")
+            // Hub and Simlink start with Windows by default; under Wine that is
+            // every program start in the profile, and MSFS starts Simlink itself.
+            && ["navigraph-hub", "navigraphsimlink.exe"]
+                .iter()
+                .any(|v| line.to_ascii_lowercase().contains(v))
             && let Some(name) = line
                 .strip_prefix('"')
                 .and_then(|v| v.split_once("\"="))
@@ -779,6 +862,8 @@ fn install_simlink(ctx: &Context, installer: &Path) -> Result<()> {
         Duration::from_secs(1800),
     )?;
     let _ = wine_processes::stop(root, SIMLINK);
+    simlink_without_login_start(&root.join("local/msfs-prefix"))?;
+    remove_run_entries(&wine, &root.join("local/msfs-prefix"))?;
     wine.stop_staged()?;
     require(
         simlink(&root.join("local/msfs-prefix"))?.is_some(),
@@ -790,8 +875,16 @@ fn open_simlink(ctx: &Context) -> Result<()> {
     let executable = simlink(&root.join("local/msfs-prefix"))?
         .ok_or(Error::Invalid("Installiere zuerst Navigraph Simlink."))?;
     let wine = wine(ctx, root, "navigraph-simlink.log")?;
-    ctx.progress("Melde dich in Simlink an und schließe es danach vollständig.");
-    interactive(ctx, root, &wine, &[&executable], SIMLINK)
+    let prefix = root.join("local/msfs-prefix");
+    simlink_without_login_start(&prefix)?;
+    ctx.progress(
+        "Melde dich in Simlink an. Schließe Simlink danach mit „Navigraph schließen“, denn sein Fenster blendet es nur aus.",
+    );
+    let result = interactive(ctx, root, &wine, &[&executable], SIMLINK);
+    // The first start creates the settings file with login start turned on.
+    let settings = simlink_without_login_start(&prefix);
+    let cleanup = remove_run_entries(&wine, &prefix);
+    result.and(settings).and(cleanup)
 }
 fn installer_path(data: &Value, app: App) -> Result<PathBuf> {
     let path = PathBuf::from(string(data, "installer_path")?.trim());
@@ -941,7 +1034,12 @@ pub fn start(app: &Arc<Launcher>, operation: &str, data: &Value) -> Result<Value
                 names.extend(SIMLINK);
                 wine_processes::stop(root, &names)?
             }
-            _ => configure(root, operation == "configure")?,
+            _ => {
+                if operation == "configure" {
+                    simlink_without_login_start(&root.join("local/msfs-prefix"))?;
+                }
+                configure(root, operation == "configure")?
+            }
         }
         let message = match operation.as_str() {
             "install-hub" => "Navigraph Hub ist installiert. Öffne Hub, melde dich an und installiere die Navdata.",
@@ -1074,6 +1172,30 @@ mod tests {
         assert!(prefer_foreground(&directory).is_err());
     }
 
+    #[test]
+    fn simlink_sign_in_and_login_start_come_from_its_settings() {
+        let settings = "[simlink]\r\nautocheck_update=1\r\nautostart_app=1\r\n\r\n[user]\r\nrefresh_token=abc\r\nautostart_app=1\r\n";
+        assert_eq!(ini_value(settings, "user", "refresh_token"), Some("abc"));
+        assert_eq!(ini_value(settings, "simlink", "refresh_token"), None);
+        let changed = without_login_start(settings).expect("changed");
+        assert_eq!(
+            changed,
+            "[simlink]\r\nautocheck_update=1\r\nautostart_app=0\r\n\r\n[user]\r\nrefresh_token=abc\r\nautostart_app=1\r\n"
+        );
+        assert_eq!(without_login_start(&changed), None);
+        let root = tempfile::tempdir().expect("fixture");
+        let prefix = root.path();
+        let path = prefix
+            .join("drive_c/users/steamuser")
+            .join(SIMLINK_SETTINGS);
+        fs::create_dir_all(path.parent().expect("folder")).expect("folder");
+        fs::write(&path, "[user]\nrefresh_token=\n").expect("settings");
+        assert!(!simlink_signed_in(prefix).expect("empty token"));
+        fs::write(&path, settings).expect("settings");
+        assert!(simlink_signed_in(prefix).expect("token"));
+        simlink_without_login_start(prefix).expect("login start");
+        assert_eq!(fs::read_to_string(&path).expect("settings"), changed);
+    }
     #[test]
     fn hub_installs_only_from_its_own_installer() {
         let root = tempfile::tempdir().expect("fixture");

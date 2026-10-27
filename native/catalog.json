@@ -744,7 +744,6 @@
   "Installiere zuerst Navigraph Simlink.": "Install Navigraph Simlink first.",
   "Kein Dateidialog verfügbar. Bitte den Pfad direkt eingeben.": "No file dialog available. Please enter the path directly.",
   "Melde dich in Navigraph Hub an und installiere die Navdata. Schließe Hub danach vollständig.": "Sign in to Navigraph Hub and install the navdata. Then quit Hub completely.",
-  "Melde dich in Simlink an und schließe es danach vollständig.": "Sign in to Simlink, then quit it completely.",
   "Navigraph Hub ist für mehrere Windows-Benutzer installiert.": "Navigraph Hub is installed for several Windows users.",
   "Navigraph Hub ist installiert. Öffne Hub, melde dich an und installiere die Navdata.": "Navigraph Hub is installed. Open Hub, sign in and install the navdata.",
   "Navigraph Hub wird im Windows-Profil installiert …": "Installing Navigraph Hub in the Windows profile …",
@@ -770,5 +769,6 @@
   "Fehlende Navigraph-Hub-Installer-Datei.": "Missing Navigraph Hub installer file.",
   "Unbekannter Navigraph-Installer.": "Unknown Navigraph installer.",
   "Navigraph Simlink wird im Windows-Profil installiert …": "Installing Navigraph Simlink in the Windows profile …",
-  "Simlink wurde nicht vollständig installiert. Details stehen im Navigraph-Protokoll.": "Simlink was not installed completely. Details are in the Navigraph log."
+  "Simlink wurde nicht vollständig installiert. Details stehen im Navigraph-Protokoll.": "Simlink was not installed completely. Details are in the Navigraph log.",
+  "Melde dich in Simlink an. Schließe Simlink danach mit „Navigraph schließen“, denn sein Fenster blendet es nur aus.": "Sign in to Simlink. Then close it with “Close Navigraph”, because its window only hides it."
 }

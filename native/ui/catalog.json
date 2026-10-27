@@ -1067,7 +1067,6 @@
   "Navigraph lokal eingerichtet · Funktion unbestätigt": "Navigraph configured locally · Functionality unconfirmed",
   "Richte zuerst die Rückkehr der Browser-Anmeldung zu Hub und Simlink ein.": "First set up the browser sign-in to return to Hub and Simlink.",
   "Simlink bei Navigraph herunterladen": "Download Simlink from Navigraph",
-  "Simlink ist geöffnet. Schließe alle Navigraph-Fenster, um fortzufahren.": "Simlink is open. Close all Navigraph windows to continue.",
   "Simlink öffnen": "Open Simlink",
   "Simlink-Autostart ausschalten": "Disable Simlink auto-start",
   "Simlink-Autostart einrichten": "Set up Simlink auto-start",
@@ -1079,5 +1078,8 @@
   "Navigraph Hub bei Navigraph herunterladen": "Download Navigraph Hub from Navigraph",
   "Navigraph-Hub-Installer-Datei": "Navigraph Hub installer file",
   "Simlink installieren": "Install Simlink",
-  "Simlink neu installieren": "Reinstall Simlink"
+  "Simlink neu installieren": "Reinstall Simlink",
+  "Simlink ist geöffnet. Klicke nach der Anmeldung auf „Navigraph schließen“; sein Fenster blendet Simlink nur aus.": "Simlink is open. After signing in, click “Close Navigraph”; its window only hides Simlink.",
+  "Öffne Simlink und melde dich mit deinem Navigraph-Konto an.": "Open Simlink and sign in with your Navigraph account.",
+  "Simlink öffnen und anmelden": "Open Simlink and sign in"
 }

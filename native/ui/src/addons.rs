@@ -639,6 +639,9 @@ impl App {
                     3 => content
                         .push(self.addon_action("Navigraph Hub öffnen", Navigraph("open-hub"))),
                     4 => content.push(self.navigraph_installer("simlink", false)),
+                    5 => content.push(
+                        self.addon_action("Simlink öffnen und anmelden", Navigraph("open-simlink")),
+                    ),
                     _ => content.push(
                         self.addon_action("Simlink-Autostart einrichten", Navigraph("configure")),
                     ),
@@ -650,6 +653,10 @@ impl App {
                     ("Navigraph Hub", yes(data, "hub_installed")),
                     ("Navdata", !packages.is_empty()),
                     ("Simlink", yes(data, "simlink_installed")),
+                    (
+                        self.tr("Simlink-Anmeldung", "Simlink sign-in"),
+                        yes(data, "simlink_signed_in"),
+                    ),
                     (
                         self.tr("Simlink-Autostart", "Simlink auto-start"),
                         yes(data, "startup"),
@@ -675,9 +682,10 @@ impl App {
                 manage = manage.push(self.navigraph_installer("hub", true));
             }
             if yes(data, "simlink_installed") {
-                manage = manage
-                    .push(self.action("Simlink öffnen", Navigraph("open-simlink")))
-                    .push(self.navigraph_installer("simlink", true));
+                if progress.next != 5 {
+                    manage = manage.push(self.action("Simlink öffnen", Navigraph("open-simlink")));
+                }
+                manage = manage.push(self.navigraph_installer("simlink", true));
             } else if progress.next != 4 && data["state"] == "available" {
                 manage = manage.push(self.navigraph_installer("simlink", false));
             }

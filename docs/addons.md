@@ -171,8 +171,11 @@ stay with Navigraph.
    installer from [Navigraph](https://navigraph.com/downloads), select it and
    choose **Install Simlink**. Flightdeck installs it without the wizard into its
    default folder (`C:\Program Files\Navigraph\Simlink`), because the wizard
-   shows an extra empty window under Wine. Then open Simlink with **Open
-   Simlink** and sign in.
+   shows an extra empty window under Wine. Then choose **Open Simlink and sign
+   in** and sign in through your browser. Simlink's window only hides it; quit it
+   with **Close Navigraph**. Flightdeck detects the sign-in from the stored token
+   without reading it, and turns off Simlink's own Windows login start, which
+   Wine would run on every program start in the profile.
 5. **Set up Simlink auto-start** adds one Simlink entry to the edition's
    `exe.xml`, next to its `UserCfg.opt`, and keeps other add-ons and a backup in
    `private/navigraph-exe-*.xml`. MSFS then starts Simlink in the same Wine session,

@@ -291,8 +291,9 @@ pub(crate) fn navigraph(data: &Value) -> AddonProgress {
     let hub = handler && yes(data, "hub_installed") && yes(data, "governor_disabled");
     let navdata = hub && data["packages"].as_array().is_some_and(|v| !v.is_empty());
     let simlink = navdata && yes(data, "simlink_installed");
-    let startup = simlink && yes(data, "startup");
-    let steps = vec![handler, hub, navdata, simlink, startup];
+    let signed_in = simlink && yes(data, "simlink_signed_in");
+    let startup = signed_in && yes(data, "startup");
+    let steps = vec![handler, hub, navdata, simlink, signed_in, startup];
     let next = steps.iter().position(|v| !v).map(|i| i + 1).unwrap_or(0);
     let mut progress = AddonProgress {
         title: "Navigraph-Status wird geladen …",
@@ -308,7 +309,7 @@ pub(crate) fn navigraph(data: &Value) -> AddonProgress {
     } else if supported {
         progress.title = match next {
             0 => "Navigraph lokal eingerichtet · Funktion unbestätigt",
-            4 | 5 => "Navdata installiert · Simlink optional",
+            4..=6 => "Navdata installiert · Simlink optional",
             _ => "Navigraph-Einrichtung",
         };
         progress.detail = match next {
@@ -317,6 +318,7 @@ pub(crate) fn navigraph(data: &Value) -> AddonProgress {
             2 => "Lade den offiziellen Navigraph-Hub-Installer herunter und wähle ihn aus.",
             3 => "Öffne Hub, melde dich an und installiere die Navdata. Schließe Hub danach.",
             4 => "Für die Flugzeugposition in Navigraph Charts installiere Simlink.",
+            5 => "Öffne Simlink und melde dich mit deinem Navigraph-Konto an.",
             _ if yes(data, "settings_found") => "Lass Simlink automatisch mit MSFS starten.",
             _ => "Starte MSFS einmal, damit die Simulator-Einstellungen angelegt werden.",
         };
@@ -339,7 +341,7 @@ pub(crate) fn navigraph(data: &Value) -> AddonProgress {
                 "Navigraph Hub ist geöffnet. Schließe Hub nach der Installation vollständig."
             }
             Some("open-simlink") => {
-                "Simlink ist geöffnet. Schließe alle Navigraph-Fenster, um fortzufahren."
+                "Simlink ist geöffnet. Klicke nach der Anmeldung auf „Navigraph schließen“; sein Fenster blendet Simlink nur aus."
             }
             _ => "Warte, bis der aktuelle Schritt abgeschlossen ist.",
         };
@@ -433,28 +435,36 @@ mod addon_tests {
 
     #[test]
     fn navigraph_steps_follow_each_local_prerequisite() {
-        for flags in 0..64 {
+        for flags in 0..128 {
             let bit = |n: u32| flags & (1 << n) != 0;
             let data = json!({"state":"available", "handler":bit(0), "hub_installed":bit(1),
                 "governor_disabled":bit(2), "packages":if bit(3) {json!(["navigraph-navdata"])} else {json!([])},
-                "simlink_installed":bit(4), "startup":bit(5)});
+                "simlink_installed":bit(4), "simlink_signed_in":bit(5), "startup":bit(6)});
             let progress = navigraph(&data);
             let handler = bit(0);
             let hub = handler && bit(1) && bit(2);
             let navdata = hub && bit(3);
             let simlink = navdata && bit(4);
+            let signed_in = simlink && bit(5);
             assert_eq!(
                 progress.steps,
-                [handler, hub, navdata, simlink, simlink && bit(5)]
+                [
+                    handler,
+                    hub,
+                    navdata,
+                    simlink,
+                    signed_in,
+                    signed_in && bit(6)
+                ]
             );
-            assert_eq!(progress.ready, flags == 63);
+            assert_eq!(progress.ready, flags == 127);
             if progress.ready {
                 assert!(progress.title.contains("Funktion unbestätigt"));
             }
         }
         let mut data = json!({"state":"available", "handler":true, "hub_installed":true,
             "governor_disabled":true, "packages":["navigraph-navdata"], "simlink_installed":true,
-            "startup":true});
+            "simlink_signed_in":true, "startup":true});
         data["job"] = json!({"state":"running", "operation":"open-hub"});
         assert!(!navigraph(&data).ready);
         data["job"] = Value::Null;
