@@ -395,8 +395,9 @@ pub fn launcher_bytes(root: &Path, manager: &str) -> Result<Vec<u8>> {
     require(files::hex_digest(manager), INVALID)?;
     Ok(format!("#!/bin/sh\n# Managed by Flightdeck; SPDX-License-Identifier: MIT\nexec {} --managed-root {} \"$@\"\n",shell(&root.join("releases").join(manager).join("bin/flightdeck"))?,shell(root)?).into_bytes())
 }
-pub fn desktop_bytes(launcher: &Path, icon: &Path, language: &str) -> Result<Vec<u8>> {
-    let raw = launcher.to_str().ok_or(Error::Invalid(INVALID))?;
+/// Quote a path for a double-quoted desktop-entry Exec argument.
+pub fn exec_argument(path: &Path) -> Result<String> {
+    let raw = path.to_str().ok_or(Error::Invalid(INVALID))?;
     let mut quoted = String::new();
     for c in raw.chars() {
         match c {
@@ -409,6 +410,10 @@ pub fn desktop_bytes(launcher: &Path, icon: &Path, language: &str) -> Result<Vec
             _ => quoted.push(c),
         }
     }
+    Ok(quoted)
+}
+pub fn desktop_bytes(launcher: &Path, icon: &Path, language: &str) -> Result<Vec<u8>> {
+    let quoted = exec_argument(launcher)?;
     let comment = if language == "de" {
         "MSFS Xbox PC unter Linux starten"
     } else {

@@ -61,6 +61,7 @@ pub mod media;
 pub mod media_overlay;
 pub mod mods;
 pub mod native_probe;
+pub mod navigraph;
 mod neural_assets;
 mod neural_decode;
 pub mod neural_rendering;

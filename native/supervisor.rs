@@ -315,6 +315,9 @@ impl Drop for Session<'_> {
             {
                 companions.extend(gsx::COMPANIONS);
             }
+            if crate::navigraph::startup_enabled(self.root) {
+                companions.extend(crate::navigraph::SIMLINK);
+            }
             if let Err(error) = wine_processes::stop(self.root, &companions) {
                 eprintln!("Windows process cleanup did not finish: {error}");
             }

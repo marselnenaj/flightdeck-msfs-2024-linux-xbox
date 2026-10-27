@@ -550,6 +550,148 @@ impl App {
         self.disclosure(Disclosure::Gsx, "GSX Pro", progress.title, content)
     }
 
+    fn navigraph_installer(&self, rerun: bool) -> Element<'_, Message> {
+        column![
+            self.help_link("Simlink bei Navigraph herunterladen", HelpLink::Navigraph),
+            self.input(
+                "Simlink-Installer-Datei",
+                "navigraph_installer_path",
+                "/home/…/Navigraph+Simlink.exe",
+                Some(NavigraphPick)
+            ),
+            self.control(
+                if rerun {
+                    "Simlink-Installer erneut ausführen"
+                } else {
+                    "Simlink-Installer starten"
+                },
+                self.request(&Navigraph("install-simlink"))
+                    .map(|_| Message::Action(Navigraph("install-simlink"))),
+                !rerun,
+            ),
+        ]
+        .spacing(12)
+        .into()
+    }
+
+    fn navigraph_card(&self) -> Element<'_, Message> {
+        let raw = self.data("navigraph");
+        let current = self.fresh("navigraph") && s(raw, "runtime_path") == self.runtime();
+        let data = if current { raw } else { &Value::Null };
+        let progress = presentation::navigraph(data);
+        let active = model::active(&data["job"]);
+        let packages: Vec<_> = data["packages"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter_map(Value::as_str)
+            .collect();
+        let mut content = column![
+            label(self.tr("Von Navigraph nicht offiziell unterstützt", "Not officially supported by Navigraph"), 15.0, Weight::Semibold, iced::color!(0xf5c873)),
+            self.paragraph(self.tr("Flightdeck installiert Navigraph Hub für Navdata und Simlink für die Flugzeugposition in Navigraph Charts, jeweils im Profil dieser MSFS-Version. Anmeldung und Abonnement bleiben bei Navigraph.", "Flightdeck installs Navigraph Hub for navdata and Simlink for the aircraft position in Navigraph Charts, each in this MSFS edition's profile. Sign-in and subscription remain with Navigraph.")),
+        ].spacing(14);
+        if current {
+            content = content.push(self.addon_feedback(data));
+            content = content.push(self.paragraph(self.t(progress.detail).to_string()));
+            if active || yes(data, "hub_running") || yes(data, "simlink_running") {
+                if yes(data, "can_stop") {
+                    content =
+                        content.push(self.addon_action("Navigraph schließen", Navigraph("stop")));
+                }
+            } else if data["state"] == "available" {
+                if data["idle"] == false
+                    || yes(data, "busy")
+                    || !["", "stopped"].contains(&s(&self.status()["game"], "state"))
+                {
+                    content = content.push(self.paragraph(self.tr(
+                        "Beende MSFS oder die laufende Einrichtung, bevor du Navigraph änderst.",
+                        "Close MSFS or the running setup before making changes to Navigraph.",
+                    )));
+                }
+                content = match progress.next {
+                    0 => content.push(self.control(
+                        "Zur Übersicht und MSFS starten",
+                        Some(Message::Navigate(Page::Overview)),
+                        true,
+                    )),
+                    1 => content.push(
+                        self.addon_action("Navigraph-Anmeldung einrichten", Navigraph("handler")),
+                    ),
+                    2 => content.push(
+                        self.addon_action("Navigraph Hub installieren", Navigraph("install-hub")),
+                    ),
+                    3 => content
+                        .push(self.addon_action("Navigraph Hub öffnen", Navigraph("open-hub"))),
+                    4 => content.push(self.navigraph_installer(false)),
+                    _ => content.push(
+                        self.addon_action("Simlink-Autostart einrichten", Navigraph("configure")),
+                    ),
+                };
+            }
+            if data["state"] == "available" {
+                content = content.push(self.addon_facts(&[
+                    (self.tr("Anmeldung", "Sign-in"), yes(data, "handler")),
+                    ("Navigraph Hub", yes(data, "hub_installed")),
+                    ("Navdata", !packages.is_empty()),
+                    ("Simlink", yes(data, "simlink_installed")),
+                    (
+                        self.tr("Simlink-Autostart", "Simlink auto-start"),
+                        yes(data, "startup"),
+                    ),
+                ]));
+                if !packages.is_empty() {
+                    content = content.push(self.paragraph(format!(
+                        "{}: {}",
+                        self.tr(
+                            "Navigraph-Pakete im Community-Ordner",
+                            "Navigraph packages in the Community folder"
+                        ),
+                        packages.join(", ")
+                    )));
+                }
+            }
+            let mut manage = column![].spacing(14);
+            if yes(data, "hub_installed") {
+                if progress.next != 3 {
+                    manage =
+                        manage.push(self.action("Navigraph Hub öffnen", Navigraph("open-hub")));
+                }
+                manage = manage.push(
+                    self.control(
+                        "Navigraph Hub neu installieren",
+                        self.request(&Navigraph("install-hub"))
+                            .map(|_| Message::Action(Navigraph("install-hub"))),
+                        false,
+                    ),
+                );
+            }
+            if yes(data, "simlink_installed") {
+                manage = manage
+                    .push(self.action("Simlink öffnen", Navigraph("open-simlink")))
+                    .push(self.navigraph_installer(true));
+            } else if progress.next != 4 && data["state"] == "available" {
+                manage = manage.push(self.navigraph_installer(false));
+            }
+            if yes(data, "startup") {
+                manage =
+                    manage.push(self.action("Simlink-Autostart ausschalten", Navigraph("disable")));
+            }
+            manage = manage
+                .push(self.job("navigraph"))
+                .push(self.help_link("Navigraph-Downloads", HelpLink::Navigraph));
+            content = content.push(self.disclosure(
+                Disclosure::NavigraphManage,
+                self.tr("Verwalten & reparieren", "Manage & repair"),
+                "",
+                manage,
+            ));
+        } else {
+            content = content.push(self.paragraph(self.tr("Der Status dieser Installation ist noch nicht verfügbar. Lade ihn erneut, bevor du die Einrichtung fortsetzt.", "The status of this installation is not available yet. Refresh before continuing setup.")));
+        }
+        content = content.push(self.refresh_button());
+        self.disclosure(Disclosure::Navigraph, "Navigraph", progress.title, content)
+    }
+
     pub(crate) fn community_card(&self) -> Element<'_, Message> {
         let mods = self.data("mods");
         let mut inventory = column![
@@ -636,7 +778,7 @@ impl App {
     pub(crate) fn mods_page(&self) -> Element<'_, Message> {
         column![self.heading(self.t("Deine Add-ons").to_string()),
             self.paragraph(self.t("Öffne die Einrichtung eines Add-ons oder verwalte unten deinen Community-Ordner.").to_string()),
-            self.fenix_card(),self.gsx_card(),self.community_card(),
+            self.fenix_card(),self.gsx_card(),self.navigraph_card(),self.community_card(),
             self.paragraph(self.tr("Fenix und GSX vollständig deinstallieren: Öffne den jeweiligen offiziellen Installer oben. Das Entfernen eines Community-Eintrags entfernt keine Windows-Begleitprogramme.","To fully uninstall Fenix or GSX, open its official installer above. Removing a Community entry does not uninstall Windows companion applications.")),
             self.paragraph(self.t("Diese Liste zeigt Dateien im Community-Ordner. Sie bestätigt weder eine Lizenz noch die Kompatibilität eines Add-ons mit MSFS oder Linux.").to_string())].spacing(16).into()
     }

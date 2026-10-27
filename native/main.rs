@@ -85,6 +85,9 @@ enum Command {
         #[arg(trailing_var_arg = true, allow_hyphen_values = true, required = true)]
         arguments: Vec<std::ffi::OsString>,
     },
+    /// Return a Navigraph browser sign-in to its application in a Flightdeck profile.
+    #[command(hide = true)]
+    NavigraphUrl { url: String },
     /// Inspect both .NET registry views and CLR files without starting Wine.
     FrameworkCheck {
         #[arg(long)]
@@ -123,6 +126,9 @@ fn run(command: Command) -> Result<(serde_json::Value, bool)> {
         )),
         Command::WineLaunch { .. } => Err(flightdeck::Error::Invalid(
             "The runtime helper requires its own process.",
+        )),
+        Command::NavigraphUrl { .. } => Err(flightdeck::Error::Invalid(
+            "The sign-in handler requires its own process.",
         )),
         Command::FrameworkCheck { prefix } => {
             let status = framework::status(&prefix);
@@ -215,6 +221,12 @@ fn main() -> ExitCode {
         .clone()
         .unwrap_or_else(|| files::xdg("XDG_STATE_HOME", ".local/state").join("flightdeck"));
     match &arguments.command {
+        Some(Command::NavigraphUrl { url }) => {
+            return match flightdeck::navigraph::forward(&state_dir, url) {
+                Ok(()) => ExitCode::SUCCESS,
+                Err(error) => finish(Err(error), Some(&language)),
+            };
+        }
         Some(Command::Play { runtime }) => {
             return match flightdeck::cli::play(runtime, &language) {
                 Ok(code) => ExitCode::from(code),

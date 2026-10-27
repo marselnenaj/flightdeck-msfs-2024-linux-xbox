@@ -24,6 +24,7 @@ pub fn get(app: &Arc<Launcher>, path: &str) -> Option<Result<Value>> {
         "/api/store-check" => Ok(crate::store_check::snapshot(app)),
         "/api/fenix" => Ok(crate::fenix::snapshot(app)),
         "/api/gsx" => Ok(crate::gsx::snapshot(app)),
+        "/api/navigraph" => Ok(crate::navigraph::snapshot(app)),
         "/api/proton" => Ok(crate::proton::snapshot(app)),
         "/api/proton/discover" => {
             Ok(json!({"ok":true,"choices":crate::proton::discover(&crate::files::home())}))
@@ -88,6 +89,10 @@ pub fn post(app: &Arc<Launcher>, path: &str, data: &Value, locale: &str) -> Opti
         }
         "/api/fenix/pick" => crate::fenix::pick(app, data),
         "/api/fenix/check-update" => crate::fenix_update::check(app, true),
+        "/api/navigraph/pick" => crate::navigraph::pick(app),
+        path if path.starts_with("/api/navigraph/") => {
+            crate::navigraph::start(app, path.rsplit('/').next().unwrap_or(""), data)
+        }
         path if path.starts_with("/api/gsx/") => {
             crate::gsx::start(app, path.rsplit('/').next().unwrap_or(""), data)
         }

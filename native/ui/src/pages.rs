@@ -80,7 +80,7 @@ impl App {
                 .align_y(alignment::Vertical::Center);
         let badge = match section {
             Disclosure::Fenix => Some("Community-Patch"),
-            Disclosure::Gsx => Some("Experimentell"),
+            Disclosure::Gsx | Disclosure::Navigraph => Some("Experimentell"),
             _ => None,
         };
         if let Some(badge) = badge {
@@ -212,6 +212,7 @@ impl App {
                 | Game("start" | "sign-in")
                 | Fenix("install" | "migrate" | "configure")
                 | Gsx("prepare" | "configure")
+                | Navigraph("install-hub" | "configure")
         );
         self.control(title, allowed.then_some(Message::Action(action)), primary)
     }

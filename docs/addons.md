@@ -35,7 +35,8 @@ add-on programs or change package contents when reading this list.
 Follow the developer's own installer when one is supplied. Keep existing
 settings and liveries before replacing a package. The general Community inventory lists packages and opens their folder.
 Fenix and the experimental GSX Pro integration have separate setup workflows
-below, currently for MSFS 2024 only.
+below, currently for MSFS 2024 only. The experimental Navigraph setup supports
+MSFS 2024 and 2020.
 
 Since 0.2.7, Flightdeck shows one highlighted next action for each add-on. Detected
 components remain visible; additional actions are under **Manage & repair**.
@@ -50,7 +51,8 @@ entry; its original files stay in place. Cancel leaves the package unchanged.
 Flightdeck refuses an outdated review if the folder or contents changed.
 
 For a full Fenix or GSX uninstall, open the official installer/manager in its
-add-on section. Removing its Community package does not uninstall its Windows
+add-on section. Navigraph Hub and Simlink remain in the Windows profile when
+their Community packages are removed. Removing its Community package does not uninstall its Windows
 companion applications.
 
 ## Aircraft with companion applications
@@ -135,6 +137,53 @@ preparation, not for undoing a later GSX installation. Diagnostic logs are in
 `private/gsx-setup-*.log` and `private/gsx-manager.log`. If FSDT replaces its
 installer download, a checksum mismatch stops preparation until Flightdeck's
 pin has been reviewed and updated. No FSDT or Microsoft binaries are bundled.
+
+### Navigraph Hub and Simlink (experimental)
+
+Open **Mods → Navigraph** and follow the highlighted next step. Each MSFS edition
+has its own Windows profile, so set up Navigraph separately for 2024 and 2020.
+Close MSFS and other Windows applications in the selected profile first.
+Navigraph does not officially support Linux; sign-in, subscription and navdata
+stay with Navigraph.
+
+1. **Set up Navigraph sign-in** registers a hidden `flightdeck-navigraph.desktop`
+   entry as the handler for `navigraph-desktop://` (Hub) and
+   `navigraph-traffic-desktop://` (Simlink) through `xdg-mime`. After you sign
+   in through your Linux browser, the browser hands the result back to
+   Flightdeck, which passes it to the waiting application in its profile. Without
+   this handler, the sign-in completes in the browser but never reaches Hub or
+   Simlink. `xdg-utils` is required.
+2. **Install Navigraph Hub** downloads the official Hub 1.2.24 installer from
+   Navigraph's update server, checks its pinned SHA-256 and installs it for the
+   Windows user of this profile. Flightdeck moves Hub's bundled Process Governor
+   (`procgov.exe`) aside, because its call fails under Wine with
+   `Win32Exception (87)` and stops every package extraction. Hub then runs 7-Zip
+   directly. Hub's updates restore the file; Flightdeck moves it aside again before
+   every start. Flightdeck also turns off Hub's **run in background** and Windows
+   login autostart settings, so closing Hub's window quits it.
+3. **Open Navigraph Hub**, sign in and install the navdata. Hub finds the
+   simulator through the same `UserCfg.opt` that Flightdeck uses; start MSFS once
+   beforehand. Close Hub's window when the installation has finished, or use
+   **Close Navigraph**. Flightdeck lists the `navigraph-*` packages it finds in the
+   Community folder.
+4. Optional, for the aircraft position in Navigraph Charts: download the Simlink
+   installer from [Navigraph](https://navigraph.com/downloads), select it and
+   choose **Start Simlink installer**. Keep the suggested folder
+   (`C:\Program Files\Navigraph\Simlink`).
+5. **Set up Simlink auto-start** adds one Simlink entry to the edition's
+   `exe.xml`, next to its `UserCfg.opt`, and keeps other add-ons and a backup in
+   `private/navigraph-exe-*.xml`. MSFS then starts Simlink in the same Wine session,
+   so SimConnect is reached without network configuration. Flightdeck closes
+   Simlink when the simulator session ends. Sign in to Simlink once through
+   **Manage & repair → Open Simlink**.
+
+**Navigraph configured locally · Functionality unconfirmed** confirms local files
+only. Hub navdata installation, Simlink's SimConnect connection and Charts
+position tracking have not yet been verified in a complete flight with
+Flightdeck. Hub detects Flightdeck's installation like a Steam installation; it
+does not see Marketplace aircraft in the Official folder, so aircraft-specific
+navdata for those may be missing. Logs are in
+`private/navigraph-*.log` of the runtime. No Navigraph binaries are bundled.
 
 ### Fenix A320
 

@@ -143,6 +143,56 @@ Installer-Download, stoppt ein Prüfsummenfehler die Vorbereitung, bis Flightdec
 festgelegte Version geprüft und aktualisiert wurde. FSDT- und Microsoft-Binärdateien
 werden nicht mitgeliefert.
 
+## Navigraph Hub und Simlink einrichten (experimentell)
+
+Öffne **Mods → Navigraph** und folge dem hervorgehobenen nächsten Schritt. Jede
+MSFS-Version hat ein eigenes Windows-Profil; richte Navigraph daher für 2024 und
+2020 getrennt ein. Beende vorher MSFS und andere Windows-Programme im gewählten
+Profil. Navigraph unterstützt Linux offiziell nicht; Anmeldung, Abonnement und
+Navdata bleiben bei Navigraph.
+
+1. **Navigraph-Anmeldung einrichten** trägt über `xdg-mime` einen versteckten
+   Eintrag `flightdeck-navigraph.desktop` als Handler für `navigraph-desktop://`
+   (Hub) und `navigraph-traffic-desktop://` (Simlink) ein. Nach der Anmeldung im
+   Linux-Browser gibt der Browser das Ergebnis an Flightdeck zurück, das es an die
+   wartende Anwendung im passenden Profil weiterreicht. Ohne diesen Handler endet
+   die Anmeldung im Browser, kommt aber nie bei Hub oder Simlink an. `xdg-utils`
+   wird benötigt.
+2. **Navigraph Hub installieren** lädt den offiziellen Hub-1.2.24-Installer vom
+   Update-Server von Navigraph, prüft die festgelegte SHA-256-Prüfsumme und
+   installiert Hub für den Windows-Benutzer dieses Profils. Flightdeck legt den
+   mitgelieferten Process Governor (`procgov.exe`) beiseite, weil dessen Aufruf
+   unter Wine mit `Win32Exception (87)` scheitert und jedes Entpacken abbricht.
+   Hub ruft 7-Zip dann direkt auf. Hub-Updates stellen die Datei wieder her;
+   Flightdeck legt sie vor jedem Start erneut beiseite. Außerdem schaltet
+   Flightdeck Hubs Einstellungen **Im Hintergrund ausführen** und den
+   Windows-Autostart aus, damit Hub mit seinem Fenster beendet wird.
+3. **Navigraph Hub öffnen**, anmelden und die Navdata installieren. Hub findet den
+   Simulator über dieselbe `UserCfg.opt` wie Flightdeck; starte MSFS vorher
+   einmal. Schließe das Hub-Fenster nach der Installation oder nutze
+   **Navigraph schließen**. Flightdeck zeigt die gefundenen `navigraph-*`-Pakete
+   im Community-Ordner an.
+4. Optional für die Flugzeugposition in Navigraph Charts: Lade den
+   Simlink-Installer bei [Navigraph](https://navigraph.com/downloads) herunter,
+   wähle ihn aus und starte ihn mit **Simlink-Installer starten**. Behalte den
+   vorgeschlagenen Ordner (`C:\Program Files\Navigraph\Simlink`).
+5. **Simlink-Autostart einrichten** ergänzt einen Simlink-Eintrag in der
+   `exe.xml` neben der `UserCfg.opt` dieser Version. Andere Add-ons bleiben
+   erhalten, eine Sicherung liegt in `private/navigraph-exe-*.xml`. MSFS startet
+   Simlink dann in derselben Wine-Sitzung, SimConnect ist so ohne
+   Netzwerkeinstellung erreichbar. Flightdeck beendet Simlink mit der
+   Simulator-Sitzung. Melde dich einmal über **Verwalten & reparieren → Simlink
+   öffnen** in Simlink an.
+
+**Navigraph lokal eingerichtet · Funktion unbestätigt** bestätigt nur lokale
+Dateien. Die Navdata-Installation durch Hub, die SimConnect-Verbindung von
+Simlink und die Positionsanzeige in Charts sind mit Flightdeck noch nicht in einem
+vollständigen Flug verifiziert. Hub erkennt Flightdecks Installation wie eine
+Steam-Installation und sieht Marketplace-Flugzeuge im Official-Ordner nicht;
+flugzeugspezifische Navdata dafür können fehlen. Protokolle liegen in
+`private/navigraph-*.log` der Runtime. Flightdeck liefert keine Navigraph-Dateien
+mit.
+
 ## Fenix A320 einrichten
 
 Öffne **Mods → Fenix A320** und folge dem hervorgehobenen nächsten Schritt.

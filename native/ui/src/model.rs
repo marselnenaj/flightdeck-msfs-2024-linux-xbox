@@ -95,6 +95,8 @@ pub enum Action {
     Fenix(&'static str),
     FenixPick(&'static str),
     Gsx(&'static str),
+    Navigraph(&'static str),
+    NavigraphPick,
     Proton,
     ProtonDefault,
     ProtonCancel,
@@ -588,6 +590,39 @@ impl App {
                     }
                 }
             }
+            Navigraph(op) => {
+                let data = self.data("navigraph");
+                let enabled = self.fresh("navigraph") && s(data, "runtime_path") == root;
+                let change =
+                    enabled && safe_idle && yes(data, "can_change") && data["state"] == "available";
+                let hub = yes(data, "hub_installed");
+                let simlink = yes(data, "simlink_installed");
+                body = json!({"runtime_path":root});
+                match *op {
+                    "install-hub" => ("navigraph/install-hub", change),
+                    "open-hub" => ("navigraph/open-hub", change && hub),
+                    "install-simlink" => {
+                        body["installer_path"] = json!(self.forms.get("navigraph_installer_path"));
+                        (
+                            "navigraph/install-simlink",
+                            change && !self.forms.get("navigraph_installer_path").trim().is_empty(),
+                        )
+                    }
+                    "open-simlink" => ("navigraph/open-simlink", change && simlink),
+                    "configure" => (
+                        "navigraph/configure",
+                        change && simlink && yes(data, "settings_found"),
+                    ),
+                    "disable" => ("navigraph/disable", change && yes(data, "startup")),
+                    "handler" => (
+                        "navigraph/handler",
+                        enabled && data["state"] == "available" && !yes(data, "handler"),
+                    ),
+                    "stop" => ("navigraph/stop", enabled && yes(data, "can_stop")),
+                    _ => return None,
+                }
+            }
+            NavigraphPick => ("navigraph/pick", safe_idle),
             FenixPick(kind) => {
                 body = json!({"kind":kind});
                 (

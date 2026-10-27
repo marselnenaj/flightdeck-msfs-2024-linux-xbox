@@ -11,6 +11,7 @@ pub const RESOURCES: &[&str] = &[
     "cloud-saves",
     "fenix",
     "gsx",
+    "navigraph",
     "proton",
     "maintenance",
     "store-check",
