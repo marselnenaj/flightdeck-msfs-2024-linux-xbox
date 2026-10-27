@@ -2,8 +2,8 @@
 
 [Deutsch](known-issues.de.md) · [Documentation](index.md)
 
-Status: 25 October 2026, covering the stable **0.2.23** release.
-See the [release changes](changelog.md#0223--25-october-2026).
+Status: 27 October 2026, including the **0.3.1** fix.
+See the [release changes](changelog.md#031--27-october-2026).
 
 - **Bazzite installation:** The installer rejects symbolic links in its source
   and destination paths, including Fedora Atomic's `/home` alias. Install from
@@ -18,6 +18,20 @@ See the [release changes](changelog.md#0223--25-october-2026).
   Older reports cannot establish missing error codes, and jobs ended by an
   older version or a service restart cannot be recovered through this button.
   [Recovery and limits](download-pause.md).
+
+- **Xbox download authentication (reported on 0.3.0):** Browser sign-in can
+  succeed while the subsequent Xbox user-token request returns HTTP 400 and
+  `X-Err: 00000005`. The bundled Xodus then panics with download code 101.
+  This was reproduced locally without a proxy. Version **0.3.1** uses a Windows
+  SISU replacement that
+  succeeds with the same account: authenticated MSFS package metadata returns
+  HTTP 200 and the Microsoft CDN metadata transfer starts. The replacement
+  retains user, device and application authentication, including the same device
+  proof key. Update Flightdeck to obtain the corrected native components.
+  A complete new installation and the original reporter's retest remain pending.
+  The code does not establish an account ban or missing purchase.
+  [Upstream PR #201](https://github.com/xodus-gaming/xodus/pull/201) is a separate
+  device-authentication experiment; the Flightdeck change requires a user token.
 
 - **NVIDIA:** Normal MSFS 2024 rendering is confirmed by user testing. Smaller
   issues remain possible, including a missing or black startup video. This does

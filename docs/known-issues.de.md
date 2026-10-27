@@ -2,8 +2,8 @@
 
 [English](known-issues.md) · [Dokumentation](index.md)
 
-Stand: 25. Oktober 2026, für die stabile Version **0.2.23**.
-Siehe [Änderungsübersicht](changelog.md#0223--25-october-2026).
+Stand: 27. Oktober 2026, einschließlich des Fixes in **0.3.1**.
+Siehe [Änderungsübersicht](changelog.md#031--27-october-2026).
 
 - **Bazzite-Installation:** Der Installer lehnt symbolische Links in Quell- und
   Zielpfaden ab, auch Fedora Atomics `/home`-Verknüpfung. Im Desktop-Modus mit
@@ -18,6 +18,22 @@ Siehe [Änderungsübersicht](changelog.md#0223--25-october-2026).
   ersten Installation in der Diagnose erhalten. Alte Berichte liefern fehlende
   Codes nicht nach; von älteren Versionen oder einem Dienstneustart beendete
   Jobs stellt der Knopf nicht wieder her. [Ablauf und Grenzen](download-pause.de.md).
+
+- **Xbox-Authentifizierung beim Download (gemeldet mit 0.3.0):** Die Anmeldung
+  im Browser kann gelingen, während die nachfolgende Xbox-Tokenanfrage HTTP 400
+  mit `X-Err: 00000005` liefert. Das gebündelte Xodus bricht dann mit einer
+  Panic und Downloadcode 101 ab. Der Fehler wurde lokal ohne Proxy reproduziert.
+  Version **0.3.1** verwendet stattdessen Windows SISU und funktioniert mit
+  demselben Konto: Die
+  authentifizierte MSFS-Paketabfrage liefert HTTP 200 und die Übertragung der
+  Metadaten vom Microsoft-CDN beginnt. Benutzer-, Geräte- und Anwendungsanmeldung
+  bleiben erhalten, einschließlich desselben Geräte-Proof-Keys. Flightdeck
+  aktualisieren, um die korrigierten nativen Komponenten zu erhalten.
+  Eine vollständige Neuinstallation und der Test des ursprünglichen Melders
+  stehen aus. Der Code belegt weder eine Kontosperre noch einen fehlenden Kauf.
+  [Upstream-PR #201](https://github.com/xodus-gaming/xodus/pull/201) ist ein
+  separates Experiment mit Geräteauthentifizierung; der Flightdeck-Fix verlangt
+  weiterhin ein Benutzertoken.
 
 - **NVIDIA:** Die normale MSFS-2024-Darstellung ist durch Nutzertests bestätigt.
   Kleinere Probleme bleiben möglich, etwa ein fehlendes oder schwarzes Startvideo.

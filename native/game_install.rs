@@ -382,9 +382,11 @@ pub fn download(request: Request<'_>, ctx: &Context) -> Result<PathBuf> {
                     if code == 0 {
                         break;
                     }
-                    let error = Error::Invalid(
-                        "Der Spieldownload wurde nicht abgeschlossen. Bitte Kaufberechtigung, Speicherplatz und Verbindung prüfen.",
-                    );
+                    let error = Error::Invalid(if code == 94 {
+                        "Die Xbox-Authentifizierung für den Spieldownload ist fehlgeschlagen. Das kann auch nach erfolgreicher Microsoft-Anmeldung passieren. Bitte diesen Fehler mit Downloadcode 94 melden."
+                    } else {
+                        "Der Spieldownload wurde nicht abgeschlossen. Bitte Kaufberechtigung, Speicherplatz und Verbindung prüfen."
+                    });
                     if !resume {
                         return Err(error);
                     }
