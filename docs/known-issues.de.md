@@ -2,8 +2,8 @@
 
 [English](known-issues.md) · [Dokumentation](index.md)
 
-Stand: 25. Oktober 2026, für die stabile Version **0.2.23**.
-Siehe [Änderungsübersicht](changelog.md#0223--25-october-2026).
+Stand: 27. Oktober 2026, einschließlich Meldungen zur stabilen Version **0.3.0**.
+Siehe [Änderungsübersicht](changelog.md#030--26-october-2026).
 
 - **Bazzite-Installation:** Der Installer lehnt symbolische Links in Quell- und
   Zielpfaden ab, auch Fedora Atomics `/home`-Verknüpfung. Im Desktop-Modus mit
@@ -18,6 +18,17 @@ Siehe [Änderungsübersicht](changelog.md#0223--25-october-2026).
   ersten Installation in der Diagnose erhalten. Alte Berichte liefern fehlende
   Codes nicht nach; von älteren Versionen oder einem Dienstneustart beendete
   Jobs stellt der Knopf nicht wieder her. [Ablauf und Grenzen](download-pause.de.md).
+
+- **Xbox-Authentifizierung beim Download (gemeldet mit 0.3.0):** Die Anmeldung
+  im Browser kann gelingen, während die nachfolgende Xbox-Tokenanfrage HTTP 400
+  mit `X-Err: 00000005` liefert. Das gebündelte Xodus bricht dann mit einer
+  Panic und Downloadcode 101 ab. Bedeutung des Xbox-Codes und serverseitige
+  Ursache sind ungeklärt; daraus folgen weder eine Kontosperre noch ein
+  fehlender Kauf. Eine bestätigte Ausweichlösung gibt es bisher nicht.
+  [Upstream-PR #201](https://github.com/xodus-gaming/xodus/pull/201) ist ein
+  experimenteller Entwurf, kein bestätigter Fix. Bei Nutzung eines TLS-Debug-Proxys
+  einen Versuch ohne Proxy vergleichen. HTTP-Status und numerischen Code melden,
+  ohne Tokens, Cookies, Kontodaten oder rohe Netzwerkaufzeichnungen.
 
 - **NVIDIA:** Die normale MSFS-2024-Darstellung ist durch Nutzertests bestätigt.
   Kleinere Probleme bleiben möglich, etwa ein fehlendes oder schwarzes Startvideo.

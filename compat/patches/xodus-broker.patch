@@ -9709,7 +9709,7 @@ index bc62549..ac300ec 100644
 -    ExitCode::from(status.code().map(|c| c as u8).unwrap_or(0))
 +    ExitCode::from(crate::process_status::shell_exit_code(status))
 diff --git c/crates/xodus-cli/src/commands/streaming.rs w/crates/xodus-cli/src/commands/streaming.rs
-index 6d6640c..7357d4f 100644
+index 6d6640c..520a674 100644
 --- c/crates/xodus-cli/src/commands/streaming.rs
 +++ w/crates/xodus-cli/src/commands/streaming.rs
 @@ -1 +1,6 @@
@@ -9768,6 +9768,9 @@ index 6d6640c..7357d4f 100644
 @@ -72 +111 @@ pub async fn run(
 -        .await;
 +        .await
+@@ -98 +137 @@ pub async fn run(
+-                return ExitCode::FAILURE;
++                return crate::package::package_error_exit_code(err.as_ref());
 @@ -107,0 +147,11 @@ pub async fn run(
 +            if resume_files {
 +                package_identity = authenticated_package_identity(&package, file);
@@ -17859,3 +17862,382 @@ index 76d2329..d218ecb 100644
 +    ) -> Result<(), TokenStoreError> {
 +        self.set(key, &update(self.get(key)?)?)
 +    }
+diff --git c/crates/xodus-cli/src/commands/download.rs w/crates/xodus-cli/src/commands/download.rs
+index a1358b9..a1bed58 100644
+--- c/crates/xodus-cli/src/commands/download.rs
++++ w/crates/xodus-cli/src/commands/download.rs
+@@ -37 +37 @@ pub async fn run(
+-        return ExitCode::FAILURE;
++        return crate::package::package_error_exit_code(err.as_ref());
+diff --git c/crates/xodus-cli/src/package.rs w/crates/xodus-cli/src/package.rs
+index b2cbecf..5eb1543 100644
+--- c/crates/xodus-cli/src/package.rs
++++ w/crates/xodus-cli/src/package.rs
+@@ -82 +82,3 @@ pub async fn get_packages(
+-    let dev_token = tokens.get_device_sts_token().unwrap();
++    let dev_token = tokens
++        .get_device_sts_token()
++        .map_err(|_| xodus::api::xbox::AuthFailure::missing_credentials())?;
+@@ -84 +86,3 @@ pub async fn get_packages(
+-        return Err(Box::new(std::io::Error::other("Invalid STS token")));
++        return Err(Box::new(
++            xodus::api::xbox::AuthFailure::missing_credentials(),
++        ));
+@@ -86 +90,3 @@ pub async fn get_packages(
+-    let user_token = tokens.get_user_sts_token().unwrap();
++    let user_token = tokens
++        .get_user_sts_token()
++        .map_err(|_| xodus::api::xbox::AuthFailure::missing_credentials())?;
+@@ -88 +94,3 @@ pub async fn get_packages(
+-        return Err(Box::new(std::io::Error::other("Unsupported user token")));
++        return Err(Box::new(
++            xodus::api::xbox::AuthFailure::missing_credentials(),
++        ));
+@@ -92 +100 @@ pub async fn get_packages(
+-        xodus::api::xbox::run(client, dev_token, legacy, "http://update.xboxlive.com").await;
++        xodus::api::xbox::run(client, dev_token, legacy, "http://update.xboxlive.com").await?;
+@@ -101 +109 @@ pub async fn get_packages(
+-            xodus::api::xbox::get_xsts_auth_header(xsts_token),
++            xodus::api::xbox::get_xsts_auth_header(xsts_token)?,
+@@ -115,0 +124,29 @@ pub async fn get_packages(
++
++/// Stable, credential-free category for launchers. 77 remains reserved for the
++/// existing expired-session check; a rejected Xbox exchange must not relogin in a loop.
++pub fn package_error_exit_code(
++    error: &(dyn std::error::Error + 'static),
++) -> std::process::ExitCode {
++    if error.is::<xodus::api::xbox::AuthFailure>() {
++        std::process::ExitCode::from(94)
++    } else {
++        std::process::ExitCode::FAILURE
++    }
++}
++
++#[cfg(test)]
++mod auth_failure_tests {
++    use super::*;
++    #[test]
++    fn auth_failure_has_a_distinct_nonpanic_nonexpired_exit_code() {
++        let error = xodus::api::xbox::AuthFailure::missing_credentials();
++        assert_eq!(
++            package_error_exit_code(&error),
++            std::process::ExitCode::from(94)
++        );
++        assert_eq!(
++            package_error_exit_code(&std::io::Error::other("other")),
++            std::process::ExitCode::FAILURE
++        );
++    }
++}
+diff --git c/crates/xodus/src/api/xbox/auth.rs w/crates/xodus/src/api/xbox/auth.rs
+index bf2aa0e..cd5ad28 100644
+--- c/crates/xodus/src/api/xbox/auth.rs
++++ w/crates/xodus/src/api/xbox/auth.rs
+@@ -4,0 +5,110 @@ use crate::models::xbox::{
++#[derive(Clone, Copy, Debug)]
++pub(super) enum AuthStage {
++    Microsoft,
++    XboxUser,
++    Xsts,
++}
++
++/// Only fixed categories and bounded server codes are retained. Never attach
++/// reqwest errors, SOAP faults, response bodies, tickets or token responses.
++#[derive(Debug)]
++pub struct AuthFailure {
++    stage: AuthStage,
++    reason: &'static str,
++    status: Option<u16>,
++    xbox_code: Option<String>,
++}
++
++impl AuthFailure {
++    pub(super) fn invalid(stage: AuthStage) -> Self {
++        Self {
++            stage,
++            reason: "invalid token response",
++            status: None,
++            xbox_code: None,
++        }
++    }
++
++    pub fn missing_credentials() -> Self {
++        Self {
++            stage: AuthStage::Microsoft,
++            reason: "sign-in credentials unavailable",
++            status: None,
++            xbox_code: None,
++        }
++    }
++
++    pub(super) fn exchange() -> Self {
++        Self {
++            stage: AuthStage::Microsoft,
++            reason: "token exchange failed",
++            status: None,
++            xbox_code: None,
++        }
++    }
++}
++
++impl std::fmt::Display for AuthFailure {
++    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
++        let stage = match self.stage {
++            AuthStage::Microsoft => "Microsoft token exchange",
++            AuthStage::XboxUser => "Xbox user authentication",
++            AuthStage::Xsts => "Xbox XSTS authorization",
++        };
++        write!(f, "{stage} failed: {}", self.reason)?;
++        if let Some(status) = self.status {
++            write!(f, "; HTTP {status}")?;
++        }
++        if let Some(code) = &self.xbox_code {
++            write!(f, "; X-Err {code}")?;
++        }
++        Ok(())
++    }
++}
++impl std::error::Error for AuthFailure {}
++
++fn xbox_code(headers: &reqwest::header::HeaderMap) -> Option<String> {
++    let value = headers.get("x-err")?.to_str().ok()?;
++    let digits = value
++        .strip_prefix("0x")
++        .or_else(|| value.strip_prefix("0X"))
++        .unwrap_or(value);
++    (!digits.is_empty() && value.len() <= 10 && digits.bytes().all(|b| b.is_ascii_hexdigit()))
++        .then(|| value.to_owned())
++}
++
++async fn checked_response(
++    stage: AuthStage,
++    response: reqwest::Result<reqwest::Response>,
++) -> Result<XstsResponse, AuthFailure> {
++    let response = response.map_err(|error| AuthFailure {
++        stage,
++        reason: if error.is_timeout() {
++            "request timed out"
++        } else {
++            "request failed"
++        },
++        status: None,
++        xbox_code: None,
++    })?;
++    let status = response.status();
++    let failure = AuthFailure {
++        stage,
++        reason: if status.is_success() {
++            "invalid token response"
++        } else {
++            "HTTP request rejected"
++        },
++        status: Some(status.as_u16()),
++        xbox_code: xbox_code(response.headers()),
++    };
++    if !status.is_success() {
++        return Err(failure);
++    }
++    let token: XstsResponse = response.json().await.map_err(|_| failure)?;
++    if token.token.is_empty() || token.not_after <= chrono::Utc::now() {
++        return Err(AuthFailure::invalid(stage));
++    }
++    Ok(token)
++}
++
+@@ -8 +118 @@ pub async fn authenticate_xbox_user(
+-) -> reqwest::Result<XstsResponse> {
++) -> Result<XstsResponse, AuthFailure> {
+@@ -25,2 +135 @@ pub async fn authenticate_xbox_user(
+-        .await?
+-        .error_for_status()?;
++        .await;
+@@ -28 +137 @@ pub async fn authenticate_xbox_user(
+-    resp.json().await
++    checked_response(AuthStage::XboxUser, resp).await
+@@ -35 +144 @@ pub async fn request_xsts_token(
+-) -> reqwest::Result<XstsResponse> {
++) -> Result<XstsResponse, AuthFailure> {
+@@ -53,2 +162 @@ pub async fn request_xsts_token(
+-        .await?
+-        .error_for_status()?;
++        .await;
+@@ -56 +164 @@ pub async fn request_xsts_token(
+-    resp.json().await
++    checked_response(AuthStage::Xsts, resp).await
+@@ -59,3 +167,135 @@ pub async fn request_xsts_token(
+-pub fn get_xsts_auth_header(xsts: XstsResponse) -> String {
+-    let uhs = xsts.user_hash().expect("XSTS response missing xui claim");
+-    format!("XBL3.0 x={uhs};{}", xsts.token)
++pub fn get_xsts_auth_header(xsts: XstsResponse) -> Result<String, AuthFailure> {
++    let uhs = xsts
++        .user_hash()
++        .filter(|s| !s.is_empty())
++        .ok_or_else(|| AuthFailure::invalid(AuthStage::Xsts))?;
++    Ok(format!("XBL3.0 x={uhs};{}", xsts.token))
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++    use std::io::{Read, Write};
++
++    async fn response(status: u16, headers: &str, body: &str) -> reqwest::Response {
++        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
++        let address = listener.local_addr().unwrap();
++        let reply = format!(
++            "HTTP/1.1 {status} Test\r\nContent-Length: {}\r\nConnection: close\r\n{headers}\r\n{body}",
++            body.len()
++        );
++        let server = std::thread::spawn(move || {
++            let (mut stream, _) = listener.accept().unwrap();
++            stream
++                .set_read_timeout(Some(std::time::Duration::from_secs(5)))
++                .unwrap();
++            let mut request = [0; 4096];
++            stream.read(&mut request).unwrap();
++            stream.write_all(reply.as_bytes()).unwrap();
++        });
++        let response = reqwest::Client::builder()
++            .no_proxy()
++            .build()
++            .unwrap()
++            .get(format!(
++                "http://{address}/PRIVATE_PATH?ticket=PRIVATE_TICKET"
++            ))
++            .timeout(std::time::Duration::from_secs(5))
++            .send()
++            .await
++            .unwrap();
++        server.join().unwrap();
++        response
++    }
++
++    #[tokio::test]
++    async fn reported_empty_http_400_retains_only_stage_status_and_xerr() {
++        let response = response(
++            400,
++            "X-Err: 00000005\r\nX-XblCorrelationId: PRIVATE_CORRELATION\r\n",
++            "",
++        )
++        .await;
++        let failure = checked_response(AuthStage::XboxUser, Ok(response))
++            .await
++            .err()
++            .unwrap();
++        assert_eq!(
++            failure.to_string(),
++            "Xbox user authentication failed: HTTP request rejected; HTTP 400; X-Err 00000005"
++        );
++        assert!(std::error::Error::source(&failure).is_none());
++        assert!(!format!("{failure:?} {failure}").contains("PRIVATE"));
++    }
++
++    #[tokio::test]
++    async fn xsts_is_a_separate_stage_and_error_bodies_are_never_displayed() {
++        let response = response(401, "X-Err: PRIVATE_HEADER\r\n", "PRIVATE_BODY").await;
++        let failure = checked_response(AuthStage::Xsts, Ok(response))
++            .await
++            .err()
++            .unwrap();
++        assert_eq!(
++            failure.to_string(),
++            "Xbox XSTS authorization failed: HTTP request rejected; HTTP 401"
++        );
++        assert!(!format!("{failure:?} {failure}").contains("PRIVATE"));
++    }
++
++    #[tokio::test]
++    async fn transport_errors_do_not_retain_request_urls_or_secrets() {
++        // Unsupported scheme fails before any network connection is attempted.
++        let response = reqwest::Client::new()
++            .get("ftp://invalid.example/PRIVATE_PATH?ticket=PRIVATE_TICKET")
++            .send()
++            .await;
++        let failure = checked_response(AuthStage::XboxUser, response)
++            .await
++            .err()
++            .unwrap();
++        assert_eq!(
++            failure.to_string(),
++            "Xbox user authentication failed: request failed"
++        );
++        assert!(!format!("{failure:?} {failure}").contains("PRIVATE"));
++        assert!(std::error::Error::source(&failure).is_none());
++    }
++
++    #[tokio::test]
++    async fn malformed_success_is_an_error_and_valid_tokens_keep_the_same_header() {
++        let response = response(200, "", "PRIVATE_BODY").await;
++        let failure = checked_response(AuthStage::XboxUser, Ok(response))
++            .await
++            .err()
++            .unwrap();
++        assert_eq!(
++            failure.to_string(),
++            "Xbox user authentication failed: invalid token response; HTTP 200"
++        );
++        let token = |claims| {
++            serde_json::from_value::<XstsResponse>(serde_json::json!({
++                "NotAfter":"2099-01-01T00:00:00Z", "Token":"PRIVATE_TOKEN", "DisplayClaims":claims
++            }))
++            .unwrap()
++        };
++        let missing = get_xsts_auth_header(token(serde_json::json!({}))).unwrap_err();
++        assert!(!format!("{missing:?} {missing}").contains("PRIVATE"));
++        assert_eq!(
++            get_xsts_auth_header(token(serde_json::json!({"xui":[{"uhs":"hash"}]}))).unwrap(),
++            "XBL3.0 x=hash;PRIVATE_TOKEN"
++        );
++    }
++
++    #[test]
++    fn xbox_codes_are_bounded_without_guessing_their_numeric_base() {
++        for code in ["00000005", "2148916233", "0x8015DC09"] {
++            let mut headers = reqwest::header::HeaderMap::new();
++            headers.insert("x-err", code.parse().unwrap());
++            assert_eq!(xbox_code(&headers).as_deref(), Some(code));
++        }
++        for code in ["", "0x", "PRIVATE_TOKEN", "12345678901234567890", "-5"] {
++            let mut headers = reqwest::header::HeaderMap::new();
++            headers.insert("x-err", code.parse().unwrap());
++            assert!(xbox_code(&headers).is_none());
++        }
++    }
+diff --git c/crates/xodus/src/api/xbox/mod.rs w/crates/xodus/src/api/xbox/mod.rs
+index 9adadb4..6254a90 100644
+--- c/crates/xodus/src/api/xbox/mod.rs
++++ w/crates/xodus/src/api/xbox/mod.rs
+@@ -8 +8 @@ pub mod title;
+-pub use auth::{authenticate_xbox_user, get_xsts_auth_header, request_xsts_token};
++pub use auth::{AuthFailure, authenticate_xbox_user, get_xsts_auth_header, request_xsts_token};
+@@ -15 +15 @@ pub async fn run(
+-) -> XstsResponse {
++) -> Result<XstsResponse, AuthFailure> {
+@@ -30 +30 @@ pub async fn run(
+-    .expect("Failed to get ms user token");
++    .map_err(|_| AuthFailure::exchange())?;
+@@ -34,2 +34 @@ pub async fn run(
+-            eprintln!("Failed to get exchange MS token");
+-            panic!("TODO");
++            return Err(AuthFailure::exchange());
+@@ -39,0 +39,3 @@ pub async fn run(
++            if !collection.challenges.is_empty() || collection.security_tokens.len() != 1 {
++                return Err(AuthFailure::invalid(auth::AuthStage::Microsoft));
++            }
+@@ -46 +48 @@ pub async fn run(
+-        _ => unreachable!("Only responses are handled"),
++        _ => return Err(AuthFailure::invalid(auth::AuthStage::Microsoft)),
+@@ -49,2 +51 @@ pub async fn run(
+-        eprintln!("Unsupported token");
+-        panic!("TODO");
++        return Err(AuthFailure::invalid(auth::AuthStage::Microsoft));
+@@ -52,3 +53 @@ pub async fn run(
+-    let resp = authenticate_xbox_user(client, user_token)
+-        .await
+-        .expect("Failed to authenticate Xbox user");
++    let resp = authenticate_xbox_user(client, user_token).await?;
+@@ -56,3 +55 @@ pub async fn run(
+-    request_xsts_token(client, resp.token, relying_party)
+-        .await
+-        .expect("Failed to authenticate Xbox user")
++    request_xsts_token(client, resp.token, relying_party).await

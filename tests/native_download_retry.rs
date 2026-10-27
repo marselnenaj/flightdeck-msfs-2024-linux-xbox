@@ -104,6 +104,34 @@ fn resume() -> Value {
 }
 
 #[test]
+fn xbox_exchange_failure_is_reported_without_repeating_successful_browser_sign_in() {
+    let mut run = Download::start(
+        "case \"$1\" in login) printf 'login\\n' >> login-calls; exit 0;; esac\nexit 94",
+        resume(),
+        true,
+        false,
+    );
+    let failed = run.wait("failed");
+    assert_eq!(failed["login_exit_code"], 0);
+    assert_eq!(failed["download_exit_code"], 94);
+    assert_eq!(failed["download_attempt"], 1);
+    assert_eq!(failed["can_retry"], true);
+    assert!(
+        failed["error"]
+            .as_str()
+            .unwrap()
+            .contains("Xbox-Authentifizierung")
+    );
+    assert_eq!(
+        fs::read_to_string(run.temp.path().join("login-calls")).unwrap(),
+        "login\n"
+    );
+    assert_eq!(run.app.lock().installation_report["download_exit_code"], 94);
+    run.app.cancel("setup", &run.id).unwrap();
+    assert!(!run.join());
+}
+
+#[test]
 fn failed_download_retries_in_the_same_directory_and_exports_evidence_before_installation() {
     let mut run = Download::start(
         r#"
