@@ -176,8 +176,11 @@ Navdata bleiben bei Navigraph.
    im Community-Ordner an.
 4. Optional für die Flugzeugposition in Navigraph Charts: Lade den
    Simlink-Installer bei [Navigraph](https://navigraph.com/downloads) herunter,
-   wähle ihn aus und starte ihn mit **Simlink-Installer starten**. Behalte den
-   vorgeschlagenen Ordner (`C:\Program Files\Navigraph\Simlink`).
+   wähle ihn aus und klicke auf **Simlink installieren**. Flightdeck installiert
+   Simlink ohne Assistenten in den Standardordner
+   (`C:\Program Files\Navigraph\Simlink`), weil der Assistent unter Wine ein
+   zusätzliches leeres Fenster zeigt. Öffne Simlink danach über **Simlink öffnen**
+   und melde dich an.
 5. **Simlink-Autostart einrichten** ergänzt einen Simlink-Eintrag in der
    `exe.xml` neben der `UserCfg.opt` dieser Version. Andere Add-ons bleiben
    erhalten, eine Sicherung liegt in `private/navigraph-exe-*.xml`. MSFS startet

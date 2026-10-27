@@ -338,7 +338,7 @@ pub(crate) fn navigraph(data: &Value) -> AddonProgress {
             Some("open-hub") => {
                 "Navigraph Hub ist geöffnet. Schließe Hub nach der Installation vollständig."
             }
-            Some("open-simlink" | "install-simlink") => {
+            Some("open-simlink") => {
                 "Simlink ist geöffnet. Schließe alle Navigraph-Fenster, um fortzufahren."
             }
             _ => "Warte, bis der aktuelle Schritt abgeschlossen ist.",

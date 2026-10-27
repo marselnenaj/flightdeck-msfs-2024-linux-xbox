@@ -607,8 +607,7 @@ pub fn snapshot(app: &Launcher) -> Value {
             value["idle"] = json!(idle);
             value["can_change"] = json!(idle && !busy && !playing && !closing);
             let interactive = job["state"] == "running"
-                && ["open-hub", "open-simlink", "install-simlink"]
-                    .contains(&job["operation"].as_str().unwrap_or(""))
+                && ["open-hub", "open-simlink"].contains(&job["operation"].as_str().unwrap_or(""))
                 && job["stopping"] != true;
             value["can_stop"] = json!(
                 (hub_running || simlink_running)
@@ -764,13 +763,26 @@ fn open_hub(ctx: &Context) -> Result<()> {
 fn install_simlink(ctx: &Context, installer: &Path) -> Result<()> {
     let root = ctx.root()?;
     let wine = wine(ctx, root, "navigraph-simlink-setup.log")?;
-    ctx.progress(
-        "Folge dem Simlink-Installer und behalte den vorgeschlagenen Ordner. Schließe danach alle Navigraph-Fenster.",
-    );
-    interactive(ctx, root, &wine, &[installer], SIMLINK)?;
+    ctx.progress("Navigraph Simlink wird im Windows-Profil installiert …");
+    // Inno Setup's wizard leaves its hidden application window visible under
+    // Wine, so the installer runs unattended into its default folder.
+    wine.run(
+        &[
+            installer.to_string_lossy().into_owned(),
+            "/VERYSILENT".into(),
+            "/SUPPRESSMSGBOXES".into(),
+            "/NORESTART".into(),
+            "/SP-".into(),
+        ],
+        None,
+        &[0],
+        Duration::from_secs(1800),
+    )?;
+    let _ = wine_processes::stop(root, SIMLINK);
+    wine.stop_staged()?;
     require(
         simlink(&root.join("local/msfs-prefix"))?.is_some(),
-        "Simlink wurde nicht im erwarteten Ordner installiert. Wähle beim Installer den vorgeschlagenen Ordner.",
+        "Simlink wurde nicht vollständig installiert. Details stehen im Navigraph-Protokoll.",
     )
 }
 fn open_simlink(ctx: &Context) -> Result<()> {
@@ -790,8 +802,12 @@ fn installer_path(data: &Value, app: App) -> Result<PathBuf> {
     require(
         path.is_absolute()
             && name.ends_with(".exe")
-            // Hub installs silently, so only its own installer is accepted.
-            && (app == App::Simlink || (name.contains("navigraph") && name.contains("hub")))
+            // Both install silently, so only Navigraph's own installer is accepted.
+            && name.contains("navigraph")
+            && name.contains(match app {
+                App::Hub => "hub",
+                App::Simlink => "simlink",
+            })
             && executable_file(&path)?,
         match app {
             App::Hub => "Wähle die heruntergeladene Navigraph-Hub-Installer-Datei (.exe).",
@@ -869,9 +885,11 @@ pub fn start(app: &Arc<Launcher>, operation: &str, data: &Value) -> Result<Value
         let mut s = app.lock();
         Launcher::open(&s)?;
         if s.active.as_ref().is_some_and(|v| v.kind == "navigraph")
-            && s.jobs
-                .get("navigraph")
-                .is_some_and(|v| v["state"] == "running" && v["operation"] != "install-hub")
+            && s.jobs.get("navigraph").is_some_and(|v| {
+                v["state"] == "running"
+                    && !["install-hub", "install-simlink"]
+                        .contains(&v["operation"].as_str().unwrap_or(""))
+            })
         {
             if let Some(active) = &s.active {
                 active.pause.store(true, Ordering::Relaxed);
@@ -1070,6 +1088,8 @@ mod tests {
         assert!(!select("setup.exe", App::Hub));
         assert!(!select("Navigraph Hub.msi", App::Hub));
         assert!(select("Navigraph+Simlink.exe", App::Simlink));
+        assert!(!select("Navigraph Hub 1.2.25.exe", App::Simlink));
+        assert!(!select("setup.exe", App::Simlink));
         assert!(
             !installer_path(
                 &json!({"installer_path":"relative/Navigraph Hub.exe"}),

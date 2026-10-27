@@ -169,8 +169,10 @@ stay with Navigraph.
    Community folder.
 4. Optional, for the aircraft position in Navigraph Charts: download the Simlink
    installer from [Navigraph](https://navigraph.com/downloads), select it and
-   choose **Start Simlink installer**. Keep the suggested folder
-   (`C:\Program Files\Navigraph\Simlink`).
+   choose **Install Simlink**. Flightdeck installs it without the wizard into its
+   default folder (`C:\Program Files\Navigraph\Simlink`), because the wizard
+   shows an extra empty window under Wine. Then open Simlink with **Open
+   Simlink** and sign in.
 5. **Set up Simlink auto-start** adds one Simlink entry to the edition's
    `exe.xml`, next to its `UserCfg.opt`, and keeps other add-ons and a backup in
    `private/navigraph-exe-*.xml`. MSFS then starts Simlink in the same Wine session,

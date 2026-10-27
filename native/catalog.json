@@ -739,7 +739,6 @@
   "Die ausgewählte Runtime hat sich geändert. Navigraph-Status neu laden.": "The selected runtime has changed. Reload the Navigraph status.",
   "Ein Dateidialog ist bereits geöffnet.": "A file dialog is already open.",
   "Fehlende Simlink-Installer-Datei.": "Missing Simlink installer file.",
-  "Folge dem Simlink-Installer und behalte den vorgeschlagenen Ordner. Schließe danach alle Navigraph-Fenster.": "Follow the Simlink installer and keep the suggested folder. Then close all Navigraph windows.",
   "Installiere zuerst Navigraph Hub.": "Install Navigraph Hub first.",
   "Installiere zuerst Navigraph Simlink in diesem Profil.": "Install Navigraph Simlink in this profile first.",
   "Installiere zuerst Navigraph Simlink.": "Install Navigraph Simlink first.",
@@ -756,7 +755,6 @@
   "Simlink ist installiert. Richte den automatischen Start mit MSFS ein.": "Simlink is installed. Set up automatic startup with MSFS.",
   "Simlink startet jetzt mit MSFS. Die Verbindung im Simulator ist noch unbestätigt.": "Simlink now starts with MSFS. The connection in the simulator is still unconfirmed.",
   "Simlink wurde geschlossen.": "Simlink was closed.",
-  "Simlink wurde nicht im erwarteten Ordner installiert. Wähle beim Installer den vorgeschlagenen Ordner.": "Simlink was not installed in the expected folder. Choose the suggested folder in the installer.",
   "Starte MSFS einmal, damit das Windows-Profil angelegt wird.": "Start MSFS once so that the Windows profile is created.",
   "Starte MSFS einmal, damit die Simulator-Einstellungen angelegt werden.": "Start MSFS once so that its simulator settings are created.",
   "Unbekannter Navigraph-Vorgang.": "Unknown Navigraph operation.",
@@ -770,5 +768,7 @@
   "Ungültige Navigraph-Hub-Einstellungen.": "Invalid Navigraph Hub settings.",
   "Wähle die heruntergeladene Navigraph-Hub-Installer-Datei (.exe).": "Select the downloaded Navigraph Hub installer file (.exe).",
   "Fehlende Navigraph-Hub-Installer-Datei.": "Missing Navigraph Hub installer file.",
-  "Unbekannter Navigraph-Installer.": "Unknown Navigraph installer."
+  "Unbekannter Navigraph-Installer.": "Unknown Navigraph installer.",
+  "Navigraph Simlink wird im Windows-Profil installiert …": "Installing Navigraph Simlink in the Windows profile …",
+  "Simlink wurde nicht vollständig installiert. Details stehen im Navigraph-Protokoll.": "Simlink was not installed completely. Details are in the Navigraph log."
 }

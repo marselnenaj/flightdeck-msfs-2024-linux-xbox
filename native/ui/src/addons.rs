@@ -572,9 +572,9 @@ impl App {
                 "/home/…/Navigraph+Simlink.exe",
                 "install-simlink",
                 if rerun {
-                    "Simlink-Installer erneut ausführen"
+                    "Simlink neu installieren"
                 } else {
-                    "Simlink-Installer starten"
+                    "Simlink installieren"
                 },
             )
         };
