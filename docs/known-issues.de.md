@@ -2,8 +2,8 @@
 
 [English](known-issues.md) · [Dokumentation](index.md)
 
-Stand: 27. Oktober 2026, einschließlich Meldungen zur stabilen Version **0.3.0**.
-Siehe [Änderungsübersicht](changelog.md#030--26-october-2026).
+Stand: 27. Oktober 2026, einschließlich des Fixes in **0.3.1**.
+Siehe [Änderungsübersicht](changelog.md#031--27-october-2026).
 
 - **Bazzite-Installation:** Der Installer lehnt symbolische Links in Quell- und
   Zielpfaden ab, auch Fedora Atomics `/home`-Verknüpfung. Im Desktop-Modus mit
@@ -23,11 +23,12 @@ Siehe [Änderungsübersicht](changelog.md#030--26-october-2026).
   im Browser kann gelingen, während die nachfolgende Xbox-Tokenanfrage HTTP 400
   mit `X-Err: 00000005` liefert. Das gebündelte Xodus bricht dann mit einer
   Panic und Downloadcode 101 ab. Der Fehler wurde lokal ohne Proxy reproduziert.
-  Ein Ersatz über Windows SISU funktioniert mit demselben Konto: Die
+  Version **0.3.1** verwendet stattdessen Windows SISU und funktioniert mit
+  demselben Konto: Die
   authentifizierte MSFS-Paketabfrage liefert HTTP 200 und die Übertragung der
   Metadaten vom Microsoft-CDN beginnt. Benutzer-, Geräte- und Anwendungsanmeldung
-  bleiben erhalten, einschließlich desselben Geräte-Proof-Keys. Der Fix ist in
-  Entwicklung und noch nicht im veröffentlichten 0.3.0-Programm enthalten.
+  bleiben erhalten, einschließlich desselben Geräte-Proof-Keys. Flightdeck
+  aktualisieren, um die korrigierten nativen Komponenten zu erhalten.
   Eine vollständige Neuinstallation und der Test des ursprünglichen Melders
   stehen aus. Der Code belegt weder eine Kontosperre noch einen fehlenden Kauf.
   [Upstream-PR #201](https://github.com/xodus-gaming/xodus/pull/201) ist ein

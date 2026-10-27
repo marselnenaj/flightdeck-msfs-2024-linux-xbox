@@ -1,6 +1,6 @@
 # Changes and release status
 
-## Unreleased
+## 0.3.1 — 27 October 2026
 
 - Replace the failing legacy Xbox package-authentication exchange with Windows
   SISU for installation, package metadata and service update checks. Preserve
