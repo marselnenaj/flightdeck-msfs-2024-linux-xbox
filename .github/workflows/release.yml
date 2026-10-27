@@ -62,7 +62,7 @@ jobs:
             printf '%s\n' 'https://archive.ubuntu.com/ubuntu/' | sudo tee /etc/apt/apt-mirrors.txt >/dev/null
           fi
           sudo apt-get update
-          sudo apt-get install -y build-essential binutils bubblewrap woff2 pkg-config liblzma-dev libxkbcommon-dev libwayland-dev libx11-dev libxrandr-dev libxi-dev flex bison gcc-mingw-w64-x86-64 autoconf automake libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev gstreamer1.0-plugins-base gstreamer1.0-plugins-good
+          sudo apt-get install -y build-essential binutils bubblewrap woff2 pkg-config liblzma-dev libxkbcommon-dev libwayland-dev libx11-dev libxrandr-dev libxi-dev flex bison gcc-mingw-w64-x86-64 autoconf automake cmake libssl-dev libdbus-1-dev protobuf-compiler libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev gstreamer1.0-plugins-base gstreamer1.0-plugins-good
       - name: Build the maintainer tooling
         run: |
           cargo build --locked -p flightdeck-tools
@@ -81,6 +81,24 @@ jobs:
           cargo test --locked -p flightdeck-ui capture_ -- --ignored
       - name: Fetch and validate pinned compatibility, graphics and corresponding sources
         run: build/flightdeck-tools release prepare --cache build/release-inputs --output build/release-previous
+      - name: Test Xbox package authentication from the verified corresponding sources
+        env:
+          CARGO_NET_OFFLINE: "true"
+          CARGO_BUILD_JOBS: "2"
+          CARGO_PROFILE_DEV_DEBUG: "0"
+          CARGO_PROFILE_TEST_DEBUG: "0"
+          CARGO_INCREMENTAL: "0"
+        run: |
+          set -- build/release-inputs/flightdeck-native-sources-*.tar.gz
+          test "$#" -eq 1 && test -f "$1"
+          flightdeck_auth_stage=$(mktemp -d build/xbox-auth-source.XXXXXX)
+          trap 'rm -rf "$flightdeck_auth_stage"' EXIT
+          tar -xzf "$1" -C "$flightdeck_auth_stage"
+          (
+            cd "$flightdeck_auth_stage"
+            cargo test --locked --manifest-path xodus-src/Cargo.toml \
+              -p xodus --lib api::xbox:: -- --test-threads=1
+          )
       - name: Build and assemble the complete native package
         run: |
           cc -O2 tests/graphics/media-caps.c -o build/media-caps $(pkg-config --cflags --libs gstreamer-1.0)
