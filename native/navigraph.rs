@@ -361,11 +361,24 @@ fn applications_dir() -> PathBuf {
 }
 fn launcher_path() -> Result<PathBuf> {
     let installed = files::home().join(".local/bin/flightdeck");
-    Ok(if installed.is_file() {
+    let current = std::env::current_exe()?;
+    let wrapper = fs::read_to_string(&installed).ok();
+    Ok(if managed_release(&current, wrapper.as_deref()) {
         installed
     } else {
-        std::env::current_exe()?
+        current
     })
+}
+/// A managed release moves on every update, so links go through the stable
+/// wrapper that selects it. Any other build, such as one under test, handles
+/// its own links.
+fn managed_release(current: &Path, wrapper: Option<&str>) -> bool {
+    let mut ancestors = current.ancestors();
+    let release = ancestors.nth(3).is_some_and(|p| p.ends_with("releases"));
+    release
+        && ancestors.next().zip(wrapper).is_some_and(|(root, script)| {
+            script.contains(&format!("--managed-root '{}'", root.display()))
+        })
 }
 pub fn handler_bytes(launcher: &Path, state_dir: &Path) -> Result<Vec<u8>> {
     let mime: String = SCHEMES
@@ -1043,6 +1056,21 @@ mod tests {
         assert!(prefer_foreground(&directory).is_err());
     }
 
+    #[test]
+    fn only_a_managed_release_hands_links_to_its_wrapper() {
+        let wrapper = "exec '/data/releases/abc/bin/flightdeck' --managed-root '/data' \"$@\"\n";
+        let release = Path::new("/data/releases/abc/bin/flightdeck");
+        assert!(managed_release(release, Some(wrapper)));
+        assert!(!managed_release(release, None));
+        assert!(!managed_release(
+            Path::new("/other/releases/abc/bin/flightdeck"),
+            Some(wrapper)
+        ));
+        assert!(!managed_release(
+            Path::new("/work/target/debug/flightdeck-rust"),
+            Some(wrapper)
+        ));
+    }
     #[test]
     fn handler_entry_quotes_paths_and_lists_both_schemes() {
         let bytes =
