@@ -22,12 +22,15 @@ See the [release changes](changelog.md#030--26-october-2026).
 - **Xbox download authentication (reported on 0.3.0):** Browser sign-in can
   succeed while the subsequent Xbox user-token request returns HTTP 400 and
   `X-Err: 00000005`. The bundled Xodus then panics with download code 101.
-  The meaning of this Xbox code and the server-side cause are unconfirmed;
-  it does not establish an account ban or a missing purchase. No verified
-  workaround is available. [Upstream PR #201](https://github.com/xodus-gaming/xodus/pull/201)
-  is an experimental draft, not a confirmed fix. If a TLS debug proxy was used,
-  compare one attempt without it. Report the HTTP status and numeric code,
-  without tokens, cookies, account data or raw traffic captures.
+  This was reproduced locally without a proxy. A Windows SISU replacement
+  succeeds with the same account: authenticated MSFS package metadata returns
+  HTTP 200 and the Microsoft CDN metadata transfer starts. The replacement
+  retains user, device and application authentication, including the same device
+  proof key. It is in development and is not part of the published 0.3.0 binary.
+  A complete new installation and the original reporter's retest remain pending.
+  The code does not establish an account ban or missing purchase.
+  [Upstream PR #201](https://github.com/xodus-gaming/xodus/pull/201) is a separate
+  device-authentication experiment; the Flightdeck change requires a user token.
 
 - **NVIDIA:** Normal MSFS 2024 rendering is confirmed by user testing. Smaller
   issues remain possible, including a missing or black startup video. This does

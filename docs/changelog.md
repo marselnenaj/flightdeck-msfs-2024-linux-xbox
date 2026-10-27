@@ -1,5 +1,20 @@
 # Changes and release status
 
+## Unreleased
+
+- Replace the failing legacy Xbox package-authentication exchange with Windows
+  SISU for installation, package metadata and service update checks. Preserve
+  the signed-in user and existing device identity, using one proof key throughout
+  device, SISU and XSTS authorization. Retain user-based package access.
+- Return bounded authentication failures with download code 94 instead of a
+  panic. Keep HTTP status and numeric Xbox codes available to CLI diagnostics;
+  exclude tickets, response bodies and request URLs. Remove XSTS debug body logs.
+- Verify the old HTTP 400 / X-Err 00000005 and the successful replacement on
+  the same local account without a proxy. The integrated CLI retrieves MSFS 2024
+  package metadata and starts the Microsoft CDN metadata transfer. The bounded
+  transfer test stops intentionally and removes its temporary files; a complete
+  new installation and the original reporter's retest remain unverified.
+
 ## 0.3.0 — 26 October 2026
 
 - Detect MSFS 2020 and 2024 in native, Flatpak and Snap Steam libraries. Select

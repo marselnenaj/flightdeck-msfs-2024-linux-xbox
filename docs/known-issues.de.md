@@ -22,13 +22,17 @@ Siehe [Änderungsübersicht](changelog.md#030--26-october-2026).
 - **Xbox-Authentifizierung beim Download (gemeldet mit 0.3.0):** Die Anmeldung
   im Browser kann gelingen, während die nachfolgende Xbox-Tokenanfrage HTTP 400
   mit `X-Err: 00000005` liefert. Das gebündelte Xodus bricht dann mit einer
-  Panic und Downloadcode 101 ab. Bedeutung des Xbox-Codes und serverseitige
-  Ursache sind ungeklärt; daraus folgen weder eine Kontosperre noch ein
-  fehlender Kauf. Eine bestätigte Ausweichlösung gibt es bisher nicht.
+  Panic und Downloadcode 101 ab. Der Fehler wurde lokal ohne Proxy reproduziert.
+  Ein Ersatz über Windows SISU funktioniert mit demselben Konto: Die
+  authentifizierte MSFS-Paketabfrage liefert HTTP 200 und die Übertragung der
+  Metadaten vom Microsoft-CDN beginnt. Benutzer-, Geräte- und Anwendungsanmeldung
+  bleiben erhalten, einschließlich desselben Geräte-Proof-Keys. Der Fix ist in
+  Entwicklung und noch nicht im veröffentlichten 0.3.0-Programm enthalten.
+  Eine vollständige Neuinstallation und der Test des ursprünglichen Melders
+  stehen aus. Der Code belegt weder eine Kontosperre noch einen fehlenden Kauf.
   [Upstream-PR #201](https://github.com/xodus-gaming/xodus/pull/201) ist ein
-  experimenteller Entwurf, kein bestätigter Fix. Bei Nutzung eines TLS-Debug-Proxys
-  einen Versuch ohne Proxy vergleichen. HTTP-Status und numerischen Code melden,
-  ohne Tokens, Cookies, Kontodaten oder rohe Netzwerkaufzeichnungen.
+  separates Experiment mit Geräteauthentifizierung; der Flightdeck-Fix verlangt
+  weiterhin ein Benutzertoken.
 
 - **NVIDIA:** Die normale MSFS-2024-Darstellung ist durch Nutzertests bestätigt.
   Kleinere Probleme bleiben möglich, etwa ein fehlendes oder schwarzes Startvideo.
