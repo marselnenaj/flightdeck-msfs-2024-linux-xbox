@@ -550,23 +550,41 @@ impl App {
         self.disclosure(Disclosure::Gsx, "GSX Pro", progress.title, content)
     }
 
-    fn navigraph_installer(&self, rerun: bool) -> Element<'_, Message> {
-        column![
-            self.help_link("Simlink bei Navigraph herunterladen", HelpLink::Navigraph),
-            self.input(
+    fn navigraph_installer(&self, app: &'static str, rerun: bool) -> Element<'_, Message> {
+        let (download, title, field, placeholder, operation, button) = if app == "hub" {
+            (
+                "Navigraph Hub bei Navigraph herunterladen",
+                "Navigraph-Hub-Installer-Datei",
+                "navigraph_hub_installer_path",
+                "/home/…/Navigraph Hub.exe",
+                "install-hub",
+                if rerun {
+                    "Navigraph Hub neu installieren"
+                } else {
+                    "Navigraph Hub installieren"
+                },
+            )
+        } else {
+            (
+                "Simlink bei Navigraph herunterladen",
                 "Simlink-Installer-Datei",
-                "navigraph_installer_path",
+                "navigraph_simlink_installer_path",
                 "/home/…/Navigraph+Simlink.exe",
-                Some(NavigraphPick)
-            ),
-            self.control(
+                "install-simlink",
                 if rerun {
                     "Simlink-Installer erneut ausführen"
                 } else {
                     "Simlink-Installer starten"
                 },
-                self.request(&Navigraph("install-simlink"))
-                    .map(|_| Message::Action(Navigraph("install-simlink"))),
+            )
+        };
+        column![
+            self.help_link(download, HelpLink::Navigraph),
+            self.input(title, field, placeholder, Some(NavigraphPick(app))),
+            self.control(
+                button,
+                self.request(&Navigraph(operation))
+                    .map(|_| Message::Action(Navigraph(operation))),
                 !rerun,
             ),
         ]
@@ -617,12 +635,10 @@ impl App {
                     1 => content.push(
                         self.addon_action("Navigraph-Anmeldung einrichten", Navigraph("handler")),
                     ),
-                    2 => content.push(
-                        self.addon_action("Navigraph Hub installieren", Navigraph("install-hub")),
-                    ),
+                    2 => content.push(self.navigraph_installer("hub", false)),
                     3 => content
                         .push(self.addon_action("Navigraph Hub öffnen", Navigraph("open-hub"))),
-                    4 => content.push(self.navigraph_installer(false)),
+                    4 => content.push(self.navigraph_installer("simlink", false)),
                     _ => content.push(
                         self.addon_action("Simlink-Autostart einrichten", Navigraph("configure")),
                     ),
@@ -656,21 +672,14 @@ impl App {
                     manage =
                         manage.push(self.action("Navigraph Hub öffnen", Navigraph("open-hub")));
                 }
-                manage = manage.push(
-                    self.control(
-                        "Navigraph Hub neu installieren",
-                        self.request(&Navigraph("install-hub"))
-                            .map(|_| Message::Action(Navigraph("install-hub"))),
-                        false,
-                    ),
-                );
+                manage = manage.push(self.navigraph_installer("hub", true));
             }
             if yes(data, "simlink_installed") {
                 manage = manage
                     .push(self.action("Simlink öffnen", Navigraph("open-simlink")))
-                    .push(self.navigraph_installer(true));
+                    .push(self.navigraph_installer("simlink", true));
             } else if progress.next != 4 && data["state"] == "available" {
-                manage = manage.push(self.navigraph_installer(false));
+                manage = manage.push(self.navigraph_installer("simlink", false));
             }
             if yes(data, "startup") {
                 manage =

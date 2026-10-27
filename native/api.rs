@@ -89,7 +89,7 @@ pub fn post(app: &Arc<Launcher>, path: &str, data: &Value, locale: &str) -> Opti
         }
         "/api/fenix/pick" => crate::fenix::pick(app, data),
         "/api/fenix/check-update" => crate::fenix_update::check(app, true),
-        "/api/navigraph/pick" => crate::navigraph::pick(app),
+        "/api/navigraph/pick" => crate::navigraph::pick(app, data),
         path if path.starts_with("/api/navigraph/") => {
             crate::navigraph::start(app, path.rsplit('/').next().unwrap_or(""), data)
         }

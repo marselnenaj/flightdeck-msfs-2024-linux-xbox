@@ -158,9 +158,11 @@ Navdata bleiben bei Navigraph.
    wartende Anwendung im passenden Profil weiterreicht. Ohne diesen Handler endet
    die Anmeldung im Browser, kommt aber nie bei Hub oder Simlink an. `xdg-utils`
    wird benötigt.
-2. **Navigraph Hub installieren** lädt den offiziellen Hub-1.2.24-Installer vom
-   Update-Server von Navigraph, prüft die festgelegte SHA-256-Prüfsumme und
-   installiert Hub für den Windows-Benutzer dieses Profils. Flightdeck legt den
+2. Lade den offiziellen Navigraph-Hub-Installer bei
+   [Navigraph](https://navigraph.com/downloads) herunter, wähle ihn aus und
+   klicke auf **Navigraph Hub installieren**. Flightdeck installiert Hub ohne
+   Rückfragen für den Windows-Benutzer dieses Profils; akzeptiert wird nur eine
+   Datei, die wie Navigraphs Hub-Installer benannt ist. Flightdeck legt den
    mitgelieferten Process Governor (`procgov.exe`) beiseite, weil dessen Aufruf
    unter Wine mit `Win32Exception (87)` scheitert und jedes Entpacken abbricht.
    Hub ruft 7-Zip dann direkt auf. Hub-Updates stellen die Datei wieder her;

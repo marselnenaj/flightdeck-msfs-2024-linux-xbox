@@ -4,7 +4,6 @@
 use crate::{
     Error, Result,
     backend::{Context, Launcher, string},
-    bootstrap,
     error::require,
     fenix, fenix_setup, files,
     games::Game,
@@ -26,11 +25,6 @@ use std::{
     time::{Duration, Instant},
 };
 pub const STARTUP: &str = "private/navigraph-startup.json";
-/// Official Hub release from Navigraph's update feed, pinned like the FSDT installer.
-const HUB_VERSION: &str = "1.2.24";
-const HUB_URL: &str =
-    "https://download.navigraph.com/software/navigraph/windows/Navigraph%20Hub%201.2.24.exe";
-const HUB_SHA256: &str = "21a4a1370b5bc4d99944248a575da57afb35d09aa46267ba2b1d412248850b5a";
 const HUB_DIR: &str = "AppData/Local/Programs/navigraph-hub";
 const HUB_EXE: &str = "Navigraph Hub.exe";
 // Hub 1.2.x wraps 7-Zip in Process Governor, whose job-object freeze call
@@ -581,7 +575,7 @@ pub fn snapshot(app: &Launcher) -> Value {
                 .unwrap_or(Value::Null),
         )
     };
-    let mut value = json!({"state":"unavailable","message":"","hub_installed":false,"hub_version":HUB_VERSION,"governor_disabled":false,"simlink_installed":false,"settings_found":false,"startup":false,"handler":false,"packages":[],"hub_running":false,"simlink_running":false,"idle":false,"runtime_path":root,"job":job,"busy":busy||playing,"can_change":false,"can_stop":false});
+    let mut value = json!({"state":"unavailable","message":"","hub_installed":false,"governor_disabled":false,"simlink_installed":false,"settings_found":false,"startup":false,"handler":false,"packages":[],"hub_running":false,"simlink_running":false,"idle":false,"runtime_path":root,"job":job,"busy":busy||playing,"can_change":false,"can_stop":false});
     if let Some(root) = root {
         let result = (|| -> Result<()> {
             validate(&root)?;
@@ -732,20 +726,9 @@ fn interactive(
     }
     result
 }
-fn install_hub(ctx: &Context) -> Result<()> {
+fn install_hub(ctx: &Context, installer: &Path) -> Result<()> {
     let root = ctx.root()?;
     let prefix = root.join("local/msfs-prefix");
-    ctx.progress("Der offizielle Navigraph-Hub-Installer wird heruntergeladen und geprüft …");
-    let installer = bootstrap::download(
-        HUB_URL,
-        HUB_SHA256,
-        &ctx.launcher
-            .state_dir
-            .join("navigraph-downloads")
-            .join(format!("Navigraph-Hub-{HUB_VERSION}.exe")),
-        &ctx.cancel,
-        |_| {},
-    )?;
     ctx.progress("Navigraph Hub wird im Windows-Profil installiert …");
     let wine = wine(ctx, root, "navigraph-hub-setup.log")?;
     // electron-builder's NSIS installer: per-user, silent and without autostart.
@@ -798,19 +781,31 @@ fn open_simlink(ctx: &Context) -> Result<()> {
     ctx.progress("Melde dich in Simlink an und schließe es danach vollständig.");
     interactive(ctx, root, &wine, &[&executable], SIMLINK)
 }
-fn installer_path(data: &Value) -> Result<PathBuf> {
+fn installer_path(data: &Value, app: App) -> Result<PathBuf> {
     let path = PathBuf::from(string(data, "installer_path")?.trim());
+    let name = path
+        .file_name()
+        .map(|v| v.to_string_lossy().to_lowercase())
+        .unwrap_or_default();
     require(
         path.is_absolute()
-            && path
-                .extension()
-                .is_some_and(|v| v.eq_ignore_ascii_case("exe"))
+            && name.ends_with(".exe")
+            // Hub installs silently, so only its own installer is accepted.
+            && (app == App::Simlink || (name.contains("navigraph") && name.contains("hub")))
             && executable_file(&path)?,
-        "Wähle die heruntergeladene Simlink-Installer-Datei (.exe).",
+        match app {
+            App::Hub => "Wähle die heruntergeladene Navigraph-Hub-Installer-Datei (.exe).",
+            App::Simlink => "Wähle die heruntergeladene Simlink-Installer-Datei (.exe).",
+        },
     )?;
     Ok(path.canonicalize()?)
 }
-pub fn pick(app: &Launcher) -> Result<Value> {
+pub fn pick(app: &Launcher, data: &Value) -> Result<Value> {
+    let title = match data["app"].as_str() {
+        Some("hub") => "--title=Navigraph Hub",
+        Some("simlink") => "--title=Navigraph Simlink",
+        _ => return Err(Error::Invalid("Unbekannter Navigraph-Installer.")),
+    };
     {
         let s = app.lock();
         Launcher::open(&s)?;
@@ -829,7 +824,7 @@ pub fn pick(app: &Launcher) -> Result<Value> {
     if name == "zenity" {
         command.args([
             "--file-selection",
-            "--title=Navigraph Simlink",
+            title,
             "--file-filter=Windows Installer | *.exe",
         ]);
     } else {
@@ -891,10 +886,10 @@ pub fn start(app: &Arc<Launcher>, operation: &str, data: &Value) -> Result<Value
     } else {
         validate(&root)?;
     }
-    let installer = if operation == "install-simlink" {
-        Some(installer_path(data)?)
-    } else {
-        None
+    let installer = match operation {
+        "install-hub" => Some(installer_path(data, App::Hub)?),
+        "install-simlink" => Some(installer_path(data, App::Simlink)?),
+        _ => None,
     };
     let operation = operation.to_string();
     app.start_job("navigraph", &operation.clone(), true, move |ctx| {
@@ -909,7 +904,12 @@ pub fn start(app: &Arc<Launcher>, operation: &str, data: &Value) -> Result<Value
             wine_processes::idle(&root.join("local/msfs-prefix"))?;
         }
         match operation.as_str() {
-            "install-hub" => install_hub(ctx)?,
+            "install-hub" => install_hub(
+                ctx,
+                installer
+                    .as_deref()
+                    .ok_or(Error::Invalid("Fehlende Navigraph-Hub-Installer-Datei."))?,
+            )?,
             "open-hub" => open_hub(ctx)?,
             "install-simlink" => install_simlink(
                 ctx,
@@ -1056,6 +1056,28 @@ mod tests {
         assert!(prefer_foreground(&directory).is_err());
     }
 
+    #[test]
+    fn hub_installs_only_from_its_own_installer() {
+        let root = tempfile::tempdir().expect("fixture");
+        let select = |name: &str, app| {
+            let path = root.path().join(name);
+            fs::write(&path, b"MZ").expect("installer");
+            installer_path(&json!({ "installer_path": path }), app).is_ok()
+        };
+        assert!(select("Navigraph Hub 1.2.25.exe", App::Hub));
+        assert!(select("navigraph-hub-setup.EXE", App::Hub));
+        assert!(!select("Navigraph+Simlink.exe", App::Hub));
+        assert!(!select("setup.exe", App::Hub));
+        assert!(!select("Navigraph Hub.msi", App::Hub));
+        assert!(select("Navigraph+Simlink.exe", App::Simlink));
+        assert!(
+            !installer_path(
+                &json!({"installer_path":"relative/Navigraph Hub.exe"}),
+                App::Hub
+            )
+            .is_ok()
+        );
+    }
     #[test]
     fn only_a_managed_release_hands_links_to_its_wrapper() {
         let wrapper = "exec '/data/releases/abc/bin/flightdeck' --managed-root '/data' \"$@\"\n";

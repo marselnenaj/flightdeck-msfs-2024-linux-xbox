@@ -1049,7 +1049,6 @@
   "Übernimmt den von FSDT angelegten Start mit MSFS. Prüfe anschließend das GSX-Menü und die Bodendienste im Simulator.": "Enables the startup entry created by FSDT for MSFS. Then check the GSX menu and ground services in the simulator.",
   "Übersicht": "Overview",
   "Für die Flugzeugposition in Navigraph Charts installiere Simlink.": "Install Simlink for the aircraft position in Navigraph Charts.",
-  "Installiere den offiziellen Navigraph Hub in diesem Windows-Profil.": "Install the official Navigraph Hub in this Windows profile.",
   "Lass Simlink automatisch mit MSFS starten.": "Let Simlink start automatically with MSFS.",
   "Navdata installiert · Simlink optional": "Navdata installed · Simlink optional",
   "Navigraph Hub installieren": "Install Navigraph Hub",
@@ -1077,5 +1076,8 @@
   "Simlink-Installer-Datei": "Simlink installer file",
   "Starte MSFS einmal, damit die Simulator-Einstellungen angelegt werden.": "Start MSFS once so that its simulator settings are created.",
   "Starte MSFS und prüfe Navdata und Simlink in Navigraph Charts.": "Start MSFS and check navdata and Simlink in Navigraph Charts.",
-  "Öffne Hub, melde dich an und installiere die Navdata. Schließe Hub danach.": "Open Hub, sign in and install the navdata. Then quit Hub."
+  "Öffne Hub, melde dich an und installiere die Navdata. Schließe Hub danach.": "Open Hub, sign in and install the navdata. Then quit Hub.",
+  "Lade den offiziellen Navigraph-Hub-Installer herunter und wähle ihn aus.": "Download the official Navigraph Hub installer and select it.",
+  "Navigraph Hub bei Navigraph herunterladen": "Download Navigraph Hub from Navigraph",
+  "Navigraph-Hub-Installer-Datei": "Navigraph Hub installer file"
 }

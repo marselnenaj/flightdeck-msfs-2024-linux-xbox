@@ -153,9 +153,10 @@ stay with Navigraph.
    Flightdeck, which passes it to the waiting application in its profile. Without
    this handler, the sign-in completes in the browser but never reaches Hub or
    Simlink. `xdg-utils` is required.
-2. **Install Navigraph Hub** downloads the official Hub 1.2.24 installer from
-   Navigraph's update server, checks its pinned SHA-256 and installs it for the
-   Windows user of this profile. Flightdeck moves Hub's bundled Process Governor
+2. Download the official Navigraph Hub installer from
+   [Navigraph](https://navigraph.com/downloads), select it and choose **Install
+   Navigraph Hub**. Flightdeck installs it silently for the Windows user of this
+   profile; only a file named like Navigraph's Hub installer is accepted. Flightdeck moves Hub's bundled Process Governor
    (`procgov.exe`) aside, because its call fails under Wine with
    `Win32Exception (87)` and stops every package extraction. Hub then runs 7-Zip
    directly. Hub's updates restore the file; Flightdeck moves it aside again before

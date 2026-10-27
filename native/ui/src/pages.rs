@@ -255,7 +255,7 @@ impl App {
             .spacing(10);
         if let Some(action) = pick {
             line = line.push(self.action(
-                if matches!(action, FenixPick("installer")) {
+                if matches!(action, FenixPick("installer") | NavigraphPick(_)) {
                     "Datei wählen"
                 } else {
                     "Ordner wählen"

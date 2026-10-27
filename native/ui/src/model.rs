@@ -96,7 +96,7 @@ pub enum Action {
     FenixPick(&'static str),
     Gsx(&'static str),
     Navigraph(&'static str),
-    NavigraphPick,
+    NavigraphPick(&'static str),
     Proton,
     ProtonDefault,
     ProtonCancel,
@@ -599,13 +599,31 @@ impl App {
                 let simlink = yes(data, "simlink_installed");
                 body = json!({"runtime_path":root});
                 match *op {
-                    "install-hub" => ("navigraph/install-hub", change),
+                    "install-hub" => {
+                        body["installer_path"] =
+                            json!(self.forms.get("navigraph_hub_installer_path"));
+                        (
+                            "navigraph/install-hub",
+                            change
+                                && !self
+                                    .forms
+                                    .get("navigraph_hub_installer_path")
+                                    .trim()
+                                    .is_empty(),
+                        )
+                    }
                     "open-hub" => ("navigraph/open-hub", change && hub),
                     "install-simlink" => {
-                        body["installer_path"] = json!(self.forms.get("navigraph_installer_path"));
+                        body["installer_path"] =
+                            json!(self.forms.get("navigraph_simlink_installer_path"));
                         (
                             "navigraph/install-simlink",
-                            change && !self.forms.get("navigraph_installer_path").trim().is_empty(),
+                            change
+                                && !self
+                                    .forms
+                                    .get("navigraph_simlink_installer_path")
+                                    .trim()
+                                    .is_empty(),
                         )
                     }
                     "open-simlink" => ("navigraph/open-simlink", change && simlink),
@@ -622,7 +640,10 @@ impl App {
                     _ => return None,
                 }
             }
-            NavigraphPick => ("navigraph/pick", safe_idle),
+            NavigraphPick(app) => {
+                body = json!({"app":app});
+                ("navigraph/pick", safe_idle)
+            }
             FenixPick(kind) => {
                 body = json!({"kind":kind});
                 (

@@ -376,13 +376,16 @@ impl App {
                                     self.forms.text.insert(field, path);
                                 }
                             }
-                            Action::NavigraphPick if value["cancelled"] != true => {
+                            Action::NavigraphPick(app) if value["cancelled"] != true => {
                                 if let Some(path) =
                                     value["path"].as_str().filter(|v| v.starts_with('/'))
                                 {
-                                    self.forms
-                                        .text
-                                        .insert("navigraph_installer_path", path.to_string());
+                                    let field = if app == "hub" {
+                                        "navigraph_hub_installer_path"
+                                    } else {
+                                        "navigraph_simlink_installer_path"
+                                    };
+                                    self.forms.text.insert(field, path.to_string());
                                 }
                             }
                             Action::FenixPick(kind) if value["cancelled"] != true => {

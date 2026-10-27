@@ -314,7 +314,7 @@ pub(crate) fn navigraph(data: &Value) -> AddonProgress {
         progress.detail = match next {
             0 => "Starte MSFS und prüfe Navdata und Simlink in Navigraph Charts.",
             1 => "Richte zuerst die Rückkehr der Browser-Anmeldung zu Hub und Simlink ein.",
-            2 => "Installiere den offiziellen Navigraph Hub in diesem Windows-Profil.",
+            2 => "Lade den offiziellen Navigraph-Hub-Installer herunter und wähle ihn aus.",
             3 => "Öffne Hub, melde dich an und installiere die Navdata. Schließe Hub danach.",
             4 => "Für die Flugzeugposition in Navigraph Charts installiere Simlink.",
             _ if yes(data, "settings_found") => "Lass Simlink automatisch mit MSFS starten.",

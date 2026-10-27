@@ -732,7 +732,6 @@
   "Beende MSFS und laufende Installationen, bevor du Navigraph schließt.": "Close MSFS and running installations before closing Navigraph.",
   "Der Navigraph-Ordner muss innerhalb des gewählten Windows-Profils liegen.": "The Navigraph folder must be inside the selected Windows profile.",
   "Der automatische Simlink-Start ist ausgeschaltet.": "Simlink auto-start is disabled.",
-  "Der offizielle Navigraph-Hub-Installer wird heruntergeladen und geprüft …": "Downloading and verifying the official Navigraph Hub installer …",
   "Die Navigraph-Anmeldung konnte nicht als Link-Handler eingetragen werden.": "The Navigraph sign-in could not be registered as a link handler.",
   "Die Navigraph-Anwendung läuft in mehreren Installationen. Schließe die nicht benötigte.": "The Navigraph application is running in several installations. Close the one you do not need.",
   "Die Navigraph-Anwendung wurde in keiner Flightdeck-Installation gefunden.": "The Navigraph application was not found in any Flightdeck installation.",
@@ -768,5 +767,8 @@
   "Ungültiger Simlink-Starteintrag.": "Invalid Simlink startup entry.",
   "Wähle die heruntergeladene Simlink-Installer-Datei (.exe).": "Select the downloaded Simlink installer file (.exe).",
   "xdg-mime fehlt. Installiere xdg-utils, damit die Navigraph-Anmeldung zurückkehren kann.": "xdg-mime is missing. Install xdg-utils so that the Navigraph sign-in can return.",
-  "Ungültige Navigraph-Hub-Einstellungen.": "Invalid Navigraph Hub settings."
+  "Ungültige Navigraph-Hub-Einstellungen.": "Invalid Navigraph Hub settings.",
+  "Wähle die heruntergeladene Navigraph-Hub-Installer-Datei (.exe).": "Select the downloaded Navigraph Hub installer file (.exe).",
+  "Fehlende Navigraph-Hub-Installer-Datei.": "Missing Navigraph Hub installer file.",
+  "Unbekannter Navigraph-Installer.": "Unknown Navigraph installer."
 }
