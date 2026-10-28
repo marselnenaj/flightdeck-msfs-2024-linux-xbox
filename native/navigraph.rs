@@ -781,14 +781,14 @@ fn install_hub(ctx: &Context, installer: &Path) -> Result<()> {
         &[0],
         Duration::from_secs(1800),
     )?;
-    wine.stop_staged()?;
+    profile.stop(HUB)?;
     let directory = hub(&prefix)?.ok_or(Error::Invalid(
         "Navigraph Hub wurde nicht vollständig installiert. Details stehen im Navigraph-Protokoll.",
     ))?;
     disable_governor(&directory)?;
     prefer_foreground(&directory)?;
     remove_run_entries(&wine, &prefix)?;
-    wine.stop_staged()
+    profile.stop(HUB)
 }
 fn open_hub(ctx: &Context) -> Result<()> {
     let profile = Profile::selected(&ctx.launcher)?;
@@ -822,10 +822,10 @@ fn install_simlink(ctx: &Context, installer: &Path) -> Result<()> {
         &[0],
         Duration::from_secs(1800),
     )?;
-    let _ = profile.stop(SIMLINK);
+    profile.stop(SIMLINK)?;
     simlink_without_login_start(&profile.prefix)?;
     remove_run_entries(&wine, &profile.prefix)?;
-    wine.stop_staged()?;
+    profile.stop(SIMLINK)?;
     require(
         simlink(&profile.prefix)?.is_some(),
         "Simlink wurde nicht vollständig installiert. Details stehen im Navigraph-Protokoll.",
