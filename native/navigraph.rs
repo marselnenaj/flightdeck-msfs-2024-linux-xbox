@@ -769,8 +769,7 @@ fn interactive(
     )
 }
 
-fn install_hub(ctx: &Context, installer: &Path) -> Result<()> {
-    let profile = Profile::selected(&ctx.launcher)?;
+fn install_hub(ctx: &Context, profile: &Profile, installer: &Path) -> Result<()> {
     let prefix = profile.prefix.clone();
     ctx.progress("Navigraph Hub wird im Windows-Profil installiert …");
     let wine = profile.wine(ctx, "navigraph-hub-setup.log")?;
@@ -790,8 +789,7 @@ fn install_hub(ctx: &Context, installer: &Path) -> Result<()> {
     remove_run_entries(&wine, &prefix)?;
     profile.stop(HUB)
 }
-fn open_hub(ctx: &Context) -> Result<()> {
-    let profile = Profile::selected(&ctx.launcher)?;
+fn open_hub(ctx: &Context, profile: &Profile) -> Result<()> {
     let prefix = profile.prefix.clone();
     let directory = hub(&prefix)?.ok_or(Error::Invalid("Installiere zuerst Navigraph Hub."))?;
     disable_governor(&directory)?;
@@ -800,12 +798,11 @@ fn open_hub(ctx: &Context) -> Result<()> {
     ctx.progress(
         "Melde dich in Navigraph Hub an und installiere die Navdata. Schließe Hub danach vollständig.",
     );
-    let result = interactive(ctx, &profile, &wine, &[&directory.join(HUB_EXE)], HUB);
+    let result = interactive(ctx, profile, &wine, &[&directory.join(HUB_EXE)], HUB);
     let cleanup = remove_run_entries(&wine, &prefix);
     result.and(cleanup)
 }
-fn install_simlink(ctx: &Context, installer: &Path) -> Result<()> {
-    let profile = Profile::selected(&ctx.launcher)?;
+fn install_simlink(ctx: &Context, profile: &Profile, installer: &Path) -> Result<()> {
     let wine = profile.wine(ctx, "navigraph-simlink-setup.log")?;
     ctx.progress("Navigraph Simlink wird im Windows-Profil installiert …");
     // Inno Setup's wizard leaves its hidden application window visible under
@@ -831,8 +828,7 @@ fn install_simlink(ctx: &Context, installer: &Path) -> Result<()> {
         "Simlink wurde nicht vollständig installiert. Details stehen im Navigraph-Protokoll.",
     )
 }
-fn open_simlink(ctx: &Context) -> Result<()> {
-    let profile = Profile::selected(&ctx.launcher)?;
+fn open_simlink(ctx: &Context, profile: &Profile) -> Result<()> {
     let executable =
         simlink(&profile.prefix)?.ok_or(Error::Invalid("Installiere zuerst Navigraph Simlink."))?;
     let wine = profile.wine(ctx, "navigraph-simlink.log")?;
@@ -841,7 +837,7 @@ fn open_simlink(ctx: &Context) -> Result<()> {
     ctx.progress(
         "Melde dich in Simlink an. Schließe Simlink danach mit „Navigraph schließen“, denn sein Fenster blendet es nur aus.",
     );
-    let result = interactive(ctx, &profile, &wine, &[&executable], SIMLINK);
+    let result = interactive(ctx, profile, &wine, &[&executable], SIMLINK);
     // The first start creates the settings file with login start turned on.
     let settings = simlink_without_login_start(&prefix);
     let cleanup = remove_run_entries(&wine, &prefix);
@@ -977,18 +973,20 @@ pub fn start(app: &Arc<Launcher>, operation: &str, data: &Value) -> Result<Value
         match operation.as_str() {
             "install-hub" => install_hub(
                 ctx,
+                &profile,
                 installer
                     .as_deref()
                     .ok_or(Error::Invalid("Fehlende Navigraph-Hub-Installer-Datei."))?,
             )?,
-            "open-hub" => open_hub(ctx)?,
+            "open-hub" => open_hub(ctx, &profile)?,
             "install-simlink" => install_simlink(
                 ctx,
+                &profile,
                 installer
                     .as_deref()
                     .ok_or(Error::Invalid("Fehlende Simlink-Installer-Datei."))?,
             )?,
-            "open-simlink" => open_simlink(ctx)?,
+            "open-simlink" => open_simlink(ctx, &profile)?,
             "stop" => {
                 let mut names = HUB.to_vec();
                 names.extend(SIMLINK);

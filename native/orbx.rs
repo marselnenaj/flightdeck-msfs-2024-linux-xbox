@@ -287,17 +287,16 @@ fn managed_files_match(
     }
     Ok(true)
 }
-fn install(ctx: &Context) -> Result<()> {
-    let profile = Profile::selected(&ctx.launcher)?;
+fn install(ctx: &Context, profile: &Profile) -> Result<()> {
     let root = &profile.root;
     let prefix = profile.prefix.clone();
-    recover(&profile)?;
+    recover(profile)?;
     let spec = lock()?;
     if let Some(directory) = manager(&prefix)?
         && (!files::exists(&directory.join(RECEIPT))
             || managed_files_match(&directory, &spec, &ctx.cancel)?)
     {
-        configure(&profile)?;
+        configure(profile)?;
         return Ok(());
     }
     let url = string(&spec, "archive_url")?;
@@ -316,7 +315,7 @@ fn install(ctx: &Context) -> Result<()> {
         "Für die Orbx-Einrichtung fehlen mindestens 3 GiB freier Speicherplatz.",
     )?;
     let id = uuid::Uuid::new_v4().simple().to_string();
-    let staged = stage(&profile, &id)?;
+    let staged = stage(profile, &id)?;
     files::atomic_json(
         &root.join(JOURNAL),
         &json!({"format":1,"id":id,"state":"preparing","prefix_id":crate::fenix::identity(&prefix)?}),
@@ -347,12 +346,12 @@ fn install(ctx: &Context) -> Result<()> {
         // Orbx account data and scenery are outside this directory.
         if files::exists(&target) {
             files::directory(&target, false)?;
-            let backup = program_backup(&profile, &id)?;
+            let backup = program_backup(profile, &id)?;
             tx::publish(&target, &backup)?;
         }
         tx::publish(&staged, &target)?;
         fs::remove_file(root.join(JOURNAL))?;
-        configure(&profile)?;
+        configure(profile)?;
         Ok(())
     })();
     if result.is_err() && files::exists(&staged) {
@@ -360,15 +359,14 @@ fn install(ctx: &Context) -> Result<()> {
     }
     result
 }
-fn open(ctx: &Context) -> Result<()> {
-    let profile = Profile::selected(&ctx.launcher)?;
+fn open(ctx: &Context, profile: &Profile) -> Result<()> {
     let prefix = profile.prefix.clone();
     let directory = manager(&prefix)?.ok_or(Error::Invalid("Installiere zuerst Orbx Central."))?;
     // Central uses a fixed worker port even across separate Wine profiles.
     // Never stop another profile merely to make that port available.
     let _worker = files::Lease::acquire(&ctx.launcher.state_dir.join("orbx-worker.lock"), true)?;
     require(worker_available(), OTHER_INSTANCE)?;
-    configure(&profile)?;
+    configure(profile)?;
     let wine = profile.wine(ctx, "orbx-central.log")?;
     fenix_setup::desktop_fonts(&wine).map_err(|error|if matches!(error,Error::Cancelled){error}else{Error::Invalid("Die Schriftvorbereitung für Orbx ist fehlgeschlagen. Details stehen im privaten Orbx-Protokoll.")})?;
     wine.reg(
@@ -380,7 +378,7 @@ fn open(ctx: &Context) -> Result<()> {
     ctx.progress("Melde dich in Orbx Central an und verwalte deine Szenerien. Schließe Orbx danach vollständig.");
     addon_apps::interactive(
         ctx,
-        &profile,
+        profile,
         &wine,
         &[
             &directory.join(EXE),
@@ -493,7 +491,7 @@ pub fn start(app: &Arc<Launcher>, operation: &str, data: &Value) -> Result<Value
         profile.current(&ctx.launcher)?;
         let _held=profile.lease()?;
         if operation!="stop"{profile.validate(false)?;wine_processes::idle(&profile.prefix)?;}
-        match operation.as_str(){"install"=>install(ctx)?,"configure"=>configure(&profile)?,"open"=>open(ctx)?,_=>profile.stop(PROCESSES)?}
+        match operation.as_str(){"install"=>install(ctx,&profile)?,"configure"=>configure(&profile)?,"open"=>open(ctx,&profile)?,_=>profile.stop(PROCESSES)?}
         Ok(json!({"state":"complete","message":match operation.as_str(){"install"=>"Orbx Central ist im vorhandenen Windows-Profil eingerichtet.","configure"=>"Orbx Central verwendet jetzt die Einstellungen dieser MSFS-Installation.",_=>"Orbx Central wurde geschlossen."},"stopping":false}))
     })
 }
@@ -631,7 +629,7 @@ mod tests {
             .expect("valid Orbx test fixture");
         addon_apps::validate(&root).expect("valid Orbx test fixture");
         wine_processes::idle(&prefix).expect("valid Orbx test fixture");
-        let result = install(&ctx);
+        let result = install(&ctx, &Profile::xbox(&root).expect("Xbox fixture"));
         match result {
             Ok(()) => app.finish(&ctx, Ok(json!({"state":"complete"})), false),
             Err(error) => {
@@ -684,8 +682,9 @@ mod tests {
             "Close the existing Orbx worker before this explicit probe."
         );
         let mut ready = false;
+        let profile = Profile::xbox(&root).expect("Xbox fixture");
         let result = std::thread::scope(|scope| {
-            let task = scope.spawn(|| open(&ctx));
+            let task = scope.spawn(|| open(&ctx, &profile));
             let deadline = std::time::Instant::now() + Duration::from_secs(60);
             while std::time::Instant::now() < deadline && !task.is_finished() {
                 if !worker_available()

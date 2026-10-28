@@ -100,7 +100,10 @@ A pending GSX transaction blocks game launch until restored. Stale actions after
 changing Proton or replacing the prefix require a fresh status page. Simlink and
 Couatl startup use the edition's real `exe.xml`; cleanup after a confirmed game
 exit affects only enabled companions in that profile. Full Steam flights and
-licensed add-on functionality still need tester validation.
+licensed add-on functionality still need tester validation. An account-free real
+CachyOS Proton 10 probe installs the official Simlink app through this Steam
+workflow into an isolated profile, retaining its identity and simulator settings;
+it does not test sign-in or a running simulator.
 
 ## Community and saves
 

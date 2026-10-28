@@ -20,7 +20,9 @@
   close check and disable tray minimization and login startup. Guard its fixed
   worker port and keep cleanup confined to the selected profile.
 - Add Steam runner, stale-action, locking, recovery, companion lifecycle and
-  bilingual UI regressions. These integrations remain experimental; actual Steam
+  bilingual UI regressions. Verify the official Simlink installer in an isolated
+  Steam-shaped profile with real CachyOS Proton 10, preserving profile identity
+  and simulator settings. These integrations remain experimental; actual Steam
   simulator flights, licensed GSX services and full-flight Navigraph operation
   still require tester validation. Preserve the 0.3.2 Xbox download auth fix.
 

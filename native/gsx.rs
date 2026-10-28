@@ -148,7 +148,9 @@ fn slot(profile: &Profile, kind: &str, id: &str) -> Result<PathBuf> {
     Ok(slot_parent(profile).join(name))
 }
 pub fn prepare(ctx: &Context) -> Result<()> {
-    let profile = Profile::selected(&ctx.launcher)?;
+    prepare_for(ctx, &Profile::selected(&ctx.launcher)?)
+}
+fn prepare_for(ctx: &Context, profile: &Profile) -> Result<()> {
     profile.validate(false)?;
     let root = &profile.root;
     require(complete(root), INCOMPLETE)?;
@@ -171,8 +173,8 @@ pub fn prepare(ctx: &Context) -> Result<()> {
         "Für die GSX-Vorbereitung fehlt Speicherplatz für eine Profilkopie.",
     )?;
     let token = uuid::Uuid::new_v4().simple().to_string();
-    let staged = slot(&profile, "stage", &token)?;
-    let backup = slot(&profile, "before", &token)?;
+    let staged = slot(profile, "stage", &token)?;
+    let backup = slot(profile, "before", &token)?;
     let mut state = json!({"format":1,"id":token,"state":"preparing","original_prefix_id":fenix::identity(&prefix)?,"runner":runner,"prior":marker(root)?});
     files::atomic_json(&root.join(MARKER), &state)?;
     ctx.progress("Das Windows-Profil wird für die GSX-Einrichtung kopiert …");
@@ -190,7 +192,7 @@ pub fn prepare(ctx: &Context) -> Result<()> {
     symlink("../drive_c", drive)?;
     let mut wine = StagedWine::for_profile(
         &prefix,
-        &slot_parent(&profile),
+        &slot_parent(profile),
         &staged,
         &runner,
         &root.join("private").join(format!("gsx-setup-{token}.log")),
@@ -332,7 +334,9 @@ pub fn prepare(ctx: &Context) -> Result<()> {
     files::atomic_json(&root.join(MARKER), &state)
 }
 pub fn recover(ctx: &Context) -> Result<()> {
-    let profile = Profile::selected(&ctx.launcher)?;
+    recover_for(ctx, &Profile::selected(&ctx.launcher)?)
+}
+fn recover_for(ctx: &Context, profile: &Profile) -> Result<()> {
     profile.validate(true)?;
     let root = &profile.root;
     let state = marker(root)?.ok_or(Error::Invalid(
@@ -344,10 +348,10 @@ pub fn recover(ctx: &Context) -> Result<()> {
     )?;
     let prefix = profile.prefix.clone();
     wine_processes::idle(&prefix)?;
-    let staged = slot(&profile, "stage", string(&state, "id")?)?;
-    let backup = slot(&profile, "before", string(&state, "id")?)?;
+    let staged = slot(profile, "stage", string(&state, "id")?)?;
+    let backup = slot(profile, "before", string(&state, "id")?)?;
     if staged.exists() {
-        owned(&staged, &slot_parent(&profile))?;
+        owned(&staged, &slot_parent(profile))?;
         require(
             !prefix.exists() || fenix::identity(&staged)? != fenix::identity(&prefix)?,
             "Invalid GSX staging profile.",
@@ -368,13 +372,13 @@ pub fn recover(ctx: &Context) -> Result<()> {
         wine.stop_staged()?;
     }
     if backup.exists() {
-        owned(&backup, &slot_parent(&profile))?;
+        owned(&backup, &slot_parent(profile))?;
         require(
             fenix::identity(&backup)? == state["original_prefix_id"],
             "Die GSX-Sicherung hat sich geändert; Wiederherstellung abgebrochen.",
         )?;
         if prefix.exists() {
-            owned(&prefix, &slot_parent(&profile))?;
+            owned(&prefix, &slot_parent(profile))?;
             require(
                 fenix::identity(&prefix)? == state["staged_prefix_id"],
                 "Die GSX-Sicherung hat sich geändert; Wiederherstellung abgebrochen.",
@@ -394,11 +398,7 @@ pub fn recover(ctx: &Context) -> Result<()> {
         if prefix.exists() {
             tx::publish(
                 &prefix,
-                &slot(
-                    &profile,
-                    "after",
-                    &uuid::Uuid::new_v4().simple().to_string(),
-                )?,
+                &slot(profile, "after", &uuid::Uuid::new_v4().simple().to_string())?,
             )?;
         }
         tx::publish(&backup, &prefix)?;
@@ -658,8 +658,7 @@ pub fn snapshot(app: &Launcher) -> Value {
     }
     value
 }
-fn open(ctx: &Context) -> Result<()> {
-    let profile = Profile::selected(&ctx.launcher)?;
+fn open(ctx: &Context, profile: &Profile) -> Result<()> {
     let root = &profile.root;
     profile.validate(false)?;
     require(complete(root), INCOMPLETE)?;
@@ -756,7 +755,7 @@ pub fn start(app: &Arc<Launcher>, operation: &str, data: &Value) -> Result<Value
         let _held=profile.lease()?;
         profile.validate(operation=="recover"||operation=="stop")?;
         if operation!="stop"{wine_processes::idle(&profile.prefix)?;}
-        match operation.as_str(){"prepare"=>prepare(ctx)?,"recover"=>recover(ctx)?,"open"=>open(ctx)?,"stop"=>profile.stop(MANAGERS)?,_=>configure_for(&profile,operation=="configure")?}
+        match operation.as_str(){"prepare"=>prepare_for(ctx,&profile)?,"recover"=>recover_for(ctx,&profile)?,"open"=>open(ctx,&profile)?,"stop"=>profile.stop(MANAGERS)?,_=>configure_for(&profile,operation=="configure")?}
         let context=Launcher::context(&ctx.launcher.lock());
         ctx.update(json!({"runtime_path":context}));
         let message=match operation.as_str(){"prepare"=>"FSDT ist vorbereitet. Öffne den Installer, um GSX zu installieren und zu aktivieren.","configure"=>"Der GSX-Autostart ist eingerichtet. Die Funktion im Simulator ist noch unbestätigt.","disable"=>"Der automatische GSX-Start ist ausgeschaltet.","recover"=>"Das Windows-Profil vor der unterbrochenen GSX-Einrichtung ist wieder aktiv.",_=>"FSDT wurde geschlossen. Der GSX-Status wird neu geprüft."};Ok(json!({"state":"complete","message":message,"stopping":false}))

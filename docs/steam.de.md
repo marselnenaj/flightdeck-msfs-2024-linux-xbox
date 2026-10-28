@@ -117,4 +117,7 @@ muss vor einem Spielstart wiederhergestellt werden. Nach einem Proton-Wechsel
 oder Profiltausch den Status neu laden. Simlink und Couatl verwenden die echte
 `exe.xml`; nach bestätigtem Spielende werden nur aktivierte Begleitprogramme
 dieses Profils beendet. Vollständige Steam-Flüge und lizenzierte Add-on-Funktionen
-müssen Tester noch bestätigen.
+müssen Tester noch bestätigen. Ein kontofreier Test mit echtem CachyOS Proton 10
+installiert den offiziellen Simlink-Installer über diesen Steam-Ablauf in ein
+isoliertes Profil und erhält Profilidentität und Simulator-Einstellungen.
+Anmeldung und laufender Simulator sind damit nicht geprüft.

@@ -482,3 +482,126 @@ fn navigraph_browser_return_uses_the_waiting_steam_profile_and_its_environment()
     assert_eq!(rows[5], link);
     assert!(!f.items[0].prefix().join("callback-observation").exists());
 }
+
+#[test]
+#[ignore = "explicit account-free Wine probe; requires an existing Proton and official Simlink installer"]
+fn real_wine_simlink_install_into_an_isolated_steam_profile() {
+    use std::{os::unix::fs::symlink, process::Command, sync::atomic::AtomicBool};
+    let runner = PathBuf::from(
+        std::env::var_os("FLIGHTDECK_TEST_STEAM_RUNNER").expect("existing Proton directory"),
+    );
+    let installer = PathBuf::from(
+        std::env::var_os("FLIGHTDECK_TEST_SIMLINK_INSTALLER").expect("official Simlink installer"),
+    );
+    let f = Fixture::new();
+    let item = &f.items[0];
+    let selected = f.steam.join("compatibilitytools.d/fixture-proton");
+    fs::remove_dir_all(selected.join("files")).unwrap();
+    symlink(runner.join("files"), selected.join("files")).unwrap();
+    // Let real Wine create its entire profile, including the Unix drive map.
+    fs::remove_dir_all(item.prefix()).unwrap();
+    struct Cleanup {
+        prefix: PathBuf,
+        runner: PathBuf,
+        log: PathBuf,
+    }
+    impl Drop for Cleanup {
+        fn drop(&mut self) {
+            let cancel = AtomicBool::new(false);
+            if let Ok(wine) =
+                flightdeck::wine::Wine::new(&self.prefix, &self.runner, &self.log, &cancel)
+            {
+                let _ = wine.stop_staged();
+            }
+        }
+    }
+    let _cleanup = Cleanup {
+        prefix: item.prefix(),
+        runner: runner.clone(),
+        log: f._temp.path().join("cleanup.log"),
+    };
+    let log = fs::File::create(f._temp.path().join("wineboot.log")).unwrap();
+    let mut boot = Command::new(flightdeck::runtime::wine(&runner));
+    boot.args(["wineboot.exe", "-u"])
+        .env_clear()
+        .envs(flightdeck::wine::environment(&item.prefix(), &runner))
+        .env("WINEDLLOVERRIDES", "winemenubuilder.exe=d;mscoree,mshtml=d")
+        .stdout(log.try_clone().unwrap())
+        .stderr(log);
+    let status =
+        flightdeck::process::run(&mut boot, Duration::from_secs(180), &AtomicBool::new(false))
+            .unwrap();
+    assert!(
+        status.success(),
+        "isolated Wine initialization failed: {}",
+        fs::read_to_string(f._temp.path().join("wineboot.log")).unwrap_or_default()
+    );
+    flightdeck::wine::Wine::new(
+        &item.prefix(),
+        &runner,
+        &f._temp.path().join("flush.log"),
+        &AtomicBool::new(false),
+    )
+    .unwrap()
+    .stop_staged()
+    .unwrap();
+    fenix_patch::steam::checked(&item.target().unwrap(), false).expect("real profile validation");
+    put(
+        &Fixture::settings(item).join("UserCfg.opt"),
+        "InstalledPackagesPath \"C:\\Packages\"\r\nOtherSetting 1\r\n",
+    );
+    files::private_dir(&item.prefix().join("drive_c/Packages/Community")).unwrap();
+    f.select(item);
+    let before = flightdeck::fenix::identity(&item.prefix()).unwrap();
+    let user_cfg = fs::read(Fixture::settings(item).join("UserCfg.opt")).unwrap();
+    let status = f.status("navigraph");
+    api::post(&f.app,"/api/navigraph/install-simlink",&json!({"runtime_path":status["runtime_path"],"profile_token":status["profile_token"],"installer_path":installer}),"en").unwrap().unwrap();
+    let deadline = Instant::now() + Duration::from_secs(300);
+    loop {
+        let status = f.status("navigraph");
+        if status["job"]["state"] != "running" {
+            if status["job"]["state"] != "complete" {
+                let path = f
+                    .app
+                    .state_dir
+                    .join("steam")
+                    .join(&item.id)
+                    .join("addon-apps/private/navigraph-simlink-setup.log");
+                eprintln!(
+                    "Isolated account-free installer log: {}",
+                    fs::read_to_string(path)
+                        .unwrap_or_default()
+                        .chars()
+                        .take(4096)
+                        .collect::<String>()
+                );
+            }
+            assert_eq!(status["job"]["state"], "complete", "{status}");
+            assert_eq!(status["simlink_installed"], true);
+            break;
+        }
+        assert!(
+            Instant::now() < deadline,
+            "official Simlink install timed out"
+        );
+        std::thread::sleep(Duration::from_millis(100));
+    }
+    assert_eq!(flightdeck::fenix::identity(&item.prefix()).unwrap(), before);
+    assert_eq!(
+        fs::read(Fixture::settings(item).join("UserCfg.opt")).unwrap(),
+        user_cfg
+    );
+    let cancel = AtomicBool::new(false);
+    flightdeck::wine::Wine::new(
+        &item.prefix(),
+        &runner,
+        &f._temp.path().join("cleanup.log"),
+        &cancel,
+    )
+    .unwrap()
+    .stop_staged()
+    .unwrap();
+    println!(
+        "Official Simlink installed into isolated Steam-shaped profile with the selected real Wine; profile identity and simulator settings retained. No simulator flight or sign-in tested."
+    );
+}
