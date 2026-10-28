@@ -3,7 +3,7 @@
 </p>
 <h1 align="center">Flightdeck</h1>
 <p align="center">
-  A Linux launcher for the Xbox PC editions of Microsoft Flight Simulator 2024 and 2020.
+  A Linux launcher for Microsoft Flight Simulator 2024 and 2020 on Xbox PC and Steam.
 </p>
 <p align="center">
   <a href="#get-started"><strong>Get started</strong></a> &nbsp;·&nbsp;
@@ -19,12 +19,18 @@
 Flightdeck installs and launches your **purchased Xbox PC / Microsoft Store copy
 of MSFS 2024 or 2020** through Wine/Proton. Sign in with your Microsoft account,
 download the licensed game and start it from the native Rust desktop application.
-Windows, the Xbox app and a previous MSFS installation are not required.
+Windows, the Xbox app and a previous MSFS installation are not required for Xbox PC setup.
+Flightdeck also detects existing **Steam installations** and manages their optional
+Fenix setup; Steam handles game downloads, updates and account sign-in.
 
-**Current stable release: [Flightdeck 0.3.0](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.3.0).**
+**Current stable release: [Flightdeck 0.3.2](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.3.2).**
 The launcher, installer and updater need no Python.
 
-**New in 0.3.0:** Select Steam MSFS 2020/2024 alongside Xbox installations and
+**New in 0.3.2:** Xbox downloads use Windows SISU authentication and the correct
+MSA ticket format for content licensing. A complete isolated MSFS 2024 download
+passed with all 28,621 files verified.
+
+**Steam support:** Select Steam MSFS 2020/2024 alongside Xbox installations and
 manage Fenix through the shared standalone Rust engine. Steam support is beta;
 actual simulator flights still need tester qualification. See the
 [Steam guide](docs/steam.md) and [changelog](docs/changelog.md).
@@ -39,11 +45,13 @@ projects behind Flightdeck. The launcher also has a **Credits** page.
 ## Get started
 
 1. Download **Flightdeck-Linux-x86_64.tar.gz** from the
-   [0.3.0 release](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.3.0),
+   [0.3.2 release](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.3.2),
    extract it and open **Install Flightdeck.desktop**. Your file manager may ask
    you to trust this local launcher. Alternatively, run `./install.sh` there.
-2. Choose **Install MSFS**, select 2024 or 2020 and a destination, then
-   **Sign in & install** with the Microsoft account that owns the PC edition.
+2. For Xbox PC, choose **Install MSFS**, select 2024 or 2020 and a destination,
+   then **Sign in & install** with the Microsoft account that owns the PC edition.
+   For Steam, install the Windows edition through Steam, then select the detected
+   installation in Flightdeck. [Steam setup](docs/steam.md)
 3. Open **Flightdeck** from your application menu and start the simulator.
    Select an installed edition on the overview to switch between separate
    runtimes, Wine prefixes, updates and local saves.
