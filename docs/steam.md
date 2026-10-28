@@ -83,12 +83,34 @@ Fenix window and MCDU refresh helpers follow an observed game using a verified
 Fenix Proton. Closing Flightdeck leaves the Steam flight running. A confirmed
 game exit cleans up Fenix companions in that profile only.
 
+## GSX, Navigraph and Orbx
+
+Since 0.3.3, **Mods** offers the same experimental GSX, Navigraph Hub/Simlink and
+Orbx Central workflows for Steam MSFS 2020 and 2024. They use this installation's
+real prefix and selected Proton, including custom tools and secondary libraries.
+Choose the compatibility tool in Steam and launch MSFS once before setup. Close
+MSFS and other Windows applications in that profile before changing add-ons.
+No separate permanent Wine profile or new Proton download is created for these
+apps. [Setup steps and tested scope](addons.md)
+
+Flightdeck stores companion metadata/logs under
+`~/.local/share/flightdeck/steam/<installation-id>/addon-apps/`. GSX preparation
+stages a copy beside the real prefix and retains `pfx.before-gsx-*` for recovery.
+A pending GSX transaction blocks game launch until restored. Stale actions after
+changing Proton or replacing the prefix require a fresh status page. Simlink and
+Couatl startup use the edition's real `exe.xml`; cleanup after a confirmed game
+exit affects only enabled companions in that profile. Full Steam flights and
+licensed add-on functionality still need tester validation. An account-free real
+CachyOS Proton 10 probe installs the official Simlink app through this Steam
+workflow into an isolated profile, retaining its identity and simulator settings;
+it does not test sign-in or a running simulator.
+
 ## Community and saves
 
 The Community inventory uses the selected Steam profile's `UserCfg.opt` and Wine
 drive mappings. It opens the actual configured folder and reports conflicting
-configurations rather than choosing one. Steam Community removal and GSX setup
-are not enabled in this beta. Use the add-on's official installer for those tasks.
+configurations rather than choosing one. Steam Community removal is not enabled in this beta. Use the add-on's
+official installer for that task.
 
 Steam saves keep their existing platform behavior. Flightdeck's Xbox cloud sync
 and Xbox save backups do not run against Steam profiles. Fenix restore points

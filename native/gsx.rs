@@ -2,12 +2,12 @@
 //! Official FSDT setup in retained Wine copies; activation stays with FSDT.
 use crate::{
     Error, Result,
+    addon_apps::{self, Profile},
     backend::{Context, Launcher, string},
     bootstrap,
     error::require,
-    fenix, fenix_setup, files, framework, framework_repair,
-    games::Game,
-    mods, process, proton, runtime, transaction as tx,
+    fenix, fenix_setup, files, framework, framework_repair, mods, process, runtime,
+    transaction as tx,
     wine::{StagedWine, Wine},
     wine_processes,
     xml::{self, Element, Item},
@@ -116,14 +116,47 @@ pub fn complete(root: &Path) -> bool {
 fn override_key(name: &str) -> String {
     format!(r"HKCU\Software\Wine\AppDefaults\{name}\DllOverrides")
 }
+fn slot_parent(profile: &Profile) -> PathBuf {
+    if profile.item.is_some() {
+        profile
+            .prefix
+            .parent()
+            .unwrap_or(&profile.root)
+            .to_path_buf()
+    } else {
+        profile.root.join("local")
+    }
+}
+fn slot(profile: &Profile, kind: &str, id: &str) -> Result<PathBuf> {
+    require(
+        id.len() == 32 && id.bytes().all(|c| c.is_ascii_hexdigit()),
+        INCOMPLETE,
+    )?;
+    let name = if profile.item.is_some() {
+        match kind {
+            "stage" => format!(".flightdeck-gsx-{id}"),
+            "before" => format!("pfx.before-gsx-{id}"),
+            _ => format!("pfx.after-gsx-{id}"),
+        }
+    } else {
+        match kind {
+            "stage" => format!(".gsx-prefix-{id}"),
+            "before" => format!("msfs-prefix.before-gsx-{id}"),
+            _ => format!("msfs-prefix.after-gsx-{id}"),
+        }
+    };
+    Ok(slot_parent(profile).join(name))
+}
 pub fn prepare(ctx: &Context) -> Result<()> {
-    let root = ctx.root()?;
-    fenix::validate(root, false)?;
-    proton::check(root)?;
+    prepare_for(ctx, &Profile::selected(&ctx.launcher)?)
+}
+fn prepare_for(ctx: &Context, profile: &Profile) -> Result<()> {
+    profile.validate(false)?;
+    let root = &profile.root;
     require(complete(root), INCOMPLETE)?;
-    let prefix = root.join("local/msfs-prefix");
+    let prefix = profile.prefix.clone();
     wine_processes::idle(&prefix)?;
-    let runner = root.join("runner").canonicalize()?;
+    let runner = profile.runner()?;
     manager(&prefix)?;
     let cache = ctx.launcher.state_dir.join("gsx-downloads");
     ctx.progress("Der offizielle FSDT-Installer wird heruntergeladen und geprüft …");
@@ -135,16 +168,14 @@ pub fn prepare(ctx: &Context) -> Result<()> {
         |_| {},
     )?;
     require(
-        tx::free_bytes(root)?
+        tx::free_bytes(&prefix)?
             > tx::prefix_size(&prefix, &ctx.cancel)?.saturating_add(1024 * 1024 * 1024),
         "Für die GSX-Vorbereitung fehlt Speicherplatz für eine Profilkopie.",
     )?;
     let token = uuid::Uuid::new_v4().simple().to_string();
-    let staged = root.join("local").join(format!(".gsx-prefix-{token}"));
-    let backup = root
-        .join("local")
-        .join(format!("msfs-prefix.before-gsx-{token}"));
-    let mut state = json!({"format":1,"id":token,"state":"preparing","original_prefix_id":fenix::identity(&prefix)?,"prior":marker(root)?});
+    let staged = slot(profile, "stage", &token)?;
+    let backup = slot(profile, "before", &token)?;
+    let mut state = json!({"format":1,"id":token,"state":"preparing","original_prefix_id":fenix::identity(&prefix)?,"runner":runner,"prior":marker(root)?});
     files::atomic_json(&root.join(MARKER), &state)?;
     ctx.progress("Das Windows-Profil wird für die GSX-Einrichtung kopiert …");
     process::copy_tree(&prefix, &staged, &ctx.cancel)?;
@@ -159,8 +190,9 @@ pub fn prepare(ctx: &Context) -> Result<()> {
         fs::remove_file(&drive)?;
     }
     symlink("../drive_c", drive)?;
-    let mut wine = StagedWine::new(
-        root,
+    let mut wine = StagedWine::for_profile(
+        &prefix,
+        &slot_parent(profile),
         &staged,
         &runner,
         &root.join("private").join(format!("gsx-setup-{token}.log")),
@@ -168,12 +200,26 @@ pub fn prepare(ctx: &Context) -> Result<()> {
     )?;
     wine.wine.without_fenix();
     let result = (|| {
-        framework_repair::prepare(
+        if profile.item.is_some() && !framework::status(&staged).ready {
+            wine.check()?;
+            let system =
+                crate::steam_fenix::Engine::new(PathBuf::new(), json!({}), Arc::clone(&ctx.cancel));
+            let shared =
+                fenix_patch::core::RealWine::new(&system, &staged, &runner, &wine.wine.log);
+            fenix_patch::steam::remove_shared_mono(&shared)
+                .map_err(crate::steam_fenix::map_error)?;
+        }
+        framework_repair::prepare_with_version(
             &mut wine,
             |name, url, hash| {
                 bootstrap::download(url, hash, &cache.join(name), &ctx.cancel, |_| {})
             },
             |s| ctx.progress(s),
+            if profile.item.is_some() {
+                "win7"
+            } else {
+                "winxp"
+            },
         )?;
         ctx.progress("Der FSDT-Installer wird im kopierten Profil eingerichtet …");
         let directory = manager(&staged)?.unwrap_or(staged.join(MANAGER_DIR));
@@ -266,11 +312,11 @@ pub fn prepare(ctx: &Context) -> Result<()> {
         "Der FSDT-Installer wurde nicht vollständig eingerichtet.",
     )?;
     require(
-        fenix::identity(&prefix)? == state["original_prefix_id"]
-            && root.join("runner").canonicalize()? == runner,
+        fenix::identity(&prefix)? == state["original_prefix_id"] && profile.runner()? == runner,
         "Die Runtime hat sich während der GSX-Einrichtung geändert.",
     )?;
     wine_processes::idle(&prefix)?;
+    profile.current(&ctx.launcher)?;
     ctx.begin_commit(
         "publish_runtime",
         "Die geprüfte FSDT-Umgebung wird aktiviert …",
@@ -280,6 +326,7 @@ pub fn prepare(ctx: &Context) -> Result<()> {
     files::atomic_json(&root.join(MARKER), &state)?;
     tx::publish(&prefix, &backup)?;
     tx::publish(&staged, &prefix)?;
+    profile.rebind_startups(state["original_prefix_id"].clone())?;
     state["state"] = json!("ready");
     if let Some(value) = state.as_object_mut() {
         value.remove("prior");
@@ -287,8 +334,11 @@ pub fn prepare(ctx: &Context) -> Result<()> {
     files::atomic_json(&root.join(MARKER), &state)
 }
 pub fn recover(ctx: &Context) -> Result<()> {
-    let root = ctx.root()?;
-    fenix::validate(root, true)?;
+    recover_for(ctx, &Profile::selected(&ctx.launcher)?)
+}
+fn recover_for(ctx: &Context, profile: &Profile) -> Result<()> {
+    profile.validate(true)?;
+    let root = &profile.root;
     let state = marker(root)?.ok_or(Error::Invalid(
         "Keine unterbrochene GSX-Einrichtung vorhanden.",
     ))?;
@@ -296,23 +346,23 @@ pub fn recover(ctx: &Context) -> Result<()> {
         state["state"] != "ready",
         "Keine unterbrochene GSX-Einrichtung vorhanden.",
     )?;
-    let prefix = root.join("local/msfs-prefix");
+    let prefix = profile.prefix.clone();
     wine_processes::idle(&prefix)?;
-    let staged = root
-        .join("local")
-        .join(format!(".gsx-prefix-{}", string(&state, "id")?));
-    let backup = root
-        .join("local")
-        .join(format!("msfs-prefix.before-gsx-{}", string(&state, "id")?));
+    let staged = slot(profile, "stage", string(&state, "id")?)?;
+    let backup = slot(profile, "before", string(&state, "id")?)?;
     if staged.exists() {
-        owned(&staged, root)?;
+        owned(&staged, &slot_parent(profile))?;
         require(
             !prefix.exists() || fenix::identity(&staged)? != fenix::identity(&prefix)?,
             "Invalid GSX staging profile.",
         )?;
         let wine = Wine::new(
             &staged,
-            &root.join("runner"),
+            &if profile.item.is_some() {
+                PathBuf::from(string(&state, "runner")?).canonicalize()?
+            } else {
+                profile.runner()?
+            },
             &root.join("private").join(format!(
                 "gsx-recovery-{}.log",
                 uuid::Uuid::new_v4().simple()
@@ -322,13 +372,13 @@ pub fn recover(ctx: &Context) -> Result<()> {
         wine.stop_staged()?;
     }
     if backup.exists() {
-        owned(&backup, root)?;
+        owned(&backup, &slot_parent(profile))?;
         require(
             fenix::identity(&backup)? == state["original_prefix_id"],
             "Die GSX-Sicherung hat sich geändert; Wiederherstellung abgebrochen.",
         )?;
         if prefix.exists() {
-            owned(&prefix, root)?;
+            owned(&prefix, &slot_parent(profile))?;
             require(
                 fenix::identity(&prefix)? == state["staged_prefix_id"],
                 "Die GSX-Sicherung hat sich geändert; Wiederherstellung abgebrochen.",
@@ -348,13 +398,11 @@ pub fn recover(ctx: &Context) -> Result<()> {
         if prefix.exists() {
             tx::publish(
                 &prefix,
-                &root.join("local").join(format!(
-                    "msfs-prefix.after-gsx-{}",
-                    uuid::Uuid::new_v4().simple()
-                )),
+                &slot(profile, "after", &uuid::Uuid::new_v4().simple().to_string())?,
             )?;
         }
         tx::publish(&backup, &prefix)?;
+        profile.rebind_startups(state["staged_prefix_id"].clone())?;
     }
     if !state["prior"].is_null() {
         files::atomic_json(&root.join(MARKER), &state["prior"])?;
@@ -365,7 +413,10 @@ pub fn recover(ctx: &Context) -> Result<()> {
     Ok(())
 }
 pub fn community(root: &Path) -> Result<Option<PathBuf>> {
-    let (locations, limited) = mods::locations(root)?;
+    community_for(&Profile::xbox(root)?)
+}
+fn community_for(profile: &Profile) -> Result<Option<PathBuf>> {
+    let (locations, limited) = profile.locations()?;
     if limited {
         return Ok(None);
     }
@@ -405,18 +456,21 @@ fn enabled(element: &Element) -> bool {
     text(element, "Disabled").trim().to_lowercase() != "true"
 }
 pub fn startup(root: &Path, directory: Option<&Path>) -> Result<Option<Startup>> {
+    startup_for(&Profile::xbox(root)?, directory)
+}
+fn startup_for(profile: &Profile, directory: Option<&Path>) -> Result<Option<Startup>> {
     let Some(directory) = directory else {
         return Ok(None);
     };
     let directory = directory.canonicalize()?;
-    let prefix = root.join("local/msfs-prefix");
+    let prefix = profile.prefix.clone();
     let users = fenix_setup::user_folders(&prefix)?;
     require(
         users.len() <= 16,
         "Die FSDT-Starteinstellung ist nicht eindeutig. Im FSDT-Installer aktualisieren.",
     )?;
-    let family = mods::family(root)?;
-    let game = Game::for_runtime(root)?;
+    let family = profile.family()?;
+    let game = profile.game;
     let mut found = None;
     for user in users {
         let mut folders = vec![user.join("AppData/Roaming").join(game.user_config())];
@@ -487,13 +541,17 @@ pub fn startup(root: &Path, directory: Option<&Path>) -> Result<Option<Startup>>
     Ok(found)
 }
 pub fn configure(root: &Path, enable: bool) -> Result<()> {
+    configure_for(&Profile::xbox(root)?, enable)
+}
+fn configure_for(profile: &Profile, enable: bool) -> Result<()> {
+    let root = &profile.root;
     require(complete(root), INCOMPLETE)?;
-    let directory = manager(&root.join("local/msfs-prefix"))?;
+    let directory = manager(&profile.prefix)?;
     require(
-        community(root)?.is_some(),
+        community_for(profile)?.is_some(),
         "Installiere GSX zuerst im FSDT-Installer und prüfe die Community-Verknüpfung.",
     )?;
-    let mut startup = startup(root, directory.as_deref())?.ok_or(Error::Invalid(
+    let mut startup = startup_for(profile, directory.as_deref())?.ok_or(Error::Invalid(
         "Der FSDT-Start fehlt. Führe im FSDT-Installer ein Update aus und prüfe erneut.",
     ))?;
     require(
@@ -510,33 +568,33 @@ pub fn configure(root: &Path, enable: bool) -> Result<()> {
         addon.set("Disabled", if enable { "False" } else { "True" });
     }
     files::atomic(&startup.path, &startup.tree.bytes()?)?;
-    files::atomic_json(&root.join(STARTUP), &json!({"format":1,"enabled":enable}))
+    files::atomic_json(
+        &root.join(STARTUP),
+        &json!({"format":1,"enabled":enable,"prefix_id":fenix::identity(&profile.prefix)?}),
+    )
 }
 pub fn snapshot(app: &Launcher) -> Value {
-    let (root, busy, playing, closing, job) = {
-        let mut s = app.lock();
-        Launcher::poll(&mut s);
-        (
-            s.runtime.clone(),
-            s.active.is_some() || Launcher::external(&s),
-            s.process.is_some(),
-            s.closing,
-            s.jobs
-                .get("gsx")
-                .cloned()
-                .filter(|j| {
-                    j["runtime_path"].as_str() == s.runtime.as_ref().and_then(|p| p.to_str())
-                })
-                .unwrap_or(Value::Null),
-        )
-    };
-    let mut value = json!({"state":"unavailable","message":"GSX ist zunächst für MSFS 2024 verfügbar.","prepared":false,"package_installed":false,"startup_found":false,"configured":false,"can_recover":false,"idle":false,"verified_in_simulator":false,"runtime_path":root,"job":job,"busy":busy||playing,"manager_running":false,"can_change":false,"can_stop":false});
-    if let Some(root) = root {
+    let selected = Profile::selected(app);
+    let context = Launcher::context(&app.lock());
+    let (busy, playing, closing, job) = selected
+        .as_ref()
+        .map(|p| addon_apps::job(app, "gsx", p))
+        .unwrap_or((false, false, false, Value::Null));
+    let mut value = json!({"state":"unavailable","message":"","prepared":false,"package_installed":false,"startup_found":false,"configured":false,"can_recover":false,"idle":false,"verified_in_simulator":false,"runtime_path":context,"job":job,"busy":busy||playing,"manager_running":false,"can_change":false,"can_stop":false});
+    if let Ok(profile) = &selected {
+        let root = &profile.root;
+        value["profile_token"] = json!(profile.revision);
+        value["source"] = json!(if profile.item.is_some() {
+            "steam"
+        } else {
+            "xbox"
+        });
+        value["installation_id"] = json!(profile.item.as_ref().map(|i| &i.id));
+        value["game"] = json!(profile.game.id());
         let result = (|| -> Result<()> {
-            fenix::validate(&root, true)?;
-            proton::check(&root)?;
-            let state = marker(&root)?;
-            let prefix = root.join("local/msfs-prefix");
+            profile.validate(true)?;
+            let state = marker(root)?;
+            let prefix = profile.prefix.clone();
             if state.is_some_and(|v| v["state"] != "ready") {
                 value["state"] = json!("interrupted");
                 value["can_recover"] = json!(true);
@@ -544,8 +602,8 @@ pub fn snapshot(app: &Launcher) -> Value {
             } else {
                 let directory = manager(&prefix)?;
                 let prepared = directory.is_some() && framework::status(&prefix).ready;
-                let package = community(&root)?.is_some();
-                let entry = startup(&root, directory.as_deref())?;
+                let package = community_for(profile)?.is_some();
+                let entry = startup_for(profile, directory.as_deref())?;
                 let active = entry.as_ref().is_some_and(|v| {
                     enabled(&v.tree)
                         && matches!(&v.tree.items[v.index],Item::Element(addon) if enabled(addon))
@@ -565,6 +623,8 @@ pub fn snapshot(app: &Launcher) -> Value {
                         && active
                         && setting["format"].as_u64() == Some(1)
                         && setting["enabled"] == true
+                        && (profile.item.is_none()
+                            || setting["prefix_id"] == json!(fenix::identity(&prefix)?))
                 );
                 value["message"] = json!(
                     "Installation und Lizenz prüft FSDT. Der GSX-Flugbetrieb unter Linux ist noch nicht bestätigt."
@@ -593,24 +653,19 @@ pub fn snapshot(app: &Launcher) -> Value {
             value["message"] = json!(error.to_string());
         }
     }
+    if let Err(error) = selected {
+        value["message"] = json!(error.to_string());
+    }
     value
 }
-fn open(ctx: &Context) -> Result<()> {
-    let root = ctx.root()?;
-    require(
-        complete(root) && snapshot(&ctx.launcher)["prepared"] == true,
-        "Bereite zuerst den FSDT-Installer vor.",
-    )?;
-    let prefix = root.join("local/msfs-prefix");
+fn open(ctx: &Context, profile: &Profile) -> Result<()> {
+    let root = &profile.root;
+    profile.validate(false)?;
+    require(complete(root), INCOMPLETE)?;
+    let prefix = profile.prefix.clone();
     let directory =
         manager(&prefix)?.ok_or(Error::Invalid("Bereite zuerst den FSDT-Installer vor."))?;
-    let mut wine = Wine::new(
-        &prefix,
-        &root.join("runner"),
-        &root.join("private/gsx-manager.log"),
-        &ctx.cancel,
-    )?;
-    wine.without_fenix();
+    let wine = profile.wine(ctx, "gsx-manager.log")?;
     let mut command = wine.command()?;
     command
         .arg(directory.join("Couatl_Updater.exe"))
@@ -624,7 +679,7 @@ fn open(ctx: &Context) -> Result<()> {
     let result = (|| {
         loop {
             if ctx.pause.load(Ordering::Relaxed) || ctx.cancel.load(Ordering::Relaxed) {
-                wine_processes::stop(root, MANAGERS)?;
+                profile.stop(MANAGERS)?;
                 process::terminate(&mut child)?;
                 return ctx.interrupted();
             }
@@ -635,7 +690,7 @@ fn open(ctx: &Context) -> Result<()> {
             {
                 let since = quiet.get_or_insert_with(Instant::now);
                 if since.elapsed() >= Duration::from_millis(1500) {
-                    wine_processes::stop(root, MANAGERS)?;
+                    profile.stop(MANAGERS)?;
                     return require(
                         code.success(),
                         "Der FSDT-Installer wurde unerwartet beendet. Details stehen im GSX-Protokoll.",
@@ -648,7 +703,7 @@ fn open(ctx: &Context) -> Result<()> {
         }
     })();
     if result.is_err() {
-        let _ = wine_processes::stop(root, MANAGERS);
+        let _ = profile.stop(MANAGERS);
         let _ = process::terminate(&mut child);
     }
     result
@@ -658,13 +713,19 @@ pub fn start(app: &Arc<Launcher>, operation: &str, data: &Value) -> Result<Value
         ["prepare", "open", "configure", "disable", "recover", "stop"].contains(&operation),
         "Unbekannter GSX-Vorgang.",
     )?;
-    let root = app.root()?;
+    let profile = Profile::selected(app)?;
     require(
-        root == Path::new(string(data, "runtime_path")?),
+        profile.context == string(data, "runtime_path")?,
         "Die ausgewählte Runtime hat sich geändert. GSX-Status neu laden.",
     )?;
+    if profile.item.is_some() {
+        require(
+            data["profile_token"] == profile.revision,
+            "Die Installation oder Proton-Auswahl hat sich geändert. Add-on-Status neu laden.",
+        )?;
+    }
     if operation != "stop" {
-        proton::check(&root)?;
+        profile.validate(true)?;
     } else {
         require(
             snapshot(app)["can_stop"] == true,
@@ -689,9 +750,14 @@ pub fn start(app: &Arc<Launcher>, operation: &str, data: &Value) -> Result<Value
         }
     }
     let operation = operation.to_string();
-    app.start_job("gsx",&operation.clone(),true,move|ctx|{
-        let selected=ctx.root()?;require(selected==root,"Die ausgewählte Runtime hat sich geändert. GSX-Status neu laden.")?;let root=selected;fenix::validate(root,operation=="recover"||operation=="stop")?;if operation!="stop"{wine_processes::idle(&root.join("local/msfs-prefix"))?;}
-        match operation.as_str(){"prepare"=>prepare(ctx)?,"recover"=>recover(ctx)?,"open"=>open(ctx)?,"stop"=>wine_processes::stop(root,MANAGERS)?,_=>configure(root,operation=="configure")?}
+    app.start_job("gsx",&operation.clone(),profile.item.is_none(),move|ctx|{
+        profile.current(&ctx.launcher)?;
+        let _held=profile.lease()?;
+        profile.validate(operation=="recover"||operation=="stop")?;
+        if operation!="stop"{wine_processes::idle(&profile.prefix)?;}
+        match operation.as_str(){"prepare"=>prepare_for(ctx,&profile)?,"recover"=>recover_for(ctx,&profile)?,"open"=>open(ctx,&profile)?,"stop"=>profile.stop(MANAGERS)?,_=>configure_for(&profile,operation=="configure")?}
+        let context=Launcher::context(&ctx.launcher.lock());
+        ctx.update(json!({"runtime_path":context}));
         let message=match operation.as_str(){"prepare"=>"FSDT ist vorbereitet. Öffne den Installer, um GSX zu installieren und zu aktivieren.","configure"=>"Der GSX-Autostart ist eingerichtet. Die Funktion im Simulator ist noch unbestätigt.","disable"=>"Der automatische GSX-Start ist ausgeschaltet.","recover"=>"Das Windows-Profil vor der unterbrochenen GSX-Einrichtung ist wieder aktiv.",_=>"FSDT wurde geschlossen. Der GSX-Status wird neu geprüft."};Ok(json!({"state":"complete","message":message,"stopping":false}))
     })
 }

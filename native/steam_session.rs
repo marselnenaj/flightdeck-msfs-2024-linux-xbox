@@ -124,6 +124,11 @@ pub fn launch(app: &Arc<Launcher>) -> Result<Value> {
         .clone()
         .ok_or(Error::Invalid("Keine Steam-Installation ausgewählt."))?;
     item.validate()?;
+    let addons = crate::addon_apps::Profile::steam(&app.state_dir, item.clone());
+    require(
+        crate::gsx::complete(&addons.root),
+        "Die GSX-Einrichtung ist unvollständig. Unter Mods wiederherstellen.",
+    )?;
     require(!running(&item)?, "Dieser Simulator läuft bereits in Steam.")?;
     let child = process::spawn(&mut command(&item, false)?, None)?;
     s.steam_notice.clear();

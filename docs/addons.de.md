@@ -2,10 +2,16 @@
 
 [English instructions](addons.md)
 
-**Ergänzungen in Entwicklung:** Die Abschnitte zu Orbx Central und Navigraph
-beschreiben den Entwicklungsstand. Die stabile Version 0.3.2 enthält sie noch
-nicht. Sie verwenden derzeit Xbox-Installationen; die Einrichtung dieser
-Begleitprogramme für Steam ist noch nicht implementiert.
+**Seit 0.3.3:** GSX, Navigraph Hub/Simlink und Orbx Central verwenden das
+vorhandene Wine-Profil und Proton der gewählten Xbox- oder Steam-Installation von
+MSFS 2020/2024. Diese Integrationen bleiben experimentell. Für Steam zuerst Proton
+in den Kompatibilitätseinstellungen wählen und MSFS einmal starten. Ein weiteres
+dauerhaftes Wine-Profil ist nicht nötig. Spieldownloads und Updates verwaltet Steam.
+Steam-Metadaten, Protokolle und XML-Sicherungen liegen unter
+`~/.local/share/flightdeck/steam/<installation-id>/addon-apps/`; Programme und
+Simulator-Einstellungen bleiben im echten `compatdata/<AppID>/pfx`. Nach einem
+Proton-Wechsel den Add-on-Status neu laden. Community-Pakete lassen sich über
+Flightdeck weiterhin nur bei Xbox entfernen.
 
 ## Community-Ordner und Mod-Liste
 
@@ -40,8 +46,9 @@ eine begrenzte Prüfung hin.
 Wenn der Entwickler einen eigenen Installer vorsieht, diesen verwenden. Vor dem
 Ersetzen vorhandener Pakete eigene Einstellungen und Bemalungen sichern.
 Die allgemeine Mod-Liste zeigt den Bestand und öffnet den Ordner.
-Für Fenix und die experimentelle GSX-Pro-Integration gibt es eigene Abläufe,
-derzeit nur für MSFS 2024.
+Für Fenix und die experimentellen GSX-, Navigraph- und Orbx-Integrationen gibt es
+eigene Abläufe. Die drei letzteren unterstützen beide Editionen und Plattformen;
+Fenix für Steam ist in der [Steam-Anleitung](steam.de.md) beschrieben.
 
 Seit 0.2.7 zeigt Flightdeck für jedes Add-on einen hervorgehobenen nächsten Schritt.
 Erkannte Komponenten bleiben sichtbar; zusätzliche Aktionen stehen unter
@@ -90,7 +97,7 @@ benötigt. Eine Verbindung zum laufenden Simulator ist damit noch nicht bestäti
 Öffne **Mods → GSX Pro** und folge dem hervorgehobenen nächsten Schritt.
 Erledigte Schritte bleiben zusammengefasst; zusätzliche Aktionen findest du im
 eingeklappten Bereich **Verwalten & reparieren**. Vor der Einrichtung MSFS, Fenix
-und andere Windows-Anwendungen im ausgewählten Profil schließen. MSFS 2024 muss
+und andere Windows-Anwendungen im ausgewählten Profil schließen. Die gewählte MSFS-Edition muss
 einmal gestartet worden sein, damit seine Paketkonfiguration vorhanden ist.
 
 GSX bleibt experimentell. Der offizielle FSDT-Installer wurde mit nativem .NET 4.8
@@ -148,9 +155,9 @@ Installer-Download, stoppt ein Prüfsummenfehler die Vorbereitung, bis Flightdec
 festgelegte Version geprüft und aktualisiert wurde. FSDT- und Microsoft-Binärdateien
 werden nicht mitgeliefert.
 
-## Orbx Central einrichten (experimentell, in Entwicklung)
+## Orbx Central einrichten (experimentell)
 
-Wähle die Xbox-MSFS-Installation und öffne **Mods → Orbx Central**. Starte MSFS
+Wähle die gewünschte Xbox- oder Steam-MSFS-Installation und öffne **Mods → Orbx Central**. Starte MSFS
 vorher einmal, damit seine echte `UserCfg.opt` existiert. Beende danach den
 Simulator und andere Windows-Programme im gewählten Profil.
 

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
-//! Fenix helpers follow an observed Steam game, including an external launch.
+//! Managed companions follow the selected Steam game, including external launches.
 use crate::{
-    Result, display_refresh, files, installations::Installation, process, steam_fenix,
-    steam_session, wine, wine_processes,
+    Result, addon_apps::Profile, display_refresh, files, installations::Installation, process,
+    steam_fenix, steam_session, wine, wine_processes,
 };
 use std::{
     path::Path,
@@ -34,7 +34,30 @@ impl Session {
         self.done.load(Ordering::Acquire)
     }
     pub fn start(state_dir: &Path, item: &Installation) -> Result<Self> {
-        let profile = steam_fenix::companion_profile(state_dir, item)?;
+        let addon = Profile::steam(state_dir, item.clone());
+        let fenix = steam_fenix::companion_profile(state_dir, item).ok();
+        let mut names = Vec::new();
+        if fenix.is_some() {
+            names.extend_from_slice(wine_processes::FENIX);
+        }
+        if addon.enabled(crate::gsx::STARTUP) {
+            names.extend_from_slice(crate::gsx::COMPANIONS);
+        }
+        if addon.enabled(crate::navigraph::STARTUP) {
+            names.extend_from_slice(crate::navigraph::SIMLINK);
+        }
+        let prefix_generation = item.prefix_generation();
+        let profile = if let Some(profile) = fenix.clone() {
+            profile
+        } else {
+            addon.prepare()?;
+            crate::display_refresh::Profile {
+                prefix: addon.prefix.clone(),
+                runner: addon.runner()?,
+                private: addon.root.join("private"),
+                library: item.game_path().join("SimConnect_internal.dll"),
+            }
+        };
         let held = files::Lease::acquire(&profile.private.join("steam-companions.lock"), true)?;
         let cancel = Arc::new(AtomicBool::new(false));
         let stopped = Arc::clone(&cancel);
@@ -45,7 +68,7 @@ impl Session {
             let _completed = Completion(completed);
             let _held = held;
             let refresh_cancel = Arc::new(AtomicBool::new(false));
-            let refresh = if profile.library.is_file() {
+            let refresh = if fenix.is_some() && profile.library.is_file() {
                 let profile = profile.clone();
                 let cancelled = Arc::clone(&refresh_cancel);
                 Some(std::thread::spawn(move || {
@@ -58,7 +81,8 @@ impl Session {
                 .prefix
                 .join("drive_c/windows/system32/FenixWindowGuard.exe");
             let mut guard = None;
-            if helper.is_file()
+            if fenix.is_some()
+                && helper.is_file()
                 && wine_processes::Processes::new(&profile.prefix)
                     .is_ok_and(|p| !p.any(Some(&["fenixwindowguard.exe"])))
             {
@@ -93,12 +117,8 @@ impl Session {
             }
             // Closing/restarting Flightdeck leaves an ongoing Steam flight
             // alone. Only a confirmed game exit ends this profile's companions.
-            if ended {
-                let _ = wine_processes::stop_prefix(
-                    &profile.prefix,
-                    &profile.runner,
-                    wine_processes::FENIX,
-                );
+            if ended && item.prefix_generation() == prefix_generation {
+                let _ = wine_processes::stop_prefix(&profile.prefix, &profile.runner, &names);
             }
         });
         Ok(Self { cancel, done })

@@ -204,7 +204,7 @@ impl App {
     pub(crate) fn steam_page(&self) -> Element<'_, Message> {
         let about=self.card(self.tr("Steam-Installation","Steam installation"),column![
             self.paragraph(s(&self.status()["runtime"],"installation_name")),
-            self.paragraph(self.tr("Steam übernimmt Installation, Spielupdates und seine Synchronisierung. Flightdeck startet den passenden Steam-Client und verwaltet den Fenix-Patch.","Steam handles installation, game updates and its synchronization. Flightdeck launches the matching Steam client and manages the Fenix patch.")),
+            self.paragraph(self.tr("Steam übernimmt Installation, Spielupdates und seine Synchronisierung. Flightdeck startet den passenden Steam-Client und verwaltet Fenix, GSX, Navigraph und Orbx im gewählten Profil.","Steam handles installation, game updates and its synchronization. Flightdeck launches the matching Steam client and manages Fenix, GSX, Navigraph and Orbx in the selected profile.")),
             self.paragraph(s(&self.status()["game"],"message")),
             self.control(self.tr("In Steam öffnen","Open in Steam"),self.request(&Action::SteamOpen).map(|_|Message::Action(Action::SteamOpen)),false),
             self.paragraph(self.tr("Steam-Unterstützung: Beta. Gib bei Problemen die MSFS-Ausgabe, den Steam-Client, deine Distribution und die Grafikkarte an.","Steam support: beta. When reporting a problem, include the MSFS edition, Steam client, distribution and GPU."))
@@ -219,6 +219,9 @@ impl App {
             Page::Mods => {
                 page = page
                     .push(self.steam_fenix_card())
+                    .push(self.gsx_card())
+                    .push(self.navigraph_card())
+                    .push(self.orbx_card())
                     .push(self.community_card());
             }
             Page::Overview => {

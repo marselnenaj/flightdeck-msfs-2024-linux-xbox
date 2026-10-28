@@ -1,18 +1,30 @@
 # Changes and release status
 
-## In development
+## 0.3.3 — 28 October 2026
 
-- Integrate the existing experimental Navigraph Hub and Simlink work, including
-  browser sign-in forwarding, direct Hub extraction without Process Governor,
-  unattended installers and simulator-session Simlink startup and cleanup.
-- Add optional Orbx Central 4.5.50 setup using the selected Xbox installation's
-  existing profile and runner. Verify the official full payload, preserve the
-  previous program during repairs and use the real edition's simulator settings.
-- Avoid Orbx's failing Wine web-installer close check and visible Wine tray host;
-  disable tray minimization and login autostart. Keep process cleanup confined to
-  Orbx in the selected profile and guard its fixed worker port across profiles.
-- These companion integrations remain experimental and are not included in
-  stable 0.3.2. Steam companion setup and full-flight qualification remain open.
+- Add experimental Orbx Central 4.5.50, Navigraph Hub and Simlink setup. Extend
+  GSX preparation and all managed companion apps to Xbox and Steam MSFS 2020/2024
+  using the selected game's existing profile and Proton runner.
+- Resolve the selected Steam compatibility tool, including global/default tools
+  and secondary libraries. Bind actions to the installation, prefix generation
+  and Proton revision. Keep saved Xbox settings unchanged and share Steam's
+  profile lock during mutations.
+- Stage Orbx and GSX on the real prefix filesystem, retain backups, recover
+  interrupted GSX publication and block simulator launch until recovery finishes.
+  Preserve Proton's shared Mono files during staged native .NET preparation.
+- Forward Navigraph browser sign-in to the waiting application in its own profile,
+  bypass Hub's failing Process Governor extraction and manage Simlink autostart.
+  After a confirmed Steam game exit, clean up only its enabled Simlink/Couatl
+  companions; closing Flightdeck leaves an active flight running.
+- Verify Orbx's complete official payload, bypass its failing Wine web-installer
+  close check and disable tray minimization and login startup. Guard its fixed
+  worker port and keep cleanup confined to the selected profile.
+- Add Steam runner, stale-action, locking, recovery, companion lifecycle and
+  bilingual UI regressions. Verify the official Simlink installer in an isolated
+  Steam-shaped profile with real CachyOS Proton 10, preserving profile identity
+  and simulator settings. These integrations remain experimental; actual Steam
+  simulator flights, licensed GSX services and full-flight Navigraph operation
+  still require tester validation. Preserve the 0.3.2 Xbox download auth fix.
 
 ## 0.3.2 — 28 October 2026
 

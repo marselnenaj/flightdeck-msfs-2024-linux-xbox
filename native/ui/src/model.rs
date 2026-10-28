@@ -191,10 +191,6 @@ impl App {
                     | Game(_)
                     | Cloud(_)
                     | Automatic(_)
-                    | Gsx(_)
-                    | Navigraph(_)
-                    | NavigraphPick(_)
-                    | Orbx(_)
                     | Proton
                     | ProtonDefault
                     | ProtonCancel
@@ -490,6 +486,9 @@ impl App {
                         ]
                         .contains(op));
                 body = json!({"runtime_path":root});
+                if let Some(token) = data["profile_token"].as_str() {
+                    body["profile_token"] = json!(token);
+                }
                 if fenix {
                     match *op {
                         "cancel" if self.is_steam() => {
@@ -602,6 +601,9 @@ impl App {
                 let hub = yes(data, "hub_installed");
                 let simlink = yes(data, "simlink_installed");
                 body = json!({"runtime_path":root});
+                if let Some(token) = data["profile_token"].as_str() {
+                    body["profile_token"] = json!(token);
+                }
                 match *op {
                     "install-hub" => {
                         body["installer_path"] =
@@ -650,6 +652,9 @@ impl App {
                 let change =
                     enabled && safe_idle && yes(data, "can_change") && data["state"] == "available";
                 body = json!({"runtime_path":root});
+                if let Some(token) = data["profile_token"].as_str() {
+                    body["profile_token"] = json!(token);
+                }
                 match *op {
                     "install" => ("orbx/install", change && yes(data, "settings_found")),
                     "configure" => (

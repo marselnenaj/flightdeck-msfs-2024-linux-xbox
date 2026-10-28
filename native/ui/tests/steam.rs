@@ -173,3 +173,38 @@ fn capture_steam_states() -> Result<(), Box<dyn std::error::Error>> {
     }
     Ok(())
 }
+
+#[test]
+fn steam_companion_cards_and_actions_use_the_selected_profile_in_both_languages()
+-> Result<(), Box<dyn std::error::Error>> {
+    for language in [Language::De, Language::En] {
+        let mut app = fixture(language, "installed");
+        for kind in ["gsx", "navigraph", "orbx"] {
+            app.snapshot.insert(kind,json!({"state":"available","source":"steam","runtime_path":"steam:2024:revision","profile_token":"selected-proton-and-prefix","can_change":true,"idle":true,"installed":true,"settings_found":true,"hub_installed":true,"simlink_installed":true,"configured":true,"prepared":true,"package_installed":true,"startup_found":true,"startup":true}));
+        }
+        for action in [
+            Action::Gsx("configure"),
+            Action::Navigraph("open-hub"),
+            Action::Navigraph("open-simlink"),
+            Action::Orbx("open"),
+        ] {
+            let request = app
+                .request(&action)
+                .expect("Steam companion action available");
+            assert_eq!(request.body["runtime_path"], "steam:2024:revision");
+            assert_eq!(request.body["profile_token"], "selected-proton-and-prefix");
+        }
+        let mut ui =
+            iced_test::Simulator::with_size(settings(), Size::new(1280.0, 2400.0), app.view());
+        for title in ["GSX Pro", "Navigraph", "Orbx Central"] {
+            ui.find(title)?;
+        }
+        drop(ui);
+        app.snapshot.get_mut("orbx").expect("Orbx")["runtime_path"] = json!("steam:2020:revision");
+        assert!(app.request(&Action::Orbx("open")).is_none());
+        app.snapshot.get_mut("status").expect("status")["game"]["state"] = json!("external");
+        assert!(app.request(&Action::Navigraph("open-hub")).is_none());
+        assert!(app.request(&Action::Gsx("configure")).is_none());
+    }
+    Ok(())
+}

@@ -21,20 +21,21 @@ of MSFS 2024 or 2020** through Wine/Proton. Sign in with your Microsoft account,
 download the licensed game and start it from the native Rust desktop application.
 Windows, the Xbox app and a previous MSFS installation are not required for Xbox PC setup.
 Flightdeck also detects existing **Steam installations** and manages their optional
-Fenix setup; Steam handles game downloads, updates and account sign-in.
+Fenix, GSX, Navigraph Hub/Simlink and Orbx Central setup; Steam handles game
+downloads, updates and account sign-in.
 
-**Current stable release: [Flightdeck 0.3.2](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.3.2).**
+**Download the [latest stable release](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/latest).**
 The launcher, installer and updater need no Python.
 
-**New in 0.3.2:** Xbox downloads use Windows SISU authentication and the correct
-MSA ticket format for content licensing. A complete isolated MSFS 2024 download
-passed with all 28,621 files verified.
+**New in 0.3.3:** optional Orbx Central, Navigraph Hub and Simlink setup, plus
+GSX preparation for the selected **Xbox or Steam** MSFS 2020/2024 profile. These
+experimental integrations use the game's existing Wine profile and selected
+Proton. Navigraph browser sign-in returns to the waiting app; Orbx avoids the
+failing web updater and Wine tray window. Full-flight add-on compatibility still
+needs tester validation. [Setup and tested scope](docs/addons.md)
 
-**In development:** optional Orbx Central, Navigraph Hub and Simlink setup in
-the selected Xbox installation's existing Wine profile. This includes browser
-sign-in forwarding for Navigraph and Orbx setup without the failing web updater
-or Wine tray window. These additions are not included in stable 0.3.2.
-[Setup and tested scope](docs/addons.md)
+Xbox downloads retain the SISU authentication and content-licensing fixes from
+0.3.2, verified with a complete isolated MSFS 2024 download of all 28,621 files.
 
 **Steam support:** Select Steam MSFS 2020/2024 alongside Xbox installations and
 manage Fenix through the shared standalone Rust engine. Steam support is beta;
@@ -51,7 +52,7 @@ projects behind Flightdeck. The launcher also has a **Credits** page.
 ## Get started
 
 1. Download **Flightdeck-Linux-x86_64.tar.gz** from the
-   [0.3.2 release](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/v0.3.2),
+   [latest release](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/latest),
    extract it and open **Install Flightdeck.desktop**. Your file manager may ask
    you to trust this local launcher. Alternatively, run `./install.sh` there.
 2. For Xbox PC, choose **Install MSFS**, select 2024 or 2020 and a destination,
@@ -91,7 +92,7 @@ use the full installer once; existing runtimes and saves are preserved.
 | Area | What it provides |
 | --- | --- |
 | **Install and updates** | Licensed downloads, retry and pause/resume, game-file verification, full repair and rollback. [Details](docs/game-updates.md) |
-| **Mods** | Community-folder management and optional Fenix/GSX setup through their official installers. [Guide](docs/addons.md) |
+| **Mods** | Community-folder management and optional Fenix, GSX, Navigraph and Orbx setup in the selected profile. [Guide](docs/addons.md) |
 | **Saves** | Local backups and experimental automatic Xbox cloud sync with conflict recovery. [Guide](docs/cloud-saves.md) |
 | **Graphics and VR** | Automatic GPU setup, NVIDIA compatibility options and optional OpenXR setup. [Graphics](docs/graphics.md) · [VR](docs/vr.md) |
 | **Diagnostics** | Selected checks and reviewable problem reports without raw game logs, tokens or save contents. [Guide](docs/problem-reports.md) |
