@@ -97,6 +97,7 @@ pub enum Action {
     Gsx(&'static str),
     Navigraph(&'static str),
     NavigraphPick(&'static str),
+    Orbx(&'static str),
     Proton,
     ProtonDefault,
     ProtonCancel,
@@ -191,6 +192,9 @@ impl App {
                     | Cloud(_)
                     | Automatic(_)
                     | Gsx(_)
+                    | Navigraph(_)
+                    | NavigraphPick(_)
+                    | Orbx(_)
                     | Proton
                     | ProtonDefault
                     | ProtonCancel
@@ -637,6 +641,29 @@ impl App {
                         enabled && data["state"] == "available" && !yes(data, "handler"),
                     ),
                     "stop" => ("navigraph/stop", enabled && yes(data, "can_stop")),
+                    _ => return None,
+                }
+            }
+            Orbx(op) => {
+                let data = self.data("orbx");
+                let enabled = self.fresh("orbx") && s(data, "runtime_path") == root;
+                let change =
+                    enabled && safe_idle && yes(data, "can_change") && data["state"] == "available";
+                body = json!({"runtime_path":root});
+                match *op {
+                    "install" => ("orbx/install", change && yes(data, "settings_found")),
+                    "configure" => (
+                        "orbx/configure",
+                        change && yes(data, "installed") && yes(data, "settings_found"),
+                    ),
+                    "open" => (
+                        "orbx/open",
+                        change
+                            && yes(data, "installed")
+                            && yes(data, "settings_found")
+                            && !yes(data, "worker_busy"),
+                    ),
+                    "stop" => ("orbx/stop", enabled && yes(data, "can_stop")),
                     _ => return None,
                 }
             }

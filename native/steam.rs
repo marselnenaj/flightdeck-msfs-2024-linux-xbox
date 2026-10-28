@@ -36,7 +36,8 @@ pub fn get(app: &Arc<Launcher>, path: &str) -> Option<Result<Value>> {
         "/api/cloud-saves" => {
             json!({"available":false,"enabled":false,"managed_by":"steam","runtime_path":context})
         }
-        "/api/gsx" | "/api/proton" | "/api/maintenance" | "/api/store-check" => {
+        "/api/gsx" | "/api/navigraph" | "/api/orbx" | "/api/proton" | "/api/maintenance"
+        | "/api/store-check" => {
             json!({"state":"unavailable","runtime_path":context,"available":false,"managed_by":"steam","job":null})
         }
         "/api/diagnostics" => {

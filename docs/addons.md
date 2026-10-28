@@ -2,6 +2,10 @@
 
 [Deutsche Anleitung](addons.de.md)
 
+**Development additions:** the Orbx Central and Navigraph sections below describe
+the development branch. Stable 0.3.2 does not include them. They currently use
+Xbox installations; Steam companion-app setup is not implemented.
+
 Open **Mods** in Flightdeck to see the packages in your selected simulator's Community
 folder. **Open Community folder** opens that location in the Linux file manager;
 **Refresh** reads the inventory again after an installation.
@@ -174,7 +178,7 @@ stay with Navigraph.
    shows an extra empty window under Wine. Then choose **Open Simlink and sign
    in** and sign in through your browser. Simlink's window only hides it; quit it
    with **Close Navigraph**. Flightdeck detects the sign-in from the stored token
-   without reading it, and turns off Simlink's own Windows login start, which
+   without exposing its contents, and turns off Simlink's own Windows login start, which
    Wine would run on every program start in the profile.
 5. **Set up Simlink auto-start** adds one Simlink entry to the edition's
    `exe.xml`, next to its `UserCfg.opt`, and keeps other add-ons and a backup in
@@ -190,6 +194,42 @@ Flightdeck. Hub detects Flightdeck's installation like a Steam installation; it
 does not see Marketplace aircraft in the Official folder, so aircraft-specific
 navdata for those may be missing. Logs are in
 `private/navigraph-*.log` of the runtime. No Navigraph binaries are bundled.
+
+### Orbx Central (experimental, in development)
+
+Open **Mods → Orbx Central** with the Xbox MSFS installation selected. Start MSFS
+once so its real `UserCfg.opt` exists, then close the simulator and other Windows
+applications before setup.
+
+1. **Set up Orbx Central** downloads the complete official Windows Central
+   4.5.50 program package and verifies its pinned SHA-256. Flightdeck extracts it
+   directly into the existing game profile using its existing runner. It does
+   not create another Wine profile or download another Proton build. Rechecking
+   a damaged managed installation retains the previous program directory.
+2. Flightdeck points Orbx at that edition's actual `UserCfg.opt`. It preserves
+   the simulator settings and other edition's Orbx override. It does not pretend
+   that a 2024 installation is MSFS 2020 to change product availability.
+3. **Open Orbx Central**, sign in normally and install your licensed products.
+   Check the edition and Community location in Orbx. Close the window when done,
+   or choose **Close Orbx Central** in Flightdeck. Tray minimization and Windows
+   login autostart are disabled so Orbx remains reachable through its window and
+   Flightdeck. Only named Orbx processes in this profile are closed.
+
+The official web installer can report **“Orbx Central cannot be closed”** under
+Wine even after Central exits. Flightdeck avoids this installer and its automatic
+web update by using the verified complete program package. It never kills another
+profile's Orbx to free the worker's fixed local port. Close any other Orbx instance
+before opening the selected installation's client.
+
+Central 4.5.50 opened and its worker became reachable in the existing Flightdeck
+MSFS 2024 profile; scoped close released both processes and port. The pre-existing
+separate Orbx profile also opened with its existing sign-in and without a visible
+Wine tray window. A previous separate-profile installation of owned Gaya LOWW
+2.0.1 passed checks of all 2,937 layout entries. Sign-in, a new scenery installation
+and an in-simulator flight in the shared profile remain unverified. Local setup
+does not establish scenery compatibility. Logs stay in `private/orbx-central.log`.
+Orbx application files, credentials and scenery are not bundled with Flightdeck.
+[Official Orbx Central](https://orbxdirect.com/central)
 
 ### Fenix A320
 

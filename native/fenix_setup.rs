@@ -262,6 +262,24 @@ fn ui_font(prefix: &Path, runner: &Path, name: &str) -> Result<()> {
 }
 
 pub fn ui_fonts(wine: &Wine<'_>) -> Result<()> {
+    font_families(
+        wine,
+        &[("tahoma.ttf", "Tahoma"), ("tahomabd.ttf", "Tahoma Bold")],
+    )
+}
+
+pub(crate) fn desktop_fonts(wine: &Wine<'_>) -> Result<()> {
+    font_families(
+        wine,
+        &[
+            ("tahoma.ttf", "Tahoma"),
+            ("tahomabd.ttf", "Tahoma Bold"),
+            ("arial.ttf", "Arial"),
+        ],
+    )
+}
+
+fn font_families(wine: &Wine<'_>, families: &[(&str, &str)]) -> Result<()> {
     let registry = String::from_utf8_lossy(&files::read(
         &wine.prefix.join("system.reg"),
         64 * 1024 * 1024,
@@ -272,7 +290,7 @@ pub fn ui_fonts(wine: &Wine<'_>) -> Result<()> {
         .nth(1)
         .and_then(|v| v.split('[').next())
         .unwrap_or("");
-    for (name, family) in [("tahoma.ttf", "Tahoma"), ("tahomabd.ttf", "Tahoma Bold")] {
+    for &(name, family) in families {
         let value = format!("{family} (TrueType)");
         let needle = format!("\"{value}\"=\"");
         if section

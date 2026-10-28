@@ -41,6 +41,7 @@ serde = { version = "1.0.229", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order", "arbitrary_precision", "raw_value"] }
 sha2 = "0.10.9"
 uuid = { version = "1.26.0", features = ["v4"] }
+sevenz-rust2 = { version = "=0.24.1", default-features = false }
 
 [dev-dependencies]
 tempfile = "3.27.0"

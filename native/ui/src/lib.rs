@@ -129,6 +129,8 @@ pub enum Disclosure {
     GsxManage,
     Navigraph,
     NavigraphManage,
+    Orbx,
+    OrbxManage,
     Cloud,
     Report,
     Diagnostics,
@@ -139,7 +141,7 @@ impl Disclosure {
     fn group(self) -> Option<u8> {
         match self {
             Self::Graphics | Self::Vr | Self::Proton | Self::Maintenance => Some(0),
-            Self::Fenix | Self::Gsx | Self::Navigraph => Some(1),
+            Self::Fenix | Self::Gsx | Self::Navigraph | Self::Orbx => Some(1),
             _ => None,
         }
     }
@@ -159,6 +161,7 @@ pub enum HelpLink {
     FenixProject,
     Gsx,
     Navigraph,
+    Orbx,
     Vr,
     Install,
 }
@@ -205,6 +208,7 @@ impl HelpLink {
             Self::FenixProject => "https://github.com/marselnenaj/fenix-a320-linux-patch",
             Self::Gsx => "https://www.fsdreamteam.com/products_gsxpro.html",
             Self::Navigraph => "https://navigraph.com/downloads",
+            Self::Orbx => "https://orbxdirect.com/central",
             Self::Vr => {
                 "https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/blob/main/docs/vr.md"
             }

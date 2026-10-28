@@ -2,6 +2,11 @@
 
 [English instructions](addons.md)
 
+**Ergänzungen in Entwicklung:** Die Abschnitte zu Orbx Central und Navigraph
+beschreiben den Entwicklungsstand. Die stabile Version 0.3.2 enthält sie noch
+nicht. Sie verwenden derzeit Xbox-Installationen; die Einrichtung dieser
+Begleitprogramme für Steam ist noch nicht implementiert.
+
 ## Community-Ordner und Mod-Liste
 
 Wähle zuerst MSFS 2024 oder MSFS 2020 und öffne im Flightdeck-Launcher
@@ -143,6 +148,43 @@ Installer-Download, stoppt ein Prüfsummenfehler die Vorbereitung, bis Flightdec
 festgelegte Version geprüft und aktualisiert wurde. FSDT- und Microsoft-Binärdateien
 werden nicht mitgeliefert.
 
+## Orbx Central einrichten (experimentell, in Entwicklung)
+
+Wähle die Xbox-MSFS-Installation und öffne **Mods → Orbx Central**. Starte MSFS
+vorher einmal, damit seine echte `UserCfg.opt` existiert. Beende danach den
+Simulator und andere Windows-Programme im gewählten Profil.
+
+1. **Orbx Central einrichten** lädt das vollständige offizielle Windows-Paket von
+   Central 4.5.50 und prüft seine festgelegte SHA-256. Flightdeck entpackt es ins
+   vorhandene Spielprofil und verwendet dessen Runner. Es entsteht kein weiteres
+   Wine-Profil und kein zusätzlicher Proton-Download. Eine Reparatur beschädigter
+   verwalteter Programmdateien bewahrt den vorherigen Programmordner auf.
+2. Flightdeck verweist Orbx auf die echte `UserCfg.opt` der gewählten Edition und
+   erhält die Simulator-Einstellungen sowie den Orbx-Pfad der anderen Edition.
+   Eine 2024-Installation wird nicht als MSFS 2020 ausgegeben.
+3. **Orbx Central öffnen**, normal anmelden und eigene lizenzierte Produkte
+   installieren. Prüfe Edition und Community-Pfad in Orbx. Schließe anschließend
+   das Fenster oder nutze **Orbx Central schließen** in Flightdeck. Tray-Modus und
+   Windows-Anmeldestart sind deaktiviert, damit Orbx über sein Hauptfenster und
+   Flightdeck erreichbar bleibt. Flightdeck beendet nur die benannten
+   Orbx-Prozesse dieses Profils.
+
+Der offizielle Web-Installer kann unter Wine **„Orbx Central cannot be closed“**
+melden, obwohl Central bereits beendet ist. Flightdeck verwendet das geprüfte
+vollständige Programmpaket und deaktiviert dessen automatisches Web-Update.
+Andere Orbx-Instanzen musst du vor dem Öffnen selbst schließen: Der Worker nutzt
+einen festen lokalen Port; Flightdeck beendet dafür kein anderes Profil.
+
+Central 4.5.50 und sein Worker starteten im vorhandenen Flightdeck-MSFS-2024-Profil;
+gezieltes Schließen gab Prozesse und Port wieder frei. Das bisherige separate
+Orbx-Profil öffnete sich ebenfalls mit bestehender Anmeldung und ohne sichtbares
+Wine-Tray-Fenster. In diesem separaten Profil wurden zuvor alle 2.937 Layout-Einträge
+einer Installation von Gaya LOWW 2.0.1 geprüft. Anmeldung, neue Szenerieinstallation
+und ein Simulatorflug im gemeinsamen Profil bleiben unbestätigt. Die lokale
+Einrichtung bestätigt keine Szeneriekompatibilität. Protokolle bleiben unter
+`private/orbx-central.log`. Orbx-Programme, Zugangsdaten und Szenerien werden nicht
+mit Flightdeck ausgeliefert. [Offizielles Orbx Central](https://orbxdirect.com/central)
+
 ## Navigraph Hub und Simlink einrichten (experimentell)
 
 Öffne **Mods → Navigraph** und folge dem hervorgehobenen nächsten Schritt. Jede
@@ -182,7 +224,7 @@ Navdata bleiben bei Navigraph.
    zusätzliches leeres Fenster zeigt. Öffne Simlink danach über **Simlink öffnen
    und anmelden** und melde dich im Browser an. Simlinks Fenster blendet es nur
    aus; beende es mit **Navigraph schließen**. Flightdeck erkennt die Anmeldung
-   am gespeicherten Token, ohne es zu lesen, und schaltet Simlinks eigenen
+   am gespeicherten Token, ohne seinen Inhalt auszugeben, und schaltet Simlinks eigenen
    Windows-Autostart aus, weil Wine ihn bei jedem Programmstart im Profil
    ausführen würde.
 5. **Simlink-Autostart einrichten** ergänzt einen Simlink-Eintrag in der

@@ -709,6 +709,85 @@ impl App {
         self.disclosure(Disclosure::Navigraph, "Navigraph", progress.title, content)
     }
 
+    fn orbx_card(&self) -> Element<'_, Message> {
+        let raw = self.data("orbx");
+        let current = self.fresh("orbx") && s(raw, "runtime_path") == self.runtime();
+        let data = if current { raw } else { &Value::Null };
+        let active = model::active(&data["job"]);
+        let installed = yes(data, "installed");
+        let configured = yes(data, "configured");
+        let title = if active {
+            if data["job"]["operation"] == "open" {
+                "Orbx Central ist geöffnet"
+            } else {
+                "Orbx Central wird eingerichtet …"
+            }
+        } else if installed && configured {
+            "Orbx lokal eingerichtet · Funktion unbestätigt"
+        } else {
+            "Orbx-Central-Einrichtung"
+        };
+        let mut content=column![self.paragraph(self.tr(
+            "Orbx Central verwaltet deine Orbx-Szenerien im vorhandenen Windows-Profil dieser MSFS-Installation. Anmeldung und Produktlizenzen bleiben bei Orbx.",
+            "Orbx Central manages your Orbx scenery in this MSFS installation's existing Windows profile. Sign-in and product licenses remain with Orbx."))].spacing(14);
+        if current {
+            content = content.push(self.addon_feedback(data));
+            if data["state"] == "available" {
+                content = content.push(self.addon_facts(&[
+                    ("Orbx Central", installed),
+                    (
+                        self.tr("Simulatorerkennung", "Simulator detection"),
+                        configured,
+                    ),
+                ]));
+                if !yes(data, "can_change") && !yes(data, "running") && !active {
+                    content = content.push(self.paragraph(self.tr(
+                        "Beende MSFS und andere laufende Aufgaben, bevor du Orbx einrichtest oder öffnest.",
+                        "Close MSFS and other running tasks before setting up or opening Orbx.",
+                    )));
+                }
+                if yes(data, "can_stop") {
+                    content =
+                        content.push(self.addon_action("Orbx Central schließen", Orbx("stop")));
+                } else if !active && !yes(data, "running") {
+                    if !yes(data, "settings_found") {
+                        content=content.push(self.paragraph(self.tr("Starte MSFS einmal, damit Orbx seine Einstellungen und den Community-Ordner findet.","Start MSFS once so Orbx can find its settings and Community folder.")));
+                    } else if !installed {
+                        content = content
+                            .push(self.addon_action("Orbx Central einrichten", Orbx("install")));
+                    } else if !configured {
+                        content =
+                            content.push(self.addon_action(
+                                "Orbx-Simulatorerkennung einrichten",
+                                Orbx("configure"),
+                            ));
+                    } else if yes(data, "worker_busy") {
+                        content=content.push(self.paragraph(self.tr("Schließe andere Orbx-Central-Instanzen, bevor du Orbx für diese Installation öffnest.","Close other Orbx Central instances before opening Orbx for this installation.")));
+                    } else {
+                        content =
+                            content.push(self.addon_action("Orbx Central öffnen", Orbx("open")));
+                    }
+                }
+                let manage = column![
+                    self.action("Orbx-Einrichtung erneut prüfen", Orbx("install")),
+                    self.job("orbx"),
+                    self.help_link("Orbx Central bei Orbx", HelpLink::Orbx)
+                ]
+                .spacing(14);
+                content = content.push(self.disclosure(
+                    Disclosure::OrbxManage,
+                    self.tr("Verwalten & reparieren", "Manage & repair"),
+                    "",
+                    manage,
+                ));
+            }
+        } else {
+            content=content.push(self.paragraph(self.tr("Der Status dieser Installation ist noch nicht verfügbar. Lade ihn erneut, bevor du die Einrichtung fortsetzt.","The status of this installation is not available yet. Refresh before continuing setup.")));
+        }
+        content = content.push(self.refresh_button());
+        self.disclosure(Disclosure::Orbx, "Orbx Central", self.t(title), content)
+    }
+
     pub(crate) fn community_card(&self) -> Element<'_, Message> {
         let mods = self.data("mods");
         let mut inventory = column![
@@ -795,7 +874,7 @@ impl App {
     pub(crate) fn mods_page(&self) -> Element<'_, Message> {
         column![self.heading(self.t("Deine Add-ons").to_string()),
             self.paragraph(self.t("Öffne die Einrichtung eines Add-ons oder verwalte unten deinen Community-Ordner.").to_string()),
-            self.fenix_card(),self.gsx_card(),self.navigraph_card(),self.community_card(),
+            self.fenix_card(),self.gsx_card(),self.navigraph_card(),self.orbx_card(),self.community_card(),
             self.paragraph(self.tr("Fenix und GSX vollständig deinstallieren: Öffne den jeweiligen offiziellen Installer oben. Das Entfernen eines Community-Eintrags entfernt keine Windows-Begleitprogramme.","To fully uninstall Fenix or GSX, open its official installer above. Removing a Community entry does not uninstall Windows companion applications.")),
             self.paragraph(self.t("Diese Liste zeigt Dateien im Community-Ordner. Sie bestätigt weder eine Lizenz noch die Kompatibilität eines Add-ons mit MSFS oder Linux.").to_string())].spacing(16).into()
     }

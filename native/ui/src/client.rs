@@ -12,6 +12,7 @@ pub const RESOURCES: &[&str] = &[
     "fenix",
     "gsx",
     "navigraph",
+    "orbx",
     "proton",
     "maintenance",
     "store-check",

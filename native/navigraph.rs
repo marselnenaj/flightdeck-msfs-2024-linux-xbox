@@ -5,9 +5,9 @@ use crate::{
     Error, Result,
     backend::{Context, Launcher, string},
     error::require,
-    fenix, fenix_setup, files,
+    fenix_setup, files,
     games::Game,
-    gsx, installer, mods, process, proton, runtime,
+    installer, mods, process, proton, runtime,
     wine::Wine,
     wine_processes,
     xml::{self, Element, Item},
@@ -617,24 +617,9 @@ pub fn forward(state_dir: &Path, url: &str) -> Result<()> {
     Ok(())
 }
 fn validate(root: &Path) -> Result<()> {
-    proton::check(root)?;
-    require(
-        gsx::complete(root),
-        "Die GSX-Einrichtung ist unvollständig. Unter Mods wiederherstellen.",
-    )?;
-    if files::exists(&root.join(fenix::MARKER)) {
-        require(
-            runtime::value(&root.join(fenix::MARKER))?["state"] == "installed",
-            "Fenix setup is incomplete. Restore or finish it in Flightdeck before starting MSFS.",
-        )?;
-    }
-    let prefix = root.join("local/msfs-prefix");
-    files::directory(&prefix.join("drive_c"), false)?;
-    require(
-        files::exists(&prefix.join("system.reg")),
-        "Starte MSFS einmal, damit das Windows-Profil angelegt wird.",
-    )
+    crate::addon_apps::validate(root)
 }
+
 pub fn snapshot(app: &Launcher) -> Value {
     let (root, busy, playing, closing, job) = {
         let mut s = app.lock();
@@ -751,17 +736,8 @@ fn remove_run_entries(wine: &Wine, prefix: &Path) -> Result<()> {
     Ok(())
 }
 fn wine<'a>(ctx: &'a Context, root: &Path, log: &str) -> Result<Wine<'a>> {
-    let mut wine = Wine::new(
-        &root.join("local/msfs-prefix"),
-        &root.join("runner"),
-        &root.join("private").join(log),
-        &ctx.cancel,
-    )?;
-    wine.without_fenix();
-    Ok(wine)
+    crate::addon_apps::wine(ctx, root, log)
 }
-/// Run an interactive Windows program until it and everything it started in
-/// the profile have exited, or until Stop ends the named applications.
 fn interactive(
     ctx: &Context,
     root: &Path,
@@ -769,45 +745,16 @@ fn interactive(
     arguments: &[&Path],
     names: &[&str],
 ) -> Result<()> {
-    let prefix = root.join("local/msfs-prefix");
-    let mut command = wine.command()?;
-    command.args(arguments);
-    if let Some(directory) = arguments.first().and_then(|v| v.parent()) {
-        command.current_dir(directory);
-    }
-    let mut child = process::spawn(&mut command, None)?;
-    let mut quiet = None;
-    let result = (|| {
-        loop {
-            if ctx.pause.load(Ordering::Relaxed) || ctx.cancel.load(Ordering::Relaxed) {
-                wine_processes::stop(root, names)?;
-                process::terminate(&mut child)?;
-                return ctx.interrupted();
-            }
-            let code = child.try_wait()?;
-            let running = wine_processes::Processes::new(&prefix)?.applications_running();
-            if let Some(code) = code
-                && !running
-            {
-                let since = quiet.get_or_insert_with(Instant::now);
-                if since.elapsed() >= Duration::from_millis(1500) {
-                    return require(
-                        code.success(),
-                        "Die Navigraph-Anwendung wurde unerwartet beendet. Details stehen im Navigraph-Protokoll.",
-                    );
-                }
-            } else {
-                quiet = None;
-            }
-            std::thread::sleep(Duration::from_millis(250));
-        }
-    })();
-    if result.is_err() {
-        let _ = wine_processes::stop(root, names);
-        let _ = process::terminate(&mut child);
-    }
-    result
+    crate::addon_apps::interactive(
+        ctx,
+        root,
+        wine,
+        arguments,
+        names,
+        "Die Navigraph-Anwendung wurde unerwartet beendet. Details stehen im Navigraph-Protokoll.",
+    )
 }
+
 fn install_hub(ctx: &Context, installer: &Path) -> Result<()> {
     let root = ctx.root()?;
     let prefix = root.join("local/msfs-prefix");

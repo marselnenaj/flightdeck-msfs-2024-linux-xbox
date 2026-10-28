@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 //! Flightdeck's Rust launcher, installer and runtime services.
+mod addon_apps;
 pub mod api;
 pub mod backend;
 pub mod bootstrap;
@@ -66,6 +67,7 @@ mod neural_assets;
 mod neural_decode;
 pub mod neural_rendering;
 pub mod neural_weights;
+pub mod orbx;
 mod ordered_json;
 pub mod owned_tree;
 pub mod problem_reports;

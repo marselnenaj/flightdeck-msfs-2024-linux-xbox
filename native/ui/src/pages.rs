@@ -80,7 +80,7 @@ impl App {
                 .align_y(alignment::Vertical::Center);
         let badge = match section {
             Disclosure::Fenix => Some("Community-Patch"),
-            Disclosure::Gsx | Disclosure::Navigraph => Some("Experimentell"),
+            Disclosure::Gsx | Disclosure::Navigraph | Disclosure::Orbx => Some("Experimentell"),
             _ => None,
         };
         if let Some(badge) = badge {

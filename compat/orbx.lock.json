@@ -1,0 +1,11 @@
+{
+  "format": 1,
+  "version": "4.5.50",
+  "archive_url": "https://orbxdirect.com/api/v4/update/orbx-central-4.5.50-x64.nsis.7z",
+  "archive_sha256": "9e0b107907b0b61ecbe825539edc673cd81a3ec774e1c3ad4a67398041cce1b6",
+  "archive_sha512": "654c19a88c9e817519ea586bf39c69810e7a0825c4ade6fa2d9470d6fcc12f994c25a86c776dc7208ddf807f1bdcdb294b5eb4af280c41b19051c2aaef93d4d6",
+  "archive_size": 141954069,
+  "manifest_url": "https://orbxdirect.com/api/v4/update/latest.yml",
+  "executable": "Orbx Central.exe",
+  "worker": "saturn-win/OrbxCentralWorker.exe"
+}
