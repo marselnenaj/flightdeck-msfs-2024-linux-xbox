@@ -2,8 +2,8 @@
 
 [English](known-issues.md) · [Dokumentation](index.md)
 
-Stand: 27. Oktober 2026, einschließlich des Fixes in **0.3.1**.
-Siehe [Änderungsübersicht](changelog.md#031--27-october-2026).
+Stand: 28. Oktober 2026, einschließlich der Lizenzkorrektur in **0.3.2**.
+Siehe [Änderungsübersicht](changelog.md#032--28-october-2026).
 
 - **Bazzite-Installation:** Der Installer lehnt symbolische Links in Quell- und
   Zielpfaden ab, auch Fedora Atomics `/home`-Verknüpfung. Im Desktop-Modus mit
@@ -29,11 +29,16 @@ Siehe [Änderungsübersicht](changelog.md#031--27-october-2026).
   Metadaten vom Microsoft-CDN beginnt. Benutzer-, Geräte- und Anwendungsanmeldung
   bleiben erhalten, einschließlich desselben Geräte-Proof-Keys. Flightdeck
   aktualisieren, um die korrigierten nativen Komponenten zu erhalten.
-  Eine vollständige Neuinstallation und der Test des ursprünglichen Melders
-  stehen aus. Der Code belegt weder eine Kontosperre noch einen fehlenden Kauf.
+  Die Folgemeldung mit **0.3.1** erreicht die Lizenzabfrage, scheitert dort aber
+  an `InvalidMsaTicketFormat` / Fehler 4003. Version **0.3.2** entfernt das Xbox-
+  Delegationspräfix `d=` ausschließlich aus der MSA-Benutzeridentität für die
+  Lizenzabfrage. Im direkten Vergleich weist Microsoft die Identität mit
+  Präfix zurück und stellt für dasselbe Ticket ohne Präfix eine Lizenz aus.
+  Der erneute Test des ursprünglichen Melders steht aus. Der Fehler belegt
+  weder eine Kontosperre noch einen fehlenden Kauf.
   [Upstream-PR #201](https://github.com/xodus-gaming/xodus/pull/201) ist ein
-  separates Experiment mit Geräteauthentifizierung; der Flightdeck-Fix verlangt
-  weiterhin ein Benutzertoken.
+  separates Experiment mit Geräteauthentifizierung; Flightdeck verlangt
+  weiterhin Benutzerzugriff auf das Paket und eine gültige Inhaltslizenz.
 
 - **NVIDIA:** Die normale MSFS-2024-Darstellung ist durch Nutzertests bestätigt.
   Kleinere Probleme bleiben möglich, etwa ein fehlendes oder schwarzes Startvideo.

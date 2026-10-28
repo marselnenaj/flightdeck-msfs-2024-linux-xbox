@@ -32,13 +32,13 @@ pub struct Pins {
 impl Pins {
     pub fn current() -> Self {
         Self {
-            previous_base: "https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/download/v0.3.0/",
-            previous_sha: "9959d8c1fc90964b600c04c909dbb2709730b58a72d30df5c916e2518891dc07",
-            native_sha: "666fb7e9d38da3a5efb967759cd5ba15dd1bb3bfbc18674a05dc0e6c76698c33",
+            previous_base: "https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/download/v0.3.1/",
+            previous_sha: "50b19c3ec108a973ba303c42f1dbf818b696b2c6c0082d181bdeea5374b7349e",
+            native_sha: "182c2ac5e43368faa6bf827a54fdae4ce649e770b10b5966b748b837f269cc6e",
             sources: [
                 (
-                    "flightdeck-native-sources-0.2.17.tar.gz",
-                    "528dac05acaf4f61d7ef2f569b8e0d2d91df69d21c18ef2e386dc18454009dc0",
+                    "flightdeck-native-sources-0.2.18.tar.gz",
+                    "ce63fc52ff70d7d47d8e3e36232eb87f3f294ea6b0246715defb6c11a6673893",
                 ),
                 (
                     "flightdeck-dxvk-0.1.11-sources.tar.gz",

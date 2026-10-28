@@ -2,8 +2,8 @@
 
 [Deutsch](known-issues.de.md) · [Documentation](index.md)
 
-Status: 27 October 2026, including the **0.3.1** fix.
-See the [release changes](changelog.md#031--27-october-2026).
+Status: 28 October 2026, including the **0.3.2** licensing correction.
+See the [release changes](changelog.md#032--28-october-2026).
 
 - **Bazzite installation:** The installer rejects symbolic links in its source
   and destination paths, including Fedora Atomic's `/home` alias. Install from
@@ -28,10 +28,15 @@ See the [release changes](changelog.md#031--27-october-2026).
   HTTP 200 and the Microsoft CDN metadata transfer starts. The replacement
   retains user, device and application authentication, including the same device
   proof key. Update Flightdeck to obtain the corrected native components.
-  A complete new installation and the original reporter's retest remain pending.
-  The code does not establish an account ban or missing purchase.
+  The follow-up report with **0.3.1** reaches content licensing but fails with
+  `InvalidMsaTicketFormat` / fault 4003. Version **0.3.2** removes the Xbox `d=`
+  delegation marker from the MSA licensing identity only. A direct comparison
+  against Microsoft rejects a prefixed identity and issues a license for the
+  same ticket after normalization. The original reporter's retest is pending.
+  This error does not establish an account ban or a missing purchase.
   [Upstream PR #201](https://github.com/xodus-gaming/xodus/pull/201) is a separate
-  device-authentication experiment; the Flightdeck change requires a user token.
+  device-authentication experiment; Flightdeck continues to require user-based
+  package access and a valid content license.
 
 - **NVIDIA:** Normal MSFS 2024 rendering is confirmed by user testing. Smaller
   issues remain possible, including a missing or black startup video. This does

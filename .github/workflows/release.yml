@@ -81,7 +81,7 @@ jobs:
           cargo test --locked -p flightdeck-ui capture_ -- --ignored
       - name: Fetch and validate pinned compatibility, graphics and corresponding sources
         run: build/flightdeck-tools release prepare --cache build/release-inputs --output build/release-previous
-      - name: Test Xbox package authentication from the verified corresponding sources
+      - name: Test Xbox authentication and content licensing from the verified corresponding sources
         env:
           CARGO_NET_OFFLINE: "true"
           CARGO_BUILD_JOBS: "2"
@@ -96,8 +96,10 @@ jobs:
           tar -xzf "$1" -C "$flightdeck_auth_stage"
           (
             cd "$flightdeck_auth_stage"
-            cargo test --locked --manifest-path xodus-src/Cargo.toml \
-              -p xodus --lib api::xbox:: -- --test-threads=1
+            for flightdeck_test_filter in api::xbox:: licensing::content::; do
+              cargo test --locked --manifest-path xodus-src/Cargo.toml \
+                -p xodus --lib "$flightdeck_test_filter" -- --test-threads=1
+            done
           )
       - name: Build and assemble the complete native package
         run: |
