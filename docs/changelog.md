@@ -1,5 +1,17 @@
 # Changes and release status
 
+## 0.3.2 — 28 October 2026
+
+- Pass the bare MSA ticket to Microsoft's content-license identity field. Strip
+  the Xbox delegation marker only at the licensing boundary, for both content
+  licenses and license tokens; preserve device authorization and Xbox SISU.
+- Select the licensing ticket by its exact Microsoft audience. Report numeric
+  licensing faults, entitlement denials and malformed license responses without
+  panicking or including credentials or response bodies in diagnostics.
+- Add HTTP request/response regressions and run the content-license tests from
+  the exact corresponding source archive during release verification. Verify
+  a real license request with the same ticket before and after normalization.
+
 ## 0.3.1 — 27 October 2026
 
 - Replace the failing legacy Xbox package-authentication exchange with Windows

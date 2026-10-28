@@ -18667,3 +18667,484 @@ index b7cd989..6f00b83 100644
 +        }
 +    }
 +
+diff --git c/crates/xodus-cli/src/license.rs w/crates/xodus-cli/src/license.rs
+index b90fa61..5580dd8 100644
+--- c/crates/xodus-cli/src/license.rs
++++ w/crates/xodus-cli/src/license.rs
+@@ -13 +13,3 @@ pub async fn get_license(
+-    let dev_token = tokens.get_device_sts_token().unwrap();
++    let dev_token = tokens
++        .get_device_sts_token()
++        .map_err(|_| "Missing device credentials")?;
+@@ -17,2 +19,4 @@ pub async fn get_license(
+-    let user = tokens.get_user().unwrap();
+-    let user_token = tokens.get_user_sts_token().unwrap();
++    let user = tokens.get_user().map_err(|_| "Missing signed-in account")?;
++    let user_token = tokens
++        .get_user_sts_token()
++        .map_err(|_| "Missing user credentials")?;
+@@ -20 +24 @@ pub async fn get_license(
+-        return Err("Unspported user token".to_string());
++        return Err("Unsupported user token".to_string());
+@@ -31 +35 @@ pub async fn get_license(
+-    .unwrap();
++    .map_err(|_| "Microsoft licensing device ticket exchange failed")?;
+@@ -47 +51 @@ pub async fn get_license(
+-    .expect("Failed to get ms user token");
++    .map_err(|_| "Microsoft licensing user ticket exchange failed")?;
+@@ -49,6 +53,5 @@ pub async fn get_license(
+-    let ms_device_token: Token = ms_device_token.into();
+-    let Token::Compact(ms_device_token) = ms_device_token else {
+-        return Err("Unsupported token".to_string());
+-    };
+-
+-    let user_token: Token = match user_token {
++    let ms_device_token = licensing_ticket(soap::BodyContent::RequestSecurityTokenResponse(
++        Box::new(ms_device_token),
++    ))?;
++    let user_token = match user_token {
++        ExchangeUserTokenOutcome::Issued(body) => licensing_ticket(body)?,
+@@ -56 +59 @@ pub async fn get_license(
+-            return Err("Failed to get exchange MS token".to_string());
++            return Err("Microsoft licensing user ticket exchange rejected".into());
+@@ -58,13 +60,0 @@ pub async fn get_license(
+-        ExchangeUserTokenOutcome::Issued(
+-            soap::BodyContent::RequestSecurityTokenResponseCollection(mut collection),
+-        ) => {
+-            let token = collection.security_tokens.remove(0);
+-            token.into()
+-        }
+-        ExchangeUserTokenOutcome::Issued(soap::BodyContent::RequestSecurityTokenResponse(
+-            token,
+-        )) => (*token).into(),
+-        _ => unreachable!("Only responses are handled"),
+-    };
+-    let Token::Compact(user_token) = user_token else {
+-        return Err("Unsupported token".to_string());
+@@ -85 +75 @@ pub async fn get_license(
+-        .expect("could not parse base64 game SPLicense");
++        .map_err(|_| "Invalid Microsoft content license")?;
+@@ -87 +77,3 @@ pub async fn get_license(
+-    let dev_license = tokens.get_device_license().unwrap();
++    let dev_license = tokens
++        .get_device_license()
++        .map_err(|_| "Missing device license")?;
+@@ -89 +81 @@ pub async fn get_license(
+-        .expect("could not parse base64 device SPLicense");
++        .map_err(|_| "Invalid local device license")?;
+@@ -92 +84 @@ pub async fn get_license(
+-        .unwrap()
++        .ok_or("Missing device license key")?
+@@ -95,0 +88,121 @@ pub async fn get_license(
++
++// Select the licensing audience explicitly. Never use an unrelated first RSTR,
++// a challenge response, or the Xbox SISU/XSTS token as an MSA identity.
++fn licensing_ticket(body: soap::BodyContent) -> Result<String, String> {
++    let invalid = || "Invalid Microsoft licensing ticket response".to_owned();
++    let replies = match body {
++        soap::BodyContent::RequestSecurityTokenResponse(reply) => vec![*reply],
++        soap::BodyContent::RequestSecurityTokenResponseCollection(c) if c.challenges.is_empty() => {
++            c.security_tokens
++        }
++        _ => return Err(invalid()),
++    };
++    let mut matching = replies
++        .into_iter()
++        .filter(|r| r.applies_to.endpoint_reference.address == "www.microsoft.com");
++    let reply = matching.next().ok_or_else(invalid)?;
++    if matching.next().is_some()
++        || !matches!(
++            reply.token_type.as_str(),
++            "urn:passport:compact" | "urn:passport:delegationcompact"
++        )
++        || reply.requested_security_token.encrypted_data.is_some()
++        || !chrono::DateTime::parse_from_rfc3339(&reply.lifetime.expires)
++            .is_ok_and(|t| t.timestamp() > chrono::Utc::now().timestamp() + 60)
++    {
++        return Err(invalid());
++    }
++    let value = reply
++        .requested_security_token
++        .binary_security_token
++        .ok_or_else(invalid)?
++        .value;
++    if value.is_empty() || value.len() > 1024 * 1024 {
++        return Err(invalid());
++    }
++    // Preserve token representation here. The licensing identity constructor
++    // removes the marker only from the user identity, never the device header.
++    Ok(if reply.token_type == "urn:passport:delegationcompact" {
++        format!("d={value}")
++    } else {
++        value
++    })
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++    fn reply(audience: &str, kind: &str) -> soap::RequestSecurityTokenResponse {
++        soap::RequestSecurityTokenResponse {
++            token_type: kind.into(),
++            applies_to: soap::AppliesTo {
++                endpoint_reference: soap::EndpointReference {
++                    address: audience.into(),
++                },
++            },
++            lifetime: soap::Timestamp {
++                id: None,
++                created: "2026-01-01T00:00:00Z".into(),
++                expires: "2099-01-01T00:00:00Z".into(),
++            },
++            requested_security_token: soap::RequestedSecurityToken {
++                encrypted_data: None,
++                binary_security_token: Some(soap::BinarySecurityTokenRes {
++                    id: "fixture".into(),
++                    value: "PRIVATE_TICKET".into(),
++                    value_type: None,
++                }),
++            },
++            requested_proof_token: None,
++        }
++    }
++    fn collection(replies: Vec<soap::RequestSecurityTokenResponse>) -> soap::BodyContent {
++        soap::BodyContent::RequestSecurityTokenResponseCollection(
++            soap::RequestSecurityTokenResponseCollection {
++                security_tokens: replies,
++                challenges: vec![],
++            },
++        )
++    }
++    #[test]
++    fn selects_licensing_audience_without_repurposing_xbox_tokens() {
++        let target = reply("www.microsoft.com", "urn:passport:delegationcompact");
++        let unrelated = reply("user.auth.xboxlive.com", "urn:passport:compact");
++        for replies in [
++            vec![target.clone(), unrelated.clone()],
++            vec![unrelated, target],
++        ] {
++            assert_eq!(
++                licensing_ticket(collection(replies)).unwrap(),
++                "d=PRIVATE_TICKET"
++            );
++        }
++        assert_eq!(
++            licensing_ticket(collection(vec![reply(
++                "www.microsoft.com",
++                "urn:passport:compact"
++            )]))
++            .unwrap(),
++            "PRIVATE_TICKET"
++        );
++    }
++    #[test]
++    fn invalid_ticket_replies_fail_without_panic_or_private_values() {
++        let valid = reply("www.microsoft.com", "urn:passport:compact");
++        let mut expired = valid.clone();
++        expired.lifetime.expires = "2000-01-01T00:00:00Z".into();
++        let mut missing = valid.clone();
++        missing.requested_security_token.binary_security_token = None;
++        for replies in [
++            vec![],
++            vec![valid.clone(), valid],
++            vec![reply("user.auth.xboxlive.com", "urn:passport:compact")],
++            vec![reply("www.microsoft.com", "unknown")],
++            vec![expired],
++            vec![missing],
++        ] {
++            let error = licensing_ticket(collection(replies)).unwrap_err();
++            assert!(!error.contains("PRIVATE"));
++        }
++    }
++}
+diff --git c/crates/xodus/src/licensing/content.rs w/crates/xodus/src/licensing/content.rs
+index 2755f1b..86eb73a 100644
+--- c/crates/xodus/src/licensing/content.rs
++++ w/crates/xodus/src/licensing/content.rs
+@@ -16,2 +16,10 @@ pub enum LicenseContentError {
+-    #[error("request error: {0}")]
+-    Request(#[from] reqwest::Error),
++    #[error("Microsoft content licensing request failed")]
++    Request,
++
++    #[error(
++        "Microsoft content licensing rejected the request (HTTP {status}, fault code {faultcode})"
++    )]
++    Rejected { status: u16, faultcode: u32 },
++
++    #[error("Microsoft content licensing returned an invalid response (HTTP {status})")]
++    InvalidResponse { status: u16 },
+@@ -21,2 +29,2 @@ pub enum LicenseContentError {
+-    #[error("not entitled to this content: {description}")]
+-    NotEntitled { description: String },
++    #[error("The signed-in account is not entitled to this content")]
++    NotEntitled,
+@@ -33,0 +42,21 @@ pub async fn get_license_content(
++) -> Result<(LicenseContent, License), LicenseContentError> {
++    get_license_content_at(
++        client,
++        "https://licensing.mp.microsoft.com/v7.0/licenses/content",
++        device_ms_token,
++        user_ms_token,
++        ticket_reference,
++        content_id,
++        market,
++    )
++    .await
++}
++
++async fn get_license_content_at(
++    client: &reqwest::Client,
++    endpoint: &str,
++    device_ms_token: String,
++    user_ms_token: String,
++    ticket_reference: String,
++    content_id: String,
++    market: String,
+@@ -37 +66 @@ pub async fn get_license_content(
+-        .post("https://licensing.mp.microsoft.com/v7.0/licenses/content")
++        .post(endpoint)
+@@ -53,5 +82 @@ pub async fn get_license_content(
+-                vec![LicenseUserIdentity {
+-                    identity_type: "Msa".to_string(),
+-                    identity_value: user_ms_token,
+-                    local_ticket_reference: ticket_reference,
+-                }])],
++                vec![LicenseUserIdentity::msa(user_ms_token, ticket_reference)])],
+@@ -61 +86 @@ pub async fn get_license_content(
+-        .await?;
++        .await.map_err(|_| LicenseContentError::Request)?;
+@@ -63 +88,8 @@ pub async fn get_license_content(
+-    let content_res = response.json::<LicenseContentResponse>().await?;
++    let status = response.status();
++    let invalid = || LicenseContentError::InvalidResponse {
++        status: status.as_u16(),
++    };
++    let content_res = response
++        .json::<LicenseContentResponse>()
++        .await
++        .map_err(|_| invalid())?;
+@@ -65,6 +97,8 @@ pub async fn get_license_content(
+-        LicenseContentResponse::Success { license } => license,
+-        LicenseContentResponse::SatisfactionFailure {
+-            satisfaction_failure,
+-        } => {
+-            return Err(LicenseContentError::NotEntitled {
+-                description: satisfaction_failure.description,
++        LicenseContentResponse::Success { license } if status.is_success() => license,
++        LicenseContentResponse::SatisfactionFailure { .. } => {
++            return Err(LicenseContentError::NotEntitled);
++        }
++        LicenseContentResponse::Fault { faultcode } => {
++            return Err(LicenseContentError::Rejected {
++                status: status.as_u16(),
++                faultcode,
+@@ -72,0 +107 @@ pub async fn get_license_content(
++        _ => return Err(invalid()),
+@@ -74,3 +109,4 @@ pub async fn get_license_content(
+-    let license = &content.keys[0].value;
+-    let license = BASE64_STANDARD.decode(license).unwrap();
+-    let license = quick_xml::de::from_str::<License>(&String::from_utf8(license).unwrap()).unwrap();
++    let license = &content.keys.first().ok_or_else(invalid)?.value;
++    let license = BASE64_STANDARD.decode(license).map_err(|_| invalid())?;
++    let xml = std::str::from_utf8(&license).map_err(|_| invalid())?;
++    let license = quick_xml::de::from_str::<License>(xml).map_err(|_| invalid())?;
+@@ -102,5 +138 @@ pub async fn get_license_token(
+-            beneficiaries: vec![LicenseUserIdentity {
+-                identity_type: "Msa".to_string(),
+-                identity_value: user_ms_token,
+-                local_ticket_reference: ticket_reference,
+-            }],
++            beneficiaries: vec![LicenseUserIdentity::msa(user_ms_token, ticket_reference)],
+@@ -114,0 +147,4 @@ pub async fn get_license_token(
++
++#[cfg(test)]
++#[path = "content/tests.rs"]
++mod tests;
+diff --git c/crates/xodus/src/licensing/content/tests.rs w/crates/xodus/src/licensing/content/tests.rs
+new file mode 100644
+index 0000000..5bf0eb5
+--- /dev/null
++++ w/crates/xodus/src/licensing/content/tests.rs
+@@ -0,0 +1,160 @@
++use super::*;
++use std::io::{Read, Write};
++use std::net::TcpListener;
++use std::time::Duration;
++
++fn fixture(status: u16, body: String) -> (String, std::thread::JoinHandle<String>) {
++    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
++    let url = format!("http://{}/licenses/content", listener.local_addr().unwrap());
++    let thread = std::thread::spawn(move || {
++        let (mut socket, _) = listener.accept().unwrap();
++        socket
++            .set_read_timeout(Some(Duration::from_secs(5)))
++            .unwrap();
++        let mut request = Vec::new();
++        while !request.ends_with(b"\r\n\r\n") {
++            let mut b = [0];
++            socket.read_exact(&mut b).unwrap();
++            request.extend(b);
++            assert!(request.len() < 16384);
++        }
++        let start = request.len();
++        let head = String::from_utf8(request.clone())
++            .unwrap()
++            .to_ascii_lowercase();
++        let length: usize = head
++            .lines()
++            .find_map(|s| s.strip_prefix("content-length:"))
++            .unwrap()
++            .trim()
++            .parse()
++            .unwrap();
++        assert!(length < 16384);
++        request.resize(start + length, 0);
++        socket.read_exact(&mut request[start..]).unwrap();
++        write!(socket, "HTTP/1.1 {status} Fixture\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}", body.len()).unwrap();
++        String::from_utf8(request).unwrap()
++    });
++    (url, thread)
++}
++
++async fn request(
++    status: u16,
++    body: String,
++    ticket: &str,
++) -> (
++    Result<(LicenseContent, License), LicenseContentError>,
++    String,
++) {
++    let (endpoint, captured) = fixture(status, body);
++    let client = reqwest::Client::builder()
++        .no_proxy()
++        .timeout(Duration::from_secs(5))
++        .build()
++        .unwrap();
++    let response = get_license_content_at(
++        &client,
++        &endpoint,
++        "d=PRIVATE_DEVICE".into(),
++        ticket.into(),
++        "PRIVATE_PUID".into(),
++        "content-fixture".into(),
++        "US".into(),
++    )
++    .await;
++    (response, captured.join().unwrap())
++}
++
++fn success(key: &str) -> String {
++    serde_json::json!({"license":{"keys":[{"value":key}],"leases":[]}}).to_string()
++}
++
++#[tokio::test]
++async fn wire_identity_strips_delegation_marker_and_preserves_device_header_and_bare_ticket() {
++    let xml = r#"<License><SPLicenseBlock>fixture</SPLicenseBlock><LicenseInfo Type="Full"/><Binding Binding_Type="Device"/></License>"#;
++    for ticket in ["PRIVATE_USER", "d=PRIVATE_USER"] {
++        let (response, captured) =
++            request(200, success(&BASE64_STANDARD.encode(xml)), ticket).await;
++        assert_eq!(response.unwrap().1.splicense_block, "fixture");
++        let (headers, body) = captured.split_once("\r\n\r\n").unwrap();
++        assert!(
++            headers
++                .to_ascii_lowercase()
++                .contains("authorization: d=private_device\r\n")
++        );
++        let body: serde_json::Value = serde_json::from_str(body).unwrap();
++        let user = &body["users"].as_object().unwrap().values().next().unwrap()[0];
++        assert_eq!(user["identityType"], "Msa");
++        assert_eq!(user["identityValue"], "PRIVATE_USER");
++        assert_eq!(user["localTicketReference"], "PRIVATE_PUID");
++    }
++    // Do not strip unrelated prefixes or mutate stored ticket representations.
++    assert_eq!(
++        LicenseUserIdentity::msa("t=PRIVATE".into(), "ref".into()).identity_value,
++        "t=PRIVATE"
++    );
++    assert_eq!(
++        LicenseUserIdentity::msa("PRIVATE_d=body".into(), "ref".into()).identity_value,
++        "PRIVATE_d=body"
++    );
++}
++
++#[tokio::test]
++async fn invalid_msa_ticket_fault_is_reported_without_body_or_credentials() {
++    for status in [200, 400] {
++        let (result, _) = request(
++            status,
++            r#"{"code":"InvalidMsaTicketFormat","faultcode":4003,"detail":"PRIVATE_BODY"}"#.into(),
++            "d=PRIVATE_USER",
++        )
++        .await;
++        let error = result.unwrap_err();
++        assert!(matches!(
++            error,
++            LicenseContentError::Rejected {
++                faultcode: 4003,
++                ..
++            }
++        ));
++        let message = format!("{error} {error:?}");
++        assert!(message.contains("4003"));
++        assert!(!message.contains("PRIVATE"));
++    }
++}
++
++#[tokio::test]
++async fn malformed_missing_keys_and_non_success_licenses_return_errors_without_panics() {
++    for body in [
++        "PRIVATE_BODY".into(),
++        r#"{"license":{"keys":[],"leases":[]}}"#.into(),
++        success("not base64"),
++        success(&BASE64_STANDARD.encode([0xff])),
++        success(&BASE64_STANDARD.encode("PRIVATE_XML")),
++    ] {
++        let (result, _) = request(200, body, "d=PRIVATE_USER").await;
++        let error = result.unwrap_err();
++        assert!(matches!(
++            error,
++            LicenseContentError::InvalidResponse { status: 200 }
++        ));
++        assert!(!format!("{error} {error:?}").contains("PRIVATE"));
++    }
++    let (result, _) = request(403, success("fixture"), "PRIVATE_USER").await;
++    assert!(matches!(
++        result,
++        Err(LicenseContentError::InvalidResponse { status: 403 })
++    ));
++}
++
++#[tokio::test]
++async fn entitlement_denial_is_not_treated_as_a_license_or_auth_retry() {
++    let (result, _) = request(
++        200,
++        r#"{"satisfactionFailure":{"code":1,"description":"PRIVATE_BODY"}}"#.into(),
++        "PRIVATE_USER",
++    )
++    .await;
++    let error = result.unwrap_err();
++    assert!(matches!(error, LicenseContentError::NotEntitled));
++    assert!(!format!("{error} {error:?}").contains("PRIVATE"));
++}
+diff --git c/crates/xodus/src/models/licensing.rs w/crates/xodus/src/models/licensing.rs
+index 3a67ce6..d6bad1c 100644
+--- c/crates/xodus/src/models/licensing.rs
++++ w/crates/xodus/src/models/licensing.rs
+@@ -60,0 +61,12 @@ pub struct LicenseUserIdentity {
++impl LicenseUserIdentity {
++    /// LicensingFD takes the bare MSA ticket. The delegation marker belongs to
++    /// Xbox authentication only; do not change the shared token or device header.
++    pub fn msa(ticket: String, local_ticket_reference: String) -> Self {
++        Self {
++            identity_type: "Msa".into(),
++            identity_value: ticket.strip_prefix("d=").unwrap_or(&ticket).to_owned(),
++            local_ticket_reference,
++        }
++    }
++}
++
+@@ -70,0 +83,3 @@ pub enum LicenseContentResponse {
++    Fault {
++        faultcode: u32,
++    },
