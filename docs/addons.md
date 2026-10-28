@@ -2,9 +2,11 @@
 
 [Deutsche Anleitung](addons.de.md)
 
-**Development additions:** the Orbx Central and Navigraph sections below describe
-the development branch. Stable 0.3.2 does not include them. They currently use
-Xbox installations; Steam companion-app setup is not implemented.
+**Since 0.3.3:** GSX, Navigraph Hub/Simlink and Orbx Central use the selected
+Xbox or Steam MSFS 2020/2024 installation's existing Wine profile and Proton.
+These integrations remain experimental. For Steam, choose Proton in the game's
+compatibility settings and launch MSFS once before setup. No extra permanent
+Wine profile is needed. Steam manages game downloads and updates.
 
 Open **Mods** in Flightdeck to see the packages in your selected simulator's Community
 folder. **Open Community folder** opens that location in the Linux file manager;
@@ -39,8 +41,8 @@ add-on programs or change package contents when reading this list.
 Follow the developer's own installer when one is supplied. Keep existing
 settings and liveries before replacing a package. The general Community inventory lists packages and opens their folder.
 Fenix and the experimental GSX Pro integration have separate setup workflows
-below, currently for MSFS 2024 only. The experimental Navigraph setup supports
-MSFS 2024 and 2020.
+below. GSX, Navigraph and Orbx support both editions and storefronts. Fenix
+support is described separately below and in the [Steam guide](steam.md).
 
 Since 0.2.7, Flightdeck shows one highlighted next action for each add-on. Detected
 components remain visible; additional actions are under **Manage & repair**.
@@ -58,6 +60,12 @@ For a full Fenix or GSX uninstall, open the official installer/manager in its
 add-on section. Navigraph Hub and Simlink remain in the Windows profile when
 their Community packages are removed. Removing its Community package does not uninstall its Windows
 companion applications.
+
+For Steam, companion metadata, logs and XML backups live under
+`~/.local/share/flightdeck/steam/<installation-id>/addon-apps/`. The applications
+and simulator settings stay in the real Steam `compatdata/<AppID>/pfx`. Reopen
+the add-on status after changing Proton; an old page cannot configure a new runner
+or replaced prefix. Community removal through Flightdeck remains Xbox-only.
 
 ## Aircraft with companion applications
 
@@ -92,7 +100,7 @@ running simulator has not yet been established by this test.
 Open **Mods → GSX Pro** and follow the highlighted next step. Completed steps
 remain summarized; additional actions are under the collapsed **Manage & repair**
 section. Close MSFS, Fenix and other Windows applications in the selected profile
-before setup. MSFS 2024 must have been started once to create its package configuration.
+before setup. The selected MSFS edition must have been started once to create its package configuration.
 
 GSX remains experimental. The official FSDT installer has been tested with native
 .NET 4.8 in a separate MSFS 2024 Wine profile, including opening, closing and
@@ -136,7 +144,8 @@ installer remain outside that session cleanup.
 If preparation is interrupted, **Recover GSX preparation** appears directly as
 the next action. It restores the previous profile; game launch remains blocked
 until recovery completes. Completed preparation keeps a
-`local/msfs-prefix.before-gsx-*` backup. Recovery is for an interrupted
+`local/msfs-prefix.before-gsx-*` backup for Xbox; Steam retains
+`steamapps/compatdata/<AppID>/pfx.before-gsx-*` beside the real profile. Recovery is for an interrupted
 preparation, not for undoing a later GSX installation. Diagnostic logs are in
 `private/gsx-setup-*.log` and `private/gsx-manager.log`. If FSDT replaces its
 installer download, a checksum mismatch stops preparation until Flightdeck's
@@ -195,9 +204,9 @@ does not see Marketplace aircraft in the Official folder, so aircraft-specific
 navdata for those may be missing. Logs are in
 `private/navigraph-*.log` of the runtime. No Navigraph binaries are bundled.
 
-### Orbx Central (experimental, in development)
+### Orbx Central (experimental)
 
-Open **Mods → Orbx Central** with the Xbox MSFS installation selected. Start MSFS
+Open **Mods → Orbx Central** with the desired Xbox or Steam MSFS installation selected. Start MSFS
 once so its real `UserCfg.opt` exists, then close the simulator and other Windows
 applications before setup.
 

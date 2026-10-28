@@ -454,7 +454,7 @@ impl App {
         )
     }
 
-    fn gsx_card(&self) -> Element<'_, Message> {
+    pub(crate) fn gsx_card(&self) -> Element<'_, Message> {
         let raw = self.data("gsx");
         let current = self.fresh("gsx") && s(raw, "runtime_path") == self.runtime();
         let data = if current { raw } else { &Value::Null };
@@ -592,7 +592,7 @@ impl App {
         .into()
     }
 
-    fn navigraph_card(&self) -> Element<'_, Message> {
+    pub(crate) fn navigraph_card(&self) -> Element<'_, Message> {
         let raw = self.data("navigraph");
         let current = self.fresh("navigraph") && s(raw, "runtime_path") == self.runtime();
         let data = if current { raw } else { &Value::Null };
@@ -709,7 +709,7 @@ impl App {
         self.disclosure(Disclosure::Navigraph, "Navigraph", progress.title, content)
     }
 
-    fn orbx_card(&self) -> Element<'_, Message> {
+    pub(crate) fn orbx_card(&self) -> Element<'_, Message> {
         let raw = self.data("orbx");
         let current = self.fresh("orbx") && s(raw, "runtime_path") == self.runtime();
         let data = if current { raw } else { &Value::Null };

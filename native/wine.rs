@@ -123,6 +123,7 @@ pub struct Wine<'a> {
     pub log: File,
     pub cancel: &'a AtomicBool,
     fenix: bool,
+    extra_env: BTreeMap<String, String>,
 }
 impl<'a> Wine<'a> {
     pub fn new(prefix: &Path, runner: &Path, log: &Path, cancel: &'a AtomicBool) -> Result<Self> {
@@ -135,6 +136,7 @@ impl<'a> Wine<'a> {
             log: process::log(log)?,
             cancel,
             fenix: true,
+            extra_env: BTreeMap::new(),
         })
     }
     pub fn command(&self) -> Result<Command> {
@@ -150,6 +152,9 @@ impl<'a> Wine<'a> {
     pub fn without_fenix(&mut self) {
         self.fenix = false;
     }
+    pub(crate) fn set_environment(&mut self, values: BTreeMap<String, String>) {
+        self.extra_env = values;
+    }
     fn environment(&self) -> BTreeMap<String, String> {
         let mut env = environment(&self.prefix, &self.runner);
         if !self.fenix {
@@ -163,6 +168,7 @@ impl<'a> Wine<'a> {
                 env.remove(key);
             }
         }
+        env.extend(self.extra_env.clone());
         env
     }
     pub fn run<S: AsRef<OsStr>>(
@@ -229,9 +235,21 @@ impl<'a> StagedWine<'a> {
     ) -> Result<Self> {
         let root = root.canonicalize()?;
         let active = root.join("local/msfs-prefix");
+        Self::for_profile(&active, &root.join("local"), stage, runner, log, ctx)
+    }
+    pub(crate) fn for_profile(
+        active: &Path,
+        staging_parent: &Path,
+        stage: &Path,
+        runner: &Path,
+        log: &Path,
+        ctx: &'a Context,
+    ) -> Result<Self> {
+        let staging_parent = staging_parent.canonicalize()?;
+        let active = active.canonicalize()?;
         let stage = stage.canonicalize()?;
         require(
-            stage.starts_with(root.join("local")) && stage != active,
+            stage.starts_with(&staging_parent) && stage != active,
             ".NET setup requires an unpublished profile copy.",
         )?;
         let original = files::directory(&active, false)?.metadata()?;

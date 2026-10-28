@@ -4,6 +4,7 @@
 mod archive;
 use crate::{
     Error, Result, addon_apps,
+    addon_apps::Profile,
     backend::{Context, Launcher, string},
     bootstrap,
     error::require,
@@ -122,9 +123,9 @@ fn save_config(root: &Path, path: &Path, previous: &Value, next: &Value) -> Resu
     )?;
     files::atomic_json(path, next)
 }
-fn settings(root: &Path) -> Result<(PathBuf, PathBuf, Game)> {
-    let prefix = root.join("local/msfs-prefix");
-    let folder = navigraph::settings_folder(root)?;
+fn settings(profile: &Profile) -> Result<(PathBuf, PathBuf, Game)> {
+    let prefix = &profile.prefix;
+    let folder = navigraph::settings_folder_for(profile)?;
     let users = prefix.join("drive_c/users");
     let relative = folder
         .strip_prefix(&users)
@@ -136,7 +137,7 @@ fn settings(root: &Path) -> Result<(PathBuf, PathBuf, Game)> {
     Ok((
         users.join(user.as_os_str()).join("AppData/Roaming/Orbx"),
         folder,
-        Game::for_runtime(root)?,
+        profile.game,
     ))
 }
 fn override_key(game: Game) -> &'static str {
@@ -145,21 +146,18 @@ fn override_key(game: Game) -> &'static str {
         Game::Msfs2024 => "msfs24",
     }
 }
-fn configured(root: &Path) -> Result<bool> {
-    let (folder, sim, game) = settings(root)?;
+fn configured(profile: &Profile) -> Result<bool> {
+    let (folder, sim, game) = settings(profile)?;
     let value = config(&folder.join("simfinder/path-overrides.json"))?;
-    Ok(value[override_key(game)]
-        == windows_path(&sim.join("UserCfg.opt"), &root.join("local/msfs-prefix"))?)
+    Ok(value[override_key(game)] == windows_path(&sim.join("UserCfg.opt"), &profile.prefix)?)
 }
-fn configure(root: &Path) -> Result<()> {
-    let (folder, sim, game) = settings(root)?;
+fn configure(profile: &Profile) -> Result<()> {
+    let root = &profile.root;
+    let (folder, sim, game) = settings(profile)?;
     let path = folder.join("simfinder/path-overrides.json");
     let before = config(&path)?;
     let mut after = before.clone();
-    after[override_key(game)] = json!(windows_path(
-        &sim.join("UserCfg.opt"),
-        &root.join("local/msfs-prefix")
-    )?);
+    after[override_key(game)] = json!(windows_path(&sim.join("UserCfg.opt"), &profile.prefix)?);
     save_config(root, &path, &before, &after)?;
     let path = folder.join("Central/central.json");
     let before = config(&path)?;
@@ -195,7 +193,35 @@ fn safe_stage(root: &Path, name: &str) -> Result<PathBuf> {
     )?;
     Ok(root.join("private").join(format!("orbx-stage-{name}")))
 }
-fn recover(root: &Path) -> Result<()> {
+fn stage(profile: &Profile, id: &str) -> Result<PathBuf> {
+    let xbox = safe_stage(&profile.root, id)?;
+    Ok(if profile.item.is_some() {
+        profile
+            .prefix
+            .parent()
+            .ok_or(Error::Invalid("Ungültiges Steam-Profil."))?
+            .join(format!(".flightdeck-orbx-stage-{id}"))
+    } else {
+        xbox
+    })
+}
+fn program_backup(profile: &Profile, id: &str) -> Result<PathBuf> {
+    safe_stage(&profile.root, id)?;
+    Ok(if profile.item.is_some() {
+        profile
+            .prefix
+            .parent()
+            .ok_or(Error::Invalid("Ungültiges Steam-Profil."))?
+            .join(format!(".flightdeck-orbx-before-{id}"))
+    } else {
+        profile
+            .root
+            .join("private")
+            .join(format!("orbx-program-backup-{id}"))
+    })
+}
+fn recover(profile: &Profile) -> Result<()> {
+    let root = &profile.root;
     let journal = root.join(JOURNAL);
     if !files::exists(&journal) {
         return Ok(());
@@ -205,15 +231,13 @@ fn recover(root: &Path) -> Result<()> {
         value["format"] == 1,
         "Ungültige Orbx-Einrichtungssicherung.",
     )?;
-    let staged = safe_stage(root, string(&value, "id")?)?;
-    let prefix = root.join("local/msfs-prefix");
+    let staged = stage(profile, string(&value, "id")?)?;
+    let prefix = &profile.prefix;
     let target = prefix.join(PROGRAM);
-    let backup = root
-        .join("private")
-        .join(format!("orbx-program-backup-{}", string(&value, "id")?));
+    let backup = program_backup(profile, string(&value, "id")?)?;
     if !files::exists(&target)
         && files::exists(&backup)
-        && crate::fenix::identity(&prefix).is_ok_and(|id| value["prefix_id"] == json!(id))
+        && crate::fenix::identity(prefix).is_ok_and(|id| value["prefix_id"] == json!(id))
     {
         files::directory(&backup, false)?;
         tx::publish(&backup, &target)?;
@@ -264,15 +288,16 @@ fn managed_files_match(
     Ok(true)
 }
 fn install(ctx: &Context) -> Result<()> {
-    let root = ctx.root()?;
-    let prefix = root.join("local/msfs-prefix");
-    recover(root)?;
+    let profile = Profile::selected(&ctx.launcher)?;
+    let root = &profile.root;
+    let prefix = profile.prefix.clone();
+    recover(&profile)?;
     let spec = lock()?;
     if let Some(directory) = manager(&prefix)?
         && (!files::exists(&directory.join(RECEIPT))
             || managed_files_match(&directory, &spec, &ctx.cancel)?)
     {
-        configure(root)?;
+        configure(&profile)?;
         return Ok(());
     }
     let url = string(&spec, "archive_url")?;
@@ -287,11 +312,11 @@ fn install(ctx: &Context) -> Result<()> {
         ctx.update(json!({"transfer":transfer}))
     })?;
     require(
-        tx::free_bytes(root)? > 3 * 1024 * 1024 * 1024,
+        tx::free_bytes(&prefix)? > 3 * 1024 * 1024 * 1024,
         "Für die Orbx-Einrichtung fehlen mindestens 3 GiB freier Speicherplatz.",
     )?;
     let id = uuid::Uuid::new_v4().simple().to_string();
-    let staged = safe_stage(root, &id)?;
+    let staged = stage(&profile, &id)?;
     files::atomic_json(
         &root.join(JOURNAL),
         &json!({"format":1,"id":id,"state":"preparing","prefix_id":crate::fenix::identity(&prefix)?}),
@@ -315,19 +340,19 @@ fn install(ctx: &Context) -> Result<()> {
                 .parent()
                 .ok_or(Error::Invalid("Ungültiger Orbx-Programmpfad."))?,
         )?;
+        profile.current(&ctx.launcher)?;
+        wine_processes::idle(&prefix)?;
         ctx.begin_commit("committing", "Orbx Central wird aktiviert …")?;
         // Retain a complete previous program directory, including unknown files.
         // Orbx account data and scenery are outside this directory.
         if files::exists(&target) {
             files::directory(&target, false)?;
-            let backup = root
-                .join("private")
-                .join(format!("orbx-program-backup-{id}"));
+            let backup = program_backup(&profile, &id)?;
             tx::publish(&target, &backup)?;
         }
         tx::publish(&staged, &target)?;
         fs::remove_file(root.join(JOURNAL))?;
-        configure(root)?;
+        configure(&profile)?;
         Ok(())
     })();
     if result.is_err() && files::exists(&staged) {
@@ -336,15 +361,15 @@ fn install(ctx: &Context) -> Result<()> {
     result
 }
 fn open(ctx: &Context) -> Result<()> {
-    let root = ctx.root()?;
-    let prefix = root.join("local/msfs-prefix");
+    let profile = Profile::selected(&ctx.launcher)?;
+    let prefix = profile.prefix.clone();
     let directory = manager(&prefix)?.ok_or(Error::Invalid("Installiere zuerst Orbx Central."))?;
     // Central uses a fixed worker port even across separate Wine profiles.
     // Never stop another profile merely to make that port available.
     let _worker = files::Lease::acquire(&ctx.launcher.state_dir.join("orbx-worker.lock"), true)?;
     require(worker_available(), OTHER_INSTANCE)?;
-    configure(root)?;
-    let wine = addon_apps::wine(ctx, root, "orbx-central.log")?;
+    configure(&profile)?;
+    let wine = profile.wine(ctx, "orbx-central.log")?;
     fenix_setup::desktop_fonts(&wine).map_err(|error|if matches!(error,Error::Cancelled){error}else{Error::Invalid("Die Schriftvorbereitung für Orbx ist fehlgeschlagen. Details stehen im privaten Orbx-Protokoll.")})?;
     wine.reg(
         r"HKCU\Software\Wine\Explorer",
@@ -355,7 +380,7 @@ fn open(ctx: &Context) -> Result<()> {
     ctx.progress("Melde dich in Orbx Central an und verwalte deine Szenerien. Schließe Orbx danach vollständig.");
     addon_apps::interactive(
         ctx,
-        root,
+        &profile,
         &wine,
         &[
             &directory.join(EXE),
@@ -367,37 +392,33 @@ fn open(ctx: &Context) -> Result<()> {
     )
 }
 pub fn snapshot(app: &Launcher) -> Value {
-    let (root, busy, playing, closing, job) = {
-        let mut s = app.lock();
-        Launcher::poll(&mut s);
-        (
-            s.runtime.clone(),
-            s.active.is_some() || Launcher::external(&s),
-            s.process.is_some(),
-            s.closing,
-            s.jobs
-                .get("orbx")
-                .cloned()
-                .filter(|j| {
-                    j["runtime_path"].as_str() == s.runtime.as_ref().and_then(|p| p.to_str())
-                })
-                .unwrap_or(Value::Null),
-        )
-    };
-    let mut value = json!({"state":"unavailable","runtime_path":root,"installed":false,"configured":false,"settings_found":false,"running":false,"worker_busy":false,"idle":false,"can_change":false,"can_stop":false,"verified_in_simulator":false,"job":job,"message":""});
-    if let Some(root) = root {
+    let selected = Profile::selected(app);
+    let context = Launcher::context(&app.lock());
+    let (busy, playing, closing, job) = selected
+        .as_ref()
+        .map(|p| addon_apps::job(app, "orbx", p))
+        .unwrap_or((false, false, false, Value::Null));
+    let mut value = json!({"state":"unavailable","runtime_path":context,"installed":false,"configured":false,"settings_found":false,"running":false,"worker_busy":false,"idle":false,"can_change":false,"can_stop":false,"verified_in_simulator":false,"job":job,"message":""});
+    if let Ok(profile) = &selected {
+        value["profile_token"] = json!(profile.revision);
+        value["source"] = json!(if profile.item.is_some() {
+            "steam"
+        } else {
+            "xbox"
+        });
+        value["installation_id"] = json!(profile.item.as_ref().map(|i| &i.id));
         let result = (|| -> Result<()> {
-            addon_apps::validate(&root)?;
-            let prefix = root.join("local/msfs-prefix");
-            let directory = manager(&prefix)?;
-            let processes = wine_processes::Processes::new(&prefix)?;
+            profile.validate(false)?;
+            let prefix = &profile.prefix;
+            let directory = manager(prefix)?;
+            let processes = wine_processes::Processes::new(prefix)?;
             let running = processes.any(Some(PROCESSES));
-            let idle = wine_processes::idle(&prefix).is_ok();
+            let idle = wine_processes::idle(prefix).is_ok();
             value["state"] = json!("available");
-            value["game"] = json!(Game::for_runtime(&root)?.id());
+            value["game"] = json!(profile.game.id());
             value["installed"] = json!(directory.is_some());
-            value["configured"] = json!(configured(&root).unwrap_or(false));
-            value["settings_found"] = json!(settings(&root).is_ok());
+            value["configured"] = json!(configured(profile).unwrap_or(false));
+            value["settings_found"] = json!(settings(profile).is_ok());
             value["idle"] = json!(idle);
             value["running"] = json!(running);
             value["worker_busy"] = json!(!running && !worker_available());
@@ -422,6 +443,9 @@ pub fn snapshot(app: &Launcher) -> Value {
             value["message"] = json!(error.to_string());
         }
     }
+    if let Err(error) = selected {
+        value["message"] = json!(error.to_string());
+    }
     value
 }
 pub fn start(app: &Arc<Launcher>, operation: &str, data: &Value) -> Result<Value> {
@@ -429,11 +453,17 @@ pub fn start(app: &Arc<Launcher>, operation: &str, data: &Value) -> Result<Value
         ["install", "configure", "open", "stop"].contains(&operation),
         "Unbekannter Orbx-Vorgang.",
     )?;
-    let root = app.root()?;
+    let profile = Profile::selected(app)?;
     require(
-        root == Path::new(string(data, "runtime_path")?),
+        profile.context == string(data, "runtime_path")?,
         "Die ausgewählte Runtime hat sich geändert. Orbx-Status neu laden.",
     )?;
+    if profile.item.is_some() {
+        require(
+            data["profile_token"] == profile.revision,
+            "Die Installation oder Proton-Auswahl hat sich geändert. Add-on-Status neu laden.",
+        )?;
+    }
     if operation == "stop" {
         require(
             snapshot(app)["can_stop"] == true,
@@ -456,32 +486,15 @@ pub fn start(app: &Arc<Launcher>, operation: &str, data: &Value) -> Result<Value
             return Ok(json!({"ok":true}));
         }
     } else {
-        addon_apps::validate(&root)?;
+        profile.validate(false)?;
     }
     let operation = operation.to_string();
-    app.start_job("orbx", &operation.clone(), true, move |ctx| {
-        require(
-            ctx.root()? == root,
-            "Die ausgewählte Runtime hat sich geändert. Orbx-Status neu laden.",
-        )?;
-        if operation != "stop" {
-            addon_apps::validate(&root)?;
-            wine_processes::idle(&root.join("local/msfs-prefix"))?;
-        }
-        match operation.as_str() {
-            "install" => install(ctx)?,
-            "configure" => configure(&root)?,
-            "open" => open(ctx)?,
-            _ => wine_processes::stop(&root, PROCESSES)?,
-        }
-        let message = match operation.as_str() {
-            "install" => "Orbx Central ist im vorhandenen Windows-Profil eingerichtet.",
-            "configure" => {
-                "Orbx Central verwendet jetzt die Einstellungen dieser MSFS-Installation."
-            }
-            _ => "Orbx Central wurde geschlossen.",
-        };
-        Ok(json!({"state":"complete","message":message,"stopping":false}))
+    app.start_job("orbx",&operation.clone(),profile.item.is_none(),move|ctx|{
+        profile.current(&ctx.launcher)?;
+        let _held=profile.lease()?;
+        if operation!="stop"{profile.validate(false)?;wine_processes::idle(&profile.prefix)?;}
+        match operation.as_str(){"install"=>install(ctx)?,"configure"=>configure(&profile)?,"open"=>open(ctx)?,_=>profile.stop(PROCESSES)?}
+        Ok(json!({"state":"complete","message":match operation.as_str(){"install"=>"Orbx Central ist im vorhandenen Windows-Profil eingerichtet.","configure"=>"Orbx Central verwendet jetzt die Einstellungen dieser MSFS-Installation.",_=>"Orbx Central wurde geschlossen."},"stopping":false}))
     })
 }
 
@@ -508,7 +521,8 @@ mod tests {
             &json!({"msfs":"C:\\original\\UserCfg.opt","unrelated":"preserved"}),
         )
         .expect("valid Orbx test fixture");
-        configure(root.path()).expect("valid Orbx test fixture");
+        configure(&Profile::xbox(root.path()).expect("Xbox fixture"))
+            .expect("valid Orbx test fixture");
         let changed: Value = runtime::value(&settings).expect("valid Orbx test fixture");
         assert_eq!(changed["msfs"], "C:\\original\\UserCfg.opt");
         assert_eq!(changed["unrelated"], "preserved");
@@ -530,7 +544,8 @@ mod tests {
         let backups = fs::read_dir(&private)
             .expect("valid Orbx test fixture")
             .count();
-        configure(root.path()).expect("valid Orbx test fixture");
+        configure(&Profile::xbox(root.path()).expect("Xbox fixture"))
+            .expect("valid Orbx test fixture");
         assert_eq!(
             fs::read_dir(&private)
                 .expect("valid Orbx test fixture")
@@ -556,7 +571,8 @@ mod tests {
             &json!({"format":1,"id":id,"prefix_id":crate::fenix::identity(&prefix).expect("valid Orbx test fixture")}),
         )
         .expect("valid Orbx test fixture");
-        recover(root.path()).expect("valid Orbx test fixture");
+        recover(&Profile::xbox(root.path()).expect("Xbox fixture"))
+            .expect("valid Orbx test fixture");
         assert_eq!(
             fs::read(prefix.join(PROGRAM).join("retained")).expect("valid Orbx test fixture"),
             b"old program"
@@ -568,7 +584,8 @@ mod tests {
             &json!({"format":1,"id":id,"prefix_id":[0,0]}),
         )
         .expect("valid Orbx test fixture");
-        recover(root.path()).expect("valid Orbx test fixture");
+        recover(&Profile::xbox(root.path()).expect("Xbox fixture"))
+            .expect("valid Orbx test fixture");
         assert!(backup.is_dir());
         assert!(!prefix.join(PROGRAM).exists());
     }
@@ -585,7 +602,8 @@ mod tests {
             &json!({"format":1,"id":"a".repeat(32),"state":"preparing"}),
         )
         .expect("valid Orbx test fixture");
-        recover(root.path()).expect("valid Orbx test fixture");
+        recover(&Profile::xbox(root.path()).expect("Xbox fixture"))
+            .expect("valid Orbx test fixture");
         assert!(!stage.exists());
         assert!(!root.path().join(JOURNAL).exists());
     }
@@ -634,7 +652,10 @@ mod tests {
             user_cfg
         );
         assert!(manager(&prefix).expect("valid Orbx test fixture").is_some());
-        assert!(configured(&root).expect("valid Orbx test fixture"));
+        assert!(
+            configured(&Profile::xbox(&root).expect("Xbox fixture"))
+                .expect("valid Orbx test fixture")
+        );
         println!(
             "Existing prefix, selected runner and original UserCfg.opt preserved; official Orbx program and selected-edition detection installed."
         );

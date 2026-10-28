@@ -2,7 +2,7 @@
 
 [Overview and quick start](../README.md) · [Deutsch](readme.de.md) · [Discord community](https://discord.gg/fAhHR2DkqN)
 
-This documentation covers the current stable release, **0.3.2**, and explicitly
+This documentation covers the current stable release, **0.3.3**, and explicitly
 marked development additions. The
 [changelog](changelog.md) records its changes and earlier releases.
 Hardware reports describe the tested setup, not universal compatibility.
@@ -17,7 +17,7 @@ Hardware reports describe the tested setup, not universal compatibility.
 | [Graphics](graphics.md) · [Deutsch](graphics.de.md) | Set up AMD/NVIDIA graphics and investigate rendering issues. |
 | [Known issues](known-issues.md) · [Deutsch](known-issues.de.md) | Check current limitations before troubleshooting. |
 | [Cloud saves](cloud-saves.md) · [Deutsch](cloud-saves.de.md) | Use sync, local backups, conflict recovery and interrupted-session recovery. |
-| [Add-ons](addons.md) · [Deutsch](addons.de.md) | Set up Community packages, Fenix and GSX; development support for Orbx, Navigraph Hub and Simlink. |
+| [Add-ons](addons.md) · [Deutsch](addons.de.md) | Set up Community packages, Fenix and GSX; experimental Orbx, Navigraph Hub and Simlink for Xbox and Steam. |
 | [VR](vr.md) · [Deutsch](vr.de.md) | Prepare OpenXR and check the current headset validation scope. |
 | [Problem reports](problem-reports.md) · [Deutsch](problem-reports.de.md) | Review diagnostics and prepare a useful report. |
 | [Languages](localization.md) | Choose German or English for the desktop, installer and CLI. |

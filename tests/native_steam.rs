@@ -267,7 +267,7 @@ fn steam_selection_persists_without_replacing_or_mutating_the_xbox_runtime() {
         let status = api::get(&f.app, route).unwrap().unwrap();
         assert_eq!(status["state"], "unavailable");
         assert_eq!(status["runtime_path"], item.context());
-        assert_eq!(status["managed_by"], "steam");
+        assert_eq!(status["source"], "steam");
     }
     assert_eq!(
         api::get(&f.app, "/api/cloud-saves").unwrap().unwrap()["available"],

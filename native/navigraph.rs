@@ -3,11 +3,10 @@
 //! Sign-in, subscriptions and navdata stay with Navigraph's own applications.
 use crate::{
     Error, Result,
+    addon_apps::{self, Profile},
     backend::{Context, Launcher, string},
     error::require,
-    fenix_setup, files,
-    games::Game,
-    installer, mods, process, proton, runtime,
+    fenix_setup, files, installer, process, runtime,
     wine::Wine,
     wine_processes,
     xml::{self, Element, Item},
@@ -255,11 +254,14 @@ fn windows_path(path: &Path, prefix: &Path) -> Result<String> {
 /// The edition's settings folder that holds the active UserCfg.opt. Hub uses
 /// the same file to detect MSFS 2020 and 2024 and their package location.
 pub fn settings_folder(root: &Path) -> Result<PathBuf> {
-    let prefix = root.join("local/msfs-prefix");
-    let game = Game::for_runtime(root)?;
-    let family = mods::family(root)?;
+    settings_folder_for(&Profile::xbox(root)?)
+}
+pub(crate) fn settings_folder_for(profile: &Profile) -> Result<PathBuf> {
+    let prefix = &profile.prefix;
+    let game = profile.game;
+    let family = profile.family()?;
     let mut found = Vec::new();
-    for user in fenix_setup::user_folders(&prefix)? {
+    for user in fenix_setup::user_folders(prefix)? {
         let mut folders = vec![user.join("AppData/Roaming").join(game.user_config())];
         if let Some(family) = &family {
             folders.push(
@@ -270,7 +272,7 @@ pub fn settings_folder(root: &Path) -> Result<PathBuf> {
         }
         for folder in folders {
             if files::exists(&folder.join("UserCfg.opt")) {
-                contained(&folder, &prefix)?;
+                contained(&folder, prefix)?;
                 found.push(folder);
             }
         }
@@ -371,11 +373,15 @@ pub fn startup_document(raw: Option<&[u8]>, executable: &str, enable: bool) -> R
     tree.bytes()
 }
 pub fn configure(root: &Path, enable: bool) -> Result<()> {
-    let prefix = root.join("local/msfs-prefix");
-    let executable = simlink(&prefix)?.ok_or(Error::Invalid(
+    configure_for(&Profile::xbox(root)?, enable)
+}
+pub(crate) fn configure_for(profile: &Profile, enable: bool) -> Result<()> {
+    let root = &profile.root;
+    let prefix = &profile.prefix;
+    let executable = simlink(prefix)?.ok_or(Error::Invalid(
         "Installiere zuerst Navigraph Simlink in diesem Profil.",
     ))?;
-    let folder = settings_folder(root)?;
+    let folder = settings_folder_for(profile)?;
     let path = folder.join("exe.xml");
     let raw = if files::exists(&path) {
         let raw = files::read(&path, 2 * 1024 * 1024)?;
@@ -390,9 +396,12 @@ pub fn configure(root: &Path, enable: bool) -> Result<()> {
     } else {
         None
     };
-    let bytes = startup_document(raw.as_deref(), &windows_path(&executable, &prefix)?, enable)?;
+    let bytes = startup_document(raw.as_deref(), &windows_path(&executable, prefix)?, enable)?;
     files::atomic(&path, &bytes)?;
-    files::atomic_json(&root.join(STARTUP), &json!({"format":1,"enabled":enable}))
+    files::atomic_json(
+        &root.join(STARTUP),
+        &json!({"format":1,"enabled":enable,"prefix_id":crate::fenix::identity(&profile.prefix)?}),
+    )
 }
 pub fn startup_enabled(root: &Path) -> bool {
     runtime::value(&root.join(STARTUP))
@@ -400,7 +409,10 @@ pub fn startup_enabled(root: &Path) -> bool {
 }
 /// Navigraph packages in the one configured Community folder.
 pub fn packages(root: &Path) -> Result<Vec<String>> {
-    let (locations, limited) = mods::locations(root)?;
+    packages_for(&Profile::xbox(root)?)
+}
+fn packages_for(profile: &Profile) -> Result<Vec<String>> {
+    let (locations, limited) = profile.locations()?;
     if limited {
         return Ok(Vec::new());
     }
@@ -567,21 +579,31 @@ pub fn forward(state_dir: &Path, url: &str) -> Result<()> {
     let app = callback_app(url)?;
     let mut running = Vec::new();
     let mut installed = Vec::new();
+    let mut profiles = std::collections::BTreeMap::new();
     for root in known_runtimes(state_dir) {
-        let prefix = root.join("local/msfs-prefix");
-        let Ok(Some(executable)) = app.executable(&prefix) else {
+        if let Ok(profile) = Profile::xbox(&root) {
+            profiles.insert(profile.context.clone(), profile);
+        }
+    }
+    if let Ok(registry) = crate::installations::load(state_dir) {
+        for item in registry.entries {
+            if item.steam() {
+                let profile = Profile::steam(state_dir, item);
+                profiles.insert(profile.context.clone(), profile);
+            }
+        }
+    }
+    for profile in profiles.into_values() {
+        let Ok(Some(executable)) = app.executable(&profile.prefix) else {
             continue;
         };
-        if wine_processes::Processes::new(&prefix).is_ok_and(|p| p.any(Some(app.names()))) {
-            running.push((root.clone(), executable.clone()));
+        if wine_processes::Processes::new(&profile.prefix).is_ok_and(|p| p.any(Some(app.names()))) {
+            running.push((profile.clone(), executable.clone()));
         }
-        installed.push((root, executable));
+        installed.push((profile, executable));
     }
-    let mut candidates = if running.is_empty() {
-        installed
-    } else {
-        running
-    };
+    let waiting = !running.is_empty();
+    let mut candidates = if !waiting { installed } else { running };
     require(
         candidates.len() == 1,
         if candidates.is_empty() {
@@ -590,21 +612,19 @@ pub fn forward(state_dir: &Path, url: &str) -> Result<()> {
             "Die Navigraph-Anwendung läuft in mehreren Installationen. Schließe die nicht benötigte."
         },
     )?;
-    let (root, executable) = candidates.remove(0);
-    proton::check(&root)?;
+    let (profile, executable) = candidates.remove(0);
+    profile.validate(false)?;
+    if !waiting {
+        wine_processes::idle(&profile.prefix)?;
+    }
+    profile.prepare()?;
     let cancel = AtomicBool::new(false);
-    let mut wine = Wine::new(
-        &root.join("local/msfs-prefix"),
-        &root.join("runner"),
-        &root.join("private/navigraph-sign-in.log"),
-        &cancel,
-    )?;
-    wine.without_fenix();
+    let wine = profile.wine_with_cancel(&cancel, "navigraph-sign-in.log")?;
     let mut command = wine.command()?;
     command
         .arg(&executable)
         .arg(url)
-        .current_dir(executable.parent().unwrap_or(&root));
+        .current_dir(executable.parent().unwrap_or(&profile.root));
     let mut child = process::spawn(&mut command, None)?;
     // A forwarding instance exits quickly; a freshly started one keeps running.
     let end = Instant::now() + Duration::from_secs(20);
@@ -616,56 +636,50 @@ pub fn forward(state_dir: &Path, url: &str) -> Result<()> {
     }
     Ok(())
 }
-fn validate(root: &Path) -> Result<()> {
-    crate::addon_apps::validate(root)
-}
 
 pub fn snapshot(app: &Launcher) -> Value {
-    let (root, busy, playing, closing, job) = {
-        let mut s = app.lock();
-        Launcher::poll(&mut s);
-        (
-            s.runtime.clone(),
-            s.active.is_some() || Launcher::external(&s),
-            s.process.is_some(),
-            s.closing,
-            s.jobs
-                .get("navigraph")
-                .cloned()
-                .filter(|j| {
-                    j["runtime_path"].as_str() == s.runtime.as_ref().and_then(|p| p.to_str())
-                })
-                .unwrap_or(Value::Null),
-        )
-    };
-    let mut value = json!({"state":"unavailable","message":"","hub_installed":false,"governor_disabled":false,"simlink_installed":false,"simlink_signed_in":false,"settings_found":false,"startup":false,"handler":false,"packages":[],"hub_running":false,"simlink_running":false,"idle":false,"runtime_path":root,"job":job,"busy":busy||playing,"can_change":false,"can_stop":false});
-    if let Some(root) = root {
+    let selected = Profile::selected(app);
+    let context = Launcher::context(&app.lock());
+    let (busy, playing, closing, job) = selected
+        .as_ref()
+        .map(|p| addon_apps::job(app, "navigraph", p))
+        .unwrap_or((false, false, false, Value::Null));
+    let mut value = json!({"state":"unavailable","message":"","hub_installed":false,"governor_disabled":false,"simlink_installed":false,"simlink_signed_in":false,"settings_found":false,"startup":false,"handler":false,"packages":[],"hub_running":false,"simlink_running":false,"idle":false,"runtime_path":context,"job":job,"busy":busy||playing,"can_change":false,"can_stop":false});
+    if let Ok(profile) = &selected {
+        value["profile_token"] = json!(profile.revision);
+        value["source"] = json!(if profile.item.is_some() {
+            "steam"
+        } else {
+            "xbox"
+        });
+        value["installation_id"] = json!(profile.item.as_ref().map(|i| &i.id));
         let result = (|| -> Result<()> {
-            validate(&root)?;
-            let prefix = root.join("local/msfs-prefix");
-            let directory = hub(&prefix)?;
+            profile.validate(false)?;
+            let prefix = &profile.prefix;
+            let directory = hub(prefix)?;
             value["state"] = json!("available");
-            value["game"] = json!(Game::for_runtime(&root)?.id());
+            value["game"] = json!(profile.game.id());
             value["hub_installed"] = json!(directory.is_some());
             value["governor_disabled"] =
                 json!(directory.as_deref().is_some_and(|d| !governor_active(d)));
-            value["simlink_installed"] = json!(simlink(&prefix)?.is_some());
-            value["simlink_signed_in"] = json!(simlink_signed_in(&prefix)?);
-            let folder = settings_folder(&root);
+            value["simlink_installed"] = json!(simlink(prefix)?.is_some());
+            value["simlink_signed_in"] = json!(simlink_signed_in(prefix)?);
+            let folder = settings_folder_for(profile);
             value["settings_found"] = json!(folder.is_ok());
             value["startup"] = json!(
-                startup_enabled(&root) && folder.is_ok_and(|f| startup_entry(&f).unwrap_or(false))
+                profile.enabled(STARTUP)
+                    && folder.is_ok_and(|f| startup_entry(&f).unwrap_or(false))
             );
             value["handler"] = json!(handler_registered(&app.state_dir));
-            value["packages"] = json!(packages(&root).unwrap_or_default());
+            value["packages"] = json!(packages_for(profile).unwrap_or_default());
             value["message"] = json!(
                 "Anmeldung, Abonnement und Navdata prüft Navigraph. Navigraph unterstützt Linux offiziell nicht."
             );
-            let processes = wine_processes::Processes::new(&prefix)?;
+            let processes = wine_processes::Processes::new(prefix)?;
             let hub_running = processes.any(Some(HUB));
             let simlink_running = processes.any(Some(SIMLINK));
             let game = processes.any(Some(wine_processes::GAMES));
-            let idle = wine_processes::idle(&prefix).is_ok();
+            let idle = wine_processes::idle(prefix).is_ok();
             value["hub_running"] = json!(hub_running);
             value["simlink_running"] = json!(simlink_running);
             value["idle"] = json!(idle);
@@ -685,6 +699,9 @@ pub fn snapshot(app: &Launcher) -> Value {
         if let Err(error) = result {
             value["message"] = json!(error.to_string());
         }
+    }
+    if let Err(error) = selected {
+        value["message"] = json!(error.to_string());
     }
     value
 }
@@ -735,19 +752,16 @@ fn remove_run_entries(wine: &Wine, prefix: &Path) -> Result<()> {
     }
     Ok(())
 }
-fn wine<'a>(ctx: &'a Context, root: &Path, log: &str) -> Result<Wine<'a>> {
-    crate::addon_apps::wine(ctx, root, log)
-}
 fn interactive(
     ctx: &Context,
-    root: &Path,
+    profile: &Profile,
     wine: &Wine,
     arguments: &[&Path],
     names: &[&str],
 ) -> Result<()> {
     crate::addon_apps::interactive(
         ctx,
-        root,
+        profile,
         wine,
         arguments,
         names,
@@ -756,10 +770,10 @@ fn interactive(
 }
 
 fn install_hub(ctx: &Context, installer: &Path) -> Result<()> {
-    let root = ctx.root()?;
-    let prefix = root.join("local/msfs-prefix");
+    let profile = Profile::selected(&ctx.launcher)?;
+    let prefix = profile.prefix.clone();
     ctx.progress("Navigraph Hub wird im Windows-Profil installiert …");
-    let wine = wine(ctx, root, "navigraph-hub-setup.log")?;
+    let wine = profile.wine(ctx, "navigraph-hub-setup.log")?;
     // electron-builder's NSIS installer: per-user, silent and without autostart.
     wine.run(
         &[installer.to_string_lossy().into_owned(), "/S".into()],
@@ -777,22 +791,22 @@ fn install_hub(ctx: &Context, installer: &Path) -> Result<()> {
     wine.stop_staged()
 }
 fn open_hub(ctx: &Context) -> Result<()> {
-    let root = ctx.root()?;
-    let prefix = root.join("local/msfs-prefix");
+    let profile = Profile::selected(&ctx.launcher)?;
+    let prefix = profile.prefix.clone();
     let directory = hub(&prefix)?.ok_or(Error::Invalid("Installiere zuerst Navigraph Hub."))?;
     disable_governor(&directory)?;
     prefer_foreground(&directory)?;
-    let wine = wine(ctx, root, "navigraph-hub.log")?;
+    let wine = profile.wine(ctx, "navigraph-hub.log")?;
     ctx.progress(
         "Melde dich in Navigraph Hub an und installiere die Navdata. Schließe Hub danach vollständig.",
     );
-    let result = interactive(ctx, root, &wine, &[&directory.join(HUB_EXE)], HUB);
+    let result = interactive(ctx, &profile, &wine, &[&directory.join(HUB_EXE)], HUB);
     let cleanup = remove_run_entries(&wine, &prefix);
     result.and(cleanup)
 }
 fn install_simlink(ctx: &Context, installer: &Path) -> Result<()> {
-    let root = ctx.root()?;
-    let wine = wine(ctx, root, "navigraph-simlink-setup.log")?;
+    let profile = Profile::selected(&ctx.launcher)?;
+    let wine = profile.wine(ctx, "navigraph-simlink-setup.log")?;
     ctx.progress("Navigraph Simlink wird im Windows-Profil installiert …");
     // Inno Setup's wizard leaves its hidden application window visible under
     // Wine, so the installer runs unattended into its default folder.
@@ -808,26 +822,26 @@ fn install_simlink(ctx: &Context, installer: &Path) -> Result<()> {
         &[0],
         Duration::from_secs(1800),
     )?;
-    let _ = wine_processes::stop(root, SIMLINK);
-    simlink_without_login_start(&root.join("local/msfs-prefix"))?;
-    remove_run_entries(&wine, &root.join("local/msfs-prefix"))?;
+    let _ = profile.stop(SIMLINK);
+    simlink_without_login_start(&profile.prefix)?;
+    remove_run_entries(&wine, &profile.prefix)?;
     wine.stop_staged()?;
     require(
-        simlink(&root.join("local/msfs-prefix"))?.is_some(),
+        simlink(&profile.prefix)?.is_some(),
         "Simlink wurde nicht vollständig installiert. Details stehen im Navigraph-Protokoll.",
     )
 }
 fn open_simlink(ctx: &Context) -> Result<()> {
-    let root = ctx.root()?;
-    let executable = simlink(&root.join("local/msfs-prefix"))?
-        .ok_or(Error::Invalid("Installiere zuerst Navigraph Simlink."))?;
-    let wine = wine(ctx, root, "navigraph-simlink.log")?;
-    let prefix = root.join("local/msfs-prefix");
+    let profile = Profile::selected(&ctx.launcher)?;
+    let executable =
+        simlink(&profile.prefix)?.ok_or(Error::Invalid("Installiere zuerst Navigraph Simlink."))?;
+    let wine = profile.wine(ctx, "navigraph-simlink.log")?;
+    let prefix = profile.prefix.clone();
     simlink_without_login_start(&prefix)?;
     ctx.progress(
         "Melde dich in Simlink an. Schließe Simlink danach mit „Navigraph schließen“, denn sein Fenster blendet es nur aus.",
     );
-    let result = interactive(ctx, root, &wine, &[&executable], SIMLINK);
+    let result = interactive(ctx, &profile, &wine, &[&executable], SIMLINK);
     // The first start creates the settings file with login start turned on.
     let settings = simlink_without_login_start(&prefix);
     let cleanup = remove_run_entries(&wine, &prefix);
@@ -908,9 +922,9 @@ pub fn start(app: &Arc<Launcher>, operation: &str, data: &Value) -> Result<Value
         OPERATIONS.contains(&operation),
         "Unbekannter Navigraph-Vorgang.",
     )?;
-    let root = app.root()?;
+    let profile = Profile::selected(app)?;
     require(
-        root == Path::new(string(data, "runtime_path")?),
+        profile.context == string(data, "runtime_path")?,
         "Die ausgewählte Runtime hat sich geändert. Navigraph-Status neu laden.",
     )?;
     if operation == "handler" {
@@ -942,25 +956,24 @@ pub fn start(app: &Arc<Launcher>, operation: &str, data: &Value) -> Result<Value
             return Ok(json!({"ok":true,"job_id":job["id"]}));
         }
     } else {
-        validate(&root)?;
+        profile.validate(false)?;
     }
     let installer = match operation {
         "install-hub" => Some(installer_path(data, App::Hub)?),
         "install-simlink" => Some(installer_path(data, App::Simlink)?),
         _ => None,
     };
-    let operation = operation.to_string();
-    app.start_job("navigraph", &operation.clone(), true, move |ctx| {
-        let selected = ctx.root()?;
+    if profile.item.is_some() {
         require(
-            selected == root,
-            "Die ausgewählte Runtime hat sich geändert. Navigraph-Status neu laden.",
+            data["profile_token"] == profile.revision,
+            "Die Installation oder Proton-Auswahl hat sich geändert. Add-on-Status neu laden.",
         )?;
-        let root = selected;
-        if operation != "stop" {
-            validate(root)?;
-            wine_processes::idle(&root.join("local/msfs-prefix"))?;
-        }
+    }
+    let operation = operation.to_string();
+    app.start_job("navigraph", &operation.clone(), profile.item.is_none(), move |ctx| {
+        profile.current(&ctx.launcher)?;
+        let _held=profile.lease()?;
+        if operation != "stop" {profile.validate(false)?;wine_processes::idle(&profile.prefix)?;}
         match operation.as_str() {
             "install-hub" => install_hub(
                 ctx,
@@ -979,13 +992,13 @@ pub fn start(app: &Arc<Launcher>, operation: &str, data: &Value) -> Result<Value
             "stop" => {
                 let mut names = HUB.to_vec();
                 names.extend(SIMLINK);
-                wine_processes::stop(root, &names)?
+                profile.stop(&names)?
             }
             _ => {
                 if operation == "configure" {
-                    simlink_without_login_start(&root.join("local/msfs-prefix"))?;
+                    simlink_without_login_start(&profile.prefix)?;
                 }
-                configure(root, operation == "configure")?
+                configure_for(&profile, operation == "configure")?
             }
         }
         let message = match operation.as_str() {

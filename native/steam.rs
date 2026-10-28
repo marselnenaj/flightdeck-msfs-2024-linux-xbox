@@ -17,9 +17,20 @@ pub fn status(app: &Launcher) -> Value {
     let Some(item) = s.steam.clone() else {
         return json!({});
     };
-    let game = steam_session::status(&mut s, &app.state_dir);
-    let available = item.validate().is_ok();
-    let checks = json!([{"id":"steam","label":"Steam-Installation","ok":available,"detail":if available{"Vorhanden"}else{"Bibliothek getrennt oder Installation verschoben. Erneut suchen."}}]);
+    let mut game = steam_session::status(&mut s, &app.state_dir);
+    let gsx_complete =
+        crate::gsx::complete(&crate::addon_apps::Profile::steam(&app.state_dir, item.clone()).root);
+    let installed = item.validate().is_ok();
+    let available = installed && gsx_complete;
+    if !gsx_complete {
+        game["can_start"] = json!(false);
+        game["message"] =
+            json!("Die GSX-Einrichtung ist unvollständig. Unter Mods wiederherstellen.");
+    }
+    let mut checks = json!([{"id":"steam","label":"Steam-Installation","ok":installed,"detail":if installed{"Vorhanden"}else{"Bibliothek getrennt oder Installation verschoben. Erneut suchen."}}]);
+    if !gsx_complete && let Some(rows) = checks.as_array_mut() {
+        rows.push(json!({"id":"gsx","label":"GSX","ok":false,"detail":"Die GSX-Einrichtung ist unvollständig. Unter Mods wiederherstellen."}));
+    }
     json!({"app":{"name":"Flightdeck","version":crate::VERSION},"runtime":{"configured":true,"path":item.context(),"ready":available,"checks":checks,"game_id":item.game.id(),"game_name":item.game.name(),"source":"steam","installation_id":item.id,"installation_name":item.label(),"game_path":item.game_path(),"prefix":item.prefix(),"needs_first_launch":!item.prefix().join("system.reg").is_file(),"steam_client":match item.source{Source::Steam{client,..}=>Some(client),_=>None}},"versions":{},"capabilities":{"launch":true,"steam":true,"fenix":true,"xbox_setup":false,"xbox_cloud":false,"game_updates":"steam","graphics":"steam","vr":"steam"},"graphics":{"available":false},"vr":{"available":false,"mode":"off"},"game":game,"saves":{"available":false,"can_backup":false,"managed_by":"steam"},"setup":{"busy":s.active.is_some()},"cloud":{"enabled":false,"state":"idle","message":"Synchronisierung wird vom Spiel und Steam verwaltet."},"support":{"level":"beta","cloud_saves":false,"cloud_sync":"platform","automatic_cloud_sync":false}})
 }
 pub fn get(app: &Arc<Launcher>, path: &str) -> Option<Result<Value>> {
@@ -31,13 +42,15 @@ pub fn get(app: &Arc<Launcher>, path: &str) -> Option<Result<Value>> {
         "/api/status" => status(app),
         "/api/fenix" => steam_fenix::snapshot(app),
         "/api/mods" => crate::mods::steam_snapshot(app),
+        "/api/gsx" => crate::gsx::snapshot(app),
+        "/api/navigraph" => crate::navigraph::snapshot(app),
+        "/api/orbx" => crate::orbx::snapshot(app),
         "/api/setup" => json!({"job":null,"managed_by":"steam"}),
         "/api/game-update" => json!({"runtime_path":context,"managed_by":"steam","job":null}),
         "/api/cloud-saves" => {
             json!({"available":false,"enabled":false,"managed_by":"steam","runtime_path":context})
         }
-        "/api/gsx" | "/api/navigraph" | "/api/orbx" | "/api/proton" | "/api/maintenance"
-        | "/api/store-check" => {
+        "/api/proton" | "/api/maintenance" | "/api/store-check" => {
             json!({"state":"unavailable","runtime_path":context,"available":false,"managed_by":"steam","job":null})
         }
         "/api/diagnostics" => {
@@ -64,6 +77,16 @@ pub fn post(app: &Arc<Launcher>, path: &str, data: &Value) -> Option<Result<Valu
                 let _ = crate::fenix_update::check(app, true);
             }
             a
+        }
+        "/api/navigraph/pick" => crate::navigraph::pick(app, data),
+        p if p.starts_with("/api/navigraph/") => {
+            crate::navigraph::start(app, p.rsplit('/').next().unwrap_or(""), data)
+        }
+        p if p.starts_with("/api/orbx/") => {
+            crate::orbx::start(app, p.rsplit('/').next().unwrap_or(""), data)
+        }
+        p if p.starts_with("/api/gsx/") => {
+            crate::gsx::start(app, p.rsplit('/').next().unwrap_or(""), data)
         }
         "/api/fenix/pick" => crate::fenix::pick(app, data),
         "/api/fenix/check-update" => crate::fenix_update::check(app, true),

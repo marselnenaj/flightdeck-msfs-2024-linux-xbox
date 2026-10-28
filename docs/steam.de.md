@@ -90,7 +90,7 @@ bestätigten Spielende werden Fenix-Begleitprogramme nur dieses Profils beendet.
 
 Der Community-Ordner wird aus der `UserCfg.opt` des gewählten Steam-Profils und
 seinen Wine-Laufwerken ermittelt. Widersprüchliche Konfigurationen werden
-angezeigt. Community-Deinstallation und GSX-Einrichtung sind in dieser
+angezeigt. Community-Deinstallation ist in dieser
 Steam-Beta noch nicht aktiviert; verwende dafür den offiziellen Add-on-Installer.
 
 Für Spielstände bleibt das bisherige Verhalten der Plattform erhalten.
@@ -100,3 +100,21 @@ gegen Steam-Profile. Fenix-Wiederherstellungspunkte sind davon getrennt.
 Melde nachvollziehbare Probleme in [GitHub Issues](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/issues)
 oder im [Discord](https://discord.gg/fAhHR2DkqN) mit MSFS-Ausgabe, Steam-Client,
 Distribution, GPU und fehlgeschlagener Aktion.
+
+## GSX, Navigraph und Orbx ab 0.3.3
+
+Unter **Mods** stehen die experimentellen GSX-, Navigraph-Hub/Simlink- und
+Orbx-Central-Abläufe auch für Steam-MSFS 2020/2024 bereit. Sie verwenden das echte
+Profil und dessen ausgewähltes Proton, auch in zusätzlichen Bibliotheken. Zuerst
+Proton in Steam wählen und MSFS einmal starten, dann Spiel und andere
+Windows-Anwendungen dieses Profils vor der Einrichtung schließen. Ein weiteres
+dauerhaftes Wine-Profil wird nicht angelegt. [Anleitung und Testumfang](addons.de.md)
+
+Metadaten und Protokolle liegen unter
+`~/.local/share/flightdeck/steam/<installation-id>/addon-apps/`. GSX behält eine
+Sicherung `pfx.before-gsx-*` neben dem echten Profil. Unterbrochene Vorbereitung
+muss vor einem Spielstart wiederhergestellt werden. Nach einem Proton-Wechsel
+oder Profiltausch den Status neu laden. Simlink und Couatl verwenden die echte
+`exe.xml`; nach bestätigtem Spielende werden nur aktivierte Begleitprogramme
+dieses Profils beendet. Vollständige Steam-Flüge und lizenzierte Add-on-Funktionen
+müssen Tester noch bestätigen.
