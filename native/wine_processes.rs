@@ -37,12 +37,13 @@ const INFRASTRUCTURE: &[&str] = &[
     "tabtip.exe",
     "conhost.exe",
 ];
-/// The game, its Fenix and GSX companions and Wine's own services, as opposed
+/// The game, its Fenix, GSX and Simlink companions and Wine's own services, as opposed
 /// to another application, such as an installer, running in the same profile.
 pub fn session_process(name: &str) -> bool {
     GAMES.contains(&name)
         || FENIX.contains(&name)
         || crate::gsx::COMPANIONS.contains(&name)
+        || crate::navigraph::SIMLINK.contains(&name)
         || INFRASTRUCTURE.contains(&name)
 }
 pub fn name(arguments: &[String]) -> String {

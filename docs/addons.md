@@ -2,6 +2,10 @@
 
 [Deutsche Anleitung](addons.de.md)
 
+**Development additions:** the Orbx Central and Navigraph sections below describe
+the development branch. Stable 0.3.2 does not include them. They currently use
+Xbox installations; Steam companion-app setup is not implemented.
+
 Open **Mods** in Flightdeck to see the packages in your selected simulator's Community
 folder. **Open Community folder** opens that location in the Linux file manager;
 **Refresh** reads the inventory again after an installation.
@@ -35,7 +39,8 @@ add-on programs or change package contents when reading this list.
 Follow the developer's own installer when one is supplied. Keep existing
 settings and liveries before replacing a package. The general Community inventory lists packages and opens their folder.
 Fenix and the experimental GSX Pro integration have separate setup workflows
-below, currently for MSFS 2024 only.
+below, currently for MSFS 2024 only. The experimental Navigraph setup supports
+MSFS 2024 and 2020.
 
 Since 0.2.7, Flightdeck shows one highlighted next action for each add-on. Detected
 components remain visible; additional actions are under **Manage & repair**.
@@ -50,7 +55,8 @@ entry; its original files stay in place. Cancel leaves the package unchanged.
 Flightdeck refuses an outdated review if the folder or contents changed.
 
 For a full Fenix or GSX uninstall, open the official installer/manager in its
-add-on section. Removing its Community package does not uninstall its Windows
+add-on section. Navigraph Hub and Simlink remain in the Windows profile when
+their Community packages are removed. Removing its Community package does not uninstall its Windows
 companion applications.
 
 ## Aircraft with companion applications
@@ -135,6 +141,95 @@ preparation, not for undoing a later GSX installation. Diagnostic logs are in
 `private/gsx-setup-*.log` and `private/gsx-manager.log`. If FSDT replaces its
 installer download, a checksum mismatch stops preparation until Flightdeck's
 pin has been reviewed and updated. No FSDT or Microsoft binaries are bundled.
+
+### Navigraph Hub and Simlink (experimental)
+
+Open **Mods → Navigraph** and follow the highlighted next step. Each MSFS edition
+has its own Windows profile, so set up Navigraph separately for 2024 and 2020.
+Close MSFS and other Windows applications in the selected profile first.
+Navigraph does not officially support Linux; sign-in, subscription and navdata
+stay with Navigraph.
+
+1. **Set up Navigraph sign-in** registers a hidden `flightdeck-navigraph.desktop`
+   entry as the handler for `navigraph-desktop://` (Hub) and
+   `navigraph-traffic-desktop://` (Simlink) through `xdg-mime`. After you sign
+   in through your Linux browser, the browser hands the result back to
+   Flightdeck, which passes it to the waiting application in its profile. Without
+   this handler, the sign-in completes in the browser but never reaches Hub or
+   Simlink. `xdg-utils` is required.
+2. Download the official Navigraph Hub installer from
+   [Navigraph](https://navigraph.com/downloads), select it and choose **Install
+   Navigraph Hub**. Flightdeck installs it silently for the Windows user of this
+   profile; only a file named like Navigraph's Hub installer is accepted. Flightdeck moves Hub's bundled Process Governor
+   (`procgov.exe`) aside, because its call fails under Wine with
+   `Win32Exception (87)` and stops every package extraction. Hub then runs 7-Zip
+   directly. Hub's updates restore the file; Flightdeck moves it aside again before
+   every start. Flightdeck also turns off Hub's **run in background** and Windows
+   login autostart settings, so closing Hub's window quits it.
+3. **Open Navigraph Hub**, sign in and install the navdata. Hub finds the
+   simulator through the same `UserCfg.opt` that Flightdeck uses; start MSFS once
+   beforehand. Close Hub's window when the installation has finished, or use
+   **Close Navigraph**. Flightdeck lists the `navigraph-*` packages it finds in the
+   Community folder.
+4. Optional, for the aircraft position in Navigraph Charts: download the Simlink
+   installer from [Navigraph](https://navigraph.com/downloads), select it and
+   choose **Install Simlink**. Flightdeck installs it without the wizard into its
+   default folder (`C:\Program Files\Navigraph\Simlink`), because the wizard
+   shows an extra empty window under Wine. Then choose **Open Simlink and sign
+   in** and sign in through your browser. Simlink's window only hides it; quit it
+   with **Close Navigraph**. Flightdeck detects the sign-in from the stored token
+   without exposing its contents, and turns off Simlink's own Windows login start, which
+   Wine would run on every program start in the profile.
+5. **Set up Simlink auto-start** adds one Simlink entry to the edition's
+   `exe.xml`, next to its `UserCfg.opt`, and keeps other add-ons and a backup in
+   `private/navigraph-exe-*.xml`. MSFS then starts Simlink in the same Wine session,
+   so SimConnect is reached without network configuration. Flightdeck closes
+   Simlink when the simulator session ends. Sign in to Simlink once through
+   **Manage & repair → Open Simlink**.
+
+**Navigraph configured locally · Functionality unconfirmed** confirms local files
+only. Hub navdata installation, Simlink's SimConnect connection and Charts
+position tracking have not yet been verified in a complete flight with
+Flightdeck. Hub detects Flightdeck's installation like a Steam installation; it
+does not see Marketplace aircraft in the Official folder, so aircraft-specific
+navdata for those may be missing. Logs are in
+`private/navigraph-*.log` of the runtime. No Navigraph binaries are bundled.
+
+### Orbx Central (experimental, in development)
+
+Open **Mods → Orbx Central** with the Xbox MSFS installation selected. Start MSFS
+once so its real `UserCfg.opt` exists, then close the simulator and other Windows
+applications before setup.
+
+1. **Set up Orbx Central** downloads the complete official Windows Central
+   4.5.50 program package and verifies its pinned SHA-256. Flightdeck extracts it
+   directly into the existing game profile using its existing runner. It does
+   not create another Wine profile or download another Proton build. Rechecking
+   a damaged managed installation retains the previous program directory.
+2. Flightdeck points Orbx at that edition's actual `UserCfg.opt`. It preserves
+   the simulator settings and other edition's Orbx override. It does not pretend
+   that a 2024 installation is MSFS 2020 to change product availability.
+3. **Open Orbx Central**, sign in normally and install your licensed products.
+   Check the edition and Community location in Orbx. Close the window when done,
+   or choose **Close Orbx Central** in Flightdeck. Tray minimization and Windows
+   login autostart are disabled so Orbx remains reachable through its window and
+   Flightdeck. Only named Orbx processes in this profile are closed.
+
+The official web installer can report **“Orbx Central cannot be closed”** under
+Wine even after Central exits. Flightdeck avoids this installer and its automatic
+web update by using the verified complete program package. It never kills another
+profile's Orbx to free the worker's fixed local port. Close any other Orbx instance
+before opening the selected installation's client.
+
+Central 4.5.50 opened and its worker became reachable in the existing Flightdeck
+MSFS 2024 profile; scoped close released both processes and port. The pre-existing
+separate Orbx profile also opened with its existing sign-in and without a visible
+Wine tray window. A previous separate-profile installation of owned Gaya LOWW
+2.0.1 passed checks of all 2,937 layout entries. Sign-in, a new scenery installation
+and an in-simulator flight in the shared profile remain unverified. Local setup
+does not establish scenery compatibility. Logs stay in `private/orbx-central.log`.
+Orbx application files, credentials and scenery are not bundled with Flightdeck.
+[Official Orbx Central](https://orbxdirect.com/central)
 
 ### Fenix A320
 

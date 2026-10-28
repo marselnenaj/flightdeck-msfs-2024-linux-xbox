@@ -30,6 +30,12 @@ The launcher, installer and updater need no Python.
 MSA ticket format for content licensing. A complete isolated MSFS 2024 download
 passed with all 28,621 files verified.
 
+**In development:** optional Orbx Central, Navigraph Hub and Simlink setup in
+the selected Xbox installation's existing Wine profile. This includes browser
+sign-in forwarding for Navigraph and Orbx setup without the failing web updater
+or Wine tray window. These additions are not included in stable 0.3.2.
+[Setup and tested scope](docs/addons.md)
+
 **Steam support:** Select Steam MSFS 2020/2024 alongside Xbox installations and
 manage Fenix through the shared standalone Rust engine. Steam support is beta;
 actual simulator flights still need tester qualification. See the

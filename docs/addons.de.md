@@ -2,6 +2,11 @@
 
 [English instructions](addons.md)
 
+**Ergänzungen in Entwicklung:** Die Abschnitte zu Orbx Central und Navigraph
+beschreiben den Entwicklungsstand. Die stabile Version 0.3.2 enthält sie noch
+nicht. Sie verwenden derzeit Xbox-Installationen; die Einrichtung dieser
+Begleitprogramme für Steam ist noch nicht implementiert.
+
 ## Community-Ordner und Mod-Liste
 
 Wähle zuerst MSFS 2024 oder MSFS 2020 und öffne im Flightdeck-Launcher
@@ -142,6 +147,102 @@ nicht zum Rückgängigmachen einer späteren GSX-Installation. Protokolle liegen
 Installer-Download, stoppt ein Prüfsummenfehler die Vorbereitung, bis Flightdecks
 festgelegte Version geprüft und aktualisiert wurde. FSDT- und Microsoft-Binärdateien
 werden nicht mitgeliefert.
+
+## Orbx Central einrichten (experimentell, in Entwicklung)
+
+Wähle die Xbox-MSFS-Installation und öffne **Mods → Orbx Central**. Starte MSFS
+vorher einmal, damit seine echte `UserCfg.opt` existiert. Beende danach den
+Simulator und andere Windows-Programme im gewählten Profil.
+
+1. **Orbx Central einrichten** lädt das vollständige offizielle Windows-Paket von
+   Central 4.5.50 und prüft seine festgelegte SHA-256. Flightdeck entpackt es ins
+   vorhandene Spielprofil und verwendet dessen Runner. Es entsteht kein weiteres
+   Wine-Profil und kein zusätzlicher Proton-Download. Eine Reparatur beschädigter
+   verwalteter Programmdateien bewahrt den vorherigen Programmordner auf.
+2. Flightdeck verweist Orbx auf die echte `UserCfg.opt` der gewählten Edition und
+   erhält die Simulator-Einstellungen sowie den Orbx-Pfad der anderen Edition.
+   Eine 2024-Installation wird nicht als MSFS 2020 ausgegeben.
+3. **Orbx Central öffnen**, normal anmelden und eigene lizenzierte Produkte
+   installieren. Prüfe Edition und Community-Pfad in Orbx. Schließe anschließend
+   das Fenster oder nutze **Orbx Central schließen** in Flightdeck. Tray-Modus und
+   Windows-Anmeldestart sind deaktiviert, damit Orbx über sein Hauptfenster und
+   Flightdeck erreichbar bleibt. Flightdeck beendet nur die benannten
+   Orbx-Prozesse dieses Profils.
+
+Der offizielle Web-Installer kann unter Wine **„Orbx Central cannot be closed“**
+melden, obwohl Central bereits beendet ist. Flightdeck verwendet das geprüfte
+vollständige Programmpaket und deaktiviert dessen automatisches Web-Update.
+Andere Orbx-Instanzen musst du vor dem Öffnen selbst schließen: Der Worker nutzt
+einen festen lokalen Port; Flightdeck beendet dafür kein anderes Profil.
+
+Central 4.5.50 und sein Worker starteten im vorhandenen Flightdeck-MSFS-2024-Profil;
+gezieltes Schließen gab Prozesse und Port wieder frei. Das bisherige separate
+Orbx-Profil öffnete sich ebenfalls mit bestehender Anmeldung und ohne sichtbares
+Wine-Tray-Fenster. In diesem separaten Profil wurden zuvor alle 2.937 Layout-Einträge
+einer Installation von Gaya LOWW 2.0.1 geprüft. Anmeldung, neue Szenerieinstallation
+und ein Simulatorflug im gemeinsamen Profil bleiben unbestätigt. Die lokale
+Einrichtung bestätigt keine Szeneriekompatibilität. Protokolle bleiben unter
+`private/orbx-central.log`. Orbx-Programme, Zugangsdaten und Szenerien werden nicht
+mit Flightdeck ausgeliefert. [Offizielles Orbx Central](https://orbxdirect.com/central)
+
+## Navigraph Hub und Simlink einrichten (experimentell)
+
+Öffne **Mods → Navigraph** und folge dem hervorgehobenen nächsten Schritt. Jede
+MSFS-Version hat ein eigenes Windows-Profil; richte Navigraph daher für 2024 und
+2020 getrennt ein. Beende vorher MSFS und andere Windows-Programme im gewählten
+Profil. Navigraph unterstützt Linux offiziell nicht; Anmeldung, Abonnement und
+Navdata bleiben bei Navigraph.
+
+1. **Navigraph-Anmeldung einrichten** trägt über `xdg-mime` einen versteckten
+   Eintrag `flightdeck-navigraph.desktop` als Handler für `navigraph-desktop://`
+   (Hub) und `navigraph-traffic-desktop://` (Simlink) ein. Nach der Anmeldung im
+   Linux-Browser gibt der Browser das Ergebnis an Flightdeck zurück, das es an die
+   wartende Anwendung im passenden Profil weiterreicht. Ohne diesen Handler endet
+   die Anmeldung im Browser, kommt aber nie bei Hub oder Simlink an. `xdg-utils`
+   wird benötigt.
+2. Lade den offiziellen Navigraph-Hub-Installer bei
+   [Navigraph](https://navigraph.com/downloads) herunter, wähle ihn aus und
+   klicke auf **Navigraph Hub installieren**. Flightdeck installiert Hub ohne
+   Rückfragen für den Windows-Benutzer dieses Profils; akzeptiert wird nur eine
+   Datei, die wie Navigraphs Hub-Installer benannt ist. Flightdeck legt den
+   mitgelieferten Process Governor (`procgov.exe`) beiseite, weil dessen Aufruf
+   unter Wine mit `Win32Exception (87)` scheitert und jedes Entpacken abbricht.
+   Hub ruft 7-Zip dann direkt auf. Hub-Updates stellen die Datei wieder her;
+   Flightdeck legt sie vor jedem Start erneut beiseite. Außerdem schaltet
+   Flightdeck Hubs Einstellungen **Im Hintergrund ausführen** und den
+   Windows-Autostart aus, damit Hub mit seinem Fenster beendet wird.
+3. **Navigraph Hub öffnen**, anmelden und die Navdata installieren. Hub findet den
+   Simulator über dieselbe `UserCfg.opt` wie Flightdeck; starte MSFS vorher
+   einmal. Schließe das Hub-Fenster nach der Installation oder nutze
+   **Navigraph schließen**. Flightdeck zeigt die gefundenen `navigraph-*`-Pakete
+   im Community-Ordner an.
+4. Optional für die Flugzeugposition in Navigraph Charts: Lade den
+   Simlink-Installer bei [Navigraph](https://navigraph.com/downloads) herunter,
+   wähle ihn aus und klicke auf **Simlink installieren**. Flightdeck installiert
+   Simlink ohne Assistenten in den Standardordner
+   (`C:\Program Files\Navigraph\Simlink`), weil der Assistent unter Wine ein
+   zusätzliches leeres Fenster zeigt. Öffne Simlink danach über **Simlink öffnen
+   und anmelden** und melde dich im Browser an. Simlinks Fenster blendet es nur
+   aus; beende es mit **Navigraph schließen**. Flightdeck erkennt die Anmeldung
+   am gespeicherten Token, ohne seinen Inhalt auszugeben, und schaltet Simlinks eigenen
+   Windows-Autostart aus, weil Wine ihn bei jedem Programmstart im Profil
+   ausführen würde.
+5. **Simlink-Autostart einrichten** ergänzt einen Simlink-Eintrag in der
+   `exe.xml` neben der `UserCfg.opt` dieser Version. Andere Add-ons bleiben
+   erhalten, eine Sicherung liegt in `private/navigraph-exe-*.xml`. MSFS startet
+   Simlink dann in derselben Wine-Sitzung, SimConnect ist so ohne
+   Netzwerkeinstellung erreichbar. Flightdeck beendet Simlink mit der
+   Simulator-Sitzung. Melde dich einmal über **Verwalten & reparieren → Simlink
+   öffnen** in Simlink an.
+
+**Navigraph lokal eingerichtet · Funktion unbestätigt** bestätigt nur lokale
+Dateien. Die Navdata-Installation durch Hub, die SimConnect-Verbindung von
+Simlink und die Positionsanzeige in Charts sind mit Flightdeck noch nicht in einem
+vollständigen Flug verifiziert. Hub erkennt Flightdecks Installation wie eine
+Steam-Installation und sieht Marketplace-Flugzeuge im Official-Ordner nicht;
+flugzeugspezifische Navdata dafür können fehlen. Protokolle liegen in
+`private/navigraph-*.log` der Runtime. Flightdeck liefert keine Navigraph-Dateien
+mit.
 
 ## Fenix A320 einrichten
 

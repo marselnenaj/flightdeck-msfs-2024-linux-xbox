@@ -550,6 +550,244 @@ impl App {
         self.disclosure(Disclosure::Gsx, "GSX Pro", progress.title, content)
     }
 
+    fn navigraph_installer(&self, app: &'static str, rerun: bool) -> Element<'_, Message> {
+        let (download, title, field, placeholder, operation, button) = if app == "hub" {
+            (
+                "Navigraph Hub bei Navigraph herunterladen",
+                "Navigraph-Hub-Installer-Datei",
+                "navigraph_hub_installer_path",
+                "/home/…/Navigraph Hub.exe",
+                "install-hub",
+                if rerun {
+                    "Navigraph Hub neu installieren"
+                } else {
+                    "Navigraph Hub installieren"
+                },
+            )
+        } else {
+            (
+                "Simlink bei Navigraph herunterladen",
+                "Simlink-Installer-Datei",
+                "navigraph_simlink_installer_path",
+                "/home/…/Navigraph+Simlink.exe",
+                "install-simlink",
+                if rerun {
+                    "Simlink neu installieren"
+                } else {
+                    "Simlink installieren"
+                },
+            )
+        };
+        column![
+            self.help_link(download, HelpLink::Navigraph),
+            self.input(title, field, placeholder, Some(NavigraphPick(app))),
+            self.control(
+                button,
+                self.request(&Navigraph(operation))
+                    .map(|_| Message::Action(Navigraph(operation))),
+                !rerun,
+            ),
+        ]
+        .spacing(12)
+        .into()
+    }
+
+    fn navigraph_card(&self) -> Element<'_, Message> {
+        let raw = self.data("navigraph");
+        let current = self.fresh("navigraph") && s(raw, "runtime_path") == self.runtime();
+        let data = if current { raw } else { &Value::Null };
+        let progress = presentation::navigraph(data);
+        let active = model::active(&data["job"]);
+        let packages: Vec<_> = data["packages"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter_map(Value::as_str)
+            .collect();
+        let mut content = column![
+            label(self.tr("Von Navigraph nicht offiziell unterstützt", "Not officially supported by Navigraph"), 15.0, Weight::Semibold, iced::color!(0xf5c873)),
+            self.paragraph(self.tr("Flightdeck installiert Navigraph Hub für Navdata und Simlink für die Flugzeugposition in Navigraph Charts, jeweils im Profil dieser MSFS-Version. Anmeldung und Abonnement bleiben bei Navigraph.", "Flightdeck installs Navigraph Hub for navdata and Simlink for the aircraft position in Navigraph Charts, each in this MSFS edition's profile. Sign-in and subscription remain with Navigraph.")),
+        ].spacing(14);
+        if current {
+            content = content.push(self.addon_feedback(data));
+            content = content.push(self.paragraph(self.t(progress.detail).to_string()));
+            if active || yes(data, "hub_running") || yes(data, "simlink_running") {
+                if yes(data, "can_stop") {
+                    content =
+                        content.push(self.addon_action("Navigraph schließen", Navigraph("stop")));
+                }
+            } else if data["state"] == "available" {
+                if data["idle"] == false
+                    || yes(data, "busy")
+                    || !["", "stopped"].contains(&s(&self.status()["game"], "state"))
+                {
+                    content = content.push(self.paragraph(self.tr(
+                        "Beende MSFS oder die laufende Einrichtung, bevor du Navigraph änderst.",
+                        "Close MSFS or the running setup before making changes to Navigraph.",
+                    )));
+                }
+                content = match progress.next {
+                    0 => content.push(self.control(
+                        "Zur Übersicht und MSFS starten",
+                        Some(Message::Navigate(Page::Overview)),
+                        true,
+                    )),
+                    1 => content.push(
+                        self.addon_action("Navigraph-Anmeldung einrichten", Navigraph("handler")),
+                    ),
+                    2 => content.push(self.navigraph_installer("hub", false)),
+                    3 => content
+                        .push(self.addon_action("Navigraph Hub öffnen", Navigraph("open-hub"))),
+                    4 => content.push(self.navigraph_installer("simlink", false)),
+                    5 => content.push(
+                        self.addon_action("Simlink öffnen und anmelden", Navigraph("open-simlink")),
+                    ),
+                    _ => content.push(
+                        self.addon_action("Simlink-Autostart einrichten", Navigraph("configure")),
+                    ),
+                };
+            }
+            if data["state"] == "available" {
+                content = content.push(self.addon_facts(&[
+                    (self.tr("Anmeldung", "Sign-in"), yes(data, "handler")),
+                    ("Navigraph Hub", yes(data, "hub_installed")),
+                    ("Navdata", !packages.is_empty()),
+                    ("Simlink", yes(data, "simlink_installed")),
+                    (
+                        self.tr("Simlink-Anmeldung", "Simlink sign-in"),
+                        yes(data, "simlink_signed_in"),
+                    ),
+                    (
+                        self.tr("Simlink-Autostart", "Simlink auto-start"),
+                        yes(data, "startup"),
+                    ),
+                ]));
+                if !packages.is_empty() {
+                    content = content.push(self.paragraph(format!(
+                        "{}: {}",
+                        self.tr(
+                            "Navigraph-Pakete im Community-Ordner",
+                            "Navigraph packages in the Community folder"
+                        ),
+                        packages.join(", ")
+                    )));
+                }
+            }
+            let mut manage = column![].spacing(14);
+            if yes(data, "hub_installed") {
+                if progress.next != 3 {
+                    manage =
+                        manage.push(self.action("Navigraph Hub öffnen", Navigraph("open-hub")));
+                }
+                manage = manage.push(self.navigraph_installer("hub", true));
+            }
+            if yes(data, "simlink_installed") {
+                if progress.next != 5 {
+                    manage = manage.push(self.action("Simlink öffnen", Navigraph("open-simlink")));
+                }
+                manage = manage.push(self.navigraph_installer("simlink", true));
+            } else if progress.next != 4 && data["state"] == "available" {
+                manage = manage.push(self.navigraph_installer("simlink", false));
+            }
+            if yes(data, "startup") {
+                manage =
+                    manage.push(self.action("Simlink-Autostart ausschalten", Navigraph("disable")));
+            }
+            manage = manage
+                .push(self.job("navigraph"))
+                .push(self.help_link("Navigraph-Downloads", HelpLink::Navigraph));
+            content = content.push(self.disclosure(
+                Disclosure::NavigraphManage,
+                self.tr("Verwalten & reparieren", "Manage & repair"),
+                "",
+                manage,
+            ));
+        } else {
+            content = content.push(self.paragraph(self.tr("Der Status dieser Installation ist noch nicht verfügbar. Lade ihn erneut, bevor du die Einrichtung fortsetzt.", "The status of this installation is not available yet. Refresh before continuing setup.")));
+        }
+        content = content.push(self.refresh_button());
+        self.disclosure(Disclosure::Navigraph, "Navigraph", progress.title, content)
+    }
+
+    fn orbx_card(&self) -> Element<'_, Message> {
+        let raw = self.data("orbx");
+        let current = self.fresh("orbx") && s(raw, "runtime_path") == self.runtime();
+        let data = if current { raw } else { &Value::Null };
+        let active = model::active(&data["job"]);
+        let installed = yes(data, "installed");
+        let configured = yes(data, "configured");
+        let title = if active {
+            if data["job"]["operation"] == "open" {
+                "Orbx Central ist geöffnet"
+            } else {
+                "Orbx Central wird eingerichtet …"
+            }
+        } else if installed && configured {
+            "Orbx lokal eingerichtet · Funktion unbestätigt"
+        } else {
+            "Orbx-Central-Einrichtung"
+        };
+        let mut content=column![self.paragraph(self.tr(
+            "Orbx Central verwaltet deine Orbx-Szenerien im vorhandenen Windows-Profil dieser MSFS-Installation. Anmeldung und Produktlizenzen bleiben bei Orbx.",
+            "Orbx Central manages your Orbx scenery in this MSFS installation's existing Windows profile. Sign-in and product licenses remain with Orbx."))].spacing(14);
+        if current {
+            content = content.push(self.addon_feedback(data));
+            if data["state"] == "available" {
+                content = content.push(self.addon_facts(&[
+                    ("Orbx Central", installed),
+                    (
+                        self.tr("Simulatorerkennung", "Simulator detection"),
+                        configured,
+                    ),
+                ]));
+                if !yes(data, "can_change") && !yes(data, "running") && !active {
+                    content = content.push(self.paragraph(self.tr(
+                        "Beende MSFS und andere laufende Aufgaben, bevor du Orbx einrichtest oder öffnest.",
+                        "Close MSFS and other running tasks before setting up or opening Orbx.",
+                    )));
+                }
+                if yes(data, "can_stop") {
+                    content =
+                        content.push(self.addon_action("Orbx Central schließen", Orbx("stop")));
+                } else if !active && !yes(data, "running") {
+                    if !yes(data, "settings_found") {
+                        content=content.push(self.paragraph(self.tr("Starte MSFS einmal, damit Orbx seine Einstellungen und den Community-Ordner findet.","Start MSFS once so Orbx can find its settings and Community folder.")));
+                    } else if !installed {
+                        content = content
+                            .push(self.addon_action("Orbx Central einrichten", Orbx("install")));
+                    } else if !configured {
+                        content =
+                            content.push(self.addon_action(
+                                "Orbx-Simulatorerkennung einrichten",
+                                Orbx("configure"),
+                            ));
+                    } else if yes(data, "worker_busy") {
+                        content=content.push(self.paragraph(self.tr("Schließe andere Orbx-Central-Instanzen, bevor du Orbx für diese Installation öffnest.","Close other Orbx Central instances before opening Orbx for this installation.")));
+                    } else {
+                        content =
+                            content.push(self.addon_action("Orbx Central öffnen", Orbx("open")));
+                    }
+                }
+                let manage = column![
+                    self.action("Orbx-Einrichtung erneut prüfen", Orbx("install")),
+                    self.job("orbx"),
+                    self.help_link("Orbx Central bei Orbx", HelpLink::Orbx)
+                ]
+                .spacing(14);
+                content = content.push(self.disclosure(
+                    Disclosure::OrbxManage,
+                    self.tr("Verwalten & reparieren", "Manage & repair"),
+                    "",
+                    manage,
+                ));
+            }
+        } else {
+            content=content.push(self.paragraph(self.tr("Der Status dieser Installation ist noch nicht verfügbar. Lade ihn erneut, bevor du die Einrichtung fortsetzt.","The status of this installation is not available yet. Refresh before continuing setup.")));
+        }
+        content = content.push(self.refresh_button());
+        self.disclosure(Disclosure::Orbx, "Orbx Central", self.t(title), content)
+    }
+
     pub(crate) fn community_card(&self) -> Element<'_, Message> {
         let mods = self.data("mods");
         let mut inventory = column![
@@ -636,7 +874,7 @@ impl App {
     pub(crate) fn mods_page(&self) -> Element<'_, Message> {
         column![self.heading(self.t("Deine Add-ons").to_string()),
             self.paragraph(self.t("Öffne die Einrichtung eines Add-ons oder verwalte unten deinen Community-Ordner.").to_string()),
-            self.fenix_card(),self.gsx_card(),self.community_card(),
+            self.fenix_card(),self.gsx_card(),self.navigraph_card(),self.orbx_card(),self.community_card(),
             self.paragraph(self.tr("Fenix und GSX vollständig deinstallieren: Öffne den jeweiligen offiziellen Installer oben. Das Entfernen eines Community-Eintrags entfernt keine Windows-Begleitprogramme.","To fully uninstall Fenix or GSX, open its official installer above. Removing a Community entry does not uninstall Windows companion applications.")),
             self.paragraph(self.t("Diese Liste zeigt Dateien im Community-Ordner. Sie bestätigt weder eine Lizenz noch die Kompatibilität eines Add-ons mit MSFS oder Linux.").to_string())].spacing(16).into()
     }

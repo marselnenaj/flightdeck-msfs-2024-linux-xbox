@@ -78,7 +78,7 @@ impl App {
             Page::Updates => keys.push("game-update"),
             Page::Saves => keys.push("cloud-saves"),
             Page::Mods => {
-                keys.extend(["fenix", "gsx"]);
+                keys.extend(["fenix", "gsx", "navigraph"]);
                 if heavy
                     || !self.snapshot.contains_key("mods")
                     || model::active(&self.data("mods")["job"])
@@ -374,6 +374,18 @@ impl App {
                                         path.to_string()
                                     };
                                     self.forms.text.insert(field, path);
+                                }
+                            }
+                            Action::NavigraphPick(app) if value["cancelled"] != true => {
+                                if let Some(path) =
+                                    value["path"].as_str().filter(|v| v.starts_with('/'))
+                                {
+                                    let field = if app == "hub" {
+                                        "navigraph_hub_installer_path"
+                                    } else {
+                                        "navigraph_simlink_installer_path"
+                                    };
+                                    self.forms.text.insert(field, path.to_string());
                                 }
                             }
                             Action::FenixPick(kind) if value["cancelled"] != true => {

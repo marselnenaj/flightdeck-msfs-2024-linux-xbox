@@ -95,6 +95,9 @@ pub enum Action {
     Fenix(&'static str),
     FenixPick(&'static str),
     Gsx(&'static str),
+    Navigraph(&'static str),
+    NavigraphPick(&'static str),
+    Orbx(&'static str),
     Proton,
     ProtonDefault,
     ProtonCancel,
@@ -189,6 +192,9 @@ impl App {
                     | Cloud(_)
                     | Automatic(_)
                     | Gsx(_)
+                    | Navigraph(_)
+                    | NavigraphPick(_)
+                    | Orbx(_)
                     | Proton
                     | ProtonDefault
                     | ProtonCancel
@@ -587,6 +593,83 @@ impl App {
                         _ => return None,
                     }
                 }
+            }
+            Navigraph(op) => {
+                let data = self.data("navigraph");
+                let enabled = self.fresh("navigraph") && s(data, "runtime_path") == root;
+                let change =
+                    enabled && safe_idle && yes(data, "can_change") && data["state"] == "available";
+                let hub = yes(data, "hub_installed");
+                let simlink = yes(data, "simlink_installed");
+                body = json!({"runtime_path":root});
+                match *op {
+                    "install-hub" => {
+                        body["installer_path"] =
+                            json!(self.forms.get("navigraph_hub_installer_path"));
+                        (
+                            "navigraph/install-hub",
+                            change
+                                && !self
+                                    .forms
+                                    .get("navigraph_hub_installer_path")
+                                    .trim()
+                                    .is_empty(),
+                        )
+                    }
+                    "open-hub" => ("navigraph/open-hub", change && hub),
+                    "install-simlink" => {
+                        body["installer_path"] =
+                            json!(self.forms.get("navigraph_simlink_installer_path"));
+                        (
+                            "navigraph/install-simlink",
+                            change
+                                && !self
+                                    .forms
+                                    .get("navigraph_simlink_installer_path")
+                                    .trim()
+                                    .is_empty(),
+                        )
+                    }
+                    "open-simlink" => ("navigraph/open-simlink", change && simlink),
+                    "configure" => (
+                        "navigraph/configure",
+                        change && simlink && yes(data, "settings_found"),
+                    ),
+                    "disable" => ("navigraph/disable", change && yes(data, "startup")),
+                    "handler" => (
+                        "navigraph/handler",
+                        enabled && data["state"] == "available" && !yes(data, "handler"),
+                    ),
+                    "stop" => ("navigraph/stop", enabled && yes(data, "can_stop")),
+                    _ => return None,
+                }
+            }
+            Orbx(op) => {
+                let data = self.data("orbx");
+                let enabled = self.fresh("orbx") && s(data, "runtime_path") == root;
+                let change =
+                    enabled && safe_idle && yes(data, "can_change") && data["state"] == "available";
+                body = json!({"runtime_path":root});
+                match *op {
+                    "install" => ("orbx/install", change && yes(data, "settings_found")),
+                    "configure" => (
+                        "orbx/configure",
+                        change && yes(data, "installed") && yes(data, "settings_found"),
+                    ),
+                    "open" => (
+                        "orbx/open",
+                        change
+                            && yes(data, "installed")
+                            && yes(data, "settings_found")
+                            && !yes(data, "worker_busy"),
+                    ),
+                    "stop" => ("orbx/stop", enabled && yes(data, "can_stop")),
+                    _ => return None,
+                }
+            }
+            NavigraphPick(app) => {
+                body = json!({"app":app});
+                ("navigraph/pick", safe_idle)
             }
             FenixPick(kind) => {
                 body = json!({"kind":kind});

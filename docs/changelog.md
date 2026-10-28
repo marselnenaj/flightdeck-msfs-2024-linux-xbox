@@ -1,5 +1,19 @@
 # Changes and release status
 
+## In development
+
+- Integrate the existing experimental Navigraph Hub and Simlink work, including
+  browser sign-in forwarding, direct Hub extraction without Process Governor,
+  unattended installers and simulator-session Simlink startup and cleanup.
+- Add optional Orbx Central 4.5.50 setup using the selected Xbox installation's
+  existing profile and runner. Verify the official full payload, preserve the
+  previous program during repairs and use the real edition's simulator settings.
+- Avoid Orbx's failing Wine web-installer close check and visible Wine tray host;
+  disable tray minimization and login autostart. Keep process cleanup confined to
+  Orbx in the selected profile and guard its fixed worker port across profiles.
+- These companion integrations remain experimental and are not included in
+  stable 0.3.2. Steam companion setup and full-flight qualification remain open.
+
 ## 0.3.2 — 28 October 2026
 
 - Pass the bare MSA ticket to Microsoft's content-license identity field. Strip

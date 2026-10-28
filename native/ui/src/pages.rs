@@ -80,7 +80,7 @@ impl App {
                 .align_y(alignment::Vertical::Center);
         let badge = match section {
             Disclosure::Fenix => Some("Community-Patch"),
-            Disclosure::Gsx => Some("Experimentell"),
+            Disclosure::Gsx | Disclosure::Navigraph | Disclosure::Orbx => Some("Experimentell"),
             _ => None,
         };
         if let Some(badge) = badge {
@@ -212,6 +212,7 @@ impl App {
                 | Game("start" | "sign-in")
                 | Fenix("install" | "migrate" | "configure")
                 | Gsx("prepare" | "configure")
+                | Navigraph("install-hub" | "configure")
         );
         self.control(title, allowed.then_some(Message::Action(action)), primary)
     }
@@ -254,7 +255,7 @@ impl App {
             .spacing(10);
         if let Some(action) = pick {
             line = line.push(self.action(
-                if matches!(action, FenixPick("installer")) {
+                if matches!(action, FenixPick("installer") | NavigraphPick(_)) {
                     "Datei wählen"
                 } else {
                     "Ordner wählen"

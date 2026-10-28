@@ -246,6 +246,11 @@ fn steam_selection_persists_without_replacing_or_mutating_the_xbox_runtime() {
         "/api/graphics",
         "/api/proton/select",
         "/api/maintenance/start",
+        "/api/navigraph/open-hub",
+        "/api/navigraph/handler",
+        "/api/orbx/install",
+        "/api/orbx/open",
+        "/api/orbx/stop",
     ] {
         assert!(
             api::post(&f.app, route, &json!({}), "en").unwrap().is_err(),
@@ -258,6 +263,12 @@ fn steam_selection_persists_without_replacing_or_mutating_the_xbox_runtime() {
         legacy
     );
     assert_eq!(f.app.status()["cloud"]["enabled"], false);
+    for route in ["/api/navigraph", "/api/orbx"] {
+        let status = api::get(&f.app, route).unwrap().unwrap();
+        assert_eq!(status["state"], "unavailable");
+        assert_eq!(status["runtime_path"], item.context());
+        assert_eq!(status["managed_by"], "steam");
+    }
     assert_eq!(
         api::get(&f.app, "/api/cloud-saves").unwrap().unwrap()["available"],
         false
