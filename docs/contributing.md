@@ -136,3 +136,10 @@ extracts only fixed Wine/window-helper payloads named in the manifest and
 deploys current launcher-owned scripts; downloaded Python code is not imported.
 Fenix aircraft, Microsoft prerequisites, fonts,
 accounts and Wine profiles must not enter either project's release archives.
+
+## Keep the README current
+
+Update both `README.md` and `docs/readme.de.md` with user-visible behavior changes
+and releases. Keep stable-version and download links on a published release,
+include the current installation routes and describe tested scope accurately.
+Features on an unmerged branch must not be presented as already released.
