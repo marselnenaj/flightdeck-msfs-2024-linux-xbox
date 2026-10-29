@@ -33,7 +33,15 @@ void g_object_unref(void *object) {}
             .unwrap()
             .success()
     );
-    for missing in ["", "avdec_h264", "h264parse", "qtdemux"] {
+    for missing in [
+        "",
+        "avdec_h264",
+        "h264parse",
+        "qtdemux",
+        "deinterlace",
+        "videoflip",
+        "capssetter",
+    ] {
         let output = Command::new(env!("CARGO_BIN_EXE_flightdeck-rust"))
             .args(["--native-probe", "media"])
             .env_clear()

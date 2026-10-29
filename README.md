@@ -31,6 +31,7 @@ The launcher, installer and updater need no Python.
 verified GSX engine repair, bounded X11 startup checks and more precise media
 diagnostics. These changes are not included in 0.3.3. Hardware connections and
 the black-screen report in #16 still need tester validation.
+[CachyOS media regression test](docs/media-validation.md).
 
 **New in 0.3.3:** optional Orbx Central, Navigraph Hub and Simlink setup, plus
 GSX preparation for the selected **Xbox or Steam** MSFS 2020/2024 profile. These

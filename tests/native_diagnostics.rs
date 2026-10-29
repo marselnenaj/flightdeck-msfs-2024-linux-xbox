@@ -10,6 +10,37 @@ use flightdeck::{
 use serde_json::{Value, json};
 use std::{fs, io::Write, os::unix::fs::symlink, process::Command, time::Duration};
 #[test]
+fn existing_launch_logs_keep_the_actual_media_overlay_without_exporting_unknown_values() {
+    for overlay in [
+        "system_memory",
+        "unsupported",
+        "not_bundled",
+        "disabled",
+        "cache_changed",
+    ] {
+        let mut log = run_diagnostics::GameLog::default();
+        log.consume(&format!("flightdeck-media: source=host h264=default overlay={overlay}\nMissing decoder: H.264 (Main Profile) private-video-caps\n"));
+        let result = log.result(json!({"complete":true}));
+        assert_eq!(result["media"]["configuration"]["overlay"], overlay);
+        assert_eq!(result["media"]["observations"]["h264_decoder_missing"], 1);
+        assert!(!result.to_string().contains("private-video-caps"));
+    }
+    let mut log = run_diagnostics::GameLog::default();
+    log.consume("flightdeck-media: source=host h264=default overlay=private-value\n");
+    let result = log.result(json!({"complete":true}));
+    assert!(result["media"]["configuration"].get("overlay").is_none());
+    assert!(!result.to_string().contains("private-value"));
+}
+#[test]
+fn existing_wine_messages_name_only_known_missing_media_elements() {
+    let mut log = run_diagnostics::GameLog::default();
+    log.consume("winegstreamer: failed to create videoflip, are 64-bit GStreamer plugins installed?\nwinegstreamer: failed to create private_secret, are 64-bit GStreamer plugins installed?\n");
+    let out = log.result(json!({"complete":true}));
+    assert_eq!(out["media"]["missing_elements"], json!(["videoflip"]));
+    assert_eq!(out["media"]["observations"]["missing_plugin"], 2);
+    assert!(!out.to_string().contains("private_secret"));
+}
+#[test]
 fn media_probe_details_only_export_fixed_names_and_states() {
     let mut log = run_diagnostics::GameLog::default();
     log.consume(

@@ -80,12 +80,16 @@ pub fn display() -> Value {
     json!({"schema":1,"state":state})
 }
 
-pub const MEDIA_ELEMENTS: [&str; 5] = [
+pub const MEDIA_ELEMENTS: [&str; 9] = [
     "avdec_h264",
     "h264parse",
     "qtdemux",
     "decodebin",
     "videoconvert",
+    "capsfilter",
+    "capssetter",
+    "deinterlace",
+    "videoflip",
 ];
 
 /// Instantiate each fixed element to force its plugin and dependencies to load.

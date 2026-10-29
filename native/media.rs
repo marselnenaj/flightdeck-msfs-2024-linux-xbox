@@ -215,7 +215,11 @@ pub fn configure_verified(
                         u8::from(ready)
                     );
                 }
-                Ok(value["state"] == "ready" && value["h264"] == true)
+                Ok(value["state"] == "ready"
+                    && value["h264"] == true
+                    && crate::native_probe::MEDIA_ELEMENTS
+                        .iter()
+                        .all(|name| value["elements"][*name] == true))
             })();
             if let Err(error) = &result {
                 let state = if matches!(

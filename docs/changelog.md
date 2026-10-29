@@ -18,6 +18,11 @@
   Instantiate fixed GStreamer elements in the isolated probe and report media
   selection and missing elements without private log text. Issue #16's black
   screen is not yet confirmed fixed by the reporter.
+- Reproduce a failed H.264 decode with the exact official CachyOS 20261015 runner;
+  verify the corrected host fallback against the real 4K loading video in a fresh
+  account-free profile. Include Wine's post-processing elements in readiness checks
+  and retain the applied media overlay in safe diagnostics. See
+  [the comparison and its limits](media-validation.md).
 
 ## 0.3.3 — 28 October 2026
 
