@@ -28,6 +28,12 @@ Spieldownloads, Updates und Kontoanmeldung übernimmt Steam.
 **Lade die [neueste stabile Version](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/latest).**
 Launcher, Installer und Updater benötigen kein Python.
 
+**In Entwicklung:** alten `mscoree`-Override beim Öffnen oder Reparieren von Fenix
+korrigieren, mit Vorrang für native DLLs und lokaler Sicherung. Der Ladefehler aus
+[#10](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/issues/10) wurde
+in einem konto-freien Wine-Profil reproduziert und repariert. Noch nicht in 0.3.4
+enthalten; der vollständige Fenix-Installer muss noch geprüft werden.
+
 **Neu in 0.3.4:** Die Medienprüfung lädt Decoder und Wines Video-Nachbearbeitung
 tatsächlich, bevor Flightdeck einen Proton-Medienpfad auswählt. Das behebt einen
 Prüffehler bei zwischengespeicherten Plugin-Einträgen und verbessert die sichere

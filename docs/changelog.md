@@ -1,5 +1,17 @@
 # Changes and release status
 
+## In development
+
+- Keep native CLR DLL priority while permitting Wine builtin fallback during
+  .NET Framework preparation. Before opening or repairing Fenix, migrate only
+  native-only global `mscoree` values, retaining a private backup. Preserve
+  disabled/builtin preferences, per-app overrides and existing DLL files.
+- Reproduce issue #10's IL-only `System.Runtime.dll` load failure with the
+  default Xodus runner and .NET 8.0.31 in an isolated, account-free prefix.
+  Verify the actual Flightdeck preparation repairs the persisted override, loads
+  the same assembly and is idempotent. This verifies the loader failure class;
+  the reporter's 8.0.33 runtime and complete Fenix installer remain untested.
+
 ## 0.3.4 — 29 October 2026
 
 - Instantiate the MP4/H.264 decoder and Wine video post-processing elements in

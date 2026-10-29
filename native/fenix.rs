@@ -807,6 +807,7 @@ fn windows_app_run(
         &root.join("private/fenix-app.log"),
         &ctx.cancel,
     )?;
+    crate::fenix_installer::prepare(&wine)?;
     crate::fenix_desktop::ensure(&wine, &root.join("private/fenix-downloads"), ctx)?;
     if operation == "repair" {
         let version = crate::fenix_installer::installed_version(&prefix).inspect_err(|_| {
@@ -852,7 +853,6 @@ fn windows_app_run(
         attempt.package_version = crate::fenix_installer::installed_version(&prefix).ok();
     }
     setup::ui_fonts(&wine)?;
-    crate::fenix_installer::prepare(&wine)?;
     wine.reg(
         r"HKCU\Software\Wine\Explorer",
         "ShowSystray",

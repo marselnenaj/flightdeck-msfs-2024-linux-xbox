@@ -27,6 +27,12 @@ downloads, updates and account sign-in.
 **Download the [latest stable release](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/latest).**
 The launcher, installer and updater need no Python.
 
+**In development:** repair the legacy native-only `mscoree` override when opening
+or repairing Fenix, retaining native DLL priority and a local backup. The loader
+failure from [#10](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/issues/10)
+was reproduced and repaired in an account-free Wine profile. This addition is not
+in 0.3.4; full Fenix installer validation remains outstanding.
+
 **New in 0.3.4:** verify that video decoders and Wine's post-processing elements
 actually load before selecting a Proton media stack. This fixes a cached-factory
 validation defect and improves safe diagnostics for missing codecs. The corrected
