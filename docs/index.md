@@ -18,6 +18,7 @@ Hardware reports describe the tested setup, not universal compatibility.
 | [Known issues](known-issues.md) · [Deutsch](known-issues.de.md) | Check current limitations before troubleshooting. |
 | [Cloud saves](cloud-saves.md) · [Deutsch](cloud-saves.de.md) | Use sync, local backups, conflict recovery and interrupted-session recovery. |
 | [Add-ons](addons.md) · [Deutsch](addons.de.md) | Set up Community packages, Fenix and GSX; experimental Orbx, Navigraph Hub and Simlink for Xbox and Steam. |
+| [MobiFlight / WinWing](mobiflight.md) · [Deutsch](mobiflight.de.md) | Development integration: prepare cockpit hardware software and diagnose Linux device access. |
 | [VR](vr.md) · [Deutsch](vr.de.md) | Prepare OpenXR and check the current headset validation scope. |
 | [Problem reports](problem-reports.md) · [Deutsch](problem-reports.de.md) | Review diagnostics and prepare a useful report. |
 | [Languages](localization.md) | Choose German or English for the desktop, installer and CLI. |

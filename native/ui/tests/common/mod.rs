@@ -35,7 +35,7 @@ pub fn fixture() -> App {
     ]}));
     app.snapshot.insert("mods",json!({"state":"ready","runtime_path":"/synthetic/msfs2024","can_open":true,"can_remove":true,"folder_path":"/synthetic/Community","message":"Der Community-Ordner wurde gefunden.","count":0,"mods":[]}));
     app.snapshot.insert("fenix",json!({"state":"installed","runtime_path":"/synthetic/msfs2024","can_change":true,"installed":true,"fenix_installed":true,"settings_ready":true,"manager_installed":true,"configured":true,"can_restore":true}));
-    app.snapshot.insert("gsx",json!({"state":"available","runtime_path":"/synthetic/msfs2024","can_change":true,"prepared":true,"package_installed":true,"startup_found":true,"configured":true}));
+    app.snapshot.insert("gsx",json!({"state":"available","runtime_path":"/synthetic/msfs2024","can_change":true,"prepared":true,"engine_ready":true,"package_installed":true,"startup_found":true,"configured":true}));
     app.snapshot.insert("launcher-update",json!({"managed":true,"installed_version":"0.2.2","can_check":true,"can_install":true,"check_id":"checked-launcher","latest_version":"0.2.3","notes":"Synthetic release notes"}));
     app.snapshot.insert("game-update",json!({"available":true,"installed_version":"1.6.0","latest_version":"1.6.0","can_check":true,"can_repair":true,"integrity":{"can_check":true,"available":true}}));
     app.snapshot.insert("cloud-saves",json!({"available":true,"can_check":true,"can_download":true,"can_prepare_import":true,"can_import":true,"can_upload":true,"can_restore":true,"plan":{"id":"reviewed-plan","container_count":3,"local_container_count":2,"blob_count":6,"total_bytes":24576,"add_count":1,"replace_count":2,"delete_count":0,"unchanged_count":0,"conflict_count":1},"restore_id":"owned-backup"}));

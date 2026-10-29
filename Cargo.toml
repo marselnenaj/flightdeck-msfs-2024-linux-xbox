@@ -6,7 +6,7 @@ rust-version = "1.98"
 license = "MIT"
 description = "Local MSFS launcher for Linux"
 publish = false
-include = ["Cargo.toml", "Cargo.lock", "LICENSE", "native/**", "tests/*.rs", "tests/fixtures/**", "examples/**", "ui/*.svg", "ui/*.png", "ui/*.woff2", "scripts/runtime/*", "compat/*.json", "compat/fenix/*.json"]
+include = ["Cargo.toml", "Cargo.lock", "LICENSE", "native/**", "tests/*.rs", "tests/fixtures/**", "examples/**", "ui/*.svg", "ui/*.png", "ui/*.woff2", "scripts/runtime/*", "compat/*.json", "compat/fenix/*.json", "compat/mobiflight/**"]
 
 [lib]
 name = "flightdeck"
@@ -14,6 +14,7 @@ path = "native/lib.rs"
 
 [features]
 bundled-media = []
+bundled-mobiflight = []
 
 [[bin]]
 name = "flightdeck-rust"

@@ -69,6 +69,21 @@ launcher-only development. A full package rejects a binary missing the verified
 payload. `FLIGHTDECK_MEDIA_SYSTEM_MEMORY=0` opts out for comparisons.
 The media probe below reports `overlay: system_memory` for a matching runner.
 
+Full releases also embed the verified HidSharp compatibility DLL. A maintainer
+.NET 10 SDK builds the reviewed patcher; users need neither the SDK nor a compiler:
+
+```sh
+target/debug/flightdeck-tools mobiflight-build --download \
+  --sources build/mobiflight-inputs --work build/mobiflight-work --output build/mobiflight
+target/debug/flightdeck-tools build-native --toolchain 1.98.0 --bundled-media --bundled-mobiflight
+```
+
+The builder requires two identical outputs matching the lock. See
+[MobiFlight provenance](compat/mobiflight/README.md). Include both
+`--media-sources build/media-inputs` and `--mobiflight-sources build/mobiflight-inputs`
+when creating a full `source-release`. Full package assembly rejects a binary
+without either verified payload and includes the corresponding license notices.
+
 
 Before changing a Wine runner's media setup, test the actual video through the
 launcher's media configuration. Build the driver and tool, then use a new output

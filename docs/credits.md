@@ -26,6 +26,11 @@ English, including the compact icon navigation and without a configured game.
 - **DXVK**, **VKD3D-Proton**, GStreamer and FFmpeg, including their contributors.
 - **Rust**, **iced**, **tiny-skia** and all production Rust dependencies.
 - **Fenix A320 Linux Patch**, the optional patch and shared Rust Steam installer engine.
+- **MobiFlight / HubHop**, cockpit hardware integration, WASM module and event data.
+  The community add-on patch supplied the starting ideas for the reviewed HID work.
+- **James F. Bellinger / HidSharp**, Apache-2.0 HID library; Flightdeck's separately
+  built compatibility change retains the original copyright and full license.
+- **Mono.Cecil**, MIT-licensed maintainer-only assembly tooling.
 
 Project and contributor credits acknowledge their work; they do not imply
 endorsement or that every external program is bundled. Compatibility components

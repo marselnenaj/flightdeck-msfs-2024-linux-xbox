@@ -20,6 +20,7 @@ use std::{
     },
     path::{Path, PathBuf},
     process::{Child, Command, Stdio},
+    sync::atomic::AtomicBool,
     time::{Duration, Instant},
 };
 pub type Environment = BTreeMap<String, String>;
@@ -318,6 +319,9 @@ impl Drop for Session<'_> {
             if crate::navigraph::startup_enabled(self.root) {
                 companions.extend(crate::navigraph::SIMLINK);
             }
+            if crate::mobiflight::startup_enabled(self.root) {
+                companions.extend(crate::mobiflight::PROCESSES);
+            }
             if let Err(error) = wine_processes::stop(self.root, &companions) {
                 eprintln!("Windows process cleanup did not finish: {error}");
             }
@@ -342,6 +346,13 @@ async fn pending_stop(
     }
 }
 pub fn run(root: &Path, lease: Option<i32>) -> Result<u8> {
+    run_with_state(
+        root,
+        lease,
+        &files::xdg("XDG_STATE_HOME", ".local/state").join("flightdeck"),
+    )
+}
+pub fn run_with_state(root: &Path, lease: Option<i32>, state_dir: &Path) -> Result<u8> {
     // Install termination handlers before synchronous prefix/environment work.
     // Pending Stop requests are consumed before either child can start.
     let executor = tokio::runtime::Builder::new_current_thread()
@@ -354,12 +365,14 @@ pub fn run(root: &Path, lease: Option<i32>) -> Result<u8> {
             tokio::signal::unix::signal(tokio::signal::unix::SignalKind::interrupt())?,
         )
     };
+    crate::display_preflight::restore_pending(state_dir, &AtomicBool::new(false))?;
     let root = root.canonicalize()?;
     let _lease = if let Some(number) = lease {
         inherited_lease(&root, number)?
     } else {
         files::Lease::acquire(&root.join("private/play.lock"), true)?.0
     };
+    crate::display_preflight::ensure(&root, state_dir, &AtomicBool::new(false))?;
     let game = Game::for_runtime(&root)?;
     let (env, socket_dir) = environment(&root)?;
     let env = game_environment(&root, env)?;
@@ -408,6 +421,7 @@ pub fn spawn_reserved(ctx: &Context) -> Result<Value> {
         "Die Runtime ist nicht startbereit oder das Spiel läuft bereits.",
     )?;
     wine_processes::idle(&root.join("local/msfs-prefix"))?;
+    crate::display_preflight::ensure(root, &ctx.launcher.state_dir, &ctx.cancel)?;
     crate::fenix_update::ensure(ctx)?;
     crate::framework_maintenance::ensure(ctx)?;
     ctx.launcher.lock().graphics_report = Value::Null;
@@ -457,6 +471,8 @@ pub fn spawn_reserved(ctx: &Context) -> Result<Value> {
     let log = process::log(&ctx.launcher.state_dir.join("launcher.log"))?;
     let mut command = Command::new(std::env::current_exe()?);
     command
+        .arg("--state-dir")
+        .arg(&ctx.launcher.state_dir)
         .args(["run-game", "--runtime"])
         .arg(root)
         .arg("--lock-fd")

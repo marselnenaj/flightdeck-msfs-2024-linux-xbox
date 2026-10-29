@@ -2,6 +2,13 @@
 
 [Deutsche Anleitung](addons.de.md)
 
+Development builds also provide [MobiFlight / WinWing setup](mobiflight.md) and
+**GSX → Manage & repair → Repair GSX engine**. Engine repair verifies pinned
+official FSDT archives, stages changes with recovery information and checks the
+engine separately from the full GSX product. It does not supply a license or
+claim that Community product files are installed. Existing Community entries,
+simulator XML and activation files remain intact.
+
 **Since 0.3.3:** GSX, Navigraph Hub/Simlink and Orbx Central use the selected
 Xbox or Steam MSFS 2020/2024 installation's existing Wine profile and Proton.
 These integrations remain experimental. For Steam, choose Proton in the game's

@@ -42,6 +42,27 @@ fn only_explicit_source_paths_are_exported() {
 }
 
 #[test]
+fn reviewed_mobiflight_builder_source_and_project_are_exported() {
+    let tree = Tree::new();
+    tree.put(
+        "compat/mobiflight/Program.cs",
+        "// reviewed patch builder\n",
+    );
+    tree.put(
+        "compat/mobiflight/HidPatch.csproj",
+        "<Project Sdk=\"Microsoft.NET.Sdk\" />\n",
+    );
+    assert!(
+        tree.names()
+            .contains(&"compat/mobiflight/Program.cs".to_string())
+    );
+    assert!(
+        tree.names()
+            .contains(&"compat/mobiflight/HidPatch.csproj".to_string())
+    );
+}
+
+#[test]
 fn retired_application_and_installers_cannot_return() {
     let tree = Tree::new();
     for name in RETIRED {

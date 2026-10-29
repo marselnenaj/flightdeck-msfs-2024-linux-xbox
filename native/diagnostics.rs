@@ -55,6 +55,9 @@ pub fn from_state(s: &State) -> Value {
         .collect::<serde_json::Map<_, _>>()
         .into();
     summary["graphics"] = graphics::probe(false);
+    summary["display"] = root
+        .map(crate::display_preflight::snapshot)
+        .unwrap_or(Value::Null);
     summary["proton"] = proton::diagnostic(root);
     let vr = vr::launcher_snapshot(s);
     summary["vr"] = json!({"mode":vr["mode"],"state":vr["state"]});

@@ -338,6 +338,22 @@ fn payload(root: &Path, inputs: &Inputs<'_>) -> Result<(Members, Value)> {
         )?;
         notice.extend_from_slice(b"\nWine GStreamer system-memory compatibility module\nWine contributors; OnlyCrayZ-Labs contributors (2026 system-memory negotiation fix).\nThis separately loaded module is LGPL-2.1-or-later. Its exact original Wine and xgameruntime sources, patch and build instructions are supplied in media-sources/ and compat/media/ of the matching Flightdeck source archive.\n");
         notice.extend(fs::read(root.join("compat/LICENSES/LGPL-2.1.txt"))?);
+        let mobiflight: Value = serde_json::from_str(&output(
+            Command::new(&binary).args(["--native-probe", "mobiflight-bundle"]),
+            "The MobiFlight HID payload",
+        )?)?;
+        let lock = crate::mobiflight::lock(root)?;
+        require(
+            mobiflight["bundled"] == true
+                && mobiflight["sha256"] == lock["hidsharp"]["patched_sha256"],
+            "Full releases require the verified bundled-mobiflight feature",
+        )?;
+        notice.extend_from_slice(b"\nModified HidSharp 2.6.4 compatibility DLL (Apache-2.0)\nThe copyright notice, full license, changes and rebuild instructions follow. The source builder and pinned NuGet inputs are in compat/mobiflight/ and mobiflight-sources/ in the matching source archive. MobiFlight Connector is downloaded separately from its official MIT-licensed release.\n");
+        notice.extend(fs::read(
+            root.join("compat/mobiflight/HidSharp-LICENSE.txt"),
+        )?);
+        notice.extend_from_slice(b"\n");
+        notice.extend(fs::read(root.join("compat/mobiflight/README.md"))?);
     }
     let mut values = Members::new();
     values.insert("bin/flightdeck".into(), raw);
