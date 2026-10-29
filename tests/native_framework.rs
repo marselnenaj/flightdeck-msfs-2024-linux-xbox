@@ -80,6 +80,12 @@ impl SetupWine for Fake {
         Ok(())
     }
     fn reg(&mut self, key: &str, name: &str, value: &str, kind: &str) -> Result<()> {
+        if name == "mscoree" {
+            assert_eq!(
+                value, "native,builtin",
+                "CLR setup must retain the builtin fallback"
+            );
+        }
         self.calls
             .push(["reg", key, name, value, kind].map(str::to_string).to_vec());
         Ok(())

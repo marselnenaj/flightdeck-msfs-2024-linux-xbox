@@ -164,6 +164,17 @@ fn run(input: Value) -> Result<Value> {
                 .collect();
             Ok(json!({"environment":env,"source":source,"h264":decoder,"overlay":overlay}))
         }
+        "fenix-environment" => {
+            let root = synthetic(&input)?;
+            let wine = wine::Wine::new(
+                &root.join("local/msfs-prefix"),
+                &root.join("runner"),
+                &root.join("private/fenix-environment.log"),
+                &cancel,
+            )?;
+            flightdeck::fenix_installer::prepare(&wine)?;
+            Ok(json!(true))
+        }
         "fenix" => fenix_fixture(&synthetic(&input)?, &path(&input, "bundle")?),
         "fenix-check" => {
             let root = synthetic(&input)?;

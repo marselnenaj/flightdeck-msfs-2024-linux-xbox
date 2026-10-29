@@ -27,9 +27,11 @@ downloads, updates and account sign-in.
 **Download the [latest stable release](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/latest).**
 The launcher, installer and updater need no Python.
 
-**In development:** selected-profile [MobiFlight / WinWing setup](docs/mobiflight.md),
-verified GSX engine repair and bounded X11 startup checks. These additions are
-not included in 0.3.4. Hardware connections still need tester validation.
+**New in 0.3.5:** [MobiFlight / WinWing setup](docs/mobiflight.md), GSX engine
+repair, bounded X11 startup checks and a repair for the native-only CLR override
+behind the Fenix loader failure in #10. Hardware connections and full-flight
+addon behavior remain experimental. The loader correction was reproduced in an
+account-free Wine profile; full Fenix installer validation remains outstanding.
 
 **New in 0.3.4:** verify that video decoders and Wine's post-processing elements
 actually load before selecting a Proton media stack. This fixes a cached-factory

@@ -1,7 +1,19 @@
 # Changes and release status
 
-## In development
+## 0.3.5 — 29 October 2026
 
+- Integrate Fenix patch 0.1.2 and its pinned source revision. Pair the loader
+  repair across the standalone installer and Flightdeck; retain 0.1.1 restore
+  identities and verify launcher updating/rollback against published 0.3.4.
+- Keep native CLR DLL priority while permitting Wine builtin fallback during
+  .NET Framework preparation. Before opening or repairing Fenix, migrate only
+  native-only global `mscoree` values, retaining a private backup. Preserve
+  disabled/builtin preferences, per-app overrides and existing DLL files.
+- Reproduce issue #10's IL-only `System.Runtime.dll` load failure with the
+  default Xodus runner and Microsoft-verified .NET 8.0.33 in an isolated, account-free prefix.
+  Verify the actual Flightdeck preparation repairs the persisted override, loads
+  the same assembly and is idempotent. This verifies the loader failure class;
+  the complete Fenix installer remains untested.
 - Prepare official MobiFlight 11.3.1, its WASM module and missing HubHop events in
   the selected Xbox or Steam profile. Preserve custom events and unknown DLLs;
   bundle a reproducible, hash-bound HidSharp fix with its license and sources.

@@ -28,9 +28,11 @@ Spieldownloads, Updates und Kontoanmeldung übernimmt Steam.
 **Lade die [neueste stabile Version](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/latest).**
 Launcher, Installer und Updater benötigen kein Python.
 
-**In Entwicklung:** [MobiFlight / WinWing](mobiflight.de.md) im gewählten Profil,
-geprüfte GSX-Engine-Reparatur und begrenzte X11-Startprüfung. Diese Ergänzungen
-sind noch nicht in 0.3.4 enthalten. Hardware-Verbindungen müssen Tester noch bestätigen.
+**Neu in 0.3.5:** [MobiFlight / WinWing](mobiflight.de.md), GSX-Engine-Reparatur,
+begrenzte X11-Startprüfung und eine Reparatur des CLR-Overrides hinter dem
+Fenix-Ladefehler aus #10. Hardware-Verbindungen und vollständige Add-on-Flüge
+bleiben experimentell. Die Loader-Korrektur wurde in einem konto-freien
+Wine-Profil geprüft; der vollständige Fenix-Installer muss noch bestätigt werden.
 
 **Neu in 0.3.4:** Die Medienprüfung lädt Decoder und Wines Video-Nachbearbeitung
 tatsächlich, bevor Flightdeck einen Proton-Medienpfad auswählt. Das behebt einen

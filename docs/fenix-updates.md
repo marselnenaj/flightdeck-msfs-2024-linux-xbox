@@ -1,5 +1,33 @@
 # Fenix patch update contract
 
+## Flightdeck 0.3.5: native-only CLR loader override
+
+[Issue #10](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/issues/10#issuecomment-6500878026)
+reports an install hook failing on an existing `System.Runtime.dll` with
+`System.IO.FileNotFoundException`. A native-only `mscoree` override can prevent
+Wine from loading an IL-only assembly when the prefix contains Wine's builtin
+loader. Checking that the assembly or Framework CLR files exist does not detect
+this loader failure.
+
+The correction writes `native,builtin` during Framework preparation,
+so an installed native CLR loader retains priority. Before Fenix installer/app
+preparation, existing global `native`/`n` values migrate to that fallback policy
+through Wine's registry commands. The previous value is retained in the prefix's
+private `.flightdeck-fenix-environment.json` backup. Existing DLL files, per-app
+settings and disabled/builtin preferences are preserved. Xbox preparation runs
+before the desktop-runtime helper, matching the Steam preparation order.
+
+An account-free test with the default Xodus Wine build and an unchanged .NET
+8.0.33 `System.Runtime.dll` reproduces error 126 with the native-only policy.
+The actual preparation routine fixes the persisted registry value; the same
+assembly then loads successfully. A second call creates no additional backup
+entry. `tests/windows/managed-load.c` is the small loader probe used for this
+comparison. It does not execute a Fenix hook or start a simulator/account.
+Full Fenix installation still needs tester validation.
+This correction first ships in 0.3.5.
+
+## Published update descriptor
+
 Flightdeck 0.2.20 and later discover releases from the fixed public
 `marselnenaj/fenix-a320-linux-patch` GitHub repository. The bounded release feed
 must advertise one uploaded `flightdeck-update.json` asset with a GitHub SHA-256
