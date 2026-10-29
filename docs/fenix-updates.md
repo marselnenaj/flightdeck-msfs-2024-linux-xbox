@@ -18,12 +18,12 @@ settings and disabled/builtin preferences are preserved. Xbox preparation runs
 before the desktop-runtime helper, matching the Steam preparation order.
 
 An account-free test with the default Xodus Wine build and an unchanged .NET
-8.0.31 `System.Runtime.dll` reproduces error 126 with the native-only policy.
+8.0.33 `System.Runtime.dll` reproduces error 126 with the native-only policy.
 The actual preparation routine fixes the persisted registry value; the same
 assembly then loads successfully. A second call creates no additional backup
 entry. `tests/windows/managed-load.c` is the small loader probe used for this
 comparison. It does not execute a Fenix hook or start a simulator/account.
-The reporter's .NET 8.0.33 and full Fenix installation still need validation.
+Full Fenix installation still needs tester validation.
 This correction first ships in 0.3.5.
 
 ## Published update descriptor

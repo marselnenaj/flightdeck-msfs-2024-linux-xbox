@@ -248,6 +248,14 @@ impl Fixture {
     }
 }
 impl System for Fixture {
+    fn prepare_clr_loader(&self, wine: &dyn Wine) -> fenix_patch::Result<()> {
+        // This adapter has synthetic registry/prerequisite steps and a
+        // deliberately non-executable Wine file. Real migration is covered
+        // by the CLR loader tests and the account-free Wine probe.
+        assert!(wine.prefix().starts_with(self.bundle.parent().unwrap()));
+        Ok(())
+    }
+
     fn root(&self) -> &Path {
         &self.bundle
     }

@@ -2,6 +2,7 @@
 //! Repair the legacy native-only CLR override and demonstrably missing startup hooks.
 //! Existing hooks and unresolved/relative/expanded values are preserved.
 use crate::{Result, error::require, files, framework_repair, process, wine::Wine};
+use fenix_patch::clr_loader::native_only;
 use serde_json::{Value, json};
 use std::{fs, path::Path, time::Duration};
 
@@ -84,28 +85,6 @@ fn backup(prefix: &Path, change: Value) -> Result<()> {
         .expect("checked array")
         .push(change);
     files::atomic_json(&backup, &record)
-}
-
-fn native_only(output: &str) -> Option<&str> {
-    let values: Vec<_> = output
-        .lines()
-        .filter_map(|line| {
-            let (name, rest) = line.trim_start().split_once(char::is_whitespace)?;
-            if !name.eq_ignore_ascii_case("mscoree") {
-                return None;
-            }
-            let (kind, value) = rest.trim_start().split_once(char::is_whitespace)?;
-            Some((kind, value.trim()))
-        })
-        .collect();
-    match values.as_slice() {
-        [("REG_SZ", value)]
-            if value.eq_ignore_ascii_case("native") || value.eq_ignore_ascii_case("n") =>
-        {
-            Some(*value)
-        }
-        _ => None,
-    }
 }
 
 fn repair_loader(wine: &Wine<'_>) -> Result<()> {

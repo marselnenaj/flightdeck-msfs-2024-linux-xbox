@@ -20,7 +20,7 @@ pub const PACKAGES: [(&str, &str, &str); 2] = [
 pub const INSTALLER_OVERRIDES: &str = "fusion=b;winemenubuilder.exe=d";
 // Keep Microsoft .NET preferred, while allowing Wine's IL-only assembly loader
 // when a prefix still contains a builtin mscoree.dll.
-pub const MSCOREE_OVERRIDE: &str = "native,builtin";
+pub const MSCOREE_OVERRIDE: &str = fenix_patch::clr_loader::MSCOREE_OVERRIDE;
 // Wine exposes the low byte of Windows ERROR_SUCCESS_REBOOT_REQUIRED (3010).
 pub const INSTALLER_EXIT_CODES: &[i32] = &[0, 194];
 pub trait SetupWine {
