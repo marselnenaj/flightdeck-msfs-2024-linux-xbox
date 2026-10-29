@@ -1,5 +1,26 @@
 # Changes and release status
 
+## 0.3.4 — 29 October 2026
+
+- Instantiate the MP4/H.264 decoder and Wine video post-processing elements in
+  the isolated media probe. Cached factory metadata no longer counts as proof
+  that a decoder loads. Verify the full chain before choosing a host fallback;
+  retain explicit media settings and hardware fallback behavior.
+- Record typed media readiness, selection reason, missing H.264 decoder/known
+  elements and the applied compatibility overlay in safe diagnostics. Exclude
+  raw plugin errors, private paths and video caps. Clear stale authentication
+  failure phases after successful or retried setup while retaining actual
+  cancelled-download failures.
+- Reproduce a failed decode with the exact official CachyOS 20261015 runner and
+  verify the corrected host fallback against the real 3840×2160 loading video:
+  two 120-frame NV12 passes, rewind, EOS and shutdown. Cache-sensitive repeats
+  selected the host path with both old drivers; this does not establish a
+  deterministic source-version difference or confirm the full outcome in #16.
+  See [the comparison and limits](media-validation.md).
+- Add cached-but-unloadable factory, missing post-processing element and
+  sanitized legacy-log regressions. Test packaged updating and rollback against
+  the pinned published 0.3.3 package.
+
 ## 0.3.3 — 28 October 2026
 
 - Add experimental Orbx Central 4.5.50, Navigraph Hub and Simlink setup. Extend

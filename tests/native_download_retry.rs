@@ -315,6 +315,34 @@ fn a_zero_exit_after_retry_does_not_replace_package_validation() {
 }
 
 #[test]
+fn completed_or_retried_setup_does_not_report_a_stale_authentication_failure() {
+    let temp = tempfile::tempdir().unwrap();
+    let old = json!({"schema":1,"id":"b".repeat(32),"mode":"install", "game_id":"msfs2024","state":"complete","phase":"complete", "failure_phase":"authentication","download_exit_code":0,"login_exit_code":0});
+    // Old releases already persisted this misleading combination. Loading it
+    // must sanitize the evidence as well as recording newly completed jobs.
+    files::atomic_json(&temp.path().join("setup-attempt.json"), &old).unwrap();
+    let loaded = setup_diagnostics::load(temp.path());
+    assert_eq!(loaded["state"], "complete");
+    assert_eq!(loaded["phase"], "complete");
+    assert!(loaded.get("failure_phase").is_none());
+    for state in ["installing", "ready", "cancelled", "complete"] {
+        let mut job = old.clone();
+        job["state"] = json!(state);
+        assert!(
+            setup_diagnostics::summary(&job)
+                .get("failure_phase")
+                .is_none()
+        );
+    }
+    let mut failed = old;
+    failed["state"] = json!("failed");
+    assert_eq!(
+        setup_diagnostics::summary(&failed)["failure_phase"],
+        "authentication"
+    );
+}
+
+#[test]
 fn setup_evidence_is_a_closed_projection_and_rejects_private_or_malformed_values() {
     let private = "/private/account/token";
     let job = json!({"id":"a".repeat(32),"mode":"install","game_id":"msfs2024","state":"failed","phase":"download_failed","failure_phase":"download", "download_exit_code":42, "login_exit_code":0, "download_attempt":1, "message":private,"error":private,"workspace_path":private,"url":private,"token":private,"recorded_at":private});
