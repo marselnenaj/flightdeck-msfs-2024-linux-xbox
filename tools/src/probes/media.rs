@@ -52,10 +52,11 @@ pub fn run(site: &Site, args: &Arguments) -> Result<u8> {
     host::new_dirs(&root.join("local"), host::PRIVATE)?;
     std::os::unix::fs::symlink(&runner, root.join("runner"))?;
     lab::mark(&root)?;
-    let prepared = site.lab.call(
+    let prepared = site.lab.call_with_stderr(
         "media-env",
         json!({"root":root,
         "runner_media":args.runner_media,"prefer_software":args.prefer_software}),
+        &output.join("media-selection.log"),
     )?;
     let mut env: Environment = serde_json::from_value(prepared["environment"].clone())?;
     for category in ["CONFIG", "DATA", "CACHE", "STATE"] {

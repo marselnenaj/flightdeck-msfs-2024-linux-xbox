@@ -20,6 +20,11 @@ Each test used a new Wine prefix and private caches. No game or account was star
 | First 0.3.3 run | Runner | H.264 decoder missing; Media Foundation failed with `c00d36bb` |
 | Repeated selection with both drivers and warmed caches | Host | Both selected the verified host fallback |
 | Corrected decoder validation, fresh profile | Host | Both passes, rewind, EOS and shutdown passed |
+| First final-version run without selection trace | Runner | Decode failed; the reason for retaining the runner was not captured |
+| Twenty subsequent fresh-cache selections, including eight after evicting the test driver's file cache | Host | All selected the verified host fallback |
+| Two full runs with retained selection trace | Host | Both passes, rewind, EOS and shutdown passed in both new profiles |
+| Final bounded-retry implementation, eight fresh-cache selections | Host | All selected the verified host fallback |
+| Final bounded-retry implementation, full video test in another new profile | Host | Both passes, rewind, EOS and shutdown passed |
 
 The runner's codec plugins report unavailable `libvpx.so.9` and other Steam
 runtime dependencies outside their intended container. The fallback must verify
@@ -34,6 +39,13 @@ the two source versions, nor prove that it explains every symptom in #16.
 The reporter's export names the host path but omits the missing element and the
 applied overlay. Updated diagnostics retain those fixed-name facts from existing
 logs. A fresh reporter test is still needed for the full simulator outcome.
+The untraced failed run is retained as a limitation; it is not counted as a
+successful regression test. The developer probe now saves `media-selection.log`,
+and launch diagnostics include the host-loader check so future failures retain
+the complete selection decision.
+An unsuccessful host fallback is checked once more before retaining an incomplete
+runner stack. Synthetic tests cover a transient codec failure, a transient loader
+failure and a persistent loader failure; a failing loader never becomes accepted.
 
 To repeat the account-free test, build the driver as described in
 [BUILDING.md](../BUILDING.md), then run `flightdeck-tools probe media` with

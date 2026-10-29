@@ -29,10 +29,16 @@ Spieldownloads, Updates und Kontoanmeldung übernimmt Steam.
 Launcher, Installer und Updater benötigen kein Python.
 
 **In Entwicklung:** [MobiFlight / WinWing](mobiflight.de.md) im gewählten Profil,
-geprüfte GSX-Engine-Reparatur, begrenzte X11-Startprüfung und genauere
-Mediendiagnose. Diese Änderungen sind noch nicht in 0.3.3 enthalten.
-Hardware-Verbindungen und der Black-Screen-Bericht in #16 müssen Tester noch bestätigen.
-[CachyOS-Medienvergleich und Testumfang](media-validation.md).
+geprüfte GSX-Engine-Reparatur und begrenzte X11-Startprüfung. Diese Ergänzungen
+sind noch nicht in 0.3.4 enthalten. Hardware-Verbindungen müssen Tester noch bestätigen.
+
+**Neu in 0.3.4:** Die Medienprüfung lädt Decoder und Wines Video-Nachbearbeitung
+tatsächlich, bevor Flightdeck einen Proton-Medienpfad auswählt. Das behebt einen
+Prüffehler bei zwischengespeicherten Plugin-Einträgen und verbessert die sichere
+Diagnose fehlender Codecs. Der korrigierte CachyOS-20261015-Fallback bestand den
+echten 4K-Ladevideotest einschließlich Zurückspulen und sauberem Beenden. Den
+vollständigen Simulatorstart in #16 muss der Tester noch bestätigen.
+[Reproduktion und Testumfang](media-validation.md)
 
 **Neu in 0.3.3:** optionale Einrichtung von Orbx Central, Navigraph Hub und
 Simlink sowie GSX-Vorbereitung im gewählten **Xbox- oder Steam-Profil** von MSFS

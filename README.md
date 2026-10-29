@@ -28,10 +28,15 @@ downloads, updates and account sign-in.
 The launcher, installer and updater need no Python.
 
 **In development:** selected-profile [MobiFlight / WinWing setup](docs/mobiflight.md),
-verified GSX engine repair, bounded X11 startup checks and more precise media
-diagnostics. These changes are not included in 0.3.3. Hardware connections and
-the black-screen report in #16 still need tester validation.
-[CachyOS media regression test](docs/media-validation.md).
+verified GSX engine repair and bounded X11 startup checks. These additions are
+not included in 0.3.4. Hardware connections still need tester validation.
+
+**New in 0.3.4:** verify that video decoders and Wine's post-processing elements
+actually load before selecting a Proton media stack. This fixes a cached-factory
+validation defect and improves safe diagnostics for missing codecs. The corrected
+CachyOS 20261015 fallback passed the real 4K loading-video test, including rewind
+and completed shutdown. The full simulator outcome in #16 still needs the
+reporter's retest. [Reproduction and tested scope](docs/media-validation.md)
 
 **New in 0.3.3:** optional Orbx Central, Navigraph Hub and Simlink setup, plus
 GSX preparation for the selected **Xbox or Steam** MSFS 2020/2024 profile. These

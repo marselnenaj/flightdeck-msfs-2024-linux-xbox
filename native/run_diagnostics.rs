@@ -198,6 +198,15 @@ impl GameLog {
         for captures in regex(r"\bflightdeck-media-probe: source=(host|runner) state=(ready|incomplete|initialization_failed|unavailable|probe_failed|timeout)(?:\s|$)").captures_iter(text) {
             self.media_probes.entry(captures[1].into()).or_insert_with(|| json!({"elements":{}}))["state"] = json!(&captures[2]);
         }
+        for captures in regex(
+            r"\bflightdeck-media-loader: source=(host) state=(ready|probe_failed|timeout)(?:\s|$)",
+        )
+        .captures_iter(text)
+        {
+            self.media_probes
+                .entry(captures[1].into())
+                .or_insert_with(|| json!({"elements":{}}))["loader"] = json!(&captures[2]);
+        }
         for captures in regex(r"\bflightdeck-media-element: source=(host|runner) name=(avdec_h264|h264parse|qtdemux|decodebin|videoconvert|capsfilter|capssetter|deinterlace|videoflip) ready=([01])(?:\s|$)").captures_iter(text) {
             self.media_probes.entry(captures[1].into()).or_insert_with(|| json!({"elements":{}}))["elements"][&captures[2]] = json!(&captures[3] == "1");
         }

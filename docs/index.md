@@ -2,7 +2,7 @@
 
 [Overview and quick start](../README.md) · [Deutsch](readme.de.md) · [Discord community](https://discord.gg/fAhHR2DkqN)
 
-This documentation covers the current stable release, **0.3.3**, and explicitly
+This documentation covers the current stable release, **0.3.4**, and explicitly
 marked development additions. The
 [changelog](changelog.md) records its changes and earlier releases.
 Hardware reports describe the tested setup, not universal compatibility.
@@ -56,6 +56,8 @@ These pages describe implementation and test evidence rather than setup steps.
 - [Connected Storage protocol](connected-storage-protocol.md): native save operations.
 - [Store session refresh](store-session-refresh.md): session-lifetime behavior.
 - [Diagnostic follow-up](diagnostic-follow-up.md): interpreting remaining diagnostic cases.
+- [CachyOS media validation](media-validation.md): alternate-Proton video checks,
+  the reproduced failure and the remaining reporter-validation scope.
 - [VR validation](vr-validation.md): isolated graphics and headset-test scope.
 - [Experimental neural rendering](neural-rendering.md): separate experimental
   work; not an established NVIDIA feature or general compatibility guarantee.
