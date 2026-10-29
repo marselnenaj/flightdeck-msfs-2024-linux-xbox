@@ -102,7 +102,10 @@ fn automatic_enabled(s: &crate::backend::State, enabled: bool) -> Value {
     let local = attention
         && !review
         && (value["phase"] == "before_start"
-            && !matches!(code, "unsafe_session" | "graphics" | "framework" | "launch")
+            && !matches!(
+                code,
+                "unsafe_session" | "display" | "graphics" | "framework" | "launch"
+            )
             || value["phase"] == "after_exit"
                 && matches!(
                     code,

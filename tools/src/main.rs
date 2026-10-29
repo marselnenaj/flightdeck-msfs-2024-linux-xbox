@@ -10,6 +10,7 @@ mod drivers;
 mod entrypoint_tests;
 mod http;
 mod media;
+mod mobiflight;
 mod package;
 mod package_check;
 mod probes;
@@ -36,12 +37,14 @@ struct Arguments {
 enum Command {
     /// Inspect the source-release allowlist; no runtime data is included.
     SourceCheck,
-    /// Create an inspected sources-only archive under build/.
+    /// Create an inspected source archive with optional verified build inputs.
     SourceRelease {
         #[arg(long)]
         output: PathBuf,
         #[arg(long)]
         media_sources: Option<PathBuf>,
+        #[arg(long)]
+        mobiflight_sources: Option<PathBuf>,
     },
     /// Build the release executable with checkout, Cargo and toolchain paths remapped.
     BuildNative {
@@ -52,11 +55,15 @@ enum Command {
         toolchain: Option<String>,
         #[arg(long)]
         bundled_media: bool,
+        #[arg(long)]
+        bundled_mobiflight: bool,
     },
     /// Run the workspace tests with private process visibility, as in CI.
     NativeTests,
     /// Build the pinned Wine system-memory video patch from its original sources.
     MediaBuild(media::Arguments),
+    /// Build the pinned MobiFlight HID compatibility DLL from verified inputs.
+    MobiflightBuild(mobiflight::Arguments),
     /// Exercise the native service with synthetic profiles over loopback HTTP.
     HttpContract {
         #[arg(long)]
@@ -195,9 +202,15 @@ fn run(command: Command) -> util::Result<u8> {
         Command::SourceRelease {
             output,
             media_sources,
+            mobiflight_sources,
         } => {
-            if let Some(folder) = media_sources {
-                source::release_with_media(&root, &output, Some(&folder))
+            if media_sources.is_some() || mobiflight_sources.is_some() {
+                source::release_with_sources(
+                    &root,
+                    &output,
+                    media_sources.as_deref(),
+                    mobiflight_sources.as_deref(),
+                )
             } else {
                 source::release(&root, &output)
             }
@@ -206,8 +219,16 @@ fn run(command: Command) -> util::Result<u8> {
             offline,
             toolchain,
             bundled_media,
-        } => build::native(&root, offline, toolchain.as_deref(), bundled_media),
+            bundled_mobiflight,
+        } => build::native(
+            &root,
+            offline,
+            toolchain.as_deref(),
+            bundled_media,
+            bundled_mobiflight,
+        ),
         Command::MediaBuild(args) => media::build(&root, &args),
+        Command::MobiflightBuild(args) => mobiflight::build(&root, &args),
         Command::NativeTests => build::native_tests(&root),
         Command::HttpContract { binary } => contract::check(&binary),
         Command::Package {

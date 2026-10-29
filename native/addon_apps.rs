@@ -232,7 +232,11 @@ impl Profile {
         if self.item.is_none() {
             return Ok(());
         }
-        for marker in [crate::navigraph::STARTUP, crate::gsx::STARTUP] {
+        for marker in [
+            crate::navigraph::STARTUP,
+            crate::gsx::STARTUP,
+            crate::mobiflight::STARTUP,
+        ] {
             let path = self.root.join(marker);
             if !files::exists(&path) {
                 continue;

@@ -53,6 +53,17 @@ pub fn summary(job: &Value) -> Value {
         "cancelled",
     ];
     for key in ["phase", "failure_phase"] {
+        // Retried jobs keep their earlier failure fields while progressing.
+        // A completed installation must not look like a current auth failure.
+        if key == "failure_phase"
+            && job["state"] != "failed"
+            && !(job["state"] == "cancelled"
+                && ["download_exit_code", "login_exit_code"]
+                    .iter()
+                    .any(|code| job[code].as_i64().is_some_and(|value| value != 0)))
+        {
+            continue;
+        }
         if let Some(value) = job[key].as_str().filter(|s| PHASES.contains(s)) {
             report[key] = json!(value);
         }

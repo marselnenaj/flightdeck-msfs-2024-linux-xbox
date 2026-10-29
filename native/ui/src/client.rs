@@ -13,6 +13,7 @@ pub const RESOURCES: &[&str] = &[
     "gsx",
     "navigraph",
     "orbx",
+    "mobiflight",
     "proton",
     "maintenance",
     "store-check",

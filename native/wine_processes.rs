@@ -44,6 +44,7 @@ pub fn session_process(name: &str) -> bool {
         || FENIX.contains(&name)
         || crate::gsx::COMPANIONS.contains(&name)
         || crate::navigraph::SIMLINK.contains(&name)
+        || crate::mobiflight::PROCESSES.contains(&name)
         || INFRASTRUCTURE.contains(&name)
 }
 pub fn name(arguments: &[String]) -> String {

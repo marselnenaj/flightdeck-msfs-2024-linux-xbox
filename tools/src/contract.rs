@@ -161,6 +161,7 @@ fn checks(client: &Client, work: &Path) -> Result<usize> {
         "/api/gsx",
         "/api/navigraph",
         "/api/orbx",
+        "/api/mobiflight",
         "/api/mods",
         "/api/game-update",
         "/api/diagnostics",

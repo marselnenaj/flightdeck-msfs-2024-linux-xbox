@@ -22,11 +22,16 @@ Microsoft-Konto an, lade das lizenzierte Spiel herunter und starte es über die
 native Rust-Oberfläche. Windows, die Xbox-App und eine bestehende MSFS-Installation
 sind für die Xbox-PC-Einrichtung nicht erforderlich. Flightdeck erkennt außerdem
 bestehende **Steam-Installationen** und verwaltet deren optionale Einrichtung von
-Fenix, GSX, Navigraph Hub/Simlink und Orbx Central;
+Fenix, GSX, Navigraph Hub/Simlink, Orbx Central und MobiFlight;
 Spieldownloads, Updates und Kontoanmeldung übernimmt Steam.
 
 **Lade die [neueste stabile Version](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/latest).**
 Launcher, Installer und Updater benötigen kein Python.
+
+**In Entwicklung:** [MobiFlight / WinWing](mobiflight.de.md) im gewählten Profil,
+geprüfte GSX-Engine-Reparatur, begrenzte X11-Startprüfung und genauere
+Mediendiagnose. Diese Änderungen sind noch nicht in 0.3.3 enthalten.
+Hardware-Verbindungen und der Black-Screen-Bericht in #16 müssen Tester noch bestätigen.
 
 **Neu in 0.3.3:** optionale Einrichtung von Orbx Central, Navigraph Hub und
 Simlink sowie GSX-Vorbereitung im gewählten **Xbox- oder Steam-Profil** von MSFS

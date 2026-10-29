@@ -37,6 +37,17 @@ also contain transitive dependencies and must receive a separate binary-release
 review. Upstream Cargo.lock is preserved for reproducibility, not presented as a
 complete binary license audit.
 
+## MobiFlight HID compatibility payload
+
+Development builds may embed a modified HidSharp 2.6.4 DLL (James F. Bellinger,
+Apache-2.0) using the `bundled-mobiflight` feature. Original copyright, full license,
+change description, exact package/output pins and Flightdeck's own MIT-licensed
+builder are in [mobiflight/](mobiflight/README.md). Full packages append those
+notices and distribute the pinned NuGet build inputs in `mobiflight-sources/` of
+their corresponding source archive. Mono.Cecil 0.11.6 is MIT-licensed build tooling;
+it is not loaded by the launcher. The official MIT-licensed MobiFlight application
+and its WASM module are downloaded separately, with their original files preserved.
+
 ## Wine GStreamer system-memory module and queue tests
 
 The separately loaded Wine media module includes OnlyCrayZ-Labs’ 2026

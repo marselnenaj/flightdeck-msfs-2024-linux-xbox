@@ -1,5 +1,24 @@
 # Changes and release status
 
+## In development
+
+- Prepare official MobiFlight 11.3.1, its WASM module and missing HubHop events in
+  the selected Xbox or Steam profile. Preserve custom events and unknown DLLs;
+  bundle a reproducible, hash-bound HidSharp fix with its license and sources.
+  Merge WinWing device IDs only for the verified Winebus build, preserving explicit
+  disable preferences. Diagnose Linux permissions without global input access.
+- Repair missing GSX engine files from bounded, hash-pinned official archives in
+  a staged profile with real recovery history. Keep engine health separate from
+  full product installation and licensing. Do not rewrite Community entries.
+- Check X11 with a bounded handshake before Xbox authentication and game launch.
+  Recover the verified Hyprland 0.56.2 stale-listener case only when no X11 clients
+  or XWayland process exist; restore temporary configuration changes on failure,
+  cancellation and the next startup. Other desktops receive an actionable error.
+- Remove stale setup authentication failures from successful/retried diagnostics.
+  Instantiate fixed GStreamer elements in the isolated probe and report media
+  selection and missing elements without private log text. Issue #16's black
+  screen is not yet confirmed fixed by the reporter.
+
 ## 0.3.3 — 28 October 2026
 
 - Add experimental Orbx Central 4.5.50, Navigraph Hub and Simlink setup. Extend

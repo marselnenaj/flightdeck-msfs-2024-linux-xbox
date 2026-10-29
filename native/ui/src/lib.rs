@@ -131,6 +131,8 @@ pub enum Disclosure {
     NavigraphManage,
     Orbx,
     OrbxManage,
+    Mobiflight,
+    MobiflightManage,
     Cloud,
     Report,
     Diagnostics,
@@ -141,7 +143,7 @@ impl Disclosure {
     fn group(self) -> Option<u8> {
         match self {
             Self::Graphics | Self::Vr | Self::Proton | Self::Maintenance => Some(0),
-            Self::Fenix | Self::Gsx | Self::Navigraph | Self::Orbx => Some(1),
+            Self::Fenix | Self::Gsx | Self::Navigraph | Self::Orbx | Self::Mobiflight => Some(1),
             _ => None,
         }
     }
@@ -162,6 +164,7 @@ pub enum HelpLink {
     Gsx,
     Navigraph,
     Orbx,
+    Mobiflight,
     Vr,
     Install,
 }
@@ -209,6 +212,9 @@ impl HelpLink {
             Self::Gsx => "https://www.fsdreamteam.com/products_gsxpro.html",
             Self::Navigraph => "https://navigraph.com/downloads",
             Self::Orbx => "https://orbxdirect.com/central",
+            Self::Mobiflight => {
+                "https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/blob/main/docs/mobiflight.md"
+            }
             Self::Vr => {
                 "https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/blob/main/docs/vr.md"
             }

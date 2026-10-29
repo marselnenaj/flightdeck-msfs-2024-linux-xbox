@@ -98,6 +98,7 @@ pub enum Action {
     Navigraph(&'static str),
     NavigraphPick(&'static str),
     Orbx(&'static str),
+    Mobiflight(&'static str),
     Proton,
     ProtonDefault,
     ProtonCancel,
@@ -570,6 +571,10 @@ impl App {
                 } else {
                     match *op {
                         "prepare" => ("gsx/prepare", change && data["state"] == "available"),
+                        "repair-engine" => (
+                            "gsx/repair-engine",
+                            change && yes(data, "can_repair_engine"),
+                        ),
                         "open" => (
                             "gsx/open",
                             change && data["state"] == "available" && yes(data, "prepared"),
@@ -579,6 +584,7 @@ impl App {
                             change
                                 && yes(data, "prepared")
                                 && yes(data, "package_installed")
+                                && yes(data, "engine_ready")
                                 && yes(data, "startup_found"),
                         ),
                         "disable" => ("gsx/disable", change && yes(data, "configured")),
@@ -669,6 +675,40 @@ impl App {
                             && !yes(data, "worker_busy"),
                     ),
                     "stop" => ("orbx/stop", enabled && yes(data, "can_stop")),
+                    _ => return None,
+                }
+            }
+            Mobiflight(op) => {
+                let data = self.data("mobiflight");
+                let enabled = self.fresh("mobiflight") && s(data, "runtime_path") == root;
+                let change =
+                    enabled && safe_idle && yes(data, "can_change") && data["state"] == "available";
+                body = json!({"runtime_path":root});
+                if let Some(token) = data["profile_token"].as_str() {
+                    body["profile_token"] = json!(token);
+                }
+                match *op {
+                    "install" => (
+                        "mobiflight/install",
+                        change && !yes(data, "installed") && yes(data, "payload_available"),
+                    ),
+                    "prepare" => (
+                        "mobiflight/prepare",
+                        change && yes(data, "installed") && yes(data, "payload_available"),
+                    ),
+                    "configure-hid" => (
+                        "mobiflight/configure-hid",
+                        change && data["winebus"]["state"] == "required",
+                    ),
+                    "open" => ("mobiflight/open", change && yes(data, "installed")),
+                    "startup-enable" => (
+                        "mobiflight/startup-enable",
+                        change && yes(data, "installed") && data["hid_fix"] == "ready",
+                    ),
+                    "startup-disable" => {
+                        ("mobiflight/startup-disable", change && yes(data, "startup"))
+                    }
+                    "stop" => ("mobiflight/stop", enabled && yes(data, "can_stop")),
                     _ => return None,
                 }
             }

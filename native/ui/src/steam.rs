@@ -222,6 +222,7 @@ impl App {
                     .push(self.gsx_card())
                     .push(self.navigraph_card())
                     .push(self.orbx_card())
+                    .push(self.mobiflight_card())
                     .push(self.community_card());
             }
             Page::Overview => {

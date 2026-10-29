@@ -21,11 +21,16 @@ of MSFS 2024 or 2020** through Wine/Proton. Sign in with your Microsoft account,
 download the licensed game and start it from the native Rust desktop application.
 Windows, the Xbox app and a previous MSFS installation are not required for Xbox PC setup.
 Flightdeck also detects existing **Steam installations** and manages their optional
-Fenix, GSX, Navigraph Hub/Simlink and Orbx Central setup; Steam handles game
+Fenix, GSX, Navigraph Hub/Simlink, Orbx Central and MobiFlight setup; Steam handles game
 downloads, updates and account sign-in.
 
 **Download the [latest stable release](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/latest).**
 The launcher, installer and updater need no Python.
+
+**In development:** selected-profile [MobiFlight / WinWing setup](docs/mobiflight.md),
+verified GSX engine repair, bounded X11 startup checks and more precise media
+diagnostics. These changes are not included in 0.3.3. Hardware connections and
+the black-screen report in #16 still need tester validation.
 
 **New in 0.3.3:** optional Orbx Central, Navigraph Hub and Simlink setup, plus
 GSX preparation for the selected **Xbox or Steam** MSFS 2020/2024 profile. These

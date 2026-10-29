@@ -10,6 +10,33 @@ use flightdeck::{
 use serde_json::{Value, json};
 use std::{fs, io::Write, os::unix::fs::symlink, process::Command, time::Duration};
 #[test]
+fn media_probe_details_only_export_fixed_names_and_states() {
+    let mut log = run_diagnostics::GameLog::default();
+    log.consume(
+        "flightdeck-media-selection: reason=verified_host_fallback\n\
+        flightdeck-media-probe: source=runner state=incomplete\n\
+        flightdeck-media-element: source=runner name=avdec_h264 ready=0\n\
+        flightdeck-media-probe: source=host state=ready\n\
+        flightdeck-media-element: source=host name=avdec_h264 ready=1\n\
+        flightdeck-media-element: source=host name=private_secret ready=0\n\
+        flightdeck-media-probe: source=host state=private_secret\n\
+        flightdeck-media-selection: reason=private_secret\n\
+        flightdeck-media-element: source=private_secret name=qtdemux ready=0\n",
+    );
+    let out = log.result(json!({"complete":true}));
+    assert_eq!(out["media"]["selection_reason"], "verified_host_fallback");
+    assert_eq!(
+        out["media"]["probes"]["runner"]["elements"]["avdec_h264"],
+        false
+    );
+    assert_eq!(out["media"]["probes"]["host"]["state"], "ready");
+    assert_eq!(
+        out["media"]["probes"]["host"]["elements"]["avdec_h264"],
+        true
+    );
+    assert!(!out.to_string().contains("private_secret"));
+}
+#[test]
 fn xbox_startup_failures_keep_stage_and_result_without_private_log_text() {
     let mut log = run_diagnostics::GameLog::default();
     log.consume(
