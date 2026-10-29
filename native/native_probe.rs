@@ -46,6 +46,40 @@ pub fn host() -> Value {
     json!({"schema":1,"libraries":libraries})
 }
 
+/// Check the real X11 connection in a bounded child. A socket accepting a
+/// connection is insufficient: a dead lazy XWayland can leave its listener
+/// behind indefinitely. XOpenDisplay completes the X11 setup handshake.
+pub fn display() -> Value {
+    if std::env::var_os("DISPLAY").is_none_or(|value| value.is_empty()) {
+        return json!({"schema":1,"state":"unavailable"});
+    }
+    // SAFETY: standard Xlib ABI; all symbols and the owned Display are kept
+    // inside this disposable probe. The parent kills a nonresponding child.
+    let state = unsafe {
+        match Library::new("libX11.so.6") {
+            Err(_) => "missing_library",
+            Ok(library) => {
+                let open =
+                    library.get::<unsafe extern "C" fn(*const c_char) -> Handle>(b"XOpenDisplay\0");
+                let close = library.get::<unsafe extern "C" fn(Handle) -> i32>(b"XCloseDisplay\0");
+                match (open, close) {
+                    (Ok(open), Ok(close)) => {
+                        let display = open(ptr::null());
+                        if display.is_null() {
+                            "unavailable"
+                        } else {
+                            close(display);
+                            "ready"
+                        }
+                    }
+                    _ => "missing_library",
+                }
+            }
+        }
+    };
+    json!({"schema":1,"state":state})
+}
+
 pub const MEDIA_ELEMENTS: [&str; 9] = [
     "avdec_h264",
     "h264parse",

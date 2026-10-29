@@ -476,6 +476,10 @@ impl App {
                     .push(self.addon_action("GSX-Vorbereitung wiederherstellen", Gsx("recover")));
             } else if data["state"] == "available" {
                 let (title, action) = match progress.next {
+                    _ if yes(data, "prepared") && !yes(data, "engine_ready") => (
+                        self.tr("GSX-Engine reparieren", "Repair GSX engine"),
+                        Gsx("repair-engine"),
+                    ),
                     1 => ("FSDT vorbereiten", Gsx("prepare")),
                     3 if yes(data, "startup_found") => {
                         ("Automatischen Start einrichten", Gsx("configure"))
@@ -508,6 +512,10 @@ impl App {
                         yes(data, "prepared"),
                     ),
                     (
+                        self.tr("GSX-Engine", "GSX engine"),
+                        yes(data, "engine_ready"),
+                    ),
+                    (
                         self.tr("GSX-Dateien", "GSX files"),
                         yes(data, "package_installed"),
                     ),
@@ -519,6 +527,10 @@ impl App {
             }
             let mut manage = column![].spacing(14);
             if yes(data, "prepared") {
+                manage = manage.push(self.paragraph(self.tr(
+                    "Die Engine-Reparatur lädt geprüfte FSDT-Laufzeitdateien. GSX-Produktdateien und eine gültige Lizenz werden weiterhin benötigt.",
+                    "Engine repair downloads verified FSDT runtime files. GSX product files and a valid license are still required.",
+                ))).push(self.addon_action(self.tr("GSX-Engine reparieren", "Repair GSX engine"), Gsx("repair-engine")));
                 if progress.ready || active || (progress.next == 3 && yes(data, "startup_found")) {
                     manage = manage.push(self.action("FSDT-Installer öffnen", Gsx("open")));
                 }
@@ -548,6 +560,128 @@ impl App {
         }
         content = content.push(self.refresh_button());
         self.disclosure(Disclosure::Gsx, "GSX Pro", progress.title, content)
+    }
+
+    pub(crate) fn mobiflight_card(&self) -> Element<'_, Message> {
+        let raw = self.data("mobiflight");
+        let current = self.fresh("mobiflight") && s(raw, "runtime_path") == self.runtime();
+        let data = if current { raw } else { &Value::Null };
+        let installed = yes(data, "installed");
+        let mut content = column![self.paragraph(self.tr(
+            "MobiFlight verbindet Cockpit-Hardware mit MSFS. Flightdeck richtet die offizielle App, das WASM-Modul und den geprüften HID-Fix im ausgewählten MSFS-Profil ein. Die Geräteverbindung im Simulator ist noch unbestätigt.",
+            "MobiFlight connects cockpit hardware to MSFS. Flightdeck prepares the official app, WASM module and verified HID fix in the selected MSFS profile. The device connection in the simulator is still unconfirmed.",
+        ))].spacing(14);
+        let title = if !current {
+            self.tr("Status wird geladen …", "Loading status …")
+        } else if yes(data, "running") {
+            self.tr("MobiFlight läuft", "MobiFlight is running")
+        } else if installed {
+            self.tr(
+                "App vorhanden · Verbindung unbestätigt",
+                "App detected · connection unconfirmed",
+            )
+        } else {
+            self.tr("MobiFlight einrichten", "Set up MobiFlight")
+        };
+        if current {
+            content = content.push(self.addon_feedback(data));
+            if data["state"] == "available" {
+                content = content.push(self.addon_facts(&[
+                    (self.tr("App vorhanden", "App detected"), installed),
+                    ("HID-Fix", data["hid_fix"] == "ready"),
+                    (
+                        self.tr("WASM & Ereignisse", "WASM & events"),
+                        yes(data, "wasm_installed") && yes(data, "wasm_events_ready"),
+                    ),
+                    (self.tr("Autostart", "Auto-start"), yes(data, "startup")),
+                ]));
+                if yes(data, "can_stop") {
+                    content = content.push(self.addon_action(
+                        self.tr("MobiFlight schließen", "Close MobiFlight"),
+                        Mobiflight("stop"),
+                    ));
+                } else if !installed {
+                    content = content.push(self.addon_action(
+                        self.tr("MobiFlight installieren", "Install MobiFlight"),
+                        Mobiflight("install"),
+                    ));
+                } else {
+                    content = content.push(self.addon_action(
+                        self.tr("MobiFlight öffnen", "Open MobiFlight"),
+                        Mobiflight("open"),
+                    ));
+                }
+                let access = &data["device_access"];
+                if access["state"] == "denied" || access["state"] == "permission_required" {
+                    content = content.push(self.paragraph(self.tr(
+                        "Linux verweigert den Zugriff auf ein WinWing-Gerät. Die Anleitung unten beschreibt die gezielte udev-Freigabe für deine aktive Sitzung.",
+                        "Linux denies access to a WinWing device. The guide below explains a targeted udev permission for your active session.",
+                    )));
+                }
+                if yes(access, "possible_input_remapper_grab") {
+                    content = content.push(self.paragraph(self.tr(
+                        "input-remapper läuft möglicherweise mit exklusivem Gerätezugriff. Prüfe seine aktiven Presets, wenn ein Gerät in MobiFlight fehlt.",
+                        "input-remapper may have exclusive device access. Check its active presets if a device is missing from MobiFlight.",
+                    )));
+                }
+                let mut manage = column![self.paragraph(self.tr(
+                    "MSFS und Begleitprogramme vor Änderungen schließen. Eigene Profile und Ereignisse bleiben erhalten; unbekannte DLL-Versionen werden nicht automatisch geändert.",
+                    "Close MSFS and companion apps before making changes. Custom profiles and events are retained; unknown DLL versions are left unchanged.",
+                ))].spacing(14);
+                if installed {
+                    manage = manage.push(self.addon_action(
+                        self.tr(
+                            "MobiFlight vorbereiten / reparieren",
+                            "Prepare / repair MobiFlight",
+                        ),
+                        Mobiflight("prepare"),
+                    ));
+                    manage = manage.push(self.addon_action(
+                        if yes(data, "startup") {
+                            self.tr(
+                                "MobiFlight-Autostart ausschalten",
+                                "Disable MobiFlight auto-start",
+                            )
+                        } else {
+                            self.tr("MobiFlight mit MSFS starten", "Start MobiFlight with MSFS")
+                        },
+                        Mobiflight(if yes(data, "startup") {
+                            "startup-disable"
+                        } else {
+                            "startup-enable"
+                        }),
+                    ));
+                }
+                if data["winebus"]["state"] == "required" {
+                    manage = manage.push(self.addon_action(
+                        self.tr("WinWing-HID einrichten", "Configure WinWing HID"),
+                        Mobiflight("configure-hid"),
+                    ));
+                }
+                manage = manage.push(self.job("mobiflight")).push(self.help_link(
+                    self.tr("MobiFlight- & Geräteanleitung", "MobiFlight & device guide"),
+                    HelpLink::Mobiflight,
+                ));
+                content = content.push(self.disclosure(
+                    Disclosure::MobiflightManage,
+                    self.tr("Verwalten & reparieren", "Manage & repair"),
+                    "",
+                    manage,
+                ));
+            }
+        } else {
+            content = content.push(self.paragraph(self.tr(
+                "Lade den Status dieser Installation erneut, bevor du fortsetzt.",
+                "Refresh this installation's status before continuing.",
+            )));
+        }
+        content = content.push(self.refresh_button());
+        self.disclosure(
+            Disclosure::Mobiflight,
+            "MobiFlight / WinWing",
+            title,
+            content,
+        )
     }
 
     fn navigraph_installer(&self, app: &'static str, rerun: bool) -> Element<'_, Message> {
@@ -874,7 +1008,7 @@ impl App {
     pub(crate) fn mods_page(&self) -> Element<'_, Message> {
         column![self.heading(self.t("Deine Add-ons").to_string()),
             self.paragraph(self.t("Öffne die Einrichtung eines Add-ons oder verwalte unten deinen Community-Ordner.").to_string()),
-            self.fenix_card(),self.gsx_card(),self.navigraph_card(),self.orbx_card(),self.community_card(),
+            self.fenix_card(),self.gsx_card(),self.navigraph_card(),self.orbx_card(),self.mobiflight_card(),self.community_card(),
             self.paragraph(self.tr("Fenix und GSX vollständig deinstallieren: Öffne den jeweiligen offiziellen Installer oben. Das Entfernen eines Community-Eintrags entfernt keine Windows-Begleitprogramme.","To fully uninstall Fenix or GSX, open its official installer above. Removing a Community entry does not uninstall Windows companion applications.")),
             self.paragraph(self.t("Diese Liste zeigt Dateien im Community-Ordner. Sie bestätigt weder eine Lizenz noch die Kompatibilität eines Add-ons mit MSFS oder Linux.").to_string())].spacing(16).into()
     }

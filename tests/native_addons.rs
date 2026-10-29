@@ -167,7 +167,20 @@ fn gsx_installation(root: &Path) {
     let prefix = root.join("local/msfs-prefix");
     let manager = prefix.join("drive_c/Program Files (x86)/Addon Manager");
     write(&manager.join("Couatl_Updater.exe"), b"MZ updater");
-    write(&manager.join("couatl64/couatl64_boot.exe"), b"MZ companion");
+    for path in [
+        "couatl64/couatl64_boot.exe",
+        "couatl64/couatl64_MSFS2024.exe",
+        "couatl64/python37.dll",
+        "couatl64/python37.zip",
+        "couatl64/wx/__init__.py",
+        "couatl64/wx/_core.cp37-win_amd64.pyd",
+        "couatl/common/__init__.pye",
+        "couatl/GSX/__init__.pye",
+        "couatl/GSX/airports/__init__.pye",
+        "couatl/GSX/sounds/Truck_Engine1.wav",
+    ] {
+        write(&manager.join(path), b"MZ companion");
+    }
     files::private_dir(&prefix.join("dosdevices")).unwrap();
     symlink("../drive_c", prefix.join("dosdevices/c:")).unwrap();
     let community = root.join("Community");
@@ -175,6 +188,22 @@ fn gsx_installation(root: &Path) {
         &community.join("fsdreamteam-gsx-pro/manifest.json"),
         br#"{"title":"GSX Pro","package_version":"1.0.0"}"#,
     );
+    let paths = [
+        "modules/fsdt-msfs-bridge.wasm",
+        "SimObjects/GroundVehicles/gsx/model/model.gltf",
+        "SimObjects/GroundVehicles/gsx/texture/common.dds",
+    ];
+    for path in paths {
+        write(
+            &community.join("fsdreamteam-gsx-pro").join(path),
+            b"payload",
+        );
+    }
+    files::atomic_json(
+        &community.join("fsdreamteam-gsx-pro/layout.json"),
+        &json!({"content":paths.map(|path| json!({"path":path,"size":7}))}),
+    )
+    .unwrap();
     files::atomic_json(
         &root.join("private/runtime.json"),
         &json!({"game_id":"msfs2024","community_path":community}),

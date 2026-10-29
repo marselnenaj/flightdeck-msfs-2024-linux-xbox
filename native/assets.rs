@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Explicit application assets; never include runtime files or build directories.
 pub static ASSETS: &[(&str, &[u8])] = &[
+    #[cfg(feature = "bundled-mobiflight")]
+    ("mobiflight/HidSharp.dll", include_bytes!("../build/mobiflight/HidSharp.dll")),
     ("compat/bootstrap.lock.json", include_bytes!("../compat/bootstrap.lock.json")),
     ("compat/fenix/bundle.json", include_bytes!("../compat/fenix/bundle.json")),
     ("compat/fenix/release.json", include_bytes!("../compat/fenix/release.json")),

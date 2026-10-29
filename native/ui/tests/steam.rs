@@ -179,14 +179,15 @@ fn steam_companion_cards_and_actions_use_the_selected_profile_in_both_languages(
 -> Result<(), Box<dyn std::error::Error>> {
     for language in [Language::De, Language::En] {
         let mut app = fixture(language, "installed");
-        for kind in ["gsx", "navigraph", "orbx"] {
-            app.snapshot.insert(kind,json!({"state":"available","source":"steam","runtime_path":"steam:2024:revision","profile_token":"selected-proton-and-prefix","can_change":true,"idle":true,"installed":true,"settings_found":true,"hub_installed":true,"simlink_installed":true,"configured":true,"prepared":true,"package_installed":true,"startup_found":true,"startup":true}));
+        for kind in ["gsx", "navigraph", "orbx", "mobiflight"] {
+            app.snapshot.insert(kind,json!({"state":"available","source":"steam","runtime_path":"steam:2024:revision","profile_token":"selected-proton-and-prefix","can_change":true,"idle":true,"installed":true,"settings_found":true,"hub_installed":true,"simlink_installed":true,"configured":true,"prepared":true,"engine_ready":true,"package_installed":true,"startup_found":true,"startup":true,"hid_fix":"ready","payload_available":true}));
         }
         for action in [
             Action::Gsx("configure"),
             Action::Navigraph("open-hub"),
             Action::Navigraph("open-simlink"),
             Action::Orbx("open"),
+            Action::Mobiflight("open"),
         ] {
             let request = app
                 .request(&action)
@@ -196,7 +197,12 @@ fn steam_companion_cards_and_actions_use_the_selected_profile_in_both_languages(
         }
         let mut ui =
             iced_test::Simulator::with_size(settings(), Size::new(1280.0, 2400.0), app.view());
-        for title in ["GSX Pro", "Navigraph", "Orbx Central"] {
+        for title in [
+            "GSX Pro",
+            "Navigraph",
+            "Orbx Central",
+            "MobiFlight / WinWing",
+        ] {
             ui.find(title)?;
         }
         drop(ui);

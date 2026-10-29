@@ -1,6 +1,6 @@
 # Fenix patch update contract
 
-## Development: native-only CLR loader override
+## Flightdeck 0.3.5: native-only CLR loader override
 
 [Issue #10](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/issues/10#issuecomment-6500878026)
 reports an install hook failing on an existing `System.Runtime.dll` with
@@ -9,7 +9,7 @@ Wine from loading an IL-only assembly when the prefix contains Wine's builtin
 loader. Checking that the assembly or Framework CLR files exist does not detect
 this loader failure.
 
-The development correction writes `native,builtin` during Framework preparation,
+The correction writes `native,builtin` during Framework preparation,
 so an installed native CLR loader retains priority. Before Fenix installer/app
 preparation, existing global `native`/`n` values migrate to that fallback policy
 through Wine's registry commands. The previous value is retained in the prefix's
@@ -24,7 +24,7 @@ assembly then loads successfully. A second call creates no additional backup
 entry. `tests/windows/managed-load.c` is the small loader probe used for this
 comparison. It does not execute a Fenix hook or start a simulator/account.
 The reporter's .NET 8.0.33 and full Fenix installation still need validation.
-This correction is not included in 0.3.4.
+This correction first ships in 0.3.5.
 
 ## Published update descriptor
 

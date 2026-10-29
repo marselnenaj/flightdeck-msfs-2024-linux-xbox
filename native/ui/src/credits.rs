@@ -103,6 +103,24 @@ const GROUPS: &[Group] = &[
                 en: "Fenix Linux adaptations and shared installer code; thanks to its contributors.",
                 url: "https://github.com/marselnenaj/fenix-a320-linux-patch",
             },
+            Credit {
+                name: "MobiFlight / HubHop",
+                de: "Cockpit-Hardware, WASM-Modul und offizielle Ereignisdefinitionen; Danke für die Hinweise aus dem Community-Add-on-Patch.",
+                en: "Cockpit hardware, WASM module and official event definitions; thanks for the ideas in the community add-on patch.",
+                url: "https://github.com/MobiFlight/MobiFlight-Connector",
+            },
+            Credit {
+                name: "HidSharp / Seekye",
+                de: "HID-Bibliothek unter Apache-2.0. Flightdeck enthält eine getrennt gebaute, dokumentierte Kompatibilitätsänderung.",
+                en: "HID library under Apache-2.0. Flightdeck includes a separately built, documented compatibility modification.",
+                url: "https://software.seekye.com/hidsharp",
+            },
+            Credit {
+                name: "Mono.Cecil",
+                de: "MIT-lizenziertes Werkzeug für den reproduzierbaren HID-Build; nur für Maintainer erforderlich.",
+                en: "MIT-licensed tool for the reproducible HID build; required only by maintainers.",
+                url: "https://github.com/jbevain/cecil",
+            },
         ],
     },
     Group {

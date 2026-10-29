@@ -6,7 +6,7 @@ use crate::{
     backend::{Context, Launcher, string},
     bootstrap,
     error::require,
-    fenix, fenix_setup, files, framework, framework_repair, mods, process, runtime,
+    fenix, fenix_setup, files, framework, framework_repair, gsx_engine, mods, process, runtime,
     transaction as tx,
     wine::{StagedWine, Wine},
     wine_processes,
@@ -149,6 +149,112 @@ fn slot(profile: &Profile, kind: &str, id: &str) -> Result<PathBuf> {
 }
 pub fn prepare(ctx: &Context) -> Result<()> {
     prepare_for(ctx, &Profile::selected(&ctx.launcher)?)
+}
+/// Repair only the engine in a retained profile copy. FSDT still owns product
+/// installation and activation; this operation never writes exe.xml or links.
+pub fn repair_engine(ctx: &Context) -> Result<()> {
+    repair_engine_for(ctx, &Profile::selected(&ctx.launcher)?)
+}
+fn repair_engine_for(ctx: &Context, profile: &Profile) -> Result<()> {
+    let packages = gsx_engine::packages()?;
+    let cache = ctx
+        .launcher
+        .state_dir
+        .join("gsx-downloads")
+        .join("engine-2.4.8.0");
+    repair_engine_in(ctx, profile, &packages, |package| {
+        ctx.progress("Die offizielle GSX-Engine wird geladen und geprüft …");
+        gsx_engine::download(package, &cache.join(&package.name), &ctx.cancel)
+    })
+}
+/// The injectable fetcher permits transaction tests with tiny pinned archives.
+/// Production always supplies the compiled official release lock above.
+#[doc(hidden)]
+pub fn repair_engine_with(
+    ctx: &Context,
+    packages: &[gsx_engine::Package],
+    fetch: impl FnMut(&gsx_engine::Package) -> Result<PathBuf>,
+) -> Result<()> {
+    let profile = Profile::selected(&ctx.launcher)?;
+    repair_engine_in(ctx, &profile, packages, fetch)
+}
+fn repair_engine_in(
+    ctx: &Context,
+    profile: &Profile,
+    packages: &[gsx_engine::Package],
+    fetch: impl FnMut(&gsx_engine::Package) -> Result<PathBuf>,
+) -> Result<()> {
+    profile.validate(false)?;
+    require(complete(&profile.root), INCOMPLETE)?;
+    let root = &profile.root;
+    let prefix = &profile.prefix;
+    wine_processes::idle(prefix)?;
+    let runner = profile.runner()?;
+    let directory = manager(prefix)?.ok_or(Error::Invalid(
+        "Bereite zuerst den offiziellen FSDT-Installer vor.",
+    ))?;
+    require(
+        framework::status(prefix).ready,
+        "Bereite zuerst die .NET-Umgebung für FSDT vor.",
+    )?;
+    let assembly = files::beneath(&files::directory(&directory, false)?, "QlmLicenseLib.dll")?;
+    require(
+        assembly.metadata()?.len() > 0 && assembly.metadata()?.len() <= 64 * 1024 * 1024,
+        "Die offizielle FSDT-Lizenzbibliothek fehlt.",
+    )?;
+    require(
+        tx::free_bytes(prefix)?
+            > tx::prefix_size(prefix, &ctx.cancel)?.saturating_add(2 * 1024 * 1024 * 1024),
+        "Für die GSX-Engine-Reparatur fehlt Speicherplatz für eine Profilkopie.",
+    )?;
+    let relative = directory
+        .canonicalize()?
+        .strip_prefix(prefix.canonicalize()?)
+        .map_err(|_| Error::Invalid("Ungültiger FSDT-Installationspfad."))?
+        .to_path_buf();
+    let token = uuid::Uuid::new_v4().simple().to_string();
+    let staged = slot(profile, "stage", &token)?;
+    let backup = slot(profile, "before", &token)?;
+    let mut state = json!({"format":1,"id":token,"state":"preparing","operation":"repair-engine","original_prefix_id":fenix::identity(prefix)?,"runner":runner,"prior":marker(root)?});
+    files::atomic_json(&root.join(MARKER), &state)?;
+    ctx.progress("Das Windows-Profil wird für die GSX-Engine-Reparatur kopiert …");
+    process::copy_tree(prefix, &staged, &ctx.cancel)?;
+    tx::relocate_prefix_links(prefix, &staged, &ctx.cancel)?;
+    let staged_manager = staged.join(relative);
+    owned(&staged_manager, &staged.join("drive_c"))?;
+    gsx_engine::install_with(
+        &staged_manager,
+        &staged.join(format!(".gsx-engine-{token}")),
+        packages,
+        &ctx.cancel,
+        fetch,
+    )?;
+    fs::remove_dir_all(staged.join(format!(".gsx-engine-{token}")))?;
+    require(
+        gsx_engine::status(Some(&staged_manager), profile.game).ready,
+        "Die GSX-Engine ist nach der Reparatur unvollständig.",
+    )?;
+    tx::interrupted(&ctx.cancel)?;
+    require(
+        fenix::identity(prefix)? == state["original_prefix_id"] && profile.runner()? == runner,
+        "Die Runtime hat sich während der GSX-Reparatur geändert.",
+    )?;
+    profile.current(&ctx.launcher)?;
+    wine_processes::idle(prefix)?;
+    wine_processes::idle(&staged)?;
+    ctx.begin_commit(
+        "publish_runtime",
+        "Die geprüfte GSX-Engine wird aktiviert …",
+    )?;
+    state["state"] = json!("committing");
+    state["staged_prefix_id"] = fenix::identity(&staged)?;
+    files::atomic_json(&root.join(MARKER), &state)?;
+    tx::publish(prefix, &backup)?;
+    tx::publish(&staged, prefix)?;
+    profile.rebind_startups(state["original_prefix_id"].clone())?;
+    // Retain the prior setup and its backup references for audit/recovery.
+    state["state"] = json!("ready");
+    files::atomic_json(&root.join(MARKER), &state)
 }
 fn prepare_for(ctx: &Context, profile: &Profile) -> Result<()> {
     profile.validate(false)?;
@@ -356,20 +462,24 @@ fn recover_for(ctx: &Context, profile: &Profile) -> Result<()> {
             !prefix.exists() || fenix::identity(&staged)? != fenix::identity(&prefix)?,
             "Invalid GSX staging profile.",
         )?;
-        let wine = Wine::new(
-            &staged,
-            &if profile.item.is_some() {
-                PathBuf::from(string(&state, "runner")?).canonicalize()?
-            } else {
-                profile.runner()?
-            },
-            &root.join("private").join(format!(
-                "gsx-recovery-{}.log",
-                uuid::Uuid::new_v4().simple()
-            )),
-            &ctx.cancel,
-        )?;
-        wine.stop_staged()?;
+        if state["operation"] != "repair-engine" {
+            let wine = Wine::new(
+                &staged,
+                &if profile.item.is_some() {
+                    PathBuf::from(string(&state, "runner")?).canonicalize()?
+                } else {
+                    profile.runner()?
+                },
+                &root.join("private").join(format!(
+                    "gsx-recovery-{}.log",
+                    uuid::Uuid::new_v4().simple()
+                )),
+                &ctx.cancel,
+            )?;
+            wine.stop_staged()?;
+        } else {
+            wine_processes::idle(&staged)?;
+        }
     }
     if backup.exists() {
         owned(&backup, &slot_parent(profile))?;
@@ -435,13 +545,7 @@ fn community_for(profile: &Profile) -> Result<Option<PathBuf>> {
     if !package.is_dir() {
         return Ok(None);
     }
-    let data: Value = files::json(&package.join("manifest.json"), 128 * 1024)?;
-    Ok((data.is_object()
-        && data["title"].as_str().is_some_and(|v| !v.is_empty())
-        && data["package_version"]
-            .as_str()
-            .is_some_and(|v| !v.is_empty()))
-    .then_some(package))
+    Ok(gsx_engine::product_present(&package).then_some(package))
 }
 pub struct Startup {
     path: PathBuf,
@@ -547,10 +651,16 @@ fn configure_for(profile: &Profile, enable: bool) -> Result<()> {
     let root = &profile.root;
     require(complete(root), INCOMPLETE)?;
     let directory = manager(&profile.prefix)?;
-    require(
-        community_for(profile)?.is_some(),
-        "Installiere GSX zuerst im FSDT-Installer und prüfe die Community-Verknüpfung.",
-    )?;
+    if enable {
+        require(
+            gsx_engine::status(directory.as_deref(), profile.game).ready,
+            "Die GSX-Engine ist unvollständig. Repariere zuerst die Engine.",
+        )?;
+        require(
+            community_for(profile)?.is_some(),
+            "Installiere GSX zuerst im FSDT-Installer und prüfe die Community-Verknüpfung.",
+        )?;
+    }
     let mut startup = startup_for(profile, directory.as_deref())?.ok_or(Error::Invalid(
         "Der FSDT-Start fehlt. Führe im FSDT-Installer ein Update aus und prüfe erneut.",
     ))?;
@@ -580,7 +690,7 @@ pub fn snapshot(app: &Launcher) -> Value {
         .as_ref()
         .map(|p| addon_apps::job(app, "gsx", p))
         .unwrap_or((false, false, false, Value::Null));
-    let mut value = json!({"state":"unavailable","message":"","prepared":false,"package_installed":false,"startup_found":false,"configured":false,"can_recover":false,"idle":false,"verified_in_simulator":false,"runtime_path":context,"job":job,"busy":busy||playing,"manager_running":false,"can_change":false,"can_stop":false});
+    let mut value = json!({"state":"unavailable","message":"","prepared":false,"engine_ready":false,"engine_missing":[],"can_repair_engine":false,"package_installed":false,"startup_found":false,"configured":false,"can_recover":false,"idle":false,"verified_in_simulator":false,"runtime_path":context,"job":job,"busy":busy||playing,"manager_running":false,"can_change":false,"can_stop":false});
     if let Ok(profile) = &selected {
         let root = &profile.root;
         value["profile_token"] = json!(profile.revision);
@@ -602,14 +712,25 @@ pub fn snapshot(app: &Launcher) -> Value {
             } else {
                 let directory = manager(&prefix)?;
                 let prepared = directory.is_some() && framework::status(&prefix).ready;
-                let package = community_for(profile)?.is_some();
-                let entry = startup_for(profile, directory.as_deref())?;
+                let engine = gsx_engine::status(directory.as_deref(), profile.game);
+                value["prepared"] = json!(prepared);
+                value["engine_ready"] = json!(engine.ready);
+                value["engine_missing"] = json!(engine.missing);
+                let (package, package_error) = match community_for(profile) {
+                    Ok(package) => (package.is_some(), None),
+                    Err(error) => (false, Some(error.to_string())),
+                };
+                value["package_installed"] = json!(package);
+                let (entry, startup_error) = match startup_for(profile, directory.as_deref()) {
+                    Ok(entry) => (entry, None),
+                    Err(error) => (None, Some(error.to_string())),
+                };
                 let active = entry.as_ref().is_some_and(|v| {
                     enabled(&v.tree)
                         && matches!(&v.tree.items[v.index],Item::Element(addon) if enabled(addon))
                 });
                 let setting = if files::exists(&root.join(STARTUP)) {
-                    runtime::value(&root.join(STARTUP))?
+                    runtime::value(&root.join(STARTUP)).unwrap_or(Value::Null)
                 } else {
                     Value::Null
                 };
@@ -619,6 +740,7 @@ pub fn snapshot(app: &Launcher) -> Value {
                 value["startup_found"] = json!(entry.is_some());
                 value["configured"] = json!(
                     prepared
+                        && engine.ready
                         && package
                         && active
                         && setting["format"].as_u64() == Some(1)
@@ -626,9 +748,13 @@ pub fn snapshot(app: &Launcher) -> Value {
                         && (profile.item.is_none()
                             || setting["prefix_id"] == json!(fenix::identity(&prefix)?))
                 );
-                value["message"] = json!(
-                    "Installation und Lizenz prüft FSDT. Der GSX-Flugbetrieb unter Linux ist noch nicht bestätigt."
-                );
+                value["message"] = json!(if !engine.ready && prepared {
+                    "Die GSX-Engine ist unvollständig. Die Engine-Reparatur erhält das vorhandene Profil; Installation und Aktivierung von GSX erfolgen im FSDT-Installer."
+                } else if !package {
+                    package_error.as_deref().unwrap_or("Die vollständigen GSX-Modelle, Texturen oder die Community-Verknüpfung fehlen. Installiere und aktiviere GSX im offiziellen FSDT-Installer.")
+                } else {
+                    startup_error.as_deref().unwrap_or("Installation und Lizenz prüft FSDT. Der GSX-Flugbetrieb unter Linux ist noch nicht bestätigt.")
+                });
             }
             let idle = wine_processes::idle(&prefix).is_ok();
             let processes = if prefix.exists() {
@@ -645,6 +771,12 @@ pub fn snapshot(app: &Launcher) -> Value {
             value["idle"] = json!(idle);
             value["manager_running"] = json!(running);
             value["can_change"] = json!(idle && !busy && !playing && !closing);
+            value["can_repair_engine"] = json!(
+                value["can_change"] == true
+                    && value["prepared"] == true
+                    && value["engine_ready"] != true
+                    && value["can_recover"] != true
+            );
             value["can_stop"] =
                 json!(running && !playing && !game && !closing && (interactive || !busy));
             Ok(())
@@ -710,7 +842,16 @@ fn open(ctx: &Context, profile: &Profile) -> Result<()> {
 }
 pub fn start(app: &Arc<Launcher>, operation: &str, data: &Value) -> Result<Value> {
     require(
-        ["prepare", "open", "configure", "disable", "recover", "stop"].contains(&operation),
+        [
+            "prepare",
+            "repair-engine",
+            "open",
+            "configure",
+            "disable",
+            "recover",
+            "stop",
+        ]
+        .contains(&operation),
         "Unbekannter GSX-Vorgang.",
     )?;
     let profile = Profile::selected(app)?;
@@ -755,9 +896,9 @@ pub fn start(app: &Arc<Launcher>, operation: &str, data: &Value) -> Result<Value
         let _held=profile.lease()?;
         profile.validate(operation=="recover"||operation=="stop")?;
         if operation!="stop"{wine_processes::idle(&profile.prefix)?;}
-        match operation.as_str(){"prepare"=>prepare_for(ctx,&profile)?,"recover"=>recover_for(ctx,&profile)?,"open"=>open(ctx,&profile)?,"stop"=>profile.stop(MANAGERS)?,_=>configure_for(&profile,operation=="configure")?}
+        match operation.as_str(){"prepare"=>prepare_for(ctx,&profile)?,"repair-engine"=>repair_engine_for(ctx,&profile)?,"recover"=>recover_for(ctx,&profile)?,"open"=>open(ctx,&profile)?,"stop"=>profile.stop(MANAGERS)?,_=>configure_for(&profile,operation=="configure")?}
         let context=Launcher::context(&ctx.launcher.lock());
         ctx.update(json!({"runtime_path":context}));
-        let message=match operation.as_str(){"prepare"=>"FSDT ist vorbereitet. Öffne den Installer, um GSX zu installieren und zu aktivieren.","configure"=>"Der GSX-Autostart ist eingerichtet. Die Funktion im Simulator ist noch unbestätigt.","disable"=>"Der automatische GSX-Start ist ausgeschaltet.","recover"=>"Das Windows-Profil vor der unterbrochenen GSX-Einrichtung ist wieder aktiv.",_=>"FSDT wurde geschlossen. Der GSX-Status wird neu geprüft."};Ok(json!({"state":"complete","message":message,"stopping":false}))
+        let message=match operation.as_str(){"prepare"=>"FSDT ist vorbereitet. Öffne den Installer, um GSX zu installieren und zu aktivieren.","repair-engine"=>"Die GSX-Engine wurde repariert. Installiere und aktiviere das vollständige GSX im offiziellen FSDT-Installer; der Autostart wurde nicht geändert.","configure"=>"Der GSX-Autostart ist eingerichtet. Die Funktion im Simulator ist noch unbestätigt.","disable"=>"Der automatische GSX-Start ist ausgeschaltet.","recover"=>"Das Windows-Profil vor der unterbrochenen GSX-Einrichtung ist wieder aktiv.",_=>"FSDT wurde geschlossen. Der GSX-Status wird neu geprüft."};Ok(json!({"state":"complete","message":message,"stopping":false}))
     })
 }

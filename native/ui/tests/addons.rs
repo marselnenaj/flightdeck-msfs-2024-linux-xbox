@@ -350,6 +350,26 @@ fn gsx_shows_the_next_action_without_claiming_simulator_success()
 }
 
 #[test]
+fn missing_engine_offers_repair_and_never_claims_ready() -> Result<(), Box<dyn std::error::Error>> {
+    let mut app = fixture("gsx-configured", Language::En);
+    let data = app.snapshot.get_mut("gsx").expect("GSX fixture");
+    data["engine_ready"] = json!(false);
+    data["can_repair_engine"] = json!(true);
+    let mut ui = iced_test::Simulator::with_size(settings(), Size::new(1280.0, 1800.0), app.view());
+    assert!(
+        ui.find("GSX locally configured · Functionality unconfirmed")
+            .is_err()
+    );
+    ui.click("Repair GSX engine")?;
+    assert!(matches!(
+        ui.into_messages().next(),
+        Some(Message::Action(Action::Gsx("repair-engine")))
+    ));
+    assert!(app.request(&Action::Gsx("configure")).is_none());
+    Ok(())
+}
+
+#[test]
 fn gsx_management_is_explicit_and_blocked_or_stale_snapshots_cannot_act()
 -> Result<(), Box<dyn std::error::Error>> {
     let mut app = fixture("gsx-configured", Language::En);

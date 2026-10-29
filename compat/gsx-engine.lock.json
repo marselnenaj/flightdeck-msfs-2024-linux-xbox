@@ -1,0 +1,15 @@
+{
+  "format": 1,
+  "release": "2.4.8.0",
+  "source": "https://www.fsdreamteam.com/products_msfs.html",
+  "description": "Official FSDT engine updates; this does not install or activate the full GSX Community product.",
+  "packages": [
+    {"name":"couatl.zip.001","target":"couatl","bytes":42064823,"sha256":"9114e1813e5ad2e3368e0b49c9c0a4e4683c8a2222c08dae314a77b3fe3c4dba","entries":521,"unpacked_bytes":55501017},
+    {"name":"couatl64.zip.001","target":"couatl64","bytes":55532437,"sha256":"17972ae25b1e0f880ff6d0b1cdc9772b24ffa51dbb73d7e071acc2de1401ebec","entries":45,"unpacked_bytes":69177042},
+    {"name":"couatl64_wx.zip.001","target":"couatl64/wx","bytes":17360366,"sha256":"1b03b97365d91c108b37b4b1935d3e366d3e00ff027c7835a9fe33a3c9cf41d8","entries":531,"unpacked_bytes":56979609},
+    {"name":"couatl_wx.zip.001","target":"couatl/wx","bytes":13828341,"sha256":"4faae7e364e3b51f670a9eb42625518fc41f45afe46b23e8bfc68e9d1c2720a3","entries":530,"unpacked_bytes":47536144},
+    {"name":"GSX.zip.001","target":"couatl/GSX","bytes":57508104,"sha256":"cf85bb7a91ee03647caeb963b6dae631d201cfb5b5288a9c05962c2425643030","entries":334,"unpacked_bytes":64790709},
+    {"name":"GSX_sounds.zip.001","target":"couatl/GSX/sounds","bytes":239896723,"sha256":"ba977f193b6e824224b27bb9e71c7e24b4f0280c0ac6fc50c1b1491ec134986d","entries":2806,"unpacked_bytes":279844526},
+    {"name":"textures_thumbnails.zip.001","target":"texture","bytes":18388749,"sha256":"abfdc0d3354789db15edb8121f19323c581fa8f7df320014691698550055cda2","entries":1374,"unpacked_bytes":18191119}
+  ]
+}

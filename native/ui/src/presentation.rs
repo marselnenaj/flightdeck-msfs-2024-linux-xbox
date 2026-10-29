@@ -132,7 +132,10 @@ pub(crate) fn gsx(data: &Value) -> AddonProgress {
     let supported = current && data["state"] == "available";
     let prepared = supported && yes(data, "prepared");
     let package = prepared && yes(data, "package_installed");
-    let configured = package && yes(data, "startup_found") && yes(data, "configured");
+    let configured = package
+        && yes(data, "engine_ready")
+        && yes(data, "startup_found")
+        && yes(data, "configured");
     let steps = vec![prepared, package, configured];
     let next = steps.iter().position(|v| !v).map(|i| i + 1).unwrap_or(0);
     let mut progress = AddonProgress {
@@ -416,8 +419,10 @@ mod addon_tests {
             let package = flags & 2 != 0;
             let startup = flags & 4 != 0;
             let configured = flags & 8 != 0;
-            let progress = gsx(&json!({"state":"available", "prepared":prepared,
-                "package_installed":package, "startup_found":startup, "configured":configured}));
+            let progress = gsx(
+                &json!({"state":"available", "engine_ready":true, "prepared":prepared,
+                "package_installed":package, "startup_found":startup, "configured":configured}),
+            );
             assert_eq!(
                 progress.steps,
                 [
@@ -475,7 +480,7 @@ mod addon_tests {
 
     #[test]
     fn gsx_unsupported_stale_or_active_cannot_be_ready() {
-        let mut data = json!({"state":"available", "prepared":true,
+        let mut data = json!({"state":"available", "engine_ready":true, "prepared":true,
             "package_installed":true, "startup_found":true, "configured":true});
         data["state"] = json!("unavailable");
         assert!(!gsx(&data).ready);

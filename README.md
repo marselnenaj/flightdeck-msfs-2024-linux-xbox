@@ -21,17 +21,17 @@ of MSFS 2024 or 2020** through Wine/Proton. Sign in with your Microsoft account,
 download the licensed game and start it from the native Rust desktop application.
 Windows, the Xbox app and a previous MSFS installation are not required for Xbox PC setup.
 Flightdeck also detects existing **Steam installations** and manages their optional
-Fenix, GSX, Navigraph Hub/Simlink and Orbx Central setup; Steam handles game
+Fenix, GSX, Navigraph Hub/Simlink, Orbx Central and MobiFlight setup; Steam handles game
 downloads, updates and account sign-in.
 
 **Download the [latest stable release](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/latest).**
 The launcher, installer and updater need no Python.
 
-**In development:** repair the legacy native-only `mscoree` override when opening
-or repairing Fenix, retaining native DLL priority and a local backup. The loader
-failure from [#10](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/issues/10)
-was reproduced and repaired in an account-free Wine profile. This addition is not
-in 0.3.4; full Fenix installer validation remains outstanding.
+**New in 0.3.5:** [MobiFlight / WinWing setup](docs/mobiflight.md), GSX engine
+repair, bounded X11 startup checks and a repair for the native-only CLR override
+behind the Fenix loader failure in #10. Hardware connections and full-flight
+addon behavior remain experimental. The loader correction was reproduced in an
+account-free Wine profile; full Fenix installer validation remains outstanding.
 
 **New in 0.3.4:** verify that video decoders and Wine's post-processing elements
 actually load before selecting a Proton media stack. This fixes a cached-factory

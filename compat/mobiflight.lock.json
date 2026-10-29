@@ -1,0 +1,42 @@
+{
+  "format": 1,
+  "version": "11.3.1",
+  "archive_url": "https://github.com/MobiFlight/MobiFlight-Connector/releases/download/11.3.1/MobiFlightConnector-11.3.1.zip",
+  "archive_sha256": "24ff1c0d172711ae04a7ca41ac3667f1fa180aab0376923914ca8cc4bf8d86d2",
+  "archive_bytes": 95692148,
+  "runtime": "self-contained .NET 10.0.12 Windows Desktop",
+  "executable": "MFConnector.exe",
+  "executable_sha256": "2d104b330f4b807eceb2fcf4e5112cf45e1b2ef4f8b191a7d048143f851e60e3",
+  "application_sha256": "f7498aca6d83d5ca90d9c74ffc39b1aebba92c19c480243d81eec838936ecc6d",
+  "hidsharp": {
+    "version": "2.6.4",
+    "package_url": "https://api.nuget.org/v3-flatcontainer/hidsharp/2.6.4/hidsharp.2.6.4.nupkg",
+    "package_sha256": "cf55d4b4d7b42dc1d8496b7b592ba00d1ecd48a70bc07bd8dabd3e9976d108e7",
+    "package_bytes": 1175217,
+    "member": "lib/netstandard2.0/HidSharp.dll",
+    "original_sha256": "79f2bc8ddff102e6dbede84b2c211a3aea2ed675bf762fa0f02ecb65f61ee812",
+    "original_bytes": 239616,
+    "patched_sha256": "5942bf310242e880fcfafb3dfcdda86d2a9a0bc6080c962dcd82a3221c4ed9aa",
+    "patched_bytes": 238080,
+    "source_url": "https://software.seekye.com/hidsharp",
+    "license": "Apache-2.0"
+  },
+  "cecil": {
+    "version": "0.11.6",
+    "package_url": "https://api.nuget.org/v3-flatcontainer/mono.cecil/0.11.6/mono.cecil.0.11.6.nupkg",
+    "package_sha256": "d2a23832aaa948ba9a01acc42b5726e34c5f995958f1b30d45c0e7c70b3a72d5",
+    "package_bytes": 707868,
+    "member": "lib/netstandard2.0/Mono.Cecil.dll",
+    "dll_sha256": "831dca77470d85cb6ffbea3072daa7a3df5b7c9fcfd9c3f43674a9be99d4bfcf",
+    "license": "MIT"
+  },
+  "wasm_sha256": "3b0bae23d0f12e6504c15b29b524aaf9f50dbac391eb70d921e5525e1b3f7416",
+  "events_url": "https://hubhop-api-mgtm.azure-api.net/api/v1/export/presets?type=wasm",
+  "winebus": {
+    "bytes": 105520,
+    "sha256": "bb8e46a8b9b182f4aca1436fb620f68e52743826a674aafa39810f28f738e8f8",
+    "runner_archive_sha256": "78a232dd5dc963045a316f59e13e01ec1b1fa35e30bc2a14cf9bb4a7b9609ca1",
+    "allowlist": ["4098:BB3E", "4098:BC1E", "4098:B920", "4098:BC28"]
+  },
+  "wine_fix": "https://github.com/wine-mirror/wine/commit/135ae829199108e7168662c740fc076b0d841bce"
+}

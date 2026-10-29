@@ -78,7 +78,7 @@ impl App {
             Page::Updates => keys.push("game-update"),
             Page::Saves => keys.push("cloud-saves"),
             Page::Mods => {
-                keys.extend(["fenix", "gsx", "navigraph"]);
+                keys.extend(["fenix", "gsx", "navigraph", "orbx", "mobiflight"]);
                 if heavy
                     || !self.snapshot.contains_key("mods")
                     || model::active(&self.data("mods")["job"])

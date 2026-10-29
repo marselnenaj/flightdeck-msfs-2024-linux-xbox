@@ -53,10 +53,10 @@ const SKIP: [&str; 10] = [
     ".venv",
     ".pytest_cache",
 ];
-const EXTENSIONS: [&str; 26] = [
+const EXTENSIONS: [&str; 28] = [
     ".py", ".sh", ".md", ".txt", ".json", ".toml", ".lock", ".patch", ".c", ".h", ".cpp", ".hpp",
     ".hip", ".inc", ".idl", ".spec", ".def", ".rs", ".css", ".js", ".mjs", ".html", ".svg",
-    ".example", ".yml", ".yaml",
+    ".example", ".yml", ".yaml", ".cs", ".csproj",
 ];
 const NAMES: [&str; 8] = [
     "LICENSE",
@@ -559,9 +559,14 @@ fn archive_extra(
 }
 
 pub fn release(root: &Path, output: &Path) -> Result<()> {
-    release_with_media(root, output, None)
+    release_with_sources(root, output, None, None)
 }
-pub fn release_with_media(root: &Path, output: &Path, media_sources: Option<&Path>) -> Result<()> {
+pub fn release_with_sources(
+    root: &Path,
+    output: &Path,
+    media_sources: Option<&Path>,
+    mobiflight_sources: Option<&Path>,
+) -> Result<()> {
     let timestamp = std::env::var("SOURCE_DATE_EPOCH")
         .ok()
         .map(|value| {
@@ -571,10 +576,13 @@ pub fn release_with_media(root: &Path, output: &Path, media_sources: Option<&Pat
         })
         .transpose()?
         .unwrap_or(0);
-    let extra = media_sources
+    let mut extra = media_sources
         .map(|folder| crate::media::source_files(root, folder))
         .transpose()?
         .unwrap_or_default();
+    if let Some(folder) = mobiflight_sources {
+        extra.extend(crate::mobiflight::source_files(root, folder)?);
+    }
     if extra.is_empty() {
         archive(root, output, &inspect(root)?, timestamp)
     } else {

@@ -130,6 +130,14 @@ impl Launcher {
     pub fn new(state_dir: PathBuf, selected: Option<&str>) -> Result<Arc<Self>> {
         files::private_dir(&state_dir)?;
         let state_dir = state_dir.canonicalize()?;
+        // Undo our temporary desktop change even if a later profile read fails.
+        // Keep the launcher available for diagnostics when live reload is pending;
+        // the launch preflight retries restoration before any Wine/auth helper.
+        if let Err(error) =
+            crate::display_preflight::restore_pending(&state_dir, &AtomicBool::new(false))
+        {
+            eprintln!("Display recovery is pending: {error}");
+        }
         crate::installations::recover(&state_dir)?;
         let mut runtime = None;
         let mut known = BTreeMap::new();

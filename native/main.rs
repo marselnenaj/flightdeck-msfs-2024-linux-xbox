@@ -28,7 +28,7 @@ struct Arguments {
     language: Option<String>,
     #[arg(long)]
     refresh_components: bool,
-    #[arg(long, hide=true, value_parser=["host","graphics","vr","nvidia-directory","hip","media","media-bundle"])]
+    #[arg(long, hide=true, value_parser=["host","graphics","display","vr","nvidia-directory","hip","media","media-bundle","mobiflight-bundle"])]
     native_probe: Option<String>,
     #[command(subcommand)]
     command: Option<Command>,
@@ -272,7 +272,11 @@ fn main() -> ExitCode {
         _ => {}
     }
     if let Some(Command::RunGame { runtime, lock_fd }) = &arguments.command {
-        return match flightdeck::supervisor::run(runtime, *lock_fd) {
+        let state_dir = arguments
+            .state_dir
+            .clone()
+            .unwrap_or_else(|| files::xdg("XDG_STATE_HOME", ".local/state").join("flightdeck"));
+        return match flightdeck::supervisor::run_with_state(runtime, *lock_fd, &state_dir) {
             Ok(code) => ExitCode::from(code),
             Err(error) => {
                 eprintln!("Flightdeck game supervisor: {error}");
@@ -301,8 +305,10 @@ fn main() -> ExitCode {
     if let Some(probe) = arguments.native_probe.as_deref() {
         let result = match probe {
             "host" => Ok(flightdeck::native_probe::host()),
+            "display" => Ok(flightdeck::native_probe::display()),
             "media" => Ok(flightdeck::native_probe::media()),
             "media-bundle" => Ok(flightdeck::media_overlay::payload_status()),
+            "mobiflight-bundle" => Ok(flightdeck::hidsharp_patch::payload_status()),
             "graphics" => flightdeck::native_probe::graphics(),
             "vr" => Ok(flightdeck::native_probe::vr()),
             "hip" => std::env::var_os("FLIGHTDECK_HIP_LIBRARY")

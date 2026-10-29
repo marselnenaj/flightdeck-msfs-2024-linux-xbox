@@ -1,6 +1,6 @@
 # Changes and release status
 
-## In development
+## 0.3.5 — 29 October 2026
 
 - Keep native CLR DLL priority while permitting Wine builtin fallback during
   .NET Framework preparation. Before opening or repairing Fenix, migrate only
@@ -11,6 +11,18 @@
   Verify the actual Flightdeck preparation repairs the persisted override, loads
   the same assembly and is idempotent. This verifies the loader failure class;
   the reporter's 8.0.33 runtime and complete Fenix installer remain untested.
+- Prepare official MobiFlight 11.3.1, its WASM module and missing HubHop events in
+  the selected Xbox or Steam profile. Preserve custom events and unknown DLLs;
+  bundle a reproducible, hash-bound HidSharp fix with its license and sources.
+  Merge WinWing device IDs only for the verified Winebus build, preserving explicit
+  disable preferences. Diagnose Linux permissions without global input access.
+- Repair missing GSX engine files from bounded, hash-pinned official archives in
+  a staged profile with real recovery history. Keep engine health separate from
+  full product installation and licensing. Do not rewrite Community entries.
+- Check X11 with a bounded handshake before Xbox authentication and game launch.
+  Recover the verified Hyprland 0.56.2 stale-listener case only when no X11 clients
+  or XWayland process exist; restore temporary configuration changes on failure,
+  cancellation and the next startup. Other desktops receive an actionable error.
 
 ## 0.3.4 — 29 October 2026
 

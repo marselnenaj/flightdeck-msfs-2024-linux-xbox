@@ -22,17 +22,17 @@ Microsoft-Konto an, lade das lizenzierte Spiel herunter und starte es über die
 native Rust-Oberfläche. Windows, die Xbox-App und eine bestehende MSFS-Installation
 sind für die Xbox-PC-Einrichtung nicht erforderlich. Flightdeck erkennt außerdem
 bestehende **Steam-Installationen** und verwaltet deren optionale Einrichtung von
-Fenix, GSX, Navigraph Hub/Simlink und Orbx Central;
+Fenix, GSX, Navigraph Hub/Simlink, Orbx Central und MobiFlight;
 Spieldownloads, Updates und Kontoanmeldung übernimmt Steam.
 
 **Lade die [neueste stabile Version](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/latest).**
 Launcher, Installer und Updater benötigen kein Python.
 
-**In Entwicklung:** alten `mscoree`-Override beim Öffnen oder Reparieren von Fenix
-korrigieren, mit Vorrang für native DLLs und lokaler Sicherung. Der Ladefehler aus
-[#10](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/issues/10) wurde
-in einem konto-freien Wine-Profil reproduziert und repariert. Noch nicht in 0.3.4
-enthalten; der vollständige Fenix-Installer muss noch geprüft werden.
+**Neu in 0.3.5:** [MobiFlight / WinWing](mobiflight.de.md), GSX-Engine-Reparatur,
+begrenzte X11-Startprüfung und eine Reparatur des CLR-Overrides hinter dem
+Fenix-Ladefehler aus #10. Hardware-Verbindungen und vollständige Add-on-Flüge
+bleiben experimentell. Die Loader-Korrektur wurde in einem konto-freien
+Wine-Profil geprüft; der vollständige Fenix-Installer muss noch bestätigt werden.
 
 **Neu in 0.3.4:** Die Medienprüfung lädt Decoder und Wines Video-Nachbearbeitung
 tatsächlich, bevor Flightdeck einen Proton-Medienpfad auswählt. Das behebt einen

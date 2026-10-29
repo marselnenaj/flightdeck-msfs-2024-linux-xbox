@@ -340,6 +340,27 @@ fn run(
         let root = ctx.root()?;
         let lease = ctx.lease()?;
         guard::check(root, &lease)?;
+        if phase == "before_start"
+            && let Err(error) =
+                crate::display_preflight::ensure(root, &ctx.launcher.state_dir, &ctx.cancel)
+        {
+            if matches!(error, Error::Cancelled) {
+                return Err(Attention {
+                    error: Failure::new("cancelled"),
+                    plan: None,
+                });
+            }
+            set(
+                ctx,
+                "attention",
+                &error.to_string(),
+                json!({"error_code":"display","phase":"before_start","error_details":{"display":crate::display_preflight::failure_code(&error)}}),
+            );
+            return Err(Attention {
+                error: Failure::new("display"),
+                plan: None,
+            });
+        }
         flow::enable_local(root, &lease)?;
         let mut binding = expected.map(str::to_owned);
         if phase == "before_start" {
@@ -386,11 +407,15 @@ fn run(
                     guard::clear(root, &lease)?;
                 }
                 let message = error.to_string();
-                let code = match error {
-                    Error::Graphics(_) => "graphics",
-                    Error::Framework(_) => "framework",
-                    Error::Cancelled => "cancelled",
-                    _ => "launch",
+                let code = if crate::display_preflight::failure_code(&error).is_some() {
+                    "display"
+                } else {
+                    match error {
+                        Error::Graphics(_) => "graphics",
+                        Error::Framework(_) => "framework",
+                        Error::Cancelled => "cancelled",
+                        _ => "launch",
+                    }
                 };
                 set(
                     ctx,
@@ -481,7 +506,10 @@ fn run(
                 "Die Spielstände wurden synchronisiert. Die Verbindung konnte nicht vollständig geschlossen werden.",
                 json!({"phase":null,"last_synced_at":files::now()}),
             );
-        } else if !matches!(error.error.code, "graphics" | "framework" | "launch") {
+        } else if !matches!(
+            error.error.code,
+            "display" | "graphics" | "framework" | "launch"
+        ) {
             attention(ctx, &phase, error);
         }
     }

@@ -46,6 +46,9 @@ impl Session {
         if addon.enabled(crate::navigraph::STARTUP) {
             names.extend_from_slice(crate::navigraph::SIMLINK);
         }
+        if addon.enabled(crate::mobiflight::STARTUP) {
+            names.extend_from_slice(crate::mobiflight::PROCESSES);
+        }
         let prefix_generation = item.prefix_generation();
         let profile = if let Some(profile) = fenix.clone() {
             profile

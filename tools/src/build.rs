@@ -37,9 +37,13 @@ pub fn native(
     offline: bool,
     toolchain: Option<&str>,
     bundled_media: bool,
+    bundled_mobiflight: bool,
 ) -> Result<()> {
     if bundled_media {
         crate::media::verify_bundle(root, &root.join("build/media"))?;
+    }
+    if bundled_mobiflight {
+        crate::mobiflight::verify_bundle(root, &root.join("build/mobiflight"))?;
     }
     let selector: Vec<String> = toolchain
         .map(|name| format!("+{name}"))
@@ -72,6 +76,7 @@ pub fn native(
         .args(&selector)
         .args(["build", "--locked", "--release"])
         .args(bundled_media.then_some("--features=bundled-media"))
+        .args(bundled_mobiflight.then_some("--features=bundled-mobiflight"))
         .args(offline.then_some("--offline"))
         .current_dir(root)
         .env_remove("RUSTFLAGS")

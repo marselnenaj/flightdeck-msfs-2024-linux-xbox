@@ -213,12 +213,43 @@ fn both_steam_editions_configure_orbx_navigraph_and_gsx_without_touching_saved_x
             .join("drive_c/Program Files (x86)/Addon Manager");
         put(&manager.join("Couatl_Updater.exe"), "synthetic manager");
         put(&manager.join("couatl64_msfs.exe"), "synthetic companion");
+        for path in [
+            "couatl64/couatl64_boot.exe",
+            "couatl64/couatl64_MSFS.exe",
+            "couatl64/couatl64_MSFS2024.exe",
+            "couatl64/python37.dll",
+            "couatl64/python37.zip",
+            "couatl64/wx/__init__.py",
+            "couatl64/wx/_core.cp37-win_amd64.pyd",
+            "couatl/common/__init__.pye",
+            "couatl/GSX/__init__.pye",
+            "couatl/GSX/airports/__init__.pye",
+            "couatl/GSX/sounds/Truck_Engine1.wav",
+        ] {
+            put(&manager.join(path), "synthetic engine module");
+        }
         put(&settings.join("exe.xml"),br#"<SimBase.Document><Disabled>False</Disabled><Launch.Addon><Name>GSX</Name><Disabled>True</Disabled><Path>C:\Program Files (x86)\Addon Manager\couatl64_msfs.exe</Path></Launch.Addon><Launch.Addon><Name>Other app</Name><Path>C:\Other.exe</Path></Launch.Addon></SimBase.Document>"#);
         put(
             &item
                 .prefix()
                 .join("drive_c/Packages/Community/fsdreamteam-gsx-pro/manifest.json"),
             br#"{"title":"GSX fixture","package_version":"1.0"}"#,
+        );
+        let gsx_package = item
+            .prefix()
+            .join("drive_c/Packages/Community/fsdreamteam-gsx-pro");
+        let paths = [
+            "modules/fsdt-msfs-bridge.wasm",
+            "SimObjects/GroundVehicles/gsx/model/model.gltf",
+            "SimObjects/GroundVehicles/gsx/texture/common.dds",
+        ];
+        for path in paths {
+            put(&gsx_package.join(path), "payload");
+        }
+        put(
+            &gsx_package.join("layout.json"),
+            serde_json::to_vec(&json!({"content":paths.map(|path| json!({"path":path,"size":7}))}))
+                .unwrap(),
         );
         let status = f.status("navigraph");
         f.action("navigraph", "configure", &status).unwrap();

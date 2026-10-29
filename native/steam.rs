@@ -45,6 +45,7 @@ pub fn get(app: &Arc<Launcher>, path: &str) -> Option<Result<Value>> {
         "/api/gsx" => crate::gsx::snapshot(app),
         "/api/navigraph" => crate::navigraph::snapshot(app),
         "/api/orbx" => crate::orbx::snapshot(app),
+        "/api/mobiflight" => crate::mobiflight::snapshot(app),
         "/api/setup" => json!({"job":null,"managed_by":"steam"}),
         "/api/game-update" => json!({"runtime_path":context,"managed_by":"steam","job":null}),
         "/api/cloud-saves" => {
@@ -84,6 +85,9 @@ pub fn post(app: &Arc<Launcher>, path: &str, data: &Value) -> Option<Result<Valu
         }
         p if p.starts_with("/api/orbx/") => {
             crate::orbx::start(app, p.rsplit('/').next().unwrap_or(""), data)
+        }
+        p if p.starts_with("/api/mobiflight/") => {
+            crate::mobiflight::start(app, p.rsplit('/').next().unwrap_or(""), data)
         }
         p if p.starts_with("/api/gsx/") => {
             crate::gsx::start(app, p.rsplit('/').next().unwrap_or(""), data)
