@@ -237,13 +237,19 @@ pub fn configure_verified(
         |env| {
             let mut command = std::process::Command::new(crate::runtime::wine(runner));
             command.arg("--version").env_clear().envs(env);
-            crate::process::output(
+            let result = crate::process::output(
                 &mut command,
                 std::time::Duration::from_secs(5),
                 4096,
                 &cancel,
-            )
-            .is_ok()
+            );
+            let state = match &result {
+                Ok(_) => "ready",
+                Err(Error::Invalid("Der Vorgang hat nicht rechtzeitig geantwortet.")) => "timeout",
+                Err(_) => "probe_failed",
+            };
+            eprintln!("flightdeck-media-loader: source=host state={state}");
+            result.is_ok()
         },
     )
 }
@@ -286,22 +292,70 @@ fn configure_checked(
     }
     let mut host = original;
     let host_configured = configure(root, runner, false, nvidia, &mut host)?;
-    if h264(&host, "host") && wine(&host) {
-        *env = host;
-        eprintln!("flightdeck-media-selection: reason=verified_host_fallback");
-        eprintln!(
-            "flightdeck-media: bundled H.264 decoder unavailable; verified host codec stack selected"
-        );
-        Ok(host_configured)
-    } else {
-        eprintln!("flightdeck-media-selection: reason=runner_unverified");
-        Ok(configured)
+    // A cold registry scan or loader probe can fail transiently. Recheck once
+    // before keeping a runner that is already known to have an incomplete
+    // media chain. Both attempts still require working codecs and Wine.
+    for attempt in 0..2 {
+        if attempt > 0 {
+            eprintln!("flightdeck-media-retry: source=host");
+        }
+        if h264(&host, "host") && wine(&host) {
+            *env = host;
+            eprintln!("flightdeck-media-selection: reason=verified_host_fallback");
+            eprintln!(
+                "flightdeck-media: bundled H.264 decoder unavailable; verified host codec stack selected"
+            );
+            return Ok(host_configured);
+        }
     }
+    eprintln!("flightdeck-media-selection: reason=runner_unverified");
+    Ok(configured)
 }
 
 #[cfg(test)]
 mod fallback_tests {
     use super::*;
+    #[test]
+    fn host_fallback_rechecks_a_transient_failure_but_never_accepts_an_unverified_loader() {
+        let temp = tempfile::tempdir().expect("runtime");
+        let runner = temp.path().join("runner");
+        let libs = runner.join("files/lib/x86_64-linux-gnu");
+        files::private_dir(&libs.join("gstreamer-1.0")).expect("plugins");
+        files::atomic(&libs.join("libavcodec.so.62"), b"codec").expect("codec");
+        for transient in ["codecs", "loader", "persistent"] {
+            let checks = std::cell::Cell::new(0);
+            let loads = std::cell::Cell::new(0);
+            let mut env = Environment::new();
+            let result = configure_checked(
+                temp.path(),
+                &runner,
+                true,
+                false,
+                &mut env,
+                |_, source| {
+                    if source == "runner" {
+                        return false;
+                    }
+                    checks.set(checks.get() + 1);
+                    transient != "codecs" || checks.get() > 1
+                },
+                |_| {
+                    loads.set(loads.get() + 1);
+                    transient != "persistent" && (transient != "loader" || loads.get() > 1)
+                },
+            )
+            .expect("media");
+            assert_eq!(checks.get(), 2);
+            assert_eq!(
+                result.0,
+                if transient == "persistent" {
+                    "runner"
+                } else {
+                    "host"
+                }
+            );
+        }
+    }
     #[test]
     fn initial_host_selection_is_probed_but_does_not_block_hardware_fallback() {
         let temp = tempfile::tempdir().expect("runtime");

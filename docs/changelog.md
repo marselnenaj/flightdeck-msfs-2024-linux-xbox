@@ -5,12 +5,16 @@
 - Instantiate the MP4/H.264 decoder and Wine video post-processing elements in
   the isolated media probe. Cached factory metadata no longer counts as proof
   that a decoder loads. Verify the full chain before choosing a host fallback;
-  retain explicit media settings and hardware fallback behavior.
+  recheck a failed fallback once, retaining explicit media settings and hardware
+  fallback behavior.
 - Record typed media readiness, selection reason, missing H.264 decoder/known
   elements and the applied compatibility overlay in safe diagnostics. Exclude
   raw plugin errors, private paths and video caps. Clear stale authentication
   failure phases after successful or retried setup while retaining actual
   cancelled-download failures.
+- Retain the codec-selection trace in the isolated developer video probe,
+  including the host Wine loader result. Wait through a transient profile
+  rebinding snapshot in the Steam recovery test instead of ending its poll early.
 - Reproduce a failed decode with the exact official CachyOS 20261015 runner and
   verify the corrected host fallback against the real 3840×2160 loading video:
   two 120-frame NV12 passes, rewind, EOS and shutdown. Cache-sensitive repeats

@@ -59,11 +59,22 @@ impl Lab {
 
     /// Runs one operation. A failing driver reports its own message.
     pub fn call(&self, operation: &str, inputs: Value) -> Result<Value> {
+        self.call_recorded(operation, inputs, None)
+    }
+
+    pub fn call_with_stderr(&self, operation: &str, inputs: Value, log: &Path) -> Result<Value> {
+        self.call_recorded(operation, inputs, Some(log))
+    }
+
+    fn call_recorded(&self, operation: &str, inputs: Value, log: Option<&Path>) -> Result<Value> {
         require(self.binary.is_file(), BUILD_FIRST)?;
         let request = encode(operation, inputs)?;
         let mut command = Command::new(host::canonical(&self.binary)?);
         command.stdout(Stdio::piped()).stderr(Stdio::piped());
         let finished = host::run(&mut command, Some(&request), SECONDS)?;
+        if let Some(log) = log {
+            host::write(log, &finished.stderr)?;
+        }
         if finished.code != 0 {
             let message = String::from_utf8_lossy(&finished.stderr).trim().to_string();
             return fail(if message.is_empty() {
@@ -151,11 +162,18 @@ mod tests {
         let binary = temp.path().join("runtime-lab");
         script(
             &binary,
-            "cat > \"$0.request\"\nprintf '%s\\n' '{\"devices\":[1,2]}'",
+            "cat > \"$0.request\"\necho 'selection trace' >&2\nprintf '%s\\n' '{\"devices\":[1,2]}'",
         );
         let lab = Lab::at(binary.clone());
-        let answer = lab.call("probe", json!({"root": "/r"})).expect("answer");
+        let trace = temp.path().join("selection.log");
+        let answer = lab
+            .call_with_stderr("probe", json!({"root": "/r"}), &trace)
+            .expect("answer");
         assert_eq!(answer, json!({"devices": [1, 2]}));
+        assert_eq!(
+            fs::read_to_string(trace).expect("trace"),
+            "selection trace\n"
+        );
         let sent: Value = serde_json::from_slice(
             &fs::read(temp.path().join("runtime-lab.request")).expect("request"),
         )

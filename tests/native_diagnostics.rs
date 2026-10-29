@@ -48,6 +48,8 @@ fn media_probe_details_only_export_fixed_names_and_states() {
         flightdeck-media-probe: source=runner state=incomplete\n\
         flightdeck-media-element: source=runner name=avdec_h264 ready=0\n\
         flightdeck-media-probe: source=host state=ready\n\
+        flightdeck-media-loader: source=host state=ready\n\
+        flightdeck-media-loader: source=host state=private_secret\n\
         flightdeck-media-element: source=host name=avdec_h264 ready=1\n\
         flightdeck-media-element: source=host name=private_secret ready=0\n\
         flightdeck-media-probe: source=host state=private_secret\n\
@@ -61,6 +63,7 @@ fn media_probe_details_only_export_fixed_names_and_states() {
         false
     );
     assert_eq!(out["media"]["probes"]["host"]["state"], "ready");
+    assert_eq!(out["media"]["probes"]["host"]["loader"], "ready");
     assert_eq!(
         out["media"]["probes"]["host"]["elements"]["avdec_h264"],
         true
