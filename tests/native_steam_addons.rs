@@ -170,7 +170,12 @@ impl Fixture {
         let deadline = Instant::now() + Duration::from_secs(10);
         loop {
             let value = self.status(kind);
-            if value["job"]["state"] != "running" {
+            // Recovery can replace the prefix between resolving the profile
+            // and reading the job. That snapshot still reports busy, but its
+            // old profile context cannot see the newly rebound job yet.
+            if value["job"]["state"] != "running"
+                && !(value["job"].is_null() && value["busy"] == true)
+            {
                 return value;
             }
             assert!(Instant::now() < deadline, "job timed out: {value}");

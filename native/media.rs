@@ -179,7 +179,7 @@ pub fn configure_verified(
         selected,
         nvidia,
         env,
-        |env| {
+        |env, source| {
             let result = (|| -> Result<bool> {
                 let mut command = std::process::Command::new(std::env::current_exe()?);
                 command
@@ -193,20 +193,63 @@ pub fn configure_verified(
                     &cancel,
                 )?;
                 let value: serde_json::Value = serde_json::from_slice(&bytes)?;
-                Ok(value["schema"] == 1 && value["h264"] == true)
+                let valid = value["schema"] == 1
+                    && [
+                        "ready",
+                        "incomplete",
+                        "initialization_failed",
+                        "unavailable",
+                    ]
+                    .contains(&value["state"].as_str().unwrap_or(""));
+                if !valid {
+                    return Err(Error::Invalid("Invalid media probe."));
+                }
+                eprintln!(
+                    "flightdeck-media-probe: source={source} state={}",
+                    value["state"].as_str().unwrap_or("unavailable")
+                );
+                for name in crate::native_probe::MEDIA_ELEMENTS {
+                    let ready = value["elements"][name] == true;
+                    eprintln!(
+                        "flightdeck-media-element: source={source} name={name} ready={}",
+                        u8::from(ready)
+                    );
+                }
+                Ok(value["state"] == "ready"
+                    && value["h264"] == true
+                    && crate::native_probe::MEDIA_ELEMENTS
+                        .iter()
+                        .all(|name| value["elements"][*name] == true))
             })();
+            if let Err(error) = &result {
+                let state = if matches!(
+                    error,
+                    Error::Invalid("Der Vorgang hat nicht rechtzeitig geantwortet.")
+                ) {
+                    "timeout"
+                } else {
+                    "probe_failed"
+                };
+                eprintln!("flightdeck-media-probe: source={source} state={state}");
+            }
             result.unwrap_or(false)
         },
         |env| {
             let mut command = std::process::Command::new(crate::runtime::wine(runner));
             command.arg("--version").env_clear().envs(env);
-            crate::process::output(
+            let result = crate::process::output(
                 &mut command,
                 std::time::Duration::from_secs(5),
                 4096,
                 &cancel,
-            )
-            .is_ok()
+            );
+            let state = match &result {
+                Ok(_) => "ready",
+                Err(Error::Invalid("Der Vorgang hat nicht rechtzeitig geantwortet.")) => "timeout",
+                Err(_) => "probe_failed",
+            };
+            eprintln!("flightdeck-media-loader: source=host state={state}");
+            result.is_ok()
         },
     )
 }
@@ -217,7 +260,7 @@ fn configure_checked(
     selected: bool,
     nvidia: bool,
     env: &mut Environment,
-    h264: impl Fn(&Environment) -> bool,
+    h264: impl Fn(&Environment, &'static str) -> bool,
     wine: impl Fn(&Environment) -> bool,
 ) -> Result<(&'static str, &'static str)> {
     let original = env.clone();
@@ -231,25 +274,110 @@ fn configure_checked(
     .iter()
     .any(|key| original.contains_key(OsStr::new(key)));
     let configured = configure(root, runner, selected, nvidia, env)?;
-    if configured.0 != "runner" || explicit || h264(env) {
+    if explicit {
+        eprintln!("flightdeck-media-selection: reason=explicit");
+        return Ok(configured);
+    }
+    let ready = h264(env, configured.0);
+    if configured.0 != "runner" || ready {
+        eprintln!(
+            "flightdeck-media-selection: reason={}",
+            if configured.0 == "host" {
+                "initial_host"
+            } else {
+                "runner"
+            }
+        );
         return Ok(configured);
     }
     let mut host = original;
     let host_configured = configure(root, runner, false, nvidia, &mut host)?;
-    if h264(&host) && wine(&host) {
-        *env = host;
-        eprintln!(
-            "flightdeck-media: bundled H.264 decoder unavailable; verified host codec stack selected"
-        );
-        Ok(host_configured)
-    } else {
-        Ok(configured)
+    // A cold registry scan or loader probe can fail transiently. Recheck once
+    // before keeping a runner that is already known to have an incomplete
+    // media chain. Both attempts still require working codecs and Wine.
+    for attempt in 0..2 {
+        if attempt > 0 {
+            eprintln!("flightdeck-media-retry: source=host");
+        }
+        if h264(&host, "host") && wine(&host) {
+            *env = host;
+            eprintln!("flightdeck-media-selection: reason=verified_host_fallback");
+            eprintln!(
+                "flightdeck-media: bundled H.264 decoder unavailable; verified host codec stack selected"
+            );
+            return Ok(host_configured);
+        }
     }
+    eprintln!("flightdeck-media-selection: reason=runner_unverified");
+    Ok(configured)
 }
 
 #[cfg(test)]
 mod fallback_tests {
     use super::*;
+    #[test]
+    fn host_fallback_rechecks_a_transient_failure_but_never_accepts_an_unverified_loader() {
+        let temp = tempfile::tempdir().expect("runtime");
+        let runner = temp.path().join("runner");
+        let libs = runner.join("files/lib/x86_64-linux-gnu");
+        files::private_dir(&libs.join("gstreamer-1.0")).expect("plugins");
+        files::atomic(&libs.join("libavcodec.so.62"), b"codec").expect("codec");
+        for transient in ["codecs", "loader", "persistent"] {
+            let checks = std::cell::Cell::new(0);
+            let loads = std::cell::Cell::new(0);
+            let mut env = Environment::new();
+            let result = configure_checked(
+                temp.path(),
+                &runner,
+                true,
+                false,
+                &mut env,
+                |_, source| {
+                    if source == "runner" {
+                        return false;
+                    }
+                    checks.set(checks.get() + 1);
+                    transient != "codecs" || checks.get() > 1
+                },
+                |_| {
+                    loads.set(loads.get() + 1);
+                    transient != "persistent" && (transient != "loader" || loads.get() > 1)
+                },
+            )
+            .expect("media");
+            assert_eq!(checks.get(), 2);
+            assert_eq!(
+                result.0,
+                if transient == "persistent" {
+                    "runner"
+                } else {
+                    "host"
+                }
+            );
+        }
+    }
+    #[test]
+    fn initial_host_selection_is_probed_but_does_not_block_hardware_fallback() {
+        let temp = tempfile::tempdir().expect("runtime");
+        let count = std::cell::Cell::new(0);
+        let mut env = Environment::new();
+        let configured = configure_checked(
+            temp.path(),
+            &temp.path().join("runner"),
+            false,
+            false,
+            &mut env,
+            |_, source| {
+                assert_eq!(source, "host");
+                count.set(count.get() + 1);
+                false
+            },
+            |_| panic!("host selection does not replace the runner"),
+        )
+        .expect("missing software plugins must not block a hardware decoder");
+        assert_eq!(configured.0, "host");
+        assert_eq!(count.get(), 1);
+    }
     #[test]
     fn broken_bundled_decoder_falls_back_only_to_a_verified_complete_host_environment() {
         let temp = tempfile::tempdir().expect("runtime");
@@ -268,7 +396,7 @@ mod fallback_tests {
                 true,
                 false,
                 &mut env,
-                |env| host_ready && !env.contains_key(OsStr::new("GST_PLUGIN_SYSTEM_PATH_1_0")),
+                |env, _| host_ready && !env.contains_key(OsStr::new("GST_PLUGIN_SYSTEM_PATH_1_0")),
                 |_| true,
             )
             .expect("media");
@@ -291,7 +419,7 @@ mod fallback_tests {
             true,
             false,
             &mut explicit,
-            |_| panic!("explicit choices must not be probed"),
+            |_, _| panic!("explicit choices must not be probed"),
             |_| false,
         )
         .expect("explicit");

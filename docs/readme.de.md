@@ -28,6 +28,14 @@ Spieldownloads, Updates und Kontoanmeldung übernimmt Steam.
 **Lade die [neueste stabile Version](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/latest).**
 Launcher, Installer und Updater benötigen kein Python.
 
+**Neu in 0.3.4:** Die Medienprüfung lädt Decoder und Wines Video-Nachbearbeitung
+tatsächlich, bevor Flightdeck einen Proton-Medienpfad auswählt. Das behebt einen
+Prüffehler bei zwischengespeicherten Plugin-Einträgen und verbessert die sichere
+Diagnose fehlender Codecs. Der korrigierte CachyOS-20261015-Fallback bestand den
+echten 4K-Ladevideotest einschließlich Zurückspulen und sauberem Beenden. Den
+vollständigen Simulatorstart in #16 muss der Tester noch bestätigen.
+[Reproduktion und Testumfang](media-validation.md)
+
 **Neu in 0.3.3:** optionale Einrichtung von Orbx Central, Navigraph Hub und
 Simlink sowie GSX-Vorbereitung im gewählten **Xbox- oder Steam-Profil** von MSFS
 2020/2024. Die experimentellen Integrationen verwenden das vorhandene Wine-Profil

@@ -118,6 +118,9 @@ pub struct GameLog {
     audio_observations: BTreeMap<String, u64>,
     media_observations: BTreeMap<&'static str, u64>,
     media_configuration: Option<Value>,
+    media_probes: BTreeMap<String, Value>,
+    media_selection: Option<String>,
+    media_missing: BTreeSet<&'static str>,
 }
 impl Default for GameLog {
     fn default() -> Self {
@@ -134,6 +137,9 @@ impl Default for GameLog {
             audio_observations: BTreeMap::new(),
             media_observations: BTreeMap::new(),
             media_configuration: None,
+            media_probes: BTreeMap::new(),
+            media_selection: None,
+            media_missing: BTreeSet::new(),
         }
     }
 }
@@ -178,8 +184,43 @@ impl GameLog {
         for c in regex(r"xodus-runtime: System\.(GetConsoleId|GetXboxLiveSandboxId|GetAppSpecificDeviceId|HandleTrack) result=([0-9a-fA-F]{8})(?:\s|$)").captures_iter(text) {
             self.add("runtime_calls", json!({"method":format!("XSystem{}",&c[1]),"hresult":c[2].to_ascii_lowercase()}));
         }
-        for captures in regex(r"\bflightdeck-media: source=(host|runner) h264=(default|explicit|software_preferred)\b").captures_iter(text) {
+        for captures in regex(r"\bflightdeck-media: source=(host|runner) h264=(default|explicit|software_preferred)\b(?: overlay=(system_memory|unsupported|not_bundled|disabled|cache_changed)(?:\s|$))?").captures_iter(text) {
             self.media_configuration = Some(json!({"source":&captures[1],"h264":&captures[2]}));
+            if let Some(overlay) = captures.get(3)
+                && let Some(configuration) = self.media_configuration.as_mut()
+            {
+                configuration["overlay"] = json!(overlay.as_str());
+            }
+        }
+        for captures in regex(r"\bflightdeck-media-selection: reason=(initial_host|runner|explicit|verified_host_fallback|runner_unverified)(?:\s|$)").captures_iter(text) {
+            self.media_selection = Some(captures[1].into());
+        }
+        for captures in regex(r"\bflightdeck-media-probe: source=(host|runner) state=(ready|incomplete|initialization_failed|unavailable|probe_failed|timeout)(?:\s|$)").captures_iter(text) {
+            self.media_probes.entry(captures[1].into()).or_insert_with(|| json!({"elements":{}}))["state"] = json!(&captures[2]);
+        }
+        for captures in regex(
+            r"\bflightdeck-media-loader: source=(host) state=(ready|probe_failed|timeout)(?:\s|$)",
+        )
+        .captures_iter(text)
+        {
+            self.media_probes
+                .entry(captures[1].into())
+                .or_insert_with(|| json!({"elements":{}}))["loader"] = json!(&captures[2]);
+        }
+        for captures in regex(r"\bflightdeck-media-element: source=(host|runner) name=(avdec_h264|h264parse|qtdemux|decodebin|videoconvert|capsfilter|capssetter|deinterlace|videoflip) ready=([01])(?:\s|$)").captures_iter(text) {
+            self.media_probes.entry(captures[1].into()).or_insert_with(|| json!({"elements":{}}))["elements"][&captures[2]] = json!(&captures[3] == "1");
+        }
+        for captures in regex(
+            r"\bwinegstreamer: failed to create ([a-z0-9_]{1,64}), are (?:32|64)-bit GStreamer\b",
+        )
+        .captures_iter(text)
+        {
+            if let Some(name) = crate::native_probe::MEDIA_ELEMENTS
+                .into_iter()
+                .find(|name| *name == &captures[1])
+            {
+                self.media_missing.insert(name);
+            }
         }
         for (name, pattern) in [
             (
@@ -187,6 +228,7 @@ impl GameLog {
                 r"\bCreating tag file placeholder-video-used\b",
             ),
             ("h264_decode_failed", r"\bCannot decode caps video/x-h264\b"),
+            ("h264_decoder_missing", r"\bMissing decoder: H\.264(?:\s|$)"),
             (
                 "missing_plugin",
                 r"\bYour GStreamer installation is missing a (?:required )?plug-in\b|\bwinegstreamer: failed to create [A-Za-z0-9_-]{1,64}, are (?:32|64)-bit GStreamer\b",
@@ -360,9 +402,14 @@ impl GameLog {
         self.graphics["error_counts"] = json!(self.graphics_errors);
         self.graphics["warning_counts"] = json!(self.graphics_warnings);
         result["graphics_log"] = self.graphics;
-        if self.media_configuration.is_some() || !self.media_observations.is_empty() {
+        if self.media_configuration.is_some()
+            || !self.media_observations.is_empty()
+            || !self.media_probes.is_empty()
+            || self.media_selection.is_some()
+        {
             result["media"] = json!({"scope":"game_log","coverage":coverage.clone(),
-                "configuration":self.media_configuration,"observations":self.media_observations});
+                "configuration":self.media_configuration,"observations":self.media_observations,
+                "selection_reason":self.media_selection,"probes":self.media_probes,"missing_elements":self.media_missing});
         }
         result["audio"] = json!({"scope":"game_log","coverage":coverage,"error_counts":self.audio_errors,"warning_counts":self.audio_warnings,"observations":self.audio_observations});
         result

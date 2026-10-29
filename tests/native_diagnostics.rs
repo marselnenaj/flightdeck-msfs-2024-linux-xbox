@@ -10,6 +10,67 @@ use flightdeck::{
 use serde_json::{Value, json};
 use std::{fs, io::Write, os::unix::fs::symlink, process::Command, time::Duration};
 #[test]
+fn existing_launch_logs_keep_the_actual_media_overlay_without_exporting_unknown_values() {
+    for overlay in [
+        "system_memory",
+        "unsupported",
+        "not_bundled",
+        "disabled",
+        "cache_changed",
+    ] {
+        let mut log = run_diagnostics::GameLog::default();
+        log.consume(&format!("flightdeck-media: source=host h264=default overlay={overlay}\nMissing decoder: H.264 (Main Profile) private-video-caps\n"));
+        let result = log.result(json!({"complete":true}));
+        assert_eq!(result["media"]["configuration"]["overlay"], overlay);
+        assert_eq!(result["media"]["observations"]["h264_decoder_missing"], 1);
+        assert!(!result.to_string().contains("private-video-caps"));
+    }
+    let mut log = run_diagnostics::GameLog::default();
+    log.consume("flightdeck-media: source=host h264=default overlay=private-value\n");
+    let result = log.result(json!({"complete":true}));
+    assert!(result["media"]["configuration"].get("overlay").is_none());
+    assert!(!result.to_string().contains("private-value"));
+}
+#[test]
+fn existing_wine_messages_name_only_known_missing_media_elements() {
+    let mut log = run_diagnostics::GameLog::default();
+    log.consume("winegstreamer: failed to create videoflip, are 64-bit GStreamer plugins installed?\nwinegstreamer: failed to create private_secret, are 64-bit GStreamer plugins installed?\n");
+    let out = log.result(json!({"complete":true}));
+    assert_eq!(out["media"]["missing_elements"], json!(["videoflip"]));
+    assert_eq!(out["media"]["observations"]["missing_plugin"], 2);
+    assert!(!out.to_string().contains("private_secret"));
+}
+#[test]
+fn media_probe_details_only_export_fixed_names_and_states() {
+    let mut log = run_diagnostics::GameLog::default();
+    log.consume(
+        "flightdeck-media-selection: reason=verified_host_fallback\n\
+        flightdeck-media-probe: source=runner state=incomplete\n\
+        flightdeck-media-element: source=runner name=avdec_h264 ready=0\n\
+        flightdeck-media-probe: source=host state=ready\n\
+        flightdeck-media-loader: source=host state=ready\n\
+        flightdeck-media-loader: source=host state=private_secret\n\
+        flightdeck-media-element: source=host name=avdec_h264 ready=1\n\
+        flightdeck-media-element: source=host name=private_secret ready=0\n\
+        flightdeck-media-probe: source=host state=private_secret\n\
+        flightdeck-media-selection: reason=private_secret\n\
+        flightdeck-media-element: source=private_secret name=qtdemux ready=0\n",
+    );
+    let out = log.result(json!({"complete":true}));
+    assert_eq!(out["media"]["selection_reason"], "verified_host_fallback");
+    assert_eq!(
+        out["media"]["probes"]["runner"]["elements"]["avdec_h264"],
+        false
+    );
+    assert_eq!(out["media"]["probes"]["host"]["state"], "ready");
+    assert_eq!(out["media"]["probes"]["host"]["loader"], "ready");
+    assert_eq!(
+        out["media"]["probes"]["host"]["elements"]["avdec_h264"],
+        true
+    );
+    assert!(!out.to_string().contains("private_secret"));
+}
+#[test]
 fn xbox_startup_failures_keep_stage_and_result_without_private_log_text() {
     let mut log = run_diagnostics::GameLog::default();
     log.consume(

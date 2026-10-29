@@ -46,10 +46,27 @@ pub fn host() -> Value {
     json!({"schema":1,"libraries":libraries})
 }
 
-/// A decoder factory is evidence that the plugin and its ABI dependencies
-/// loaded. This runs only in a disposable probe child, never in the service.
+pub const MEDIA_ELEMENTS: [&str; 9] = [
+    "avdec_h264",
+    "h264parse",
+    "qtdemux",
+    "decodebin",
+    "videoconvert",
+    "capsfilter",
+    "capssetter",
+    "deinterlace",
+    "videoflip",
+];
+
+/// Instantiate each fixed element to force its plugin and dependencies to load.
+/// Factory lookup alone can succeed from a stale GStreamer registry entry.
+/// This runs only in a disposable probe child, never in the service.
 pub fn media() -> Value {
-    let available = (|| -> Option<bool> {
+    let mut elements: serde_json::Map<String, Value> = MEDIA_ELEMENTS
+        .iter()
+        .map(|name| ((*name).into(), json!(false)))
+        .collect();
+    let state = (|| -> Option<&str> {
         // SAFETY: GStreamer 1.0's stable C ABI, null optional arguments, and a
         // factory handle released through GObject. Keep GStreamer loaded until
         // this child exits: its registry can retain callbacks and global types.
@@ -60,25 +77,35 @@ pub fn media() -> Value {
                     b"gst_init_check\0",
                 )
                 .ok()?;
-            let find = library
-                .get::<unsafe extern "C" fn(*const c_char) -> Handle>(b"gst_element_factory_find\0")
+            let make = library
+                .get::<unsafe extern "C" fn(*const c_char, *const c_char) -> Handle>(
+                    b"gst_element_factory_make\0",
+                )
                 .ok()?;
             let unref = library
                 .get::<unsafe extern "C" fn(Handle)>(b"g_object_unref\0")
                 .ok()?;
             if init(ptr::null_mut(), ptr::null_mut(), ptr::null_mut()) == 0 {
-                return Some(false);
+                return Some("initialization_failed");
             }
-            let factory = find(c"avdec_h264".as_ptr());
-            if factory.is_null() {
-                return Some(false);
+            for name in MEDIA_ELEMENTS {
+                let cname = CString::new(name).ok()?;
+                let element = make(cname.as_ptr(), ptr::null());
+                let available = !element.is_null();
+                if available {
+                    unref(element);
+                }
+                elements.insert(name.into(), json!(available));
             }
-            unref(factory);
-            Some(true)
+            Some(if elements.values().all(|value| value == true) {
+                "ready"
+            } else {
+                "incomplete"
+            })
         }
     })()
-    .unwrap_or(false);
-    json!({"schema":1,"h264":available})
+    .unwrap_or("unavailable");
+    json!({"schema":1,"h264":elements["avdec_h264"],"state":state,"elements":elements})
 }
 #[repr(C)]
 struct VkApp {
