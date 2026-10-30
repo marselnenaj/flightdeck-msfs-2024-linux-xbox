@@ -28,6 +28,15 @@ Spieldownloads, Updates und Kontoanmeldung übernimmt Steam.
 **Lade die [neueste stabile Version](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/latest).**
 Launcher, Installer und Updater benötigen kein Python.
 
+**Neu in 0.3.6:** Die Medienprüfung beim Xbox-Spielstart verwendet dieselbe
+GStreamer-Cachedatei wie Wine. Scheitert ein benötigter Video-Baustein an alten negativen Plugin-Einträgen,
+wird nur dieser Cache einmal neu aufgebaut. Das Spielprofil bleibt erhalten.
+Der reproduzierte Widerspruch zwischen grüner Prüfung und fehlgeschlagener
+4K-Wiedergabe wird im selben isolierten Profil behoben. Die sichere Diagnose
+enthält Cache-Reparatur, Plugin-Architektur und die fehlgeschlagene Wartungsphase
+mit Fehlercode. Den vollständigen Simulatorstart in #16 muss der Tester noch bestätigen.
+[Reproduktion und Testumfang](media-validation.md)
+
 **Neu in 0.3.5:** [MobiFlight / WinWing](mobiflight.de.md), GSX-Engine-Reparatur,
 begrenzte X11-Startprüfung und eine Reparatur des CLR-Overrides hinter dem
 Fenix-Ladefehler aus #10. Hardware-Verbindungen und vollständige Add-on-Flüge

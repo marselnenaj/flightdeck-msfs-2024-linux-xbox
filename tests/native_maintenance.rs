@@ -373,6 +373,31 @@ fn interrupted_reset_journal_validates_both_directory_identities() {
     files::private_dir(&backup).unwrap();
     assert!(maintenance::restore_path(&f.root).is_err());
 }
+
+#[test]
+fn reset_preview_exports_the_failing_phase_and_errno_without_private_paths() {
+    let f = Fixture::new();
+    fs::remove_file(
+        f.root
+            .join("runner/files/lib/wine/x86_64-windows/xgameruntime.dll"),
+    )
+    .unwrap();
+    maintenance::preview(&f.app, &json!({"operation":"reset"})).unwrap();
+    assert_eq!(f.done()["state"], "failed");
+    let report = maintenance::diagnostics(&f.app.lock());
+    assert_eq!(report["failure_phase"], "reset_sources");
+    assert_eq!(report["error_code"], "filesystem_io");
+    assert_eq!(report["os_error"], 2);
+    assert!(!report.to_string().contains(f.root.to_str().unwrap()));
+    assert!(!report.to_string().contains("xgameruntime"));
+    assert!(f.game.exists());
+    assert_eq!(
+        fs::read(f.root.join("local/msfs-prefix/user.reg")).unwrap(),
+        b"old user settings"
+    );
+    f.app.lock().runtime = None;
+    assert!(maintenance::diagnostics(&f.app.lock()).is_null());
+}
 #[test]
 fn failed_configuration_prevents_any_uninstall_renames() {
     let f = Fixture::new();

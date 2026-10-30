@@ -4,10 +4,16 @@ use crate::{Error, Result, files};
 use std::{
     collections::BTreeMap,
     ffi::{OsStr, OsString},
+    os::unix::fs::MetadataExt,
     path::{Path, PathBuf},
+    sync::atomic::AtomicBool,
+    time::Duration,
 };
 
 pub type Environment = BTreeMap<OsString, OsString>;
+// Wine's wg_init_gstreamer replaces GST_REGISTRY_1_0 with this filename.
+// The supported game/probe ABI is x86-64. Validate the same registry as Wine.
+pub const REGISTRY: &str = "registry.x86_64.bin";
 
 /// Both layouts are used by supported Proton releases. Do not mix a runner's
 /// GStreamer plugins with host libraries: their GLib/FFmpeg ABIs can differ.
@@ -129,7 +135,7 @@ pub fn configure(
     env.insert("WINE_GST_REGISTRY_DIR".into(), cache.as_os_str().into());
     env.insert(
         "GST_REGISTRY_1_0".into(),
-        cache.join("registry.bin").into_os_string(),
+        cache.join(REGISTRY).into_os_string(),
     );
     // Per-frame colorimetry warnings can flood a looping loading video.
     // The maintainer probe opts into decoder detail separately.
@@ -162,6 +168,210 @@ pub fn configure(
     Ok((source, decoder))
 }
 
+fn probe_value(env: &Environment, source: &str, cancel: &AtomicBool) -> Result<serde_json::Value> {
+    eprintln!("flightdeck-media-registry: source={source} scope=wine_x86_64");
+    let mut command = std::process::Command::new(std::env::current_exe()?);
+    command
+        .args(["--native-probe", "media"])
+        .env_clear()
+        .envs(env);
+    let bytes = crate::process::output(&mut command, Duration::from_secs(5), 4096, cancel)?;
+    let value: serde_json::Value = serde_json::from_slice(&bytes)?;
+    let valid = value["schema"] == 1
+        && [
+            "ready",
+            "incomplete",
+            "initialization_failed",
+            "unavailable",
+        ]
+        .contains(&value["state"].as_str().unwrap_or(""))
+        && value["h264"].is_boolean()
+        && crate::native_probe::MEDIA_ELEMENTS
+            .iter()
+            .all(|name| value["elements"][*name].is_boolean());
+    crate::error::require(valid, "Invalid media probe.")?;
+    eprintln!(
+        "flightdeck-media-probe: source={source} state={}",
+        value["state"].as_str().unwrap_or("unavailable")
+    );
+    for name in crate::native_probe::MEDIA_ELEMENTS {
+        eprintln!(
+            "flightdeck-media-element: source={source} name={name} ready={}",
+            u8::from(value["elements"][name] == true)
+        );
+    }
+    Ok(value)
+}
+
+/// Rebuild only the owner's managed Wine registry after a required element
+/// failed construction. Never follow a link, remove a prefix or alter a plugin.
+fn invalidate_registry(env: &Environment) -> Result<bool> {
+    let Some(directory) = env.get(OsStr::new("WINE_GST_REGISTRY_DIR")) else {
+        return Ok(false);
+    };
+    let directory = Path::new(directory);
+    if env.get(OsStr::new("GST_REGISTRY_1_0")) != Some(&directory.join(REGISTRY).into_os_string()) {
+        return Ok(false);
+    }
+    let folder = files::directory(directory, true)?;
+    let file = match files::open_at(&folder, REGISTRY, false, false) {
+        Ok(file) => file,
+        Err(Error::Io(error)) if error.kind() == std::io::ErrorKind::NotFound => return Ok(false),
+        Err(error) => return Err(error),
+    };
+    let before = file.metadata()?;
+    let linked = rustix::fs::statat(&folder, REGISTRY, rustix::fs::AtFlags::SYMLINK_NOFOLLOW)?;
+    crate::error::require(
+        [before.dev(), before.ino()] == [linked.st_dev, linked.st_ino],
+        "The media registry changed during verification.",
+    )?;
+    rustix::fs::unlinkat(&folder, REGISTRY, rustix::fs::AtFlags::empty())?;
+    folder.sync_all()?;
+    Ok(true)
+}
+
+fn checked_probe(env: &Environment, source: &str, cancel: &AtomicBool) -> Result<bool> {
+    probe_with_recovery(env, source, || probe_value(env, source, cancel))
+}
+
+fn probe_with_recovery(
+    env: &Environment,
+    source: &str,
+    probe: impl Fn() -> Result<serde_json::Value>,
+) -> Result<bool> {
+    let mut value = probe()?;
+    // Missing avdec_h264 alone can mean a valid hardware-only installation.
+    // Rebuild once only for a broken required demux/post-processing chain.
+    let broken_chain = value["state"] == "incomplete"
+        && crate::native_probe::MEDIA_ELEMENTS
+            .iter()
+            .any(|name| *name != "avdec_h264" && value["elements"][*name] == false);
+    if broken_chain && invalidate_registry(env)? {
+        eprintln!("flightdeck-media-cache: source={source} state=rebuilding");
+        value = probe()?;
+        eprintln!(
+            "flightdeck-media-cache: source={source} state={}",
+            if value["state"] == "ready" {
+                "recovered"
+            } else {
+                "incomplete"
+            }
+        );
+    }
+    Ok(value["state"] == "ready"
+        && value["h264"] == true
+        && crate::native_probe::MEDIA_ELEMENTS
+            .iter()
+            .all(|name| value["elements"][*name] == true))
+}
+
+#[cfg(test)]
+mod registry_tests {
+    use super::*;
+    use serde_json::json;
+    use std::{cell::Cell, fs, os::unix::fs::symlink};
+
+    fn state(missing: &str) -> serde_json::Value {
+        let elements: serde_json::Map<_, _> = crate::native_probe::MEDIA_ELEMENTS
+            .into_iter()
+            .map(|name| (name.to_string(), json!(name != missing)))
+            .collect();
+        json!({"schema":1,"state":if missing.is_empty(){"ready"}else{"incomplete"},
+            "h264":missing!="avdec_h264","elements":elements})
+    }
+
+    #[test]
+    fn broken_wine_registry_is_rebuilt_once_and_software_only_absence_is_preserved() {
+        for missing in ["videoconvert", "avdec_h264", "persistent"] {
+            let temp = tempfile::tempdir().expect("runtime");
+            let mut env = Environment::new();
+            configure(
+                temp.path(),
+                &temp.path().join("runner"),
+                false,
+                false,
+                &mut env,
+            )
+            .expect("media configuration");
+            let path = PathBuf::from(&env[OsStr::new("GST_REGISTRY_1_0")]);
+            files::atomic(&path, b"blacklisted").expect("old registry");
+            files::atomic(
+                &path.with_file_name("registry.bin"),
+                b"healthy Linux registry",
+            )
+            .expect("old separate probe cache");
+            let count = Cell::new(0);
+            let ready = probe_with_recovery(&env, "host", || {
+                count.set(count.get() + 1);
+                if path.exists() {
+                    Ok(state(if missing == "persistent" {
+                        "videoconvert"
+                    } else {
+                        missing
+                    }))
+                } else {
+                    files::atomic(&path, b"regenerated")?;
+                    Ok(state(if missing == "persistent" {
+                        "videoconvert"
+                    } else {
+                        ""
+                    }))
+                }
+            })
+            .expect("bounded registry repair");
+            assert_eq!(ready, missing == "videoconvert");
+            assert_eq!(count.get(), if missing == "avdec_h264" { 1 } else { 2 });
+            assert_eq!(
+                fs::read(&path).expect("registry"),
+                if missing == "avdec_h264" {
+                    &b"blacklisted"[..]
+                } else {
+                    &b"regenerated"[..]
+                }
+            );
+            assert_eq!(
+                fs::read(path.with_file_name("registry.bin")).expect("other cache"),
+                b"healthy Linux registry"
+            );
+        }
+    }
+
+    #[test]
+    fn registry_recovery_never_removes_a_link_or_unrelated_cache() {
+        for hard in [false, true] {
+            let temp = tempfile::tempdir().expect("runtime");
+            let mut env = Environment::new();
+            configure(
+                temp.path(),
+                &temp.path().join("runner"),
+                false,
+                false,
+                &mut env,
+            )
+            .expect("media configuration");
+            let path = PathBuf::from(&env[OsStr::new("GST_REGISTRY_1_0")]);
+            let other = temp.path().join("unrelated-user-file");
+            fs::write(&other, b"keep").expect("other file");
+            if hard {
+                fs::hard_link(&other, &path).expect("hard link");
+            } else {
+                symlink(&other, &path).expect("symbolic link");
+            }
+            let count = Cell::new(0);
+            assert!(
+                probe_with_recovery(&env, "host", || {
+                    count.set(count.get() + 1);
+                    Ok(state("videoconvert"))
+                })
+                .is_err()
+            );
+            assert_eq!(count.get(), 1);
+            assert_eq!(fs::read(&other).expect("preserved file"), b"keep");
+            assert!(fs::symlink_metadata(&path).is_ok());
+        }
+    }
+}
+
 /// Prefer the runner's complete stack. If its H.264 plugin cannot load, use a
 /// separately verified host stack, including the host library search path.
 /// Explicit media choices are left to the user.
@@ -172,7 +382,7 @@ pub fn configure_verified(
     nvidia: bool,
     env: &mut Environment,
 ) -> Result<(&'static str, &'static str)> {
-    let cancel = std::sync::atomic::AtomicBool::new(false);
+    let cancel = AtomicBool::new(false);
     configure_checked(
         root,
         runner,
@@ -180,47 +390,7 @@ pub fn configure_verified(
         nvidia,
         env,
         |env, source| {
-            let result = (|| -> Result<bool> {
-                let mut command = std::process::Command::new(std::env::current_exe()?);
-                command
-                    .args(["--native-probe", "media"])
-                    .env_clear()
-                    .envs(env);
-                let bytes = crate::process::output(
-                    &mut command,
-                    std::time::Duration::from_secs(5),
-                    4096,
-                    &cancel,
-                )?;
-                let value: serde_json::Value = serde_json::from_slice(&bytes)?;
-                let valid = value["schema"] == 1
-                    && [
-                        "ready",
-                        "incomplete",
-                        "initialization_failed",
-                        "unavailable",
-                    ]
-                    .contains(&value["state"].as_str().unwrap_or(""));
-                if !valid {
-                    return Err(Error::Invalid("Invalid media probe."));
-                }
-                eprintln!(
-                    "flightdeck-media-probe: source={source} state={}",
-                    value["state"].as_str().unwrap_or("unavailable")
-                );
-                for name in crate::native_probe::MEDIA_ELEMENTS {
-                    let ready = value["elements"][name] == true;
-                    eprintln!(
-                        "flightdeck-media-element: source={source} name={name} ready={}",
-                        u8::from(ready)
-                    );
-                }
-                Ok(value["state"] == "ready"
-                    && value["h264"] == true
-                    && crate::native_probe::MEDIA_ELEMENTS
-                        .iter()
-                        .all(|name| value["elements"][*name] == true))
-            })();
+            let result = checked_probe(env, source, &cancel);
             if let Err(error) = &result {
                 let state = if matches!(
                     error,

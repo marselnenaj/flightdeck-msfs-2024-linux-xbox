@@ -121,6 +121,7 @@ pub struct GameLog {
     media_probes: BTreeMap<String, Value>,
     media_selection: Option<String>,
     media_missing: BTreeSet<&'static str>,
+    media_missing_architectures: BTreeMap<&'static str, BTreeSet<u8>>,
 }
 impl Default for GameLog {
     fn default() -> Self {
@@ -140,6 +141,7 @@ impl Default for GameLog {
             media_probes: BTreeMap::new(),
             media_selection: None,
             media_missing: BTreeSet::new(),
+            media_missing_architectures: BTreeMap::new(),
         }
     }
 }
@@ -198,6 +200,17 @@ impl GameLog {
         for captures in regex(r"\bflightdeck-media-probe: source=(host|runner) state=(ready|incomplete|initialization_failed|unavailable|probe_failed|timeout)(?:\s|$)").captures_iter(text) {
             self.media_probes.entry(captures[1].into()).or_insert_with(|| json!({"elements":{}}))["state"] = json!(&captures[2]);
         }
+        for captures in
+            regex(r"\bflightdeck-media-registry: source=(host|runner) scope=(wine_x86_64)(?:\s|$)")
+                .captures_iter(text)
+        {
+            self.media_probes
+                .entry(captures[1].into())
+                .or_insert_with(|| json!({"elements":{}}))["registry_scope"] = json!(&captures[2]);
+        }
+        for captures in regex(r"\bflightdeck-media-cache: source=(host|runner) state=(rebuilding|recovered|incomplete)(?:\s|$)").captures_iter(text) {
+            self.media_probes.entry(captures[1].into()).or_insert_with(|| json!({"elements":{}}))["cache_state"] = json!(&captures[2]);
+        }
         for captures in regex(
             r"\bflightdeck-media-loader: source=(host) state=(ready|probe_failed|timeout)(?:\s|$)",
         )
@@ -211,7 +224,7 @@ impl GameLog {
             self.media_probes.entry(captures[1].into()).or_insert_with(|| json!({"elements":{}}))["elements"][&captures[2]] = json!(&captures[3] == "1");
         }
         for captures in regex(
-            r"\bwinegstreamer: failed to create ([a-z0-9_]{1,64}), are (?:32|64)-bit GStreamer\b",
+            r"\bwinegstreamer: failed to create ([a-z0-9_]{1,64}), are (32|64)-bit GStreamer\b",
         )
         .captures_iter(text)
         {
@@ -220,6 +233,10 @@ impl GameLog {
                 .find(|name| *name == &captures[1])
             {
                 self.media_missing.insert(name);
+                self.media_missing_architectures
+                    .entry(name)
+                    .or_default()
+                    .insert(if &captures[2] == "32" { 32 } else { 64 });
             }
         }
         for (name, pattern) in [
@@ -409,7 +426,8 @@ impl GameLog {
         {
             result["media"] = json!({"scope":"game_log","coverage":coverage.clone(),
                 "configuration":self.media_configuration,"observations":self.media_observations,
-                "selection_reason":self.media_selection,"probes":self.media_probes,"missing_elements":self.media_missing});
+                "selection_reason":self.media_selection,"probes":self.media_probes,"missing_elements":self.media_missing,
+                "missing_element_architectures":self.media_missing_architectures});
         }
         result["audio"] = json!({"scope":"game_log","coverage":coverage,"error_counts":self.audio_errors,"warning_counts":self.audio_warnings,"observations":self.audio_observations});
         result

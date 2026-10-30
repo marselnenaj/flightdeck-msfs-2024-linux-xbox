@@ -1,5 +1,24 @@
 # Changes and release status
 
+## 0.3.6 — 30 October 2026
+
+- Probe the same architecture-specific GStreamer registry used by Wine, with
+  Wine's in-process plugin loading and disabled GStreamer signal trap. A healthy
+  Linux-only registry no longer hides a stale Wine plugin blacklist.
+- When a required demux/post-processing element cannot be constructed, rebuild
+  only the owned regular Wine registry and probe once more. Preserve links,
+  unrelated files, explicit plugin settings and hardware-only decoder choices.
+  Keep the existing game prefix, runner, DLLs and saves.
+- Reproduce the reported ready-probe/missing-videoconvert failure with a real
+  GStreamer blacklist and the actual 4K loading video. The corrected driver
+  recovers in the same isolated profile and completes both decode passes,
+  rewind, EOS and shutdown. The full simulator outcome in #16 remains unconfirmed.
+- Export fixed cache-recovery states, registry scope and missing-element bitness
+  in safe diagnostics. Record the failed maintenance-preview phase and numeric
+  operating-system error without paths or raw exception text. The reported reset
+  failure is not reproduced; a real isolated Wine reset completed with its backup.
+- Test packaged updating and rollback against the pinned published 0.3.5 archive.
+
 ## 0.3.5 — 29 October 2026
 
 - Integrate Fenix patch 0.1.2 and its pinned source revision. Pair the loader

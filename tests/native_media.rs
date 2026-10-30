@@ -25,6 +25,10 @@ fn default_runner_uses_host_codecs_and_nvidia_prefers_available_software_decoder
         ("GST_PLUGIN_FEATURE_RANK".into(), "vp9dec:128".into()),
     ]);
     configured(root, &runner, false, true, &mut env);
+    assert_eq!(
+        env[OsStr::new("GST_REGISTRY_1_0")],
+        Path::new(&env[OsStr::new("WINE_GST_REGISTRY_DIR")]).join("registry.x86_64.bin")
+    );
     assert_eq!(env[OsStr::new("LD_LIBRARY_PATH")], "/host/libraries");
     assert!(!env.contains_key(OsStr::new("GST_PLUGIN_SYSTEM_PATH_1_0")));
     assert_eq!(

@@ -119,6 +119,16 @@ pub fn media() -> Value {
             let unref = library
                 .get::<unsafe extern "C" fn(Handle)>(b"g_object_unref\0")
                 .ok()?;
+            let fork = library
+                .get::<unsafe extern "C" fn(i32)>(b"gst_registry_fork_set_enabled\0")
+                .ok()?;
+            let segtrap = library
+                .get::<unsafe extern "C" fn(i32)>(b"gst_segtrap_set_enabled\0")
+                .ok()?;
+            // Match Wine's in-process plugin loading, including constructor
+            // failures that an external gst-plugin-scanner could hide.
+            fork(0);
+            segtrap(0);
             if init(ptr::null_mut(), ptr::null_mut(), ptr::null_mut()) == 0 {
                 return Some("initialization_failed");
             }
