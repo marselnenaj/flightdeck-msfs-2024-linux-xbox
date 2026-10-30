@@ -154,14 +154,14 @@ installer through their account.
 
 ## Runner and platform limits
 
-The automatic setup downloads the unmodified pinned upstream Proton artifact
-directly from the upstream distribution. Its ZIP digest was independently
-checked against GitHub's artifact metadata, and the inner tar archive and
-original runtime have separate pinned hashes. It is not repackaged by Flightdeck.
-The current upstream artifact expires on **2026-11-05**. Maintainers must replace
-that pin with a newly validated available upstream build before expiry; the
-installer fails clearly if the download is no longer available. It never silently
-switches to an untested latest runner. Already installed runners keep working.
+Automatic setup downloads the unmodified pinned upstream Proton ZIP from the
+[dedicated runtime release](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/runner-xodus-7c0b4354).
+Version **0.3.8** uses this durable mirror instead of the upstream Actions artifact,
+which expires on **2026-11-05**. Both ZIP and inner tar hashes are unchanged;
+Flightdeck still verifies each before installation and never silently switches
+to an untested latest runner. The release includes corresponding sources,
+original notices and provenance. [Source inventory and maintenance](../compat/proton/README.md).
+Already installed runners and verified cached archives remain reusable.
 
 The full native package requires Linux x86-64 with glibc 2.39+, compatible GTK 3,
 WebKitGTK 4.1 and OpenSSL 3 libraries. Vulkan drivers and a Secret Service provider

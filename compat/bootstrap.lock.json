@@ -235,12 +235,13 @@
     ]
   },
   "runner": {
-    "url": "https://nightly.link/xodus-gaming/Proton/suites/84702581477/artifacts/9008475181",
+    "url": "https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/download/runner-xodus-7c0b4354/flightdeck-proton-xodus-7c0b4354-x86_64.zip",
     "zip_sha256": "3cae31d88671b2cb57a721f24777e8a4f01fc4acb18d773aa8e98c50fda6b9db",
     "archive_sha256": "78a232dd5dc963045a316f59e13e01ec1b1fa35e30bc2a14cf9bb4a7b9609ca1",
     "directory": "proton-xodus-bleeding-edge-11.0-20260803-3-g7c0b4354-x86_64",
     "original_runtime_sha256": "02dc24d6dfc7f7807a5ae3081ad2ae6ca550ce42f35c46197676da3c63b9e6d0",
-    "artifact_expires_at": "2026-11-05T19:52:05Z"
+    "upstream_url": "https://nightly.link/xodus-gaming/Proton/suites/84702581477/artifacts/9008475181",
+    "upstream_artifact_expires_at": "2026-11-05T19:52:05Z"
   },
   "runtime_scripts": {
     "files": {

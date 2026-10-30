@@ -1,6 +1,6 @@
 {
   "date": "2026-10-30",
-  "status": "unreleased",
+  "status": "released in 0.3.8",
   "baseline_commit": "3090c9c",
   "production_target": "x86_64-unknown-linux-gnu",
   "dependency_counts": {
@@ -69,14 +69,15 @@
   ],
   "added_linux_packages": [],
   "tests": {
-    "passed": 724,
+    "passed": 725,
     "failed": 0,
-    "ignored": 34,
+    "ignored": 35,
     "harness_results": 72,
     "http_contract_checks": 100,
     "official_mobiflight_checks": 5,
     "official_runner_decode_checks": 1,
-    "native_ui_example": "cargo check --locked --offline passed"
+    "native_ui_example": "cargo check --locked --offline passed",
+    "published_runner_cold_download_checks": 1
   },
   "runner_archive": {
     "compressed_sha256": "78a232dd5dc963045a316f59e13e01ec1b1fa35e30bc2a14cf9bb4a7b9609ca1",
@@ -84,7 +85,8 @@
     "decoded_sha256": "d6d3a0ec3cef84937ab4dcbe244e4be4167aacb5e4e41f0cd8ff38dbdd0bfc5e",
     "decoder_comparison": "Rust and system xz match",
     "upstream_expires_at": "2026-11-05T19:52:05Z",
-    "durable_mirror": "not present in compat-v0.3.7"
+    "durable_mirror": "https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/runner-xodus-7c0b4354",
+    "public_release_asset_digests_verified": 5
   },
   "scope_limits": [
     "No licensed add-on flight qualification",

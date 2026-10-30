@@ -1,7 +1,11 @@
 # Changes and release status
 
-## Unreleased
+## 0.3.8 — 30 October 2026
 
+- Download the exact pinned Proton runner from a durable Flightdeck component
+  release, preserving both SHA-256 checks. Publish its original notices and
+  corresponding sources alongside it; new installations no longer depend on
+  the upstream Actions artifact that expires on 5 November.
 - Reduce the Linux production dependency graph from 372 to 358 packages without
   adding a package: share SHA-256 with the Fenix integration, reuse its Rust XZ
   decoder, and remove unused ZIP compressor, HTTP extractor, XML serialization

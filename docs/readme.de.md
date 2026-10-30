@@ -32,9 +32,10 @@ erneuten App-Download fort.
 **Lade die [neueste stabile Version](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/latest).**
 Launcher, Installer und Updater benötigen kein Python.
 
-**In Entwicklung:** weniger Abhängigkeiten, XZ-Dekodierung in Rust ohne native
+**Neu in 0.3.8:** dauerhafter Download des geprüften Proton-Runners, reparierte
+MobiFlight-WASM-/Ereignis-Einrichtung, weniger Abhängigkeiten, XZ-Dekodierung in Rust ohne native
 liblzma und Diagnoseprüfungen außerhalb der zentralen Launcher-Sperre.
-[Prüfung und Validierung](performance.md#codebase-review--30-october-2026-unreleased).
+[Prüfung und Validierung](performance.md#codebase-review--30-october-2026-038).
 
 **Neu in 0.3.7:** Proton-Wechsel und Wiederaufnahme werden auch dann abgeschlossen,
 wenn eine alte Profilsicherung nicht sicher gelöscht werden kann. Die Sicherung
@@ -118,7 +119,7 @@ Zur vollständigen Runtime gehören außerdem GTK 3, WebKitGTK 4.1, OpenSSL 3 un
 GStreamer Good/Bad/Libav. Der Launcher benötigt außerdem libgcc_s,
 libxkbcommon und die Bibliotheken des verwendeten Wayland-/X11-Desktops.
 Bis einschließlich 0.3.7 benötigt das veröffentlichte Paket zusätzlich liblzma;
-im Entwicklungsstand entfällt diese Abhängigkeit.
+ab 0.3.8 entfällt diese Abhängigkeit.
 Setup prüft fehlende Voraussetzungen. Die Launcher-Prüfungen auf Ubuntu 24.04,
 Debian 13, Fedora 44, Arch Linux und openSUSE Tumbleweed bestanden am
 8. Oktober 2026. Der geprüfte Umfang steht in der

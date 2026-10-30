@@ -1,12 +1,12 @@
 # Rust and Python launcher performance
 
-## Codebase review — 30 October 2026 (unreleased)
+## Codebase review — 30 October 2026 (0.3.8)
 
 The review covers all three Cargo packages, their feature graph, local HTTP/UI
 contract, setup/update/recovery, Xbox/Steam profile selection, saves, add-ons,
 diagnostics and compatibility build tooling. The baseline is `3090c9c`.
 
-| Check | Before | Development branch |
+| Check | Before | 0.3.8 |
 | --- | ---: | ---: |
 | Linux production/build dependency nodes | 372 | 358 |
 | Entire workspace/all-platform package versions | 495 | 481 |
@@ -48,7 +48,7 @@ Implemented changes:
   verifying the outer ZIP. This avoids an unnecessary cache read/download and
   keeps repeated setup working when only the verified tar archive remains.
 
-Validation: **724 ordinary workspace tests pass**, with 34 explicit opt-in tests
+Validation: **725 ordinary workspace tests pass**, with 35 explicit opt-in tests
 skipped; Clippy and formatting pass. The actual local-service contract passes
 100 checks, and the inspected source-release boundary passes. A separate real
 MobiFlight ZIP/HubHop setup test and the complete pinned Proton XZ comparison
@@ -57,17 +57,18 @@ network-disabled container with real temporary-disk capacity. No real account,
 cloud save or installed simulator is modified by these checks.
 The separate native UI example also passes `cargo check --locked --offline`.
 [Machine-readable review results](codebase-review-results.json) record the removed
-packages, test totals, archive identity and remaining download-expiry risk.
+packages, test totals and archive identity.
+
+The exact pinned runner now has a [durable component release](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/runner-xodus-7c0b4354),
+with its original source inputs and notices. Version 0.3.8 uses that URL with both
+checksums unchanged, removing the fresh-install dependency on the upstream
+Actions artifact's 5 November expiry. A cold download through the production
+bootstrap verifies the published ZIP and inner XZ in an empty cache; all five
+release assets also match GitHub's SHA-256 digests.
+[Provenance](../compat/proton/README.md).
 
 Larger changes remain separate decisions:
 
-- **Before 5 November 2026:** mirror the exact pinned Proton artifact at a
-  durable release URL with its source/provenance and notices, then retain its
-  two existing checksums. GitHub reports expiry at **2026-11-05 19:52:05 UTC**
-  for [artifact 9008475181](https://api.github.com/repos/xodus-gaming/Proton/actions/artifacts/9008475181).
-  The [0.3.7 component release](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/compat-v0.3.7)
-  contains native components and sources, but no Proton mirror. Cache-first reuse
-  helps existing installations; it does not supply a fresh download after expiry.
 - Fenix's standalone installer owns a synchronous HTTP client while Flightdeck
   uses Reqwest. Sharing a download interface across the repositories could reduce
   the second HTTP/TLS stack, but must retain the standalone installer, cancellation,

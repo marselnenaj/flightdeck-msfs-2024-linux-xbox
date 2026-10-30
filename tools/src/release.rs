@@ -34,8 +34,8 @@ pub struct Pins {
 impl Pins {
     pub fn current() -> Self {
         Self {
-            previous_base: "https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/download/v0.3.6/",
-            previous_sha: "31ef334ee7b83404fb5ccd8ec0224d3f3705328f4e4a5fcf67ba9f07218e51c7",
+            previous_base: "https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/download/v0.3.7/",
+            previous_sha: "d68709c3ee6f34bc3b665f7d038da0bb3d69e3686fa89bbf828dd730c59480e5",
             native_source_base: Some(
                 "https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/download/compat-v0.3.7/",
             ),

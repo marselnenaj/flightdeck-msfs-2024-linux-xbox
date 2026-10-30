@@ -171,3 +171,60 @@ fn embedded_script_hashes_match_the_release_contract() {
         );
     }
 }
+
+#[test]
+fn pinned_runner_mirror_retains_upstream_identity_and_both_hashes() {
+    let lock = flightdeck::resources::json("compat/bootstrap.lock.json").unwrap();
+    let inventory: serde_json::Value =
+        serde_json::from_str(include_str!("../compat/proton/sources.lock.json")).unwrap();
+    let runner = &lock["runner"];
+    for field in ["zip_sha256", "archive_sha256", "directory"] {
+        assert_eq!(runner[field], inventory["runner"][field]);
+    }
+    assert_eq!(
+        runner["url"],
+        format!(
+            "https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/download/{}/{}",
+            inventory["release_tag"].as_str().unwrap(),
+            inventory["runner"]["asset"].as_str().unwrap()
+        )
+    );
+    assert_eq!(
+        runner["upstream_url"],
+        inventory["upstream"]["artifact_url"]
+    );
+    assert_eq!(
+        runner["upstream_artifact_expires_at"],
+        inventory["upstream"]["artifact_expires_at"]
+    );
+}
+
+#[test]
+#[ignore = "downloads the published 275 MiB runner into a new empty cache"]
+fn published_runner_cold_download_verifies_both_archives() {
+    let lock = flightdeck::resources::json("compat/bootstrap.lock.json").unwrap();
+    let spec = &lock["runner"];
+    let cache = tempfile::tempdir().unwrap();
+    let cancel = AtomicBool::new(false);
+    let zip = bootstrap::download(
+        spec["url"].as_str().unwrap(),
+        spec["zip_sha256"].as_str().unwrap(),
+        &cache.path().join("runner.zip"),
+        &cancel,
+        |_| {},
+    )
+    .unwrap();
+    let archive = cache.path().join("runner.tar.xz");
+    bootstrap::unzip_runner(
+        &zip,
+        &archive,
+        spec["archive_sha256"].as_str().unwrap(),
+        &cancel,
+    )
+    .unwrap();
+    assert_eq!(
+        files::digest(std::fs::File::open(&archive).unwrap()).unwrap(),
+        spec["archive_sha256"]
+    );
+    println!("Published runner: verified outer ZIP and inner XZ in an empty cache");
+}

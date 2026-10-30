@@ -27,9 +27,10 @@ downloads, updates and account sign-in.
 **Download the [latest stable release](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/latest).**
 The launcher, installer and updater need no Python.
 
-**In development:** a smaller dependency graph, Rust-only XZ decoding without
+**New in 0.3.8:** a durable download for the pinned Proton runner, repaired
+MobiFlight WASM/events setup, a smaller dependency graph, Rust-only XZ decoding without
 native liblzma, and diagnostic collection that releases the launcher coordinator
-before scanning logs or running probes. [Review and validation](docs/performance.md#codebase-review--30-october-2026-unreleased).
+before scanning logs or running probes. [Review and validation](docs/performance.md#codebase-review--30-october-2026-038).
 
 **New in 0.3.7:** Complete Proton switching and recovery even when an old
 profile cannot be safely reclaimed. Keep that backup and allow returning to the
