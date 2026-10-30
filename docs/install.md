@@ -362,11 +362,13 @@ the retained installation, then restart. Restoring the launcher does not roll
 back the simulator or Fenix patch.
 
 The Fenix patch is downloaded separately under **Mods → Fenix A320** when
-requested. A newer patch is adopted through a reviewed Flightdeck release.
-Supported earlier patch installations update before opening Fenix, its installer
-or manager, or finishing setup. **Update patch** starts the same update directly.
-Flightdeck does not independently check for or follow the latest Fenix patch tag
-on GitHub. The purchased aircraft uses the official Fenix updater.
+requested. Flightdeck 0.2.20 and later also check independent patch releases from
+the fixed public Fenix patch repository. A verified update descriptor must match
+the supported runner, destinations and installer contract; incompatible updates
+require a newer launcher. Supported earlier patch installations update before
+opening Fenix, its installer or manager, or finishing setup. **Update patch**
+starts the same update directly. The purchased aircraft uses the official
+Fenix updater. See [the update contract](fenix-updates.md).
 [Fenix setup and restore](addons.md#fenix-a320).
 
 For Flightdeck versions before 0.1.4, or to install the updater for the first

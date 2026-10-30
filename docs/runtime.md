@@ -208,7 +208,8 @@ adds an already prepared plugin directory without modifying the system. Codec
 ABI and driver availability are host-specific. The source builder does not
 download or install graphics, multimedia or system packages.
 
-Flightdeck configures media only in the actual game's Wine child. The default
+Flightdeck applies the game's media environment to its Wine child and disposable
+verification children. Account and cloud helpers use their separate environment. The default
 Xodus runner uses system GStreamer codecs: MP4 needs the ISO/QuickTime demuxer
 and a working H.264 decoder, normally `qtdemux` and `avdec_h264`. Its bundled
 Steam media converter depends on a transcoded-video cache that Flightdeck does

@@ -111,7 +111,7 @@ Windows-Anwendungen dieses Profils vor der Einrichtung schließen. Ein weiteres
 dauerhaftes Wine-Profil wird nicht angelegt. [Anleitung und Testumfang](addons.de.md)
 
 Metadaten und Protokolle liegen unter
-`~/.local/share/flightdeck/steam/<installation-id>/addon-apps/`. GSX behält eine
+`~/.local/state/flightdeck/steam/<installation-id>/addon-apps/`. GSX behält eine
 Sicherung `pfx.before-gsx-*` neben dem echten Profil. Unterbrochene Vorbereitung
 muss vor einem Spielstart wiederhergestellt werden. Nach einem Proton-Wechsel
 oder Profiltausch den Status neu laden. Simlink und Couatl verwenden die echte
