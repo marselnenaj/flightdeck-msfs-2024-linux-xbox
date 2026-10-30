@@ -2,6 +2,7 @@
 //! Media settings for the game's Wine child, never the Store or broker.
 use crate::{Error, Result, files};
 use std::{
+    cell::Cell,
     collections::BTreeMap,
     ffi::{OsStr, OsString},
     os::unix::fs::MetadataExt,
@@ -230,13 +231,19 @@ fn invalidate_registry(env: &Environment) -> Result<bool> {
     Ok(true)
 }
 
-fn checked_probe(env: &Environment, source: &str, cancel: &AtomicBool) -> Result<bool> {
-    probe_with_recovery(env, source, || probe_value(env, source, cancel))
+fn checked_probe(
+    env: &Environment,
+    source: &str,
+    cancel: &AtomicBool,
+    rebuilt: &Cell<bool>,
+) -> Result<bool> {
+    probe_with_recovery(env, source, rebuilt, || probe_value(env, source, cancel))
 }
 
 fn probe_with_recovery(
     env: &Environment,
     source: &str,
+    rebuilt: &Cell<bool>,
     probe: impl Fn() -> Result<serde_json::Value>,
 ) -> Result<bool> {
     let mut value = probe()?;
@@ -246,7 +253,8 @@ fn probe_with_recovery(
         && crate::native_probe::MEDIA_ELEMENTS
             .iter()
             .any(|name| *name != "avdec_h264" && value["elements"][*name] == false);
-    if broken_chain && invalidate_registry(env)? {
+    if broken_chain && !rebuilt.get() && invalidate_registry(env)? {
+        rebuilt.set(true);
         eprintln!("flightdeck-media-cache: source={source} state=rebuilding");
         value = probe()?;
         eprintln!(
@@ -301,7 +309,8 @@ mod registry_tests {
             )
             .expect("old separate probe cache");
             let count = Cell::new(0);
-            let ready = probe_with_recovery(&env, "host", || {
+            let rebuilt = Cell::new(false);
+            let ready = probe_with_recovery(&env, "host", &rebuilt, || {
                 count.set(count.get() + 1);
                 if path.exists() {
                     Ok(state(if missing == "persistent" {
@@ -333,6 +342,20 @@ mod registry_tests {
                 fs::read(path.with_file_name("registry.bin")).expect("other cache"),
                 b"healthy Linux registry"
             );
+            if missing == "persistent" {
+                assert!(
+                    !probe_with_recovery(&env, "host", &rebuilt, || {
+                        count.set(count.get() + 1);
+                        assert!(
+                            path.exists(),
+                            "A host fallback retry must reuse the rebuilt cache"
+                        );
+                        Ok(state("videoconvert"))
+                    })
+                    .expect("bounded repeated check")
+                );
+                assert_eq!(count.get(), 3);
+            }
         }
     }
 
@@ -359,7 +382,7 @@ mod registry_tests {
             }
             let count = Cell::new(0);
             assert!(
-                probe_with_recovery(&env, "host", || {
+                probe_with_recovery(&env, "host", &Cell::new(false), || {
                     count.set(count.get() + 1);
                     Ok(state("videoconvert"))
                 })
@@ -383,6 +406,8 @@ pub fn configure_verified(
     env: &mut Environment,
 ) -> Result<(&'static str, &'static str)> {
     let cancel = AtomicBool::new(false);
+    let host_rebuilt = Cell::new(false);
+    let runner_rebuilt = Cell::new(false);
     configure_checked(
         root,
         runner,
@@ -390,7 +415,12 @@ pub fn configure_verified(
         nvidia,
         env,
         |env, source| {
-            let result = checked_probe(env, source, &cancel);
+            let rebuilt = if source == "host" {
+                &host_rebuilt
+            } else {
+                &runner_rebuilt
+            };
+            let result = checked_probe(env, source, &cancel, rebuilt);
             if let Err(error) = &result {
                 let state = if matches!(
                     error,
