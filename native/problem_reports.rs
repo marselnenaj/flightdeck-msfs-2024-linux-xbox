@@ -46,7 +46,7 @@ const FIELDS: [&str; 23] = [
 const UNREADABLE: &str =
     "Der gespeicherte Bericht konnte nicht gelesen werden. Bitte einen neuen Bericht vorbereiten.";
 // Serialize same-process reads/discards and publications. The launcher lock
-// separately pins the selected edition during evidence capture.
+// separately pins the selected edition during the brief service-state capture.
 static DRAFT: Mutex<()> = Mutex::new(());
 pub fn email_address(value: &str) -> bool {
     value.len()<=254&&!value.contains("..")&&regex(r"^[A-Za-z0-9.!#$%'+/=_`{|}~-]{1,64}@[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?\.[A-Za-z]{2,63}$").is_match(value)
@@ -174,7 +174,9 @@ pub fn prepare(app: &Arc<Launcher>, data: &Value) -> Result<Value> {
         data["runtime_path"] == json!(s.runtime.as_deref().and_then(|p| p.to_str())),
         "Die ausgewählte Installation hat sich geändert. Bitte den Status neu laden.",
     )?;
-    let mut evidence = diagnostics::from_state(&s);
+    let captured = diagnostics::capture(&s);
+    drop(s);
+    let mut evidence = diagnostics::collect(captured);
     if let Some(summary) = evidence["summary"].as_object_mut() {
         summary.retain(|key, _| FIELDS.contains(&key.as_str()));
     }
@@ -191,7 +193,6 @@ pub fn prepare(app: &Arc<Launcher>, data: &Value) -> Result<Value> {
         .map(|row| json!({"id":row["id"],"ok":row["ok"]}))
         .collect();
     let report = json!({"schema":1,"id":uuid::Uuid::new_v4().simple().to_string(),"created_at":files::now(),"category":category,"description":description.trim(),"observations":observations,"system":system_info(),"diagnostics":{"generated_at":evidence["generated_at"],"summary":evidence["summary"],"checks":checks}});
-    drop(s);
     let raw = ordered_json::encoded(&report)?;
     require(
         raw.len() <= MAXIMUM - 1024,

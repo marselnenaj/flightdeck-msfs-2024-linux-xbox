@@ -162,7 +162,9 @@ The package built here targets Linux x86-64; check its host-library requirements
 with `ldd`/`readelf` on the intended build image. The validated build requires
 glibc 2.39 or later. [Performance checks](docs/performance.md) describe the
 isolated comparison with the Python release.
-The Rust executable also links to the host's `liblzma.so.5` and `libgcc_s.so.1`.
+The Rust executable also links to the host's `libgcc_s.so.1`.
+XZ archives use the same Rust decoder already used by the Fenix integration;
+building or running the launcher no longer requires native liblzma.
 The UI loads libxkbcommon and the selected Wayland/X11 libraries at runtime.
 
 Release packaging rejects binaries importing glibc symbols newer than 2.39.

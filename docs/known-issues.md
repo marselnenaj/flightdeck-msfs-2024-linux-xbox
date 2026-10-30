@@ -2,8 +2,15 @@
 
 [Deutsch](known-issues.de.md) · [Documentation](index.md)
 
-Status: 28 October 2026, including the **0.3.2** licensing correction.
-See the [release changes](changelog.md#032--28-october-2026).
+Status: 30 October 2026, current published launcher **0.3.7**.
+See the [release changes](changelog.md#037--30-october-2026).
+
+- **MobiFlight setup in 0.3.7:** App installation can finish while WASM/event
+  preparation fails because HubHop redirects its old address and now includes
+  event scripts longer than the previous line limit. Both are corrected in
+  development, including resuming setup after a Fenix/Proton profile replacement;
+  this fix is not yet released. After updating to a build containing the fix,
+  **Prepare / repair MobiFlight** reuses the app and preserves custom events.
 
 - **Bazzite installation:** The installer rejects symbolic links in its source
   and destination paths, including Fedora Atomic's `/home` alias. Install from

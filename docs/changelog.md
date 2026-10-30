@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- Reduce the Linux production dependency graph from 372 to 358 packages without
+  adding a package: share SHA-256 with the Fenix integration, reuse its Rust XZ
+  decoder, and remove unused ZIP compressor, HTTP extractor, XML serialization
+  and local-timezone features. Native liblzma is no longer linked by the launcher.
+  Keep gzip/XZ/tar/ZIP/7z formats, UTC timestamps and checksum verification.
+- Capture diagnostic state briefly, then release the launcher coordinator before
+  scanning logs, hashing libraries or running graphics probes. Apply the same
+  separation to problem-report preparation, retaining the selected context and
+  filtered report fields.
+- Reuse the verified cached Proton tar archive before requiring its outer ZIP
+  or upstream download. Cancellation and checksum checks remain mandatory;
+  changed cache contents never authorize offline reuse.
 - Use HubHop's current export endpoint directly. Its former URL redirects, which
   prevented missing MobiFlight WASM events from downloading. Resume interrupted
   setup without reinstalling the app and offer repair as the primary action when

@@ -1,0 +1,94 @@
+{
+  "date": "2026-10-30",
+  "status": "unreleased",
+  "baseline_commit": "3090c9c",
+  "production_target": "x86_64-unknown-linux-gnu",
+  "dependency_counts": {
+    "linux_before": 372,
+    "linux_after": 358,
+    "workspace_all_platforms_before": 495,
+    "workspace_all_platforms_after": 481
+  },
+  "removed_linux_packages": [
+    {
+      "name": "block-buffer",
+      "version": "0.10.4"
+    },
+    {
+      "name": "bumpalo",
+      "version": "3.20.3"
+    },
+    {
+      "name": "cpufeatures",
+      "version": "0.2.17"
+    },
+    {
+      "name": "crypto-common",
+      "version": "0.1.7"
+    },
+    {
+      "name": "digest",
+      "version": "0.10.7"
+    },
+    {
+      "name": "generic-array",
+      "version": "0.14.7"
+    },
+    {
+      "name": "iana-time-zone",
+      "version": "0.1.65"
+    },
+    {
+      "name": "lzma-sys",
+      "version": "0.1.20"
+    },
+    {
+      "name": "ryu",
+      "version": "1.0.23"
+    },
+    {
+      "name": "serde_path_to_error",
+      "version": "0.1.20"
+    },
+    {
+      "name": "serde_urlencoded",
+      "version": "0.7.1"
+    },
+    {
+      "name": "sha2",
+      "version": "0.10.9"
+    },
+    {
+      "name": "xz2",
+      "version": "0.1.7"
+    },
+    {
+      "name": "zopfli",
+      "version": "0.8.3"
+    }
+  ],
+  "added_linux_packages": [],
+  "tests": {
+    "passed": 724,
+    "failed": 0,
+    "ignored": 34,
+    "harness_results": 72,
+    "http_contract_checks": 100,
+    "official_mobiflight_checks": 5,
+    "official_runner_decode_checks": 1,
+    "native_ui_example": "cargo check --locked --offline passed"
+  },
+  "runner_archive": {
+    "compressed_sha256": "78a232dd5dc963045a316f59e13e01ec1b1fa35e30bc2a14cf9bb4a7b9609ca1",
+    "decoded_bytes": 1463132160,
+    "decoded_sha256": "d6d3a0ec3cef84937ab4dcbe244e4be4167aacb5e4e41f0cd8ff38dbdd0bfc5e",
+    "decoder_comparison": "Rust and system xz match",
+    "upstream_expires_at": "2026-11-05T19:52:05Z",
+    "durable_mirror": "not present in compat-v0.3.7"
+  },
+  "scope_limits": [
+    "No licensed add-on flight qualification",
+    "No physical MobiFlight/WinWing or VR device qualification",
+    "No new live cloud/account transaction qualification"
+  ]
+}

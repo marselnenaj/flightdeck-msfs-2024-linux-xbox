@@ -8,12 +8,39 @@ use crate::{
     proton, run_diagnostics, runtime, store_check, store_diagnostics, vr,
 };
 use serde_json::{Value, json};
-use std::sync::Arc;
-pub fn snapshot(app: &Arc<Launcher>) -> Value {
-    from_state(&app.lock())
+use std::{path::PathBuf, sync::Arc};
+
+/// Capture service-owned state while holding the coordinator briefly. Log scans,
+/// library hashing and child probes must run after releasing its lock.
+pub(crate) struct Captured {
+    root: Option<PathBuf>,
+    store_check: Value,
+    installation: Value,
+    maintenance: Value,
+    cloud: Value,
+    vr: Value,
+    graphics_report: Value,
 }
-pub fn from_state(s: &State) -> Value {
-    let root = s.runtime.as_deref();
+pub(crate) fn capture(s: &State) -> Captured {
+    Captured {
+        root: s.runtime.clone(),
+        store_check: store_check::report(s),
+        installation: s.installation_report.clone(),
+        maintenance: crate::maintenance::diagnostics(s),
+        cloud: cloud_sync::automatic(s),
+        vr: vr::launcher_snapshot(s),
+        graphics_report: s.graphics_report.clone(),
+    }
+}
+pub fn snapshot(app: &Arc<Launcher>) -> Value {
+    snapshot_with(app, collect)
+}
+fn snapshot_with(app: &Launcher, gather: impl FnOnce(Captured) -> Value) -> Value {
+    let captured = capture(&app.lock());
+    gather(captured)
+}
+pub(crate) fn collect(captured: Captured) -> Value {
+    let root = captured.root.as_deref();
     let mut summary = json!({"run_found":false,"auth_http":[],"local_save_init":[],"store_calls":[],"store_catalog":[],"exit":null,"context":{"diagnostics_schema":crate::run_diagnostics::SCHEMA,"launcher_version":crate::VERSION,"game_id":root.and_then(|r|Game::for_runtime(r).ok()).map(|g|g.id()),"cloud_sync_scope":"current_service","run_log_modified_at":null}});
     let mut graphics_log = Value::Null;
     if let Some(root) = root
@@ -45,11 +72,11 @@ pub fn from_state(s: &State) -> Value {
             }
         }
     }
-    summary["store_check"] = store_check::report(s);
-    summary["installation"] = s.installation_report.clone();
-    summary["maintenance"] = crate::maintenance::diagnostics(s);
+    summary["store_check"] = captured.store_check;
+    summary["installation"] = captured.installation;
+    summary["maintenance"] = captured.maintenance;
     summary["fenix"] = root.map(fenix_diagnostics::load).unwrap_or(Value::Null);
-    let cloud = cloud_sync::automatic(s);
+    let cloud = captured.cloud;
     summary["cloud_sync"] = ["state", "phase", "error_code", "error_details"]
         .into_iter()
         .map(|k| (k.into(), cloud[k].clone()))
@@ -60,7 +87,7 @@ pub fn from_state(s: &State) -> Value {
         .map(crate::display_preflight::snapshot)
         .unwrap_or(Value::Null);
     summary["proton"] = proton::diagnostic(root);
-    let vr = vr::launcher_snapshot(s);
+    let vr = captured.vr;
     summary["vr"] = json!({"mode":vr["mode"],"state":vr["state"]});
     if vr["check"].is_object() {
         summary["vr"]["check"] =
@@ -71,8 +98,32 @@ pub fn from_state(s: &State) -> Value {
         summary["graphics"]["prefix"] = graphics_diagnostics::prefix_summary(root);
         summary["graphics"]["last_start_attempt"] = graphics_diagnostics::load_launch(root);
     }
-    if !s.graphics_report.is_null() {
-        summary["graphics"]["last_launch"] = s.graphics_report.clone();
+    if !captured.graphics_report.is_null() {
+        summary["graphics"]["last_launch"] = captured.graphics_report;
     }
     json!({"generated_at":files::now(),"summary":summary,"checks":runtime::checks(root)})
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn expensive_collection_releases_the_coordinator_and_retains_captured_state() {
+        let temp = tempfile::tempdir().expect("state");
+        let app = Launcher::new(temp.path().join("state"), None).expect("launcher");
+        app.lock().installation_report = json!({"state":"captured"});
+        let result = snapshot_with(&app, |captured| {
+            // Collection may be slow. Actions and status reads must still be
+            // able to acquire the coordinator while its probes run.
+            let mut state = app
+                .state
+                .try_lock()
+                .expect("diagnostics must not retain lock");
+            state.installation_report = json!({"state":"newer"});
+            captured.installation
+        });
+        assert_eq!(result["state"], "captured");
+        assert_eq!(app.lock().installation_report["state"], "newer");
+    }
 }

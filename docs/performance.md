@@ -1,5 +1,86 @@
 # Rust and Python launcher performance
 
+## Codebase review — 30 October 2026 (unreleased)
+
+The review covers all three Cargo packages, their feature graph, local HTTP/UI
+contract, setup/update/recovery, Xbox/Steam profile selection, saves, add-ons,
+diagnostics and compatibility build tooling. The baseline is `3090c9c`.
+
+| Check | Before | Development branch |
+| --- | ---: | ---: |
+| Linux production/build dependency nodes | 372 | 358 |
+| Entire workspace/all-platform package versions | 495 | 481 |
+| Added package versions | — | 0 |
+| Launcher native XZ dependency | `liblzma.so.5` | none |
+
+The Linux counts walk only normal/build edges from `flightdeck-linux`, including
+the launcher and UI themselves, using Cargo's `x86_64-unknown-linux-gnu` filter.
+They exclude development dependencies; workspace/all-platform counts use complete
+metadata. They are dependency counts, not measured binary-size or startup claims.
+`readelf -d` confirms that the rebuilt executable imports only the GNU loader,
+libc, libm and libgcc_s. Desktop libraries still load dynamically as before.
+
+Implemented changes:
+
+- Share SHA-256 0.11 with the pinned Fenix integration. Stream large-file hashes
+  through a fixed-size buffer, preserving all checksum formats and integrity gates.
+- Decode XZ with the existing `lzma-rust2` dependency and a buffered input. Keep
+  existing tar path/link/type/size and cancellation checks. Independent XZ
+  fixtures exercise successful extraction, an escaping link and a truncated stream.
+  A complete pinned Proton archive also decodes to the same **1,463,132,160 bytes**
+  and SHA-256 as the system XZ decoder. An optimized-build comparison using the
+  same Rust hashing harness measured 7.2–10.1 seconds for the old native wrapper
+  and 12.1 seconds for the safe Rust decoder on this workstation. This trades
+  some initial setup time for removing the host library; it is not a universal
+  decoder benchmark. The optional unsafe optimization feature stays disabled.
+- Use ZIP's flate2 implementation without its unused Zopfli encoder. Packaging
+  still writes deflated ZIPs; installers still read stored/deflated ZIP members
+  and validate local/central headers before publication.
+- Disable unused Axum extractors/tracing defaults and quick-xml's unused Serde
+  adapter. Retain the explicit authenticated HTTP contract and bounded XML editor.
+- Keep Chrono's UTC clock/format/parser support without local-timezone discovery
+  or unused timestamp serialization. Existing save/report timestamp contracts remain.
+- Capture service-owned diagnostic values under the coordinator, release the
+  mutex, then scan logs/hash libraries/run child probes. Problem reports use
+  the same captured context. A regression test permits another state access
+  during collection and checks that the original captured data is retained.
+- Reuse a hash-verified cached Proton tar archive without first obtaining or
+  verifying the outer ZIP. This avoids an unnecessary cache read/download and
+  keeps repeated setup working when only the verified tar archive remains.
+
+Validation: **724 ordinary workspace tests pass**, with 34 explicit opt-in tests
+skipped; Clippy and formatting pass. The actual local-service contract passes
+100 checks, and the inspected source-release boundary passes. A separate real
+MobiFlight ZIP/HubHop setup test and the complete pinned Proton XZ comparison
+pass. The main suite runs as UID 1000 without capabilities in an isolated,
+network-disabled container with real temporary-disk capacity. No real account,
+cloud save or installed simulator is modified by these checks.
+The separate native UI example also passes `cargo check --locked --offline`.
+[Machine-readable review results](codebase-review-results.json) record the removed
+packages, test totals, archive identity and remaining download-expiry risk.
+
+Larger changes remain separate decisions:
+
+- **Before 5 November 2026:** mirror the exact pinned Proton artifact at a
+  durable release URL with its source/provenance and notices, then retain its
+  two existing checksums. GitHub reports expiry at **2026-11-05 19:52:05 UTC**
+  for [artifact 9008475181](https://api.github.com/repos/xodus-gaming/Proton/actions/artifacts/9008475181).
+  The [0.3.7 component release](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/tag/compat-v0.3.7)
+  contains native components and sources, but no Proton mirror. Cache-first reuse
+  helps existing installations; it does not supply a fresh download after expiry.
+- Fenix's standalone installer owns a synchronous HTTP client while Flightdeck
+  uses Reqwest. Sharing a download interface across the repositories could reduce
+  the second HTTP/TLS stack, but must retain the standalone installer, cancellation,
+  trusted origins and download verification. Removing the client alone would break it.
+- Different XML, PNG, Wayland and font-library versions originate in Fenix and
+  iced dependencies. Do not force incompatible versions or replace the existing
+  SVG/text renderer merely to reduce the package count.
+- Large add-on/UI modules can be split by workflow after their behavior is
+  covered. Avoid combining that reorganization with changes to recovery formats.
+- Licensed add-on flights, physical MobiFlight/WinWing devices, NVIDIA/VR and live
+  account/cloud transactions need their own live validation. This codebase check
+  preserves the existing support boundary and does not qualify them anew.
+
 ## Native page switching 0.2.5
 
 The release-mode native interface was compared with 0.2.4 at

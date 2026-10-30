@@ -162,10 +162,14 @@ name alone does not prove that its required libraries are installed.
 
 | Component | Host requirements |
 | --- | --- |
-| Native launcher | `liblzma.so.5`, `libgcc_s.so.1`, glibc and its math library; libxkbcommon and the Wayland/X11 libraries for the selected desktop |
+| Native launcher | `libgcc_s.so.1`, glibc and its math library; libxkbcommon and the Wayland/X11 libraries for the selected desktop |
 | Microsoft sign-in and runtime helpers | GTK 3 (`libgtk-3.so.0`), WebKitGTK 4.1 (`libwebkit2gtk-4.1.so.0`), OpenSSL 3 (`libssl.so.3`, `libcrypto.so.3`) and their dependencies |
 | Simulator graphics | Vulkan loader (`libvulkan.so.1`) and a working compatible GPU driver |
 | Account storage | A graphical session with D-Bus and a Linux Secret Service keyring |
+
+Published packages through **0.3.7** also require `liblzma.so.5`. The development
+branch replaces that native dependency with the existing Rust XZ decoder; this
+change has not yet been released.
 | Online services | A working network connection and the distribution's CA certificate store |
 
 GStreamer with its Good, Bad and Libav plugin sets must

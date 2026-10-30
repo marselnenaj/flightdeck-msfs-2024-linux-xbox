@@ -11,7 +11,7 @@ use serde_json::{Value, json};
 use std::{
     collections::BTreeMap,
     fs::{self, File},
-    io::{Read, Write},
+    io::{BufReader, Read, Write},
     os::unix::fs::MetadataExt,
     path::{Component, Path, PathBuf},
     process::{Command, Stdio},
@@ -280,7 +280,11 @@ pub fn extract_reader(reader: impl Read, destination: &Path, cancel: &AtomicBool
 pub fn extract(archive: &Path, destination: &Path, cancel: &AtomicBool) -> Result<()> {
     let file = files::open_at(rustix::fs::CWD, archive, false, false)?;
     match archive.extension().and_then(|v| v.to_str()) {
-        Some("xz") => extract_reader(xz2::read::XzDecoder::new(file), destination, cancel),
+        Some("xz") => extract_reader(
+            lzma_rust2::XzReader::new(BufReader::new(file), false),
+            destination,
+            cancel,
+        ),
         Some("gz") => extract_reader(flate2::read::GzDecoder::new(file), destination, cancel),
         _ => extract_reader(file, destination, cancel),
     }
@@ -547,20 +551,9 @@ pub fn obtain(ctx: &Context, destination: &Path) -> Result<Value> {
     )?;
     ctx.progress("Der geprüfte Proton-Runner wird heruntergeladen …");
     let runner_lock = &lock["runner"];
-    let zip = download(
-        string(runner_lock, "url")?,
-        string(runner_lock, "zip_sha256")?,
-        &cache.join("runner.zip"),
-        &ctx.cancel,
-        |v| ctx.update(json!({"transfer":v})),
-    )?;
-    let archive = cache.join("runner.tar.xz");
-    unzip_runner(
-        &zip,
-        &archive,
-        string(runner_lock, "archive_sha256")?,
-        &ctx.cancel,
-    )?;
+    let archive = runner_archive(runner_lock, &cache, &ctx.cancel, |v| {
+        ctx.update(json!({"transfer":v}));
+    })?;
     ctx.update(json!({"transfer":null}));
     ctx.progress("Proton wird entpackt und die Grafik eingerichtet …");
     extract(&archive, &work, &ctx.cancel)?;
@@ -581,4 +574,62 @@ pub fn obtain(ctx: &Context, destination: &Path) -> Result<Value> {
     Ok(
         json!({"cli":artifacts.join("bin/xodus-cli"),"cli_sha256":lock["native"]["files"]["bin/xodus-cli"],"cli_features":lock["native"]["cli_features"],"artifacts_path":artifacts,"runner_path":runner,"prefix_path":prefix,"workspace":work}),
     )
+}
+
+fn runner_archive(
+    spec: &Value,
+    cache: &Path,
+    cancel: &AtomicBool,
+    progress: impl FnMut(Value),
+) -> Result<PathBuf> {
+    tx::interrupted(cancel)?;
+    let archive = cache.join("runner.tar.xz");
+    let expected = string(spec, "archive_sha256")?;
+    // The verified inner archive is sufficient. Do not require its outer ZIP
+    // or the upstream artifact to remain available for a repeated setup.
+    if tx::digest(&archive).is_ok_and(|hash| hash == expected) {
+        return Ok(archive);
+    }
+    let zip = download(
+        string(spec, "url")?,
+        string(spec, "zip_sha256")?,
+        &cache.join("runner.zip"),
+        cancel,
+        progress,
+    )?;
+    unzip_runner(&zip, &archive, expected, cancel)?;
+    Ok(archive)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn verified_runner_archive_needs_neither_zip_nor_upstream_access() {
+        let temp = tempfile::tempdir().expect("cache");
+        let path = temp.path().join("runner.tar.xz");
+        let bytes = b"synthetic pinned archive";
+        files::atomic(&path, bytes).expect("archive");
+        // This URL must be rejected if a download is attempted.
+        let spec = json!({"archive_sha256":files::sha256(bytes),"zip_sha256":"0".repeat(64),"url":"http://not-used.invalid"});
+        assert_eq!(
+            runner_archive(&spec, temp.path(), &AtomicBool::new(false), |_| panic!(
+                "cache hit must not start a transfer"
+            ))
+            .expect("verified cache"),
+            path
+        );
+        assert!(!temp.path().join("runner.zip").exists());
+        assert!(matches!(
+            runner_archive(&spec, temp.path(), &AtomicBool::new(true), |_| {}),
+            Err(Error::Cancelled)
+        ));
+        files::atomic(&path, b"changed archive").expect("changed cache");
+        assert!(runner_archive(&spec, temp.path(), &AtomicBool::new(false), |_| {}).is_err());
+        assert_eq!(
+            files::read(&path, 100).expect("unchanged by failure"),
+            b"changed archive"
+        );
+    }
 }

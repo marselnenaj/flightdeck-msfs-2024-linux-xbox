@@ -219,7 +219,7 @@ fn loader_failures_are_classified_and_never_install() {
             "needs glibc 2.39 or newer",
         ),
         (
-            "error while loading shared libraries: liblzma.so.5: cannot open shared object file: No such file or directory",
+            "error while loading shared libraries: libgcc_s.so.1: cannot open shared object file: No such file or directory",
             "runtime library",
         ),
         (

@@ -2,7 +2,7 @@
 
 This example uses the **production** Rust widgets in `native/ui`, with synthetic
 state and no client connection. Buttons cannot modify any game, account, or
-installation. All six screens are available.
+installation. All production screens are available.
 
 ```sh
 cargo run --locked --manifest-path examples/native-ui/Cargo.toml

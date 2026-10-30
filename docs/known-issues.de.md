@@ -2,8 +2,15 @@
 
 [English](known-issues.md) · [Dokumentation](index.md)
 
-Stand: 28. Oktober 2026, einschließlich der Lizenzkorrektur in **0.3.2**.
-Siehe [Änderungsübersicht](changelog.md#032--28-october-2026).
+Stand: 30. Oktober 2026, veröffentlichter Launcher **0.3.7**.
+Siehe [Änderungsübersicht](changelog.md#037--30-october-2026).
+
+- **MobiFlight-Einrichtung in 0.3.7:** Die App kann installiert sein, während die
+  WASM-/Ereignis-Einrichtung an HubHops alter, weitergeleiteter Adresse oder langen
+  Ereignisskripten scheitert. Der Entwicklungsstand behebt beides und setzt die
+  Einrichtung auch nach einem Fenix-/Proton-Profilwechsel fort. Der Fix ist noch
+  nicht veröffentlicht. Nach einem Update mit dem Fix verwendet **MobiFlight
+  vorbereiten / reparieren** die vorhandene App und erhält eigene Ereignisse.
 
 - **Bazzite-Installation:** Der Installer lehnt symbolische Links in Quell- und
   Zielpfaden ab, auch Fedora Atomics `/home`-Verknüpfung. Im Desktop-Modus mit

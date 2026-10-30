@@ -36,7 +36,14 @@ fn sha(path: &Path) -> Result<String> {
     let mut file =
         fs::File::open(path).map_err(|error| Failure(format!("{}: {error}", path.display())))?;
     let mut hasher = Sha256::new();
-    std::io::copy(&mut file, &mut hasher)?;
+    let mut buffer = [0_u8; 128 * 1024];
+    loop {
+        let count = std::io::Read::read(&mut file, &mut buffer)?;
+        if count == 0 {
+            break;
+        }
+        hasher.update(&buffer[..count]);
+    }
     Ok(hex::encode(hasher.finalize()))
 }
 
