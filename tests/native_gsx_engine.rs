@@ -76,6 +76,53 @@ fn install(
     )
 }
 #[test]
+fn conflicting_zip_headers_never_publish_an_engine_file() {
+    let control = tempfile::tempdir().unwrap();
+    files::private_dir(&control.path().join("manager")).unwrap();
+    let (package, source) = archive(
+        control.path(),
+        "headers.zip",
+        "engine",
+        &[("safe.dll", b"engine")],
+        false,
+    );
+    install(control.path(), package, source, &AtomicBool::new(false)).unwrap();
+    assert_eq!(
+        fs::read(control.path().join("manager/engine/safe.dll")).unwrap(),
+        b"engine"
+    );
+    for changed in ["name", "compression", "flags"] {
+        let temp = tempfile::tempdir().unwrap();
+        files::private_dir(&temp.path().join("manager")).unwrap();
+        let (mut package, source) = archive(
+            temp.path(),
+            "headers.zip",
+            "engine",
+            &[("safe.dll", b"engine")],
+            false,
+        );
+        let mut bytes = fs::read(&source).unwrap();
+        assert_eq!(&bytes[..4], b"PK\x03\x04");
+        match changed {
+            "name" => bytes[30..38].copy_from_slice(b"../x.dll"),
+            "compression" => bytes[8..10].copy_from_slice(&8_u16.to_le_bytes()),
+            "flags" => bytes[6] ^= 8,
+            _ => unreachable!(),
+        }
+        // Exercise the parser behind the digest gate with a self-consistent
+        // test pin, not merely rejection of an incorrect download checksum.
+        package.sha256 = files::sha256(&bytes);
+        write(&source, &bytes);
+        assert!(
+            install(temp.path(), package, source, &AtomicBool::new(false)).is_err(),
+            "{changed}"
+        );
+        assert!(!temp.path().join("manager/engine/safe.dll").exists());
+        assert!(!temp.path().join("manager/x.dll").exists());
+        assert!(!temp.path().join("x.dll").exists());
+    }
+}
+#[test]
 fn official_lock_has_exact_https_release_identities_and_bounded_sizes() {
     let packages = gsx_engine::packages().unwrap();
     assert_eq!(packages.len(), 7);

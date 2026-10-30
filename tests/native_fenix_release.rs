@@ -60,10 +60,8 @@ fn published_payload_updates_every_runner_and_prefix_without_changing_originals(
     let old_manifest_name = (0..old_zip.len())
         .find_map(|index| {
             let entry = old_zip.by_index(index).expect("ZIP entry");
-            entry
-                .name()
-                .ends_with("/bundle.json")
-                .then(|| entry.name().to_owned())
+            let name = entry.name().expect("member name");
+            name.ends_with("/bundle.json").then(|| name.into_owned())
         })
         .expect("preceding manifest");
     let old_root = old_manifest_name

@@ -163,10 +163,8 @@ fn interrupted_upgrade(
     let manifest_name = (0..zip.len())
         .find_map(|i| {
             let entry = zip.by_index(i).expect("entry");
-            entry
-                .name()
-                .ends_with("/bundle.json")
-                .then(|| entry.name().to_owned())
+            let name = entry.name().expect("member name");
+            name.ends_with("/bundle.json").then(|| name.into_owned())
         })
         .expect("old manifest");
     let old: serde_json::Value =

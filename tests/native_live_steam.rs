@@ -32,14 +32,18 @@ fn unpack(archive: &Path, output: &Path) -> serde_json::Value {
     let roots: Vec<_> = (0..zipped.len())
         .filter_map(|i| {
             let file = zipped.by_index(i).unwrap();
-            file.name().strip_suffix("/bundle.json").map(str::to_string)
+            file.name()
+                .unwrap()
+                .strip_suffix("/bundle.json")
+                .map(str::to_string)
         })
         .collect();
     assert_eq!(roots.len(), 1);
     let root = format!("{}/", roots[0]);
     for i in 0..zipped.len() {
         let mut entry = zipped.by_index(i).unwrap();
-        let Some(name) = entry.name().strip_prefix(&root) else {
+        let archive_name = entry.name().unwrap();
+        let Some(name) = archive_name.strip_prefix(&root) else {
             continue;
         };
         if entry.is_dir()

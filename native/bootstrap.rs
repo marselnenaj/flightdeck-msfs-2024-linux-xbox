@@ -300,12 +300,19 @@ pub fn unzip_runner(
         archive.len() <= 30000,
         "Das Runner-Archiv enthält zu viele Dateien.",
     )?;
+    archive
+        .validate_header_consistency()
+        .map_err(|_| Error::Invalid("Das Runner-Archiv ist beschädigt."))?;
     let mut selected = None;
     for i in 0..archive.len() {
         let file = archive
             .by_index(i)
             .map_err(|_| Error::Invalid("Das Runner-Archiv ist beschädigt."))?;
-        if file.name().ends_with(".tar.xz") {
+        if file
+            .name()
+            .map_err(|_| Error::Invalid("Das Runner-Archiv ist beschädigt."))?
+            .ends_with(".tar.xz")
+        {
             require(
                 selected.is_none() && file.size() <= 1024 * 1024 * 1024,
                 "Das Runner-Archiv enthält keine eindeutige Installation.",

@@ -209,12 +209,16 @@ fn extract_zip<R: Read + Seek>(source: R, target: &Path, cancel: &AtomicBool) ->
     let invalid = "Ungültiges oder unerwartetes MobiFlight-Programmpaket.";
     let mut archive = zip::ZipArchive::new(source).map_err(|_| Error::Invalid(invalid))?;
     require(archive.len() <= 2000, invalid)?;
+    archive
+        .validate_header_consistency()
+        .map_err(|_| Error::Invalid(invalid))?;
     let mut seen = BTreeSet::new();
     let mut total = 0_u64;
     for i in 0..archive.len() {
         tx::interrupted(cancel)?;
         let mut entry = archive.by_index(i).map_err(|_| Error::Invalid(invalid))?;
-        let name = entry.name().trim_end_matches('/');
+        let archive_name = entry.name().map_err(|_| Error::Invalid(invalid))?;
+        let name = archive_name.trim_end_matches('/');
         require(
             !name.is_empty() && !name.contains(['\\', ':', '\0']) && name.len() <= 512,
             invalid,

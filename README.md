@@ -27,13 +27,19 @@ downloads, updates and account sign-in.
 **Download the [latest stable release](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/latest).**
 The launcher, installer and updater need no Python.
 
-**New in 0.3.6:** validate the same GStreamer registry that Wine uses for Xbox
+**New in 0.3.7:** Complete Proton switching and recovery even when an old
+profile cannot be safely reclaimed. Keep that backup and allow returning to the
+default runner. Update ZIP/TLS/async dependencies and native authentication
+cryptography, enable ZIP header consistency checks and integrate Fenix 0.1.3.
+
+**Since 0.3.6:** validate the same GStreamer registry that Wine uses for Xbox
 game launches.
 A stale plugin blacklist is rebuilt once when a required video element fails,
 without resetting the game profile. The reproduced false-positive probe and
 failed 4K decode now recover in the same isolated profile. Diagnostics retain
 cache recovery, missing-plugin architecture and maintenance-preview failure
-phase/errno. The complete simulator retest in #16 is still pending.
+phase/errno. The reporter now confirms reaching the main menu with the default
+runner in 0.3.6; full flights remain unqualified.
 [Reproduction and tested scope](docs/media-validation.md)
 
 **New in 0.3.5:** [MobiFlight / WinWing setup](docs/mobiflight.md), GSX engine
@@ -46,8 +52,8 @@ account-free Wine profile; full Fenix installer validation remains outstanding.
 actually load before selecting a Proton media stack. This fixes a cached-factory
 validation defect and improves safe diagnostics for missing codecs. The corrected
 CachyOS 20261015 fallback passed the real 4K loading-video test, including rewind
-and completed shutdown. The full simulator outcome in #16 still needs the
-reporter's retest. [Reproduction and tested scope](docs/media-validation.md)
+and completed shutdown. The reporter has since confirmed the default-runner
+main-menu launch with 0.3.6; alternate-runner recovery is addressed in 0.3.7. [Reproduction and tested scope](docs/media-validation.md)
 
 **New in 0.3.3:** optional Orbx Central, Navigraph Hub and Simlink setup, plus
 GSX preparation for the selected **Xbox or Steam** MSFS 2020/2024 profile. These

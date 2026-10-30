@@ -330,6 +330,9 @@ Install the toolchain described in BUILDING.md. From this archive's root run:\n\
 The root .cargo/config.toml uses the included vendor directory. Host development\n\
 packages and compilers remain external system prerequisites. The original build\n\
 used Rust 1.98, GCC/MinGW 16.2 and WIDL from this Wine source. Output is artifacts/.\n\
+For the 0.3.7 broker update, native-build.Dockerfile supplies Ubuntu 24.04\n\
+prerequisites. Mount Rust 1.98 at /opt/rust and build xodus-cli/xodus-service\n\
+with --release --locked --offline. See BUILDING.md for provider and retained ABI provenance.\n\
 The build produces six binaries, including bin/flightdeck-connected-storage.exe.\n\
 Its complete sources and build script are under runtime/tools/. It performs no\n\
 authentication or cloud requests during a build. The helper provides scoped\n\
@@ -463,6 +466,10 @@ pub fn create_with(
         file(job.output.join("dependency-inventory.json")),
     );
     sources.insert("BUILDING.md".into(), file(root.join("BUILDING.md")));
+    sources.insert(
+        "native-build.Dockerfile".into(),
+        file(root.join("compat/native-build.Dockerfile")),
+    );
     sources.insert(
         "README.md".into(),
         Source::Bytes(readme(&version).into_bytes()),

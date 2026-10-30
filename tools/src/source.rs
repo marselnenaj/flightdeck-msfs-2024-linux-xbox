@@ -336,6 +336,10 @@ pub fn private_content(text: &str) -> Option<&'static str> {
         Regex::new(r"(?i)\b(?:Bearer\s+|XBL3\.0 x=[0-9]{1,20};)([A-Za-z0-9+/=_~.-]{32,})")
             .expect("pattern")
     });
+    static OAUTH_VALUES: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"(?i)\b(?:access|refresh)(?:_|%5f)?token(?:=|%3d)([A-Za-z0-9%+/=_~.-]{32,})")
+            .expect("pattern")
+    });
     if private_key(text) {
         return Some("Private key material");
     }
@@ -357,7 +361,13 @@ pub fn private_content(text: &str) -> Option<&'static str> {
     let header = HEADERS
         .captures_iter(text)
         .any(|found| opaque_literal(&found[1]));
-    (quoted || header).then_some("Embedded credential literal")
+    // OAuth callback parsers percent-decode both field names and values.
+    // Inspect that same representation, including encoded letters in a key.
+    let decoded = percent_encoding::percent_decode_str(text).decode_utf8_lossy();
+    let oauth = OAUTH_VALUES
+        .captures_iter(&decoded)
+        .any(|found| opaque_literal(&found[1]));
+    (quoted || header || oauth).then_some("Embedded credential literal")
 }
 
 fn walk(root: &Path, directory: &Path, files: &mut BTreeSet<PathBuf>) -> Result<()> {

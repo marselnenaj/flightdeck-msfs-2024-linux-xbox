@@ -297,6 +297,21 @@ retained for ABI compatibility; renaming the file is insufficient. CLI and
 service are built together with the default Linux Secret Service backend. Do
 not mix a file-keyring build with a Secret Service build.
 
+For the 0.3.7 Linux broker update, `compat/native-build.Dockerfile` pins an
+Ubuntu 24.04 build environment (glibc 2.39). Mount the official Rust 1.98
+Linux toolchain at `/opt/rust`; build `xodus-cli` and `xodus-service` from the
+staged sources with `--release --locked --offline` and the included Cargo
+vendor configuration. The corresponding-source archive includes this Dockerfile.
+The Linux XML-signature provider is AWS-LC; BCrypt RSA private-key blobs are
+validated/imported with OpenSSL, and temporary PKCS#8 exports are zeroized.
+This removes the affected RustCrypto RSA dependency while preserving the
+Microsoft request formats. This provider selection targets Linux builds.
+
+The four unchanged Wine/Windows ABI components in 0.3.7 retain the exact
+hashes from the verified 0.3.1 compatibility archive. Only the two Linux broker
+programs are rebuilt for this update. Their shared source manifest records
+that provenance; the archive still includes complete sources for all six.
+
 ## Synthetic native checks
 
 To reproduce the automatic .NET repair with real Microsoft installers and a

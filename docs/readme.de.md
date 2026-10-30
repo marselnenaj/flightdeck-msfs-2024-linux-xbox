@@ -28,13 +28,20 @@ Spieldownloads, Updates und Kontoanmeldung übernimmt Steam.
 **Lade die [neueste stabile Version](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/latest).**
 Launcher, Installer und Updater benötigen kein Python.
 
-**Neu in 0.3.6:** Die Medienprüfung beim Xbox-Spielstart verwendet dieselbe
+**Neu in 0.3.7:** Proton-Wechsel und Wiederaufnahme werden auch dann abgeschlossen,
+wenn eine alte Profilsicherung nicht sicher gelöscht werden kann. Die Sicherung
+bleibt erhalten; die Rückkehr zum Standard-Proton funktioniert wieder.
+Sicherheitsupdates für ZIP, TLS, Tokio und native Authentifizierung, explizite
+ZIP-Headerprüfung und Fenix 0.1.3 sind enthalten.
+
+**Seit 0.3.6:** Die Medienprüfung beim Xbox-Spielstart verwendet dieselbe
 GStreamer-Cachedatei wie Wine. Scheitert ein benötigter Video-Baustein an alten negativen Plugin-Einträgen,
 wird nur dieser Cache einmal neu aufgebaut. Das Spielprofil bleibt erhalten.
 Der reproduzierte Widerspruch zwischen grüner Prüfung und fehlgeschlagener
 4K-Wiedergabe wird im selben isolierten Profil behoben. Die sichere Diagnose
 enthält Cache-Reparatur, Plugin-Architektur und die fehlgeschlagene Wartungsphase
-mit Fehlercode. Den vollständigen Simulatorstart in #16 muss der Tester noch bestätigen.
+mit Fehlercode. Der Tester bestätigt inzwischen das Hauptmenü mit dem
+Standard-Proton unter 0.3.6; vollständige Flüge sind weiterhin nicht qualifiziert.
 [Reproduktion und Testumfang](media-validation.md)
 
 **Neu in 0.3.5:** [MobiFlight / WinWing](mobiflight.de.md), GSX-Engine-Reparatur,
@@ -48,7 +55,8 @@ tatsächlich, bevor Flightdeck einen Proton-Medienpfad auswählt. Das behebt ein
 Prüffehler bei zwischengespeicherten Plugin-Einträgen und verbessert die sichere
 Diagnose fehlender Codecs. Der korrigierte CachyOS-20261015-Fallback bestand den
 echten 4K-Ladevideotest einschließlich Zurückspulen und sauberem Beenden. Den
-vollständigen Simulatorstart in #16 muss der Tester noch bestätigen.
+Hauptmenü-Start mit dem Standard-Proton hat der Tester unter 0.3.6 inzwischen
+bestätigt; die Wiederherstellung nach Proton-Wechseln wird in 0.3.7 repariert.
 [Reproduktion und Testumfang](media-validation.md)
 
 **Neu in 0.3.3:** optionale Einrichtung von Orbx Central, Navigraph Hub und

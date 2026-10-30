@@ -6,6 +6,18 @@ working video with 0.2.25 and CachyOS 20261015-SLR. The media-selection source
 and system-memory patch are identical in those two releases. This is a return
 of a symptom; a particular intervening source change is not established as its cause.
 
+## Reporter confirmation and separate Proton recovery
+
+On 30 October the [reporter confirmed](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/issues/16#issuecomment-6514344157)
+that 0.3.6 launches with the default Proton to the main menu. This confirms the
+original black-screen report is resolved for that setup; it is not a full-flight
+qualification. The same reply reports an interrupted alternate-Proton switch.
+0.3.7 separates retention of its previous profile from permission to reclaim it:
+failed deletion inventory retains the backup rather than stranding the journal.
+Synthetic tests verify both new and already-published switches and return to the
+default runner. The exact entry that triggered the reporter's inventory rejection
+and the later manual permission changes are not established by the screenshots.
+
 ## Wine registry mismatch reproduced on 30 October 2026
 
 The new [reporter reply](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/issues/16#issuecomment-6507238288)
@@ -81,7 +93,8 @@ cache-sensitive comparison does not establish a deterministic difference between
 the two source versions, nor prove that it explains every symptom in #16.
 The reporter's export names the host path but omits the missing element and the
 applied overlay. Updated diagnostics retain those fixed-name facts from existing
-logs. A fresh reporter test is still needed for the full simulator outcome.
+logs. The later reporter confirmation above establishes the default-runner main menu;
+a full flight and alternate-runner qualification are still outstanding.
 The untraced failed run is retained as a limitation; it is not counted as a
 successful regression test. The developer probe now saves `media-selection.log`,
 and launch diagnostics include the host-loader check so future failures retain

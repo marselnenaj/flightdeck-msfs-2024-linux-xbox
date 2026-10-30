@@ -1,5 +1,27 @@
 # Changes and release status
 
+## 0.3.7 — 30 October 2026
+
+- Finish Proton switch recovery independently of optional backup reclamation.
+  Preserve backups that fail the strict removal inventory, clear their stale
+  cleanup fingerprints, and retain all ownership/mount/link deletion guards.
+  Exercise both a new switch and an older already-published interrupted journal,
+  then return through the public default-Proton action without losing add-ons.
+- Update ZIP to the patched 9.x line and explicitly validate local/central header
+  consistency in every ZIP reader. Verify ordinary extraction and reject
+  contradictory names, compression and flags before publishing engine files.
+- Update Tokio, Fenix 0.1.3 and its TLS/certificate dependencies. Rebuild native
+  Xodus authentication with patched P-256/constant-time dependencies and the
+  supported AWS-LC XML-signing provider, removing the affected RSA/old Bigint graph.
+  Preserve device identity, signing formats, Secret Service and verified downloads.
+- Replace copied OAuth token fixtures with synthetic values and reject literal
+  or percent-encoded OAuth credentials in source exports. Retain zeroizing
+  temporary private-key buffers; make a real upstream device network test opt-in
+  and remove its token output.
+- Record the #16 reporter's confirmation that 0.3.6 reaches the main menu with
+  default Proton. Full flights and the reporter's alternate-runner retest remain
+  separate validation; no FenixSystem memory fix is claimed.
+
 ## 0.3.6 — 30 October 2026
 
 - Probe the same architecture-specific GStreamer registry used by Wine, with

@@ -51,6 +51,12 @@ incomplete process/reference audit defer cleanup. Deletion uses a private
 quarantine and never follows package-directory links. Never delete
 `proton-tests` wholesale: active runners or restore points may still be inside.
 
+From 0.3.7, an old profile that fails the deletion inventory is retained without
+a cleanup fingerprint. That failure no longer strands a completed switch or
+journal recovery. Returning to Flightdeck remains possible; the unverified
+backup is excluded from automatic reclamation. Ownership and mount checks on
+active profile operations remain in force.
+
 Preparation verifies the selected files, updates Wine and installs that runner's
 graphics libraries for both architectures. Steam updates cannot modify the
 private runner copy; select the updated build again to adopt it. Failure or
