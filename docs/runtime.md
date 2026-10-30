@@ -51,6 +51,12 @@ incomplete process/reference audit defer cleanup. Deletion uses a private
 quarantine and never follows package-directory links. Never delete
 `proton-tests` wholesale: active runners or restore points may still be inside.
 
+From 0.3.7, an old profile that fails the deletion inventory is retained without
+a cleanup fingerprint. That failure no longer strands a completed switch or
+journal recovery. Returning to Flightdeck remains possible; the unverified
+backup is excluded from automatic reclamation. Ownership and mount checks on
+active profile operations remain in force.
+
 Preparation verifies the selected files, updates Wine and installs that runner's
 graphics libraries for both architectures. Steam updates cannot modify the
 private runner copy; select the updated build again to adopt it. Failure or
@@ -202,7 +208,8 @@ adds an already prepared plugin directory without modifying the system. Codec
 ABI and driver availability are host-specific. The source builder does not
 download or install graphics, multimedia or system packages.
 
-Flightdeck configures media only in the actual game's Wine child. The default
+Flightdeck applies the game's media environment to its Wine child and disposable
+verification children. Account and cloud helpers use their separate environment. The default
 Xodus runner uses system GStreamer codecs: MP4 needs the ISO/QuickTime demuxer
 and a working H.264 decoder, normally `qtdemux` and `avdec_h264`. Its bundled
 Steam media converter depends on a transcoded-video cache that Flightdeck does

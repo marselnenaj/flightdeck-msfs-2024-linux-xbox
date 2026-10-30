@@ -357,6 +357,103 @@ fn interrupted_exchange_recovers_idempotently_before_or_after_directory_swap() {
     }
 }
 #[test]
+fn unreclaimable_backup_does_not_strand_switch_recovery_or_return_to_default() {
+    use std::os::unix::fs::FileTypeExt;
+
+    for already_published in [false, true] {
+        let temp = tempfile::tempdir().unwrap();
+        let (root, app) = fixture(temp.path());
+        let candidate = temp.path().join("alternative");
+        runner(&candidate, "synthetic-selected");
+        write(&root.join("local/msfs-prefix/addon"), b"user add-on");
+        let ctx = app.reserve("proton", "select", true).unwrap();
+        let (fresh, selected) = proton::prepare(
+            &ctx,
+            &proton::inspect(candidate.to_str().unwrap()).unwrap(),
+            None,
+            false,
+        )
+        .unwrap();
+        let prefix = root.join("local/msfs-prefix");
+        // A special entry fails the same conservative removal inventory as a
+        // foreign owner or nested mount, without changing ownership or mounts.
+        rustix::fs::mknodat(
+            rustix::fs::CWD,
+            prefix.join("keep-fifo"),
+            rustix::fs::FileType::Fifo,
+            rustix::fs::Mode::RUSR | rustix::fs::Mode::WUSR,
+            0,
+        )
+        .unwrap();
+        if already_published {
+            // Recreate the durable state left by an older release after the
+            // exchange and settings publication, before backup recording.
+            files::atomic_json(
+                &root.join("private/proton-switch.json"),
+                &json!({
+                    "schema":1,"backup":selected["base_prefix"],
+                    "runner":root.join(selected["runner"].as_str().unwrap()),
+                    "previous_runner":root.join("runner").canonicalize().unwrap(),
+                    "base_runner":selected["base_runner"],
+                    "before":fenix::identity(&prefix).unwrap(),
+                    "after":fenix::identity(&fresh).unwrap(),
+                    "selection":selected,"fenix_state":null,"scripts":selected["scripts"]
+                }),
+            )
+            .unwrap();
+            tx::exchange(&prefix, &fresh).unwrap();
+            fenix::replace_link(
+                &root.join("runner"),
+                &root.join(selected["runner"].as_str().unwrap()),
+            )
+            .unwrap();
+            files::atomic_json(&root.join("private/proton-selection.json"), &selected).unwrap();
+        } else {
+            proton::switch(&ctx, &fresh, &selected, false).unwrap();
+        }
+        proton::recover(&root).unwrap();
+        proton::recover(&root).unwrap();
+        assert!(!root.join("private/proton-switch.json").exists());
+        assert_eq!(proton::snapshot(&app)["selected"], "synthetic-selected");
+        let record: Value =
+            files::json(&fresh.parent().unwrap().join("cache.json"), 65536).unwrap();
+        let name = fresh.file_name().unwrap().to_str().unwrap();
+        assert_eq!(record["profiles"][name], fenix::identity(&fresh).unwrap());
+        assert!(record["profile_fingerprints"][name].is_null());
+        assert!(
+            fresh
+                .join("keep-fifo")
+                .symlink_metadata()
+                .unwrap()
+                .file_type()
+                .is_fifo()
+        );
+        assert!(
+            flightdeck::owned_tree::inventory(&fresh, &std::sync::atomic::AtomicBool::new(false))
+                .is_err()
+        );
+        app.finish(&ctx, Ok(json!({"state":"complete"})), false);
+        // Exercise the public Return button path, including optional cleanup.
+        let result = select(&app, &root, None);
+        assert_ne!(result["cleanup"]["skipped"], true, "{result}");
+        proton::check(&root).unwrap();
+        assert!(proton::selection(&root).unwrap().is_none());
+        assert_eq!(
+            fs::read(root.join("local/msfs-prefix/addon")).unwrap(),
+            b"user add-on"
+        );
+        assert_eq!(fs::read(fresh.join("addon")).unwrap(), b"user add-on");
+        assert!(
+            fresh
+                .join("keep-fifo")
+                .symlink_metadata()
+                .unwrap()
+                .file_type()
+                .is_fifo()
+        );
+    }
+}
+#[test]
 fn changed_prefix_or_launch_script_stops_recovery_before_publication() {
     let temp = tempfile::tempdir().unwrap();
     let (root, _) = fixture(temp.path());

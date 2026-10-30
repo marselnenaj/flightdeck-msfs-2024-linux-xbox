@@ -52,6 +52,7 @@ impl Fixture {
             fs::read(crate::util::root().join("scripts/build-compat.sh")).expect("build script");
         fixture.write("repo/scripts/build-compat.sh", &script);
         fixture.write("repo/BUILDING.md", b"Synthetic build guidance\n");
+        fixture.write("repo/compat/native-build.Dockerfile", b"FROM scratch\n");
         fixture.write(
             "repo/compat/LICENSES/LGPL.txt",
             b"Synthetic license preservation marker\n",
@@ -195,6 +196,7 @@ fn six_binaries_and_full_corresponding_sources_are_preserved() {
         "source-manifest.json",
         "dependency-inventory.json",
         "BUILDING.md",
+        "native-build.Dockerfile",
     ] {
         assert!(sources.contains_key(name), "{name}");
     }

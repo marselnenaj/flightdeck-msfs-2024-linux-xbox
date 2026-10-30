@@ -1,13 +1,5 @@
 {
   "packages": {
-    "fenix-patch@0.1.2": {
-      "path": "compat/LICENSES/rust/fenix-5e2630c89574-MIT.txt",
-      "revision": "5e2630c8957497a18034dc1eb2d433c43d3b6e0b",
-      "selected_license": "MIT",
-      "sha256": "037dd0f2ed88ab580b7ac6a5d7fde0bbf5206b7c988e5f8ea7c25778df8fe585",
-      "spdx": "MIT",
-      "url": "https://raw.githubusercontent.com/marselnenaj/fenix-a320-linux-patch/5e2630c8957497a18034dc1eb2d433c43d3b6e0b/LICENSE"
-    },
     "iced_core@0.14.0": {
       "path": "compat/LICENSES/rust/iced-3997291f318a-MIT.txt",
       "revision": "3997291f318a8bc06fa522f5579836fb3feb94df",
@@ -103,6 +95,14 @@
       "sha256": "7fa429541e55b1509909e058f2d21a37467e4958ec713b357f6e0cf9dc4ee352",
       "spdx": "MIT OR Apache-2.0 OR Zlib",
       "url": "https://raw.githubusercontent.com/etemesi254/zune-image/fa2c767a01d7d9373911d0bf63e0588553d67e0e/LICENSE-ZLIB"
+    },
+    "fenix-patch@0.1.4": {
+      "path": "compat/LICENSES/rust/fenix-0c8079c61337-MIT.txt",
+      "revision": "0c8079c61337e5699d0568ec9ffc66354b86708d",
+      "selected_license": "MIT",
+      "sha256": "037dd0f2ed88ab580b7ac6a5d7fde0bbf5206b7c988e5f8ea7c25778df8fe585",
+      "spdx": "MIT",
+      "url": "https://raw.githubusercontent.com/marselnenaj/fenix-a320-linux-patch/0c8079c61337e5699d0568ec9ffc66354b86708d/LICENSE"
     }
   },
   "schema": 1

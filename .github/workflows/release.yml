@@ -100,10 +100,12 @@ jobs:
           tar -xzf "$1" -C "$flightdeck_auth_stage"
           (
             cd "$flightdeck_auth_stage"
-            for flightdeck_test_filter in api::xbox:: licensing::content::; do
+            for flightdeck_test_filter in api::xbox:: licensing::content:: licensing::utils:: api::live::rst::; do
               cargo test --locked --manifest-path xodus-src/Cargo.toml \
                 -p xodus --lib "$flightdeck_test_filter" -- --test-threads=1
             done
+            cargo test --locked --manifest-path xodus-src/Cargo.toml \
+              -p xal --lib -- --test-threads=1
           )
       - name: Build and assemble the complete native package
         run: |

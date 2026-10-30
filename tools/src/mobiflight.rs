@@ -52,6 +52,10 @@ fn pinned(path: &Path, hash: &Value, length: Option<u64>) -> Result<Vec<u8>> {
 fn member(bytes: Vec<u8>, name: &str) -> Result<Vec<u8>> {
     let mut archive =
         zip::ZipArchive::new(Cursor::new(bytes)).map_err(|e| Failure(e.to_string()))?;
+    require(archive.len() <= 2000, "Unexpected NuGet archive")?;
+    archive
+        .validate_header_consistency()
+        .map_err(|e| Failure(e.to_string()))?;
     let mut entry = archive.by_name(name).map_err(|e| Failure(e.to_string()))?;
     require(
         entry.size() <= 1024 * 1024 && entry.is_file(),

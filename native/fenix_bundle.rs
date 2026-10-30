@@ -233,6 +233,9 @@ pub fn obtain(cache: &Path, supplied: Option<&str>, ctx: &Context) -> Result<Pat
         let mut zipped = zip::ZipArchive::new(File::open(&archive)?)
             .map_err(|_| Error::Invalid("Invalid Fenix release archive."))?;
         require(zipped.len() < 10000, "Invalid Fenix release archive.")?;
+        zipped
+            .validate_header_consistency()
+            .map_err(|_| Error::Invalid("Invalid Fenix release archive."))?;
         let mut seen = BTreeSet::new();
         let prefix = format!("{}/", string(release, "archive_root")?);
         for i in 0..zipped.len() {
@@ -240,10 +243,12 @@ pub fn obtain(cache: &Path, supplied: Option<&str>, ctx: &Context) -> Result<Pat
             let mut entry = zipped
                 .by_index(i)
                 .map_err(|_| Error::Invalid("Invalid Fenix archive member."))?;
-            let name = entry
+            let archive_name = entry
                 .name()
+                .map_err(|_| Error::Invalid("Invalid Fenix archive member."))?;
+            let name = archive_name
                 .strip_prefix(&prefix)
-                .unwrap_or(entry.name())
+                .unwrap_or(&archive_name)
                 .to_string();
             if !wanted.contains_key(&name) {
                 continue;

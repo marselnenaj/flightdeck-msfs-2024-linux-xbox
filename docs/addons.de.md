@@ -15,7 +15,7 @@ MSFS 2020/2024. Diese Integrationen bleiben experimentell. Für Steam zuerst Pro
 in den Kompatibilitätseinstellungen wählen und MSFS einmal starten. Ein weiteres
 dauerhaftes Wine-Profil ist nicht nötig. Spieldownloads und Updates verwaltet Steam.
 Steam-Metadaten, Protokolle und XML-Sicherungen liegen unter
-`~/.local/share/flightdeck/steam/<installation-id>/addon-apps/`; Programme und
+`~/.local/state/flightdeck/steam/<installation-id>/addon-apps/`; Programme und
 Simulator-Einstellungen bleiben im echten `compatdata/<AppID>/pfx`. Nach einem
 Proton-Wechsel den Add-on-Status neu laden. Community-Pakete lassen sich über
 Flightdeck weiterhin nur bei Xbox entfernen.

@@ -1,6 +1,6 @@
 [package]
 name = "flightdeck-linux"
-version = "0.3.6"
+version = "0.3.7"
 edition = "2024"
 rust-version = "1.98"
 license = "MIT"
@@ -21,14 +21,14 @@ name = "flightdeck-rust"
 path = "native/main.rs"
 
 [dependencies]
-fenix-patch = { git = "https://github.com/marselnenaj/fenix-a320-linux-patch", rev = "5e2630c8957497a18034dc1eb2d433c43d3b6e0b" }
+fenix-patch = { git = "https://github.com/marselnenaj/fenix-a320-linux-patch", rev = "0c8079c61337e5699d0568ec9ffc66354b86708d" }
 flightdeck-ui = { path = "native/ui" }
 tar = "0.4"
 flate2 = "1"
 xz2 = "0.1"
-zip = { version = "8", default-features = false, features = ["deflate"] }
+zip = { version = "9.0.5", default-features = false, features = ["deflate"] }
 axum = "0.8.9"
-tokio = { version = "1.53.1", features = ["rt-multi-thread", "net", "signal", "time", "sync", "macros"] }
+tokio = { version = "1.53.3", features = ["rt-multi-thread", "net", "signal", "time", "sync", "macros"] }
 reqwest = { version = "0.13.4", default-features = false, features = ["blocking", "json", "rustls"] }
 regex = "1"
 quick-xml = { version = "0.42.0", features = ["serialize"] }

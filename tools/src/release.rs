@@ -25,6 +25,8 @@ const MAX_ARCHIVE: u64 = 512 * 1024 * 1024;
 pub struct Pins {
     pub previous_base: &'static str,
     pub previous_sha: &'static str,
+    /// New native sources can precede the full launcher release they serve.
+    pub native_source_base: Option<&'static str>,
     /// The corresponding sources below describe exactly this native bundle.
     pub native_sha: &'static str,
     pub sources: BTreeMap<&'static str, &'static str>,
@@ -32,13 +34,16 @@ pub struct Pins {
 impl Pins {
     pub fn current() -> Self {
         Self {
-            previous_base: "https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/download/v0.3.5/",
-            previous_sha: "6b8153bc9cd81c5ed5141257a29edf6e030ac20e3bc655a4b6fb06f596f3d502",
-            native_sha: "182c2ac5e43368faa6bf827a54fdae4ce649e770b10b5966b748b837f269cc6e",
+            previous_base: "https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/download/v0.3.6/",
+            previous_sha: "31ef334ee7b83404fb5ccd8ec0224d3f3705328f4e4a5fcf67ba9f07218e51c7",
+            native_source_base: Some(
+                "https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/download/compat-v0.3.7/",
+            ),
+            native_sha: "e324177f5af87378c2a84caacc71f28703247f579d83b8c545ca594767b1324b",
             sources: [
                 (
-                    "flightdeck-native-sources-0.2.18.tar.gz",
-                    "ce63fc52ff70d7d47d8e3e36232eb87f3f294ea6b0246715defb6c11a6673893",
+                    "flightdeck-native-sources-0.3.7.tar.gz",
+                    "fd050bc1307118af3e73b4a9393f67ff7c91d8910b2d92f97d5e4c197edfb8b3",
                 ),
                 (
                     "flightdeck-dxvk-0.1.11-sources.tar.gz",
@@ -301,12 +306,12 @@ pub fn prepare(root: &Path, pins: &Pins, cache: &Path, output: &Path, offline: b
         .into_iter()
         .chain(pins.sources.iter().map(|(name, hash)| (*name, *hash)));
     for (name, hash) in inputs {
-        download(
-            &format!("{}{name}", pins.previous_base),
-            &cache.join(name),
-            hash,
-            offline,
-        )?;
+        let base = if name.starts_with("flightdeck-native-sources-") {
+            pins.native_source_base.unwrap_or(pins.previous_base)
+        } else {
+            pins.previous_base
+        };
+        download(&format!("{base}{name}"), &cache.join(name), hash, offline)?;
     }
     unpack(&cache.join(PACKAGE), output)?;
     components::graphics_files(

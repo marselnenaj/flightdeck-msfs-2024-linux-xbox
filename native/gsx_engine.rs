@@ -230,6 +230,9 @@ fn plan(
         archive.len() == package.entries && archive.len() <= MAX_ENTRIES,
         INVALID,
     )?;
+    archive
+        .validate_header_consistency()
+        .map_err(|_| Error::Invalid(INVALID))?;
     let mut entries = Vec::new();
     let mut seen = BTreeSet::new();
     let mut total = 0u64;
@@ -238,12 +241,13 @@ fn plan(
             .by_index(index)
             .map_err(|_| Error::Invalid(INVALID))?;
         let dir = file.is_dir();
+        let archive_name = file.name().map_err(|_| Error::Invalid(INVALID))?;
         let raw = if dir {
-            file.name()
+            archive_name
                 .strip_suffix('/')
                 .ok_or(Error::Invalid(INVALID))?
         } else {
-            file.name()
+            &archive_name
         };
         let relative = name(raw)?;
         let kind = file.unix_mode().unwrap_or(0) & 0o170000;

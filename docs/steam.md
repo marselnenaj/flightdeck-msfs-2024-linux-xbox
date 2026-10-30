@@ -94,7 +94,7 @@ No separate permanent Wine profile or new Proton download is created for these
 apps. [Setup steps and tested scope](addons.md)
 
 Flightdeck stores companion metadata/logs under
-`~/.local/share/flightdeck/steam/<installation-id>/addon-apps/`. GSX preparation
+`~/.local/state/flightdeck/steam/<installation-id>/addon-apps/`. GSX preparation
 stages a copy beside the real prefix and retains `pfx.before-gsx-*` for recovery.
 A pending GSX transaction blocks game launch until restored. Stale actions after
 changing Proton or replacing the prefix require a fresh status page. Simlink and

@@ -13,7 +13,7 @@
     "repository": "https://github.com/xodus-gaming/xodus.git",
     "revision": "0670e25aeb0e0e9f800f8f2f4968ae3b681842a7",
     "patch": "compat/patches/xodus-broker.patch",
-    "patch_sha256": "17d2e7f2a2bcf70ec2251b338e31e456f2afca2bc1c4af9054d130d120a9cf17",
+    "patch_sha256": "ee8a39309fd40844fc77bb47bf3b6439dd3a8e53b72e754a7bba9205b6340dca",
     "license": "GPL-3.0-only"
   },
   "store_idl": {

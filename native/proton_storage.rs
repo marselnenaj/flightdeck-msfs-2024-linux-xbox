@@ -140,18 +140,7 @@ impl Slot {
     }
     pub fn record_profile(&self, path: &Path) -> Result<()> {
         if files::exists(path) {
-            let mut record = runtime::value(&self.work.join("cache.json"))?;
-            let name = path
-                .file_name()
-                .and_then(|n| n.to_str())
-                .ok_or(Error::Invalid(INVALID))?;
-            let inventory = owned_tree::inventory(path, &AtomicBool::new(false))?;
-            record["profiles"][name] = json!(inventory.id);
-            if !record["profile_fingerprints"].is_object() {
-                record["profile_fingerprints"] = json!({});
-            }
-            record["profile_fingerprints"][name] = inventory.fingerprint.into();
-            files::atomic_json(&self.work.join("cache.json"), &record)?;
+            record_profile(&self.work.join("cache.json"), path)?;
         }
         Ok(())
     }
@@ -166,6 +155,38 @@ impl Slot {
     }
 }
 
+fn record_profile(marker: &Path, path: &Path) -> Result<()> {
+    let parent = path.parent().ok_or(Error::Invalid(INVALID))?;
+    let mut record = runtime::value(marker)?;
+    require(
+        record["schema"] == 1
+            && record["app"] == "flightdeck-proton-cache"
+            && record["id"] == fenix::identity(parent)?,
+        INVALID,
+    )?;
+    let name = path
+        .file_name()
+        .and_then(|n| n.to_str())
+        .ok_or(Error::Invalid(INVALID))?;
+    let id = owned_tree::identity(path)?;
+    // Retention is not permission to delete. A foreign entry, nested mount,
+    // special file or unreadable descendant makes this profile ineligible for
+    // automatic reclamation, but must not strand an already published switch.
+    let inventory = owned_tree::inventory(path, &AtomicBool::new(false)).ok();
+    require(
+        owned_tree::identity(path)? == id && inventory.as_ref().is_none_or(|v| v.id == id),
+        INVALID,
+    )?;
+    record["profiles"][name] = json!(id);
+    if !record["profile_fingerprints"].is_object() {
+        record["profile_fingerprints"] = json!({});
+    }
+    // Clear any fingerprint left by the prepared profile before exchange.
+    // A null fingerprint always preserves the backup, including on later runs.
+    record["profile_fingerprints"][name] = json!(inventory.map(|v| v.fingerprint));
+    files::atomic_json(marker, &record)
+}
+
 pub(crate) fn retain_backup(
     root: &Path,
     path: &Path,
@@ -176,23 +197,7 @@ pub(crate) fn retain_backup(
     if let Some(parent) = path.parent() {
         let marker = parent.join("cache.json");
         if files::exists(&marker) {
-            let mut record = runtime::value(&marker)?;
-            require(
-                record["app"] == "flightdeck-proton-cache"
-                    && record["id"] == fenix::identity(parent)?,
-                INVALID,
-            )?;
-            let name = path
-                .file_name()
-                .and_then(|n| n.to_str())
-                .ok_or(Error::Invalid(INVALID))?;
-            let inventory = owned_tree::inventory(path, &AtomicBool::new(false))?;
-            record["profiles"][name] = json!(inventory.id);
-            if !record["profile_fingerprints"].is_object() {
-                record["profile_fingerprints"] = json!({});
-            }
-            record["profile_fingerprints"][name] = inventory.fingerprint.into();
-            files::atomic_json(&marker, &record)?;
+            record_profile(&marker, path)?;
         }
     }
     files::atomic_json(
@@ -512,6 +517,9 @@ fn cleanup(root: &Path, cancel: &AtomicBool, others: &[PathBuf]) -> Result<Value
                 if !files::exists(&profile)
                     || protected(&profile, &pins)
                     || record["profiles"][name] != fenix::identity(&profile)?
+                    || !record["profile_fingerprints"][name]
+                        .as_str()
+                        .is_some_and(files::hex_digest)
                 {
                     continue;
                 }

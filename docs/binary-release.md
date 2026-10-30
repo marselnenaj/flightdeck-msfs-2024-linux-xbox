@@ -70,7 +70,7 @@ every executable/library and the notice file to SHA256 checksums. The installer
 accepts only these eight native files. Bootstrap rechecks executable hashes
 before use. Native archive readers reject links, traversal, duplicate names and
 oversized payloads, with bounded member counts and expanded sizes. Downloads
-use HTTPS with checksums checked before use. Build/test archive readers also enforce explicit extraction limits.
+use HTTPS with checksums checked before use. The developer-only transition probe checks member containment and caps its input archive size; it does not cap expanded output or member count.
 
 ## Build and sources
 

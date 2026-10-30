@@ -364,6 +364,31 @@ fn access_keys_and_credential_literals_are_rejected_without_values() {
     }
 }
 
+#[test]
+fn oauth_url_credentials_are_rejected_without_echoing_the_value() {
+    let tree = Tree::new();
+    let material = "A9b8C7d6E5f4G3h2I1j0K9l8M7n6O5p4Q3r2S1t0U9v8W7x6Y5z4";
+    for field in [
+        "access_token",
+        "refresh_token",
+        "ACCESS_TOKEN",
+        "refresh%5Ftoken",
+        "%61ccess_token",
+        "ref%72esh_token",
+    ] {
+        for separator in ["?", "#", "&", "&amp;"] {
+            for value in [material.to_string(), format!("{material}%2B%2F%3D")] {
+                tree.put("compat/fixture.patch", format!("+let callback = \"https://example.invalid/callback{separator}{field}={value}&state=test\";"));
+                let error = tree.error();
+                assert!(error.contains("credential literal"), "{field}");
+                assert!(!error.contains(material));
+            }
+        }
+    }
+    tree.put("compat/fixture.patch", "+let callback = \"https://example.invalid/callback#access_token=synthetic-access&refresh_token=synthetic-refresh\";");
+    inspect(tree.root()).expect("explicit synthetic parser fixture");
+}
+
 fn members(archive: &Path) -> BTreeMap<String, (Vec<u8>, u32, u64)> {
     let mut found = BTreeMap::new();
     let stream = flate2::read::GzDecoder::new(fs::File::open(archive).expect("archive"));
