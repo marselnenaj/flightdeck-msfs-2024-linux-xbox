@@ -175,6 +175,42 @@ fn run(input: Value) -> Result<Value> {
             flightdeck::fenix_installer::prepare(&wine)?;
             Ok(json!(true))
         }
+        "maintenance-reset" | "maintenance-preview" => {
+            let root = synthetic(&input)?;
+            let state = root
+                .parent()
+                .ok_or(Error::Invalid("Missing probe parent."))?
+                .join(format!(
+                    "maintenance-state-{}",
+                    uuid::Uuid::new_v4().simple()
+                ));
+            let app = Launcher::new(state, root.to_str())?;
+            flightdeck::maintenance::preview(&app, &json!({"operation":"reset"}))?;
+            let wait = || -> Result<Value> {
+                let deadline = std::time::Instant::now() + std::time::Duration::from_secs(120);
+                while app.lock().active.is_some() {
+                    require(
+                        std::time::Instant::now() < deadline,
+                        "Probe maintenance timed out.",
+                    )?;
+                    std::thread::sleep(std::time::Duration::from_millis(10));
+                }
+                Ok(app.job("maintenance"))
+            };
+            let preview = wait()?;
+            if input["operation"] == "maintenance-preview" || preview["state"] != "ready" {
+                return Ok(preview);
+            }
+            require(
+                input["confirmed"] == true,
+                "Synthetic reset requires explicit confirmation.",
+            )?;
+            flightdeck::maintenance::start(
+                &app,
+                &json!({"job_id":preview["id"],"confirmed":true}),
+            )?;
+            wait()
+        }
         "fenix" => fenix_fixture(&synthetic(&input)?, &path(&input, "bundle")?),
         "fenix-check" => {
             let root = synthetic(&input)?;

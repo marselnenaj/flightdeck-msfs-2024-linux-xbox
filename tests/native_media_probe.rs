@@ -14,7 +14,10 @@ fn media_probe_constructs_elements_instead_of_trusting_cached_factories() {
 #include <stdlib.h>
 #include <string.h>
 static int element;
-int gst_init_check(int *argc, char ***argv, void **error) { return 1; }
+static int fork_disabled, segtrap_disabled;
+void gst_registry_fork_set_enabled(int enabled) { fork_disabled = !enabled; }
+void gst_segtrap_set_enabled(int enabled) { segtrap_disabled = !enabled; }
+int gst_init_check(int *argc, char ***argv, void **error) { return fork_disabled && segtrap_disabled; }
 void *gst_element_factory_find(const char *name) { return &element; }
 void *gst_element_factory_make(const char *name, const char *instance) {
     const char *missing = getenv("TEST_MISSING_ELEMENT");
@@ -38,6 +41,9 @@ void g_object_unref(void *object) {}
         "avdec_h264",
         "h264parse",
         "qtdemux",
+        "videoconvert",
+        "decodebin",
+        "capsfilter",
         "deinterlace",
         "videoflip",
         "capssetter",

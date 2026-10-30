@@ -1,10 +1,53 @@
-# Alternate-Proton video validation
+# Wine media-cache and alternate-Proton validation
 
 Issue [#16](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/issues/16)
 reports a black screen with Flightdeck 0.3.3 after the reporter had confirmed
 working video with 0.2.25 and CachyOS 20261015-SLR. The media-selection source
 and system-memory patch are identical in those two releases. This is a return
 of a symptom; a particular intervening source change is not established as its cause.
+
+## Wine registry mismatch reproduced on 30 October 2026
+
+The new [reporter reply](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/issues/16#issuecomment-6507238288)
+confirms that 0.3.5 still black-screens after a clean installation. Its complete
+safe scan reports all nine host elements ready, followed by Wine being unable to
+create `videoconvert`. Sign-in and download completed; this does not establish an
+authentication failure.
+
+The [pinned Wine `wg_init_gstreamer`](https://github.com/xodus-gaming/wine/blob/b1dd32734a34472a28eb5be9922df06e07ac0834/dlls/winegstreamer/unixlib.c)
+replaces `GST_REGISTRY_1_0` with
+`WINE_GST_REGISTRY_DIR/registry.x86_64.bin` and disables registry forking. The
+launcher had instead validated `registry.bin` with the ordinary scanner. These
+were separate caches even when both runs selected the host media path.
+
+An account-free reproduction used the installed pinned Xodus Wine family with
+its existing Fenix ntdll pair and the verified system-memory module. The media
+configuration of the retained 0.3.4-final driver is unchanged in 0.3.5. A temporary
+incompatible libgstvideo in the test scanner generated a real GStreamer blacklist;
+the public GStreamer API repaired unrelated entries, retaining only the stale
+`videoconvertscale` entry. Neither the system plugins nor the installed runner
+were modified.
+
+| State | Native check | Actual Wine Media Foundation result |
+| --- | --- | --- |
+| Healthy, isolated caches | All nine elements ready | Two 120-frame 3840×2160 NV12 passes, rewind, EOS and shutdown |
+| Stale Wine registry; separate Linux registry healthy | All nine elements ready | `videoconvert` missing, decode fails with exit 1 |
+| Corrected driver, same damaged profile | Detects `videoconvert` missing; rebuilds the owned registry once | Same video passes both reads, rewind, EOS and shutdown |
+
+The correction shares Wine's registry filename and initialization flags. It
+rechecks after a bounded cache rebuild instead of resetting a prefix or changing
+plugins. Missing software H.264 alone does not trigger cache deletion; explicit
+plugin choices and links to unrelated files are retained. Tests cover persistent
+failure and refuse symbolic/hard-linked registry files. Safe diagnostics identify
+the shared registry scope, recovery state and 32-/64-bit missing-element evidence.
+
+This proves the cache defect and its repair under Wine, including the exact
+missing element named in the report. It does not establish that the reporter's
+cache is its only cause or confirm a complete simulator flight. The additional
+reset-preview failure was not reproduced: a real isolated Wine reset completed
+with its backup. Maintenance diagnostics now retain a fixed failure phase and
+numeric errno so a subsequent report can identify that separate failure without
+exposing paths.
 
 ## Isolated comparison on 29 October 2026
 

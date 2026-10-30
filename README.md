@@ -27,6 +27,15 @@ downloads, updates and account sign-in.
 **Download the [latest stable release](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/latest).**
 The launcher, installer and updater need no Python.
 
+**New in 0.3.6:** validate the same GStreamer registry that Wine uses for Xbox
+game launches.
+A stale plugin blacklist is rebuilt once when a required video element fails,
+without resetting the game profile. The reproduced false-positive probe and
+failed 4K decode now recover in the same isolated profile. Diagnostics retain
+cache recovery, missing-plugin architecture and maintenance-preview failure
+phase/errno. The complete simulator retest in #16 is still pending.
+[Reproduction and tested scope](docs/media-validation.md)
+
 **New in 0.3.5:** [MobiFlight / WinWing setup](docs/mobiflight.md), GSX engine
 repair, bounded X11 startup checks and a repair for the native-only CLR override
 behind the Fenix loader failure in #10. Hardware connections and full-flight

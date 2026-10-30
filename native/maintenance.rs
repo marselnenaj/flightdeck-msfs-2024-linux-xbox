@@ -2,7 +2,7 @@
 //! Reviewed edition-scoped removal and reversible Wine environment resets.
 use crate::{
     Error, Result,
-    backend::{Context, Launcher, string},
+    backend::{Context, Launcher, State, string},
     bootstrap, cloud_process_guard,
     error::require,
     files,
@@ -24,6 +24,49 @@ const STALE: &str = "Die Vorschau ist nicht mehr gültig. Prüfe die Wartung ern
 const CHANGED: &str =
     "Die Installation wurde seit der Vorschau geändert. Prüfe die Wartung erneut.";
 const RESTORE: &str = "Die gesicherte Spielumgebung passt nicht mehr zur aktiven Installation.";
+const PREVIEW_PHASES: [&str; 5] = [
+    "idle",
+    "packages",
+    "reset_sources",
+    "restore_source",
+    "inventory",
+];
+
+fn inspect<T>(ctx: &Context, phase: &'static str, work: impl FnOnce() -> Result<T>) -> Result<T> {
+    ctx.update(json!({"maintenance_phase":phase}));
+    work().inspect_err(|error| {
+        let (code, number) = match error {
+            Error::Io(error) => ("filesystem_io", error.raw_os_error()),
+            Error::Cancelled => ("cancelled", None),
+            _ => ("validation_failed", None),
+        };
+        ctx.update(json!({"maintenance_failure_phase":phase,"error_code":code,"os_error":number}));
+    })
+}
+
+/// Current installation only; fixed symbols and numeric errno, never filenames,
+/// job messages, runtime paths or underlying operating-system error text.
+pub fn diagnostics(state: &State) -> Value {
+    let Some(job) = state.jobs.get("maintenance") else {
+        return Value::Null;
+    };
+    if state.runtime.as_deref().and_then(Path::to_str) != job["runtime_path"].as_str() {
+        return Value::Null;
+    }
+    let fixed = |key: &str, allowed: &[&str]| {
+        job[key]
+            .as_str()
+            .filter(|v| allowed.contains(v))
+            .map(str::to_owned)
+    };
+    json!({"scope":"current_service",
+        "operation":fixed("operation", &["reset","restore","uninstall"]),
+        "state":fixed("state", &["checking","ready","running","complete","failed","cancelled"]),
+        "phase":fixed("maintenance_phase", &PREVIEW_PHASES),
+        "failure_phase":fixed("maintenance_failure_phase", &PREVIEW_PHASES),
+        "error_code":fixed("error_code", &["filesystem_io","validation_failed","cancelled"]),
+        "os_error":job["os_error"].as_i64().filter(|v| (1..=4095).contains(v))})
+}
 #[derive(Clone)]
 pub struct Plan {
     runtime: PathBuf,
@@ -272,7 +315,26 @@ pub fn preview(app: &Arc<Launcher>, data: &Value) -> Result<Value> {
     drop(s);
     ctx.update(json!({"state":"checking","game_name":game.name(),"keep_data":keep_data,"delete_packages":delete_packages,"message":"Die ausgewählte Installation wird geprüft …","error":null}));
     std::thread::spawn(move || {
-        let outcome=std::panic::catch_unwind(std::panic::AssertUnwindSafe(||->Result<Value>{idle(&ctx)?;let root=ctx.root()?;let paths=if operation=="uninstall"&&delete_packages{packages(root,&known)?}else{vec![]};if operation=="reset"{reset_sources(root)?;}else if operation=="restore"{restore_path(root)?;}let mut inventory=BTreeMap::new();for p in std::iter::once(root).chain(paths.iter().map(PathBuf::as_path)){inventory.insert(p.into(),owned_tree::inventory(p,&ctx.cancel)?);}let bytes:u64=paths.iter().filter_map(|p|inventory.get(p)).map(|v|v.bytes).sum();let plan=Plan{runtime:root.into(),packages:paths.clone(),inventory,created:Instant::now(),id:ctx.id.clone(),operation,keep_data,delete_packages};ctx.launcher.lock().maintenance=Some(plan);Ok(json!({"state":"ready","message":"Prüfe die Ordner und bestätige anschließend die Aktion.","packages":paths,"package_bytes":bytes}))})).unwrap_or(Err(Error::Invalid("Die Wartung konnte nicht abgeschlossen werden. Vorhandene Sicherungen bleiben erhalten.")));
+        let outcome=std::panic::catch_unwind(std::panic::AssertUnwindSafe(||->Result<Value>{
+            inspect(&ctx, "idle", || idle(&ctx))?;
+            let root=ctx.root()?;
+            let paths=if operation=="uninstall"&&delete_packages {
+                inspect(&ctx, "packages", || packages(root,&known))?
+            } else { vec![] };
+            if operation=="reset" { inspect(&ctx, "reset_sources", || reset_sources(root))?; }
+            else if operation=="restore" { inspect(&ctx, "restore_source", || restore_path(root))?; }
+            let inventory=inspect(&ctx, "inventory", || {
+                let mut inventory=BTreeMap::new();
+                for p in std::iter::once(root).chain(paths.iter().map(PathBuf::as_path)) {
+                    inventory.insert(p.into(),owned_tree::inventory(p,&ctx.cancel)?);
+                }
+                Ok(inventory)
+            })?;
+            let bytes:u64=paths.iter().filter_map(|p|inventory.get(p)).map(|v|v.bytes).sum();
+            let plan=Plan{runtime:root.into(),packages:paths.clone(),inventory,created:Instant::now(),id:ctx.id.clone(),operation,keep_data,delete_packages};
+            ctx.launcher.lock().maintenance=Some(plan);
+            Ok(json!({"state":"ready","message":"Prüfe die Ordner und bestätige anschließend die Aktion.","packages":paths,"package_bytes":bytes}))
+        })).unwrap_or(Err(Error::Invalid("Die Wartung konnte nicht abgeschlossen werden. Vorhandene Sicherungen bleiben erhalten.")));
         ctx.launcher.finish(&ctx, outcome, false);
     });
     Ok(json!({"ok":true,"job":app.job("maintenance")}))

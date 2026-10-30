@@ -37,6 +37,10 @@ fn existing_wine_messages_name_only_known_missing_media_elements() {
     log.consume("winegstreamer: failed to create videoflip, are 64-bit GStreamer plugins installed?\nwinegstreamer: failed to create private_secret, are 64-bit GStreamer plugins installed?\n");
     let out = log.result(json!({"complete":true}));
     assert_eq!(out["media"]["missing_elements"], json!(["videoflip"]));
+    assert_eq!(
+        out["media"]["missing_element_architectures"],
+        json!({"videoflip":[64]})
+    );
     assert_eq!(out["media"]["observations"]["missing_plugin"], 2);
     assert!(!out.to_string().contains("private_secret"));
 }
@@ -49,6 +53,11 @@ fn media_probe_details_only_export_fixed_names_and_states() {
         flightdeck-media-element: source=runner name=avdec_h264 ready=0\n\
         flightdeck-media-probe: source=host state=ready\n\
         flightdeck-media-loader: source=host state=ready\n\
+        flightdeck-media-registry: source=host scope=wine_x86_64\n\
+        flightdeck-media-cache: source=host state=rebuilding\n\
+        flightdeck-media-cache: source=host state=recovered\n\
+        flightdeck-media-cache: source=host state=private_secret\n\
+        flightdeck-media-registry: source=host scope=private_secret\n\
         flightdeck-media-loader: source=host state=private_secret\n\
         flightdeck-media-element: source=host name=avdec_h264 ready=1\n\
         flightdeck-media-element: source=host name=private_secret ready=0\n\
@@ -64,6 +73,11 @@ fn media_probe_details_only_export_fixed_names_and_states() {
     );
     assert_eq!(out["media"]["probes"]["host"]["state"], "ready");
     assert_eq!(out["media"]["probes"]["host"]["loader"], "ready");
+    assert_eq!(
+        out["media"]["probes"]["host"]["registry_scope"],
+        "wine_x86_64"
+    );
+    assert_eq!(out["media"]["probes"]["host"]["cache_state"], "recovered");
     assert_eq!(
         out["media"]["probes"]["host"]["elements"]["avdec_h264"],
         true
