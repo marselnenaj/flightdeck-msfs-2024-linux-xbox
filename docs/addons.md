@@ -69,7 +69,7 @@ their Community packages are removed. Removing its Community package does not un
 companion applications.
 
 For Steam, companion metadata, logs and XML backups live under
-`~/.local/share/flightdeck/steam/<installation-id>/addon-apps/`. The applications
+`~/.local/state/flightdeck/steam/<installation-id>/addon-apps/`. The applications
 and simulator settings stay in the real Steam `compatdata/<AppID>/pfx`. Reopen
 the add-on status after changing Proton; an old page cannot configure a new runner
 or replaced prefix. Community removal through Flightdeck remains Xbox-only.
