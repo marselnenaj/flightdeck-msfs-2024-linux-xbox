@@ -30,7 +30,7 @@ The launcher, installer and updater need no Python.
 **New in 0.3.7:** Complete Proton switching and recovery even when an old
 profile cannot be safely reclaimed. Keep that backup and allow returning to the
 default runner. Update ZIP/TLS/async dependencies and native authentication
-cryptography, enable ZIP header consistency checks and integrate Fenix 0.1.3.
+cryptography, enable ZIP header consistency checks and integrate Fenix 0.1.4.
 
 **Since 0.3.6:** validate the same GStreamer registry that Wine uses for Xbox
 game launches.

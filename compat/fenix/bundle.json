@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "version": "0.1.3",
+  "version": "0.1.4",
   "repository": "https://github.com/marselnenaj/fenix-a320-linux-patch",
   "wine_revision": "b1dd32734a34472a28eb5be9922df06e07ac0834",
   "xgameruntime_revision": "64aebcabb8c66121eae25d3bf0ace4b582ebb0da",
@@ -226,7 +226,7 @@
     "xodus-wine-launch": "b9ef538cf83ead2dc5485b835f6b1b795219879888333fc2f886c4dfcc84ee33",
     "FenixGeometrySetup.exe": "b996c9f8f26ca52edbe5e8e2ae0bc4f1d0d031eec50d8e1927bca351df855324",
     "FenixMCDURefresh.exe": "1dfa0662c83e568007c12e15131ec58c176a9c79ff17a94004b27b2ed1494154",
-    "fenix-runtime": "9401a19f57b90e44b3be955e1d6e7635e86cbc9b2b76e7098715fe6277153fe0"
+    "fenix-runtime": "9e848248e1396557063ff536e612d269e6267c70cb4b3d5bcfee4268e9661acd"
   },
   "previous_releases": {
     "0.1.0-preview.1": {
@@ -666,13 +666,51 @@
         "drive_c/windows/system32/FenixMCDURefresh.exe": "1dfa0662c83e568007c12e15131ec58c176a9c79ff17a94004b27b2ed1494154",
         "drive_c/windows/system32/fenix-runtime": "bb6ff52ff55e3b4671aa699710ead8a801aa69d16cedc739cb89ed02faa7179a"
       }
+    },
+    "0.1.3": {
+      "files": {
+        "files/lib/wine/x86_64-windows/ntdll.dll": "cd03f6f93fcfcee2e2d1c18daebf2d7abe530c0da0f73490e7ca6950e59deef0",
+        "files/lib/wine/x86_64-unix/ntdll.so": "93c78b998321b4af09d69423a46b54e57dabc2c181789a50ffc13fa649eabec8",
+        "files/bin/wineserver": "ebd8f0861798d5634a3c13b492ada8eb1a6d74d2d3bd600087c0eaaafece02a9",
+        "files/lib/wine/x86_64-windows/crypt32.dll": "d7af8990662b2c69b2b0eb8ffeaf32d52e2bf940958708b5accaca0816c17bf5",
+        "files/lib/wine/x86_64-windows/mmdevapi.dll": "e85030f6996a4e449ae84fb0a88123ae55f8835d9007975aef945d84ac942571",
+        "files/lib/wine/x86_64-windows/kernelbase.dll": "e56a646e0be3b9310273786b9de596090f73178115cb29dbfd514b1feaaaa857",
+        "files/lib/wine/x86_64-windows/d2d1.dll": "bea772ac301c2be412941e678929a84f45360d030dc4ebe0816ae27328fd0e0f",
+        "files/lib/wine/x86_64-windows/dwrite.dll": "ea43e3abac10b7cbecb68fc6aade4ca0142eedd2e1968c9baae6c6a1a3e1e9e4",
+        "files/lib/wine/x86_64-unix/dwrite.so": "4128f9aecfcd266ab99ef818b62758f9e6c1096bb256f1fdb32135d3e2b88417",
+        "files/lib/wine/x86_64-unix/win32u.so": "cd7e9d70189fdabac7a1d2dfaecef3aeadbb56ef39a5fcd3f8fba4e883ba2ea9",
+        "files/lib/wine/x86_64-unix/winex11.so": "52c39af3c3e16205d6b8d638167793d73e3174dbe2be3f5509283e16faffa8c0",
+        "files/lib/wine/x86_64-windows/gdi32.dll": "3693f8f2c1e551126309cb20120ccc3bc65e0191740d7edf27206e974d711e79",
+        "files/lib/wine/x86_64-windows/win32u.dll": "17da85184ce7acc69559c3a947bc10e2da108b511bf68bd37474318d5a0fcff5",
+        "files/lib/wine/x86_64-windows/wow64win.dll": "0844db92a3228f11da1850ed673bf91d7b07af1ef9e609330a60571246277799",
+        "files/lib/wine/dxvk/x86_64-windows/dxgi.dll": "6e7588552eed8c6885887550a760c543d2dc45ca6556727c151ca48b17111efc",
+        "files/lib/wine/x86_64-windows/windows.storage.applicationdata.dll": "2d7875a562f0aa509ba39a309bc9f391f55f07b717dd539977f3fd72dca40529",
+        "files/lib/wine/x86_64-windows/bcrypt.dll": "a00f427450bb439cb0d087c7c4d028c6aa66e6788b063293d7d2f7c6dfdf451f",
+        "files/lib/wine/x86_64-windows/ncrypt.dll": "abbdcb1e71a42218f771a1d2e5062ccc0dde60476554c6d9c9cb73cb5fe1e9ea",
+        "files/lib/wine/x86_64-unix/bcrypt.so": "a558b27b2d55662cc7a5db24972d53deefaa97d25a7f1350fe5071a8b81b4d08",
+        "files/lib/wine/x86_64-windows/wintrust.dll": "6de74ee506499e1ebe3d2c5c8372011ed4c07974c78647082d56dcef422c5d92"
+      },
+      "integration": {
+        "FenixWindowGuard.exe": "2e3814496b8a539cac4e1b0f2cba5c8eb9e7d2bdc6b73df87aab6019164c4af3",
+        "launch-msfs.sh": "c8e717d070e76e3c6a98981c825700eea51e2d0aeda84dd2ede239bea040e0b2",
+        "xodus-wine-launch": "b9ef538cf83ead2dc5485b835f6b1b795219879888333fc2f886c4dfcc84ee33",
+        "FenixGeometrySetup.exe": "b996c9f8f26ca52edbe5e8e2ae0bc4f1d0d031eec50d8e1927bca351df855324",
+        "FenixMCDURefresh.exe": "1dfa0662c83e568007c12e15131ec58c176a9c79ff17a94004b27b2ed1494154",
+        "fenix-runtime": "9401a19f57b90e44b3be955e1d6e7635e86cbc9b2b76e7098715fe6277153fe0"
+      },
+      "prefix_files": {
+        "drive_c/windows/system32/d2d1_geometry.dll": "663f1d59ec1c014b9ea47a6cef71b3d43579e9759a82f3ee2cbd80b8c6d9e85f",
+        "drive_c/windows/system32/FenixWindowGuard.exe": "2e3814496b8a539cac4e1b0f2cba5c8eb9e7d2bdc6b73df87aab6019164c4af3",
+        "drive_c/windows/system32/FenixMCDURefresh.exe": "1dfa0662c83e568007c12e15131ec58c176a9c79ff17a94004b27b2ed1494154",
+        "drive_c/windows/system32/fenix-runtime": "bb6ff52ff55e3b4671aa699710ead8a801aa69d16cedc739cb89ed02faa7179a"
+      }
     }
   },
   "prefix_files": {
     "drive_c/windows/system32/d2d1_geometry.dll": "663f1d59ec1c014b9ea47a6cef71b3d43579e9759a82f3ee2cbd80b8c6d9e85f",
     "drive_c/windows/system32/FenixWindowGuard.exe": "2e3814496b8a539cac4e1b0f2cba5c8eb9e7d2bdc6b73df87aab6019164c4af3",
     "drive_c/windows/system32/FenixMCDURefresh.exe": "1dfa0662c83e568007c12e15131ec58c176a9c79ff17a94004b27b2ed1494154",
-    "drive_c/windows/system32/fenix-runtime": "bb6ff52ff55e3b4671aa699710ead8a801aa69d16cedc739cb89ed02faa7179a"
+    "drive_c/windows/system32/fenix-runtime": "9e848248e1396557063ff536e612d269e6267c70cb4b3d5bcfee4268e9661acd"
   },
   "variants": {
     "experimental-11": {
@@ -1153,6 +1191,44 @@
             "drive_c/windows/system32/FenixMCDURefresh.exe": "1dfa0662c83e568007c12e15131ec58c176a9c79ff17a94004b27b2ed1494154",
             "drive_c/windows/system32/fenix-runtime": "bb6ff52ff55e3b4671aa699710ead8a801aa69d16cedc739cb89ed02faa7179a"
           }
+        },
+        "0.1.3": {
+          "files": {
+            "files/lib/wine/x86_64-windows/ntdll.dll": "a6ef266baaa50f76bc7b02dc9b2f249a0c5853981a007b2c4c03f342bedcd27e",
+            "files/lib/wine/x86_64-unix/ntdll.so": "59fa7c425bc3c6bf10183ae65ee36576768a8e31aa0ed8819331051fd4fc7342",
+            "files/bin/wineserver": "8aa13e1e88ef05206763be1068da6c69d64b54f7cb79b069271d7d56bee6fa20",
+            "files/lib/wine/x86_64-windows/crypt32.dll": "9dd0bcad57f32856f6f8c9a3011618bffe65f96f5eeea3078ffe70058bc96c5c",
+            "files/lib/wine/x86_64-windows/mmdevapi.dll": "2e0476f872855de0e0a7f7c36f79550629158d53a9c700d4b6036ce21d31ee9d",
+            "files/lib/wine/x86_64-windows/kernelbase.dll": "3e6f62f5acce237a79f0311e436e2c797b515df7087850a2f9452ac87b97fdee",
+            "files/lib/wine/x86_64-windows/d2d1.dll": "782a6f81515816f74c53b93681174476a14f2411d2eb57c5310927097b5f4f67",
+            "files/lib/wine/x86_64-windows/dwrite.dll": "c0878c3b33d6518d42332ff2a12db87ed0bf16d2aed04f9903990b4577060850",
+            "files/lib/wine/x86_64-unix/dwrite.so": "0ae1f557e8115102e8cfb6359f455271cba4efbea4e9eaf37b67ba1f31343022",
+            "files/lib/wine/x86_64-unix/win32u.so": "9a63a27edf9a694bdc5fbb2c18480c3c987e556985f88ab4227240feec0071b9",
+            "files/lib/wine/x86_64-unix/winex11.so": "8921f9fd8af699b0964192bd95867d9fe24b3b0f505fb720eab9fb212c1afeed",
+            "files/lib/wine/x86_64-windows/gdi32.dll": "c2f24fa978a205f27f4c4d9913caf6baf60dda8528b41d63dd06b80b8e3e0a1a",
+            "files/lib/wine/x86_64-windows/win32u.dll": "9547c4bb50b09e145a2d4ee81a42b92d43305b4a4c92a376e1d820d79c388a02",
+            "files/lib/wine/x86_64-windows/wow64win.dll": "0ce56f189b2d0920b7094f591ffca812c1a48ae8a646b5c53962baeefd286ae9",
+            "files/lib/wine/dxvk/x86_64-windows/dxgi.dll": "0469b8cc9ff2ebfedfbfd15ed1a3e65f5f06b707e9239cb3f09e584355347af1",
+            "files/lib/wine/x86_64-windows/windows.storage.applicationdata.dll": "2d7875a562f0aa509ba39a309bc9f391f55f07b717dd539977f3fd72dca40529",
+            "files/lib/wine/x86_64-windows/bcrypt.dll": "5978805747af1243c0f4faf72f47e09a1b3b6dbdf383851ed2866006e83bd042",
+            "files/lib/wine/x86_64-windows/ncrypt.dll": "abbdcb1e71a42218f771a1d2e5062ccc0dde60476554c6d9c9cb73cb5fe1e9ea",
+            "files/lib/wine/x86_64-unix/bcrypt.so": "a558b27b2d55662cc7a5db24972d53deefaa97d25a7f1350fe5071a8b81b4d08",
+            "files/lib/wine/x86_64-windows/wintrust.dll": "ff882b740b25bfae35856c4b2092fe9d2f5200b31ec5b87af4c3d63201000685"
+          },
+          "integration": {
+            "FenixWindowGuard.exe": "2e3814496b8a539cac4e1b0f2cba5c8eb9e7d2bdc6b73df87aab6019164c4af3",
+            "launch-msfs.sh": "c8e717d070e76e3c6a98981c825700eea51e2d0aeda84dd2ede239bea040e0b2",
+            "xodus-wine-launch": "b9ef538cf83ead2dc5485b835f6b1b795219879888333fc2f886c4dfcc84ee33",
+            "FenixGeometrySetup.exe": "b996c9f8f26ca52edbe5e8e2ae0bc4f1d0d031eec50d8e1927bca351df855324",
+            "FenixMCDURefresh.exe": "1dfa0662c83e568007c12e15131ec58c176a9c79ff17a94004b27b2ed1494154",
+            "fenix-runtime": "9401a19f57b90e44b3be955e1d6e7635e86cbc9b2b76e7098715fe6277153fe0"
+          },
+          "prefix_files": {
+            "drive_c/windows/system32/d2d1_geometry.dll": "663f1d59ec1c014b9ea47a6cef71b3d43579e9759a82f3ee2cbd80b8c6d9e85f",
+            "drive_c/windows/system32/FenixWindowGuard.exe": "2e3814496b8a539cac4e1b0f2cba5c8eb9e7d2bdc6b73df87aab6019164c4af3",
+            "drive_c/windows/system32/FenixMCDURefresh.exe": "1dfa0662c83e568007c12e15131ec58c176a9c79ff17a94004b27b2ed1494154",
+            "drive_c/windows/system32/fenix-runtime": "bb6ff52ff55e3b4671aa699710ead8a801aa69d16cedc739cb89ed02faa7179a"
+          }
         }
       },
       "dxvk": {
@@ -1595,6 +1671,40 @@
             "FenixGeometrySetup.exe": "b996c9f8f26ca52edbe5e8e2ae0bc4f1d0d031eec50d8e1927bca351df855324",
             "FenixMCDURefresh.exe": "1dfa0662c83e568007c12e15131ec58c176a9c79ff17a94004b27b2ed1494154",
             "fenix-runtime": "bb6ff52ff55e3b4671aa699710ead8a801aa69d16cedc739cb89ed02faa7179a"
+          },
+          "prefix_files": {
+            "drive_c/windows/system32/d2d1_geometry.dll": "663f1d59ec1c014b9ea47a6cef71b3d43579e9759a82f3ee2cbd80b8c6d9e85f",
+            "drive_c/windows/system32/FenixWindowGuard.exe": "2e3814496b8a539cac4e1b0f2cba5c8eb9e7d2bdc6b73df87aab6019164c4af3",
+            "drive_c/windows/system32/FenixMCDURefresh.exe": "1dfa0662c83e568007c12e15131ec58c176a9c79ff17a94004b27b2ed1494154",
+            "drive_c/windows/system32/fenix-runtime": "bb6ff52ff55e3b4671aa699710ead8a801aa69d16cedc739cb89ed02faa7179a"
+          }
+        },
+        "0.1.3": {
+          "files": {
+            "files/lib/wine/x86_64-windows/ntdll.dll": "ebda347273090f849733829dd53e924f5cdbf1cfa91fc5840dadacac6300bbcf",
+            "files/lib/wine/x86_64-unix/ntdll.so": "f5a0c4eb1ab7c593e3eb7c0bf539e225f2f78885974ca143483b5a1b9ccc73f7",
+            "files/bin/wineserver": "91b83aaf2a740033a0d9ceafb45346938e9095424c9944807a90ee1f31fc59cc",
+            "files/lib/wine/x86_64-windows/crypt32.dll": "b900c1e4e3325b28f280d7f5a5e5668abdd6b69ed59e5715dac6876076222c91",
+            "files/lib/wine/x86_64-windows/mmdevapi.dll": "84917aef5b70440d049f2fbe9acc67381ab52875dde6fe560614a455559bebcd",
+            "files/lib/wine/x86_64-windows/kernelbase.dll": "012135c69a6db6d1f461b50bccf17dc6302240360d469b67d0b762e2bab67a74",
+            "files/lib/wine/x86_64-windows/d2d1.dll": "f11a04e0f9139d5c33539bbcde0999ff0c54ade8420ef23f0798dd219bed41b4",
+            "files/lib/wine/x86_64-windows/dwrite.dll": "4de36018fa4439baa2886a280ef9340fd667d48ad83cc8b1801701ec2e4302dd",
+            "files/lib/wine/x86_64-unix/dwrite.so": "b57523357f12afe11758cbc6d8f23c54cb04465cde6693969c897039fc16efbc",
+            "files/lib/wine/x86_64-unix/win32u.so": "3ef39a72b302c62a38a155b109f8b0e3273e44caf09005a1bdc26c5f76925a2e",
+            "files/lib/wine/x86_64-unix/winex11.so": "edaf6e5d2a4e5204471b957fc6a96735588635927c1797e36917a010f2f249db",
+            "files/lib/wine/x86_64-windows/windows.storage.applicationdata.dll": "1b91587cce7f74e86a5e7047c05571a6f7e643efb14b783178ce256fd121bd9c",
+            "files/lib/wine/x86_64-windows/bcrypt.dll": "443334b3e2ec77a8761f629fcf21f6a767e5dcf4ed381c50b55ea4ed4b7a7cb5",
+            "files/lib/wine/x86_64-windows/ncrypt.dll": "b3adbdc2ae14ebb5331d6f46bab56edd265fc380f3bf37e9d512fe4047c09fa6",
+            "files/lib/wine/x86_64-unix/bcrypt.so": "fd17a216855eec00e3d19985998f85361d58c0bca3b887f8f9d698231bb61cca",
+            "files/lib/wine/x86_64-windows/wintrust.dll": "07228a51d01e20cb126241655474402d73ea2c38ae537a028e102cab4becb9bf"
+          },
+          "integration": {
+            "FenixWindowGuard.exe": "2e3814496b8a539cac4e1b0f2cba5c8eb9e7d2bdc6b73df87aab6019164c4af3",
+            "launch-msfs.sh": "c8e717d070e76e3c6a98981c825700eea51e2d0aeda84dd2ede239bea040e0b2",
+            "xodus-wine-launch": "b9ef538cf83ead2dc5485b835f6b1b795219879888333fc2f886c4dfcc84ee33",
+            "FenixGeometrySetup.exe": "b996c9f8f26ca52edbe5e8e2ae0bc4f1d0d031eec50d8e1927bca351df855324",
+            "FenixMCDURefresh.exe": "1dfa0662c83e568007c12e15131ec58c176a9c79ff17a94004b27b2ed1494154",
+            "fenix-runtime": "9401a19f57b90e44b3be955e1d6e7635e86cbc9b2b76e7098715fe6277153fe0"
           },
           "prefix_files": {
             "drive_c/windows/system32/d2d1_geometry.dll": "663f1d59ec1c014b9ea47a6cef71b3d43579e9759a82f3ee2cbd80b8c6d9e85f",
@@ -2048,6 +2158,44 @@
             "FenixGeometrySetup.exe": "b996c9f8f26ca52edbe5e8e2ae0bc4f1d0d031eec50d8e1927bca351df855324",
             "FenixMCDURefresh.exe": "1dfa0662c83e568007c12e15131ec58c176a9c79ff17a94004b27b2ed1494154",
             "fenix-runtime": "bb6ff52ff55e3b4671aa699710ead8a801aa69d16cedc739cb89ed02faa7179a"
+          },
+          "prefix_files": {
+            "drive_c/windows/system32/d2d1_geometry.dll": "663f1d59ec1c014b9ea47a6cef71b3d43579e9759a82f3ee2cbd80b8c6d9e85f",
+            "drive_c/windows/system32/FenixWindowGuard.exe": "2e3814496b8a539cac4e1b0f2cba5c8eb9e7d2bdc6b73df87aab6019164c4af3",
+            "drive_c/windows/system32/FenixMCDURefresh.exe": "1dfa0662c83e568007c12e15131ec58c176a9c79ff17a94004b27b2ed1494154",
+            "drive_c/windows/system32/fenix-runtime": "bb6ff52ff55e3b4671aa699710ead8a801aa69d16cedc739cb89ed02faa7179a"
+          }
+        },
+        "0.1.3": {
+          "files": {
+            "files/lib/wine/x86_64-windows/ntdll.dll": "a57c2492602f583b66263ed7829f59df058626bf85bcd7a5c83877254ff7a63f",
+            "files/lib/wine/x86_64-unix/ntdll.so": "9eaa6daaecc497c8b0eec514e28a88d6430ebf1dcb988ec6adccb71cdefcd793",
+            "files/bin/wineserver": "aaaa4cebf17c2fef58fcbf2c759659109d48d40b3cc5a1279100acded23094cb",
+            "files/lib/wine/x86_64-windows/crypt32.dll": "a40827bf153753b7c1e51279e62d6c07de119d4afe17bf8f31bac76f9c098d7b",
+            "files/lib/wine/x86_64-windows/mmdevapi.dll": "b37a39364f74df0ad460a2eb94db010e6b5184d10a4bc0ad00084876e1cfe605",
+            "files/lib/wine/x86_64-windows/kernelbase.dll": "7927afc45f0bf29409e0817c00923a6881ac6ec6ab7c9e64288928e9eb462c74",
+            "files/lib/wine/x86_64-windows/d2d1.dll": "42bd9b24e4de41e736b2d99def757b223582fea54a2635b824abaec943835be9",
+            "files/lib/wine/x86_64-windows/dwrite.dll": "a8d58f88fcab7e67c95558e5c99de32a3a65763380725b08b144fd98d5e75caf",
+            "files/lib/wine/x86_64-unix/dwrite.so": "0ae1f557e8115102e8cfb6359f455271cba4efbea4e9eaf37b67ba1f31343022",
+            "files/lib/wine/x86_64-unix/win32u.so": "c7413b595ad737c0d4d0f58f721256a71b91eed80731cabb6ccc758c39ea28c4",
+            "files/lib/wine/x86_64-unix/winex11.so": "a85b64fc44626c2e5de07ca2d26fdbd39966c46c0b0f95d723348e296417725b",
+            "files/lib/wine/x86_64-windows/gdi32.dll": "06e67c3cd4227e5d04f0101adaabc733da364f362d3199922f9bb97931d98593",
+            "files/lib/wine/x86_64-windows/win32u.dll": "5285fed65ec1255c9d9e1a1b1ef717e0fd7c937ea24cf55de173bb3c5f0751ad",
+            "files/lib/wine/x86_64-windows/wow64win.dll": "575284e84e2b8016bd6f41bb8bd66c7e8f9750ba8d957235ce3d7239a5b5edef",
+            "files/lib/wine/dxvk/x86_64-windows/dxgi.dll": "3301e1c163eecedf1a3882fd88efc6e6e0a2dfb8234978b6da11bfb74ec46b70",
+            "files/lib/wine/x86_64-windows/windows.storage.applicationdata.dll": "e250404eabe6268fefc048debf677ee4d393e6cad13d24d15f76086416807597",
+            "files/lib/wine/x86_64-windows/bcrypt.dll": "f071547b55ac9f4571dc68ed056d4c1e9cfc8f8d16761e0a6a843fc3f099af08",
+            "files/lib/wine/x86_64-windows/ncrypt.dll": "fb8ce9dd1e2d8deaa3df8baed8cd4faa478e7da462c590982ef309d622138e30",
+            "files/lib/wine/x86_64-unix/bcrypt.so": "a558b27b2d55662cc7a5db24972d53deefaa97d25a7f1350fe5071a8b81b4d08",
+            "files/lib/wine/x86_64-windows/wintrust.dll": "99134ff02e50dd24e833d65e071eb2d0ec4c38c63e7e6a1ab4f92f3fd74b0436"
+          },
+          "integration": {
+            "FenixWindowGuard.exe": "2e3814496b8a539cac4e1b0f2cba5c8eb9e7d2bdc6b73df87aab6019164c4af3",
+            "launch-msfs.sh": "c8e717d070e76e3c6a98981c825700eea51e2d0aeda84dd2ede239bea040e0b2",
+            "xodus-wine-launch": "b9ef538cf83ead2dc5485b835f6b1b795219879888333fc2f886c4dfcc84ee33",
+            "FenixGeometrySetup.exe": "b996c9f8f26ca52edbe5e8e2ae0bc4f1d0d031eec50d8e1927bca351df855324",
+            "FenixMCDURefresh.exe": "1dfa0662c83e568007c12e15131ec58c176a9c79ff17a94004b27b2ed1494154",
+            "fenix-runtime": "9401a19f57b90e44b3be955e1d6e7635e86cbc9b2b76e7098715fe6277153fe0"
           },
           "prefix_files": {
             "drive_c/windows/system32/d2d1_geometry.dll": "663f1d59ec1c014b9ea47a6cef71b3d43579e9759a82f3ee2cbd80b8c6d9e85f",

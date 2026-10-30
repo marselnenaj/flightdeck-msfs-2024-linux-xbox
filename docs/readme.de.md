@@ -32,7 +32,7 @@ Launcher, Installer und Updater benötigen kein Python.
 wenn eine alte Profilsicherung nicht sicher gelöscht werden kann. Die Sicherung
 bleibt erhalten; die Rückkehr zum Standard-Proton funktioniert wieder.
 Sicherheitsupdates für ZIP, TLS, Tokio und native Authentifizierung, explizite
-ZIP-Headerprüfung und Fenix 0.1.3 sind enthalten.
+ZIP-Headerprüfung und Fenix 0.1.4 sind enthalten.
 
 **Seit 0.3.6:** Die Medienprüfung beim Xbox-Spielstart verwendet dieselbe
 GStreamer-Cachedatei wie Wine. Scheitert ein benötigter Video-Baustein an alten negativen Plugin-Einträgen,

@@ -12,6 +12,11 @@ use std::{
     sync::{Arc, atomic::AtomicBool},
 };
 
+#[test]
+fn embedded_bundle_satisfies_the_same_contract_as_downloaded_updates() {
+    update::compatible_manifest(&bundle::manifest(None).unwrap()).unwrap();
+}
+
 fn future() -> Value {
     let mut lock = bundle::manifest(None).unwrap();
     let version = lock["version"].as_str().unwrap().to_string();

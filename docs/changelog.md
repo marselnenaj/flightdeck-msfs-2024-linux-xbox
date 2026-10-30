@@ -10,7 +10,7 @@
 - Update ZIP to the patched 9.x line and explicitly validate local/central header
   consistency in every ZIP reader. Verify ordinary extraction and reject
   contradictory names, compression and flags before publishing engine files.
-- Update Tokio, Fenix 0.1.3 and its TLS/certificate dependencies. Rebuild native
+- Update Tokio, Fenix 0.1.4 and its TLS/certificate dependencies. Rebuild native
   Xodus authentication with patched P-256/constant-time dependencies and the
   supported AWS-LC XML-signing provider, removing the affected RSA/old Bigint graph.
   Preserve device identity, signing formats, Secret Service and verified downloads.

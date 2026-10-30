@@ -1,6 +1,6 @@
 {
-  "version": "0.1.3",
-  "url": "https://github.com/marselnenaj/fenix-a320-linux-patch/releases/download/v0.1.3/fenix-a320-linux-patch-0.1.3-linux-x86_64.zip",
-  "sha256": "dcae92e5eef33151a189303cb228d89d465466d8ac51b529ac7ba549086cbe58",
-  "archive_root": "fenix-a320-linux-patch-0.1.3"
+  "version": "0.1.4",
+  "url": "https://github.com/marselnenaj/fenix-a320-linux-patch/releases/download/v0.1.4/fenix-a320-linux-patch-0.1.4-linux-x86_64.zip",
+  "sha256": "619d7a5af0ab564d6617fa94ad82aa249a60aa65c153dd3ac6b79b63e14ebfe2",
+  "archive_root": "fenix-a320-linux-patch-0.1.4"
 }
