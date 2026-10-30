@@ -8,6 +8,15 @@ portable Version **11.3.1**, prüft Größe und SHA-256 und verwendet deren enth
 Windows-.NET-Laufzeit. Ein weiteres dauerhaftes Wine-Profil oder Linux-.NET ist
 nicht nötig.
 
+Der automatische Download verwendet MobiFlights öffentliches Release-ZIP;
+eine separate Installer-Datei musst du nicht auswählen. Wenn der App-Download
+fertig ist, aber die WASM-/Ereignis-Einrichtung fehlschlägt, wähle
+**MobiFlight vorbereiten / reparieren**. Flightdeck setzt die vorhandene
+Installation fort und erhält deine Einstellungen, ohne die App erneut zu laden.
+Falls Fenix oder ein Proton-Wechsel seit dem Abbruch das Windows-Profil ersetzt
+hat, archiviert Flightdeck das alte Einrichtungsprotokoll und erhält dessen
+Zwischendateien. Die Reparatur startet einen neuen Versuch im ausgewählten Profil.
+
 1. Die richtige Simulator-Installation wählen, MSFS und Begleitprogramme schließen.
 2. **MobiFlight installieren** bzw. **MobiFlight vorbereiten / reparieren** wählen.
 3. MobiFlight öffnen, Hardware und Konfiguration auswählen und die Verbindung im
@@ -20,6 +29,8 @@ HubHop-Dienst. Vorhandene Module, Ereignisse und eigene `events.user.txt` bleibe
 erhalten. Unbekannte Module bleiben unter deiner Kontrolle. Flightdeck aktiviert
 keine input-remapper-Presets; exklusiver Gerätezugriff durch ein aktives Preset
 kann ein Gerät vor Wine verbergen.
+
+Flightdeck verwendet die aktuelle HubHop-Export-Adresse direkt, ohne Weiterleitungen.
 
 Der HID-Fix wird aus der exakt geprüften offiziellen HidSharp-2.6.4-DLL gebaut.
 Flightdeck sichert das Original und ersetzt nur diese unterstützte Version

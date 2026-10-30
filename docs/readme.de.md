@@ -25,6 +25,10 @@ bestehende **Steam-Installationen** und verwaltet deren optionale Einrichtung vo
 Fenix, GSX, Navigraph Hub/Simlink, Orbx Central und MobiFlight;
 Spieldownloads, Updates und Kontoanmeldung übernimmt Steam.
 
+MobiFlight lädt sein öffentliches portables ZIP automatisch. Wird die WASM-/Ereignis-
+Einrichtung unterbrochen, setzt **MobiFlight vorbereiten / reparieren** sie ohne
+erneuten App-Download fort.
+
 **Lade die [neueste stabile Version](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/latest).**
 Launcher, Installer und Updater benötigen kein Python.
 

@@ -567,6 +567,7 @@ impl App {
         let current = self.fresh("mobiflight") && s(raw, "runtime_path") == self.runtime();
         let data = if current { raw } else { &Value::Null };
         let installed = yes(data, "installed");
+        let module_ready = yes(data, "wasm_installed") && yes(data, "wasm_events_ready");
         let mut content = column![self.paragraph(self.tr(
             "MobiFlight verbindet Cockpit-Hardware mit MSFS. Flightdeck richtet die offizielle App, das WASM-Modul und den geprüften HID-Fix im ausgewählten MSFS-Profil ein. Die Geräteverbindung im Simulator ist noch unbestätigt.",
             "MobiFlight connects cockpit hardware to MSFS. Flightdeck prepares the official app, WASM module and verified HID fix in the selected MSFS profile. The device connection in the simulator is still unconfirmed.",
@@ -575,6 +576,11 @@ impl App {
             self.tr("Status wird geladen …", "Loading status …")
         } else if yes(data, "running") {
             self.tr("MobiFlight läuft", "MobiFlight is running")
+        } else if installed && !module_ready {
+            self.tr(
+                "App vorhanden · Einrichtung unvollständig",
+                "App detected · setup incomplete",
+            )
         } else if installed {
             self.tr(
                 "App vorhanden · Verbindung unbestätigt",
@@ -605,6 +611,14 @@ impl App {
                         self.tr("MobiFlight installieren", "Install MobiFlight"),
                         Mobiflight("install"),
                     ));
+                } else if !module_ready {
+                    content = content.push(self.addon_action(
+                        self.tr(
+                            "MobiFlight vorbereiten / reparieren",
+                            "Prepare / repair MobiFlight",
+                        ),
+                        Mobiflight("prepare"),
+                    ));
                 } else {
                     content = content.push(self.addon_action(
                         self.tr("MobiFlight öffnen", "Open MobiFlight"),
@@ -630,11 +644,15 @@ impl App {
                 ))].spacing(14);
                 if installed {
                     manage = manage.push(self.addon_action(
-                        self.tr(
-                            "MobiFlight vorbereiten / reparieren",
-                            "Prepare / repair MobiFlight",
-                        ),
-                        Mobiflight("prepare"),
+                        if module_ready {
+                            self.tr(
+                                "MobiFlight vorbereiten / reparieren",
+                                "Prepare / repair MobiFlight",
+                            )
+                        } else {
+                            self.tr("MobiFlight öffnen", "Open MobiFlight")
+                        },
+                        Mobiflight(if module_ready { "prepare" } else { "open" }),
                     ));
                     manage = manage.push(self.addon_action(
                         if yes(data, "startup") {

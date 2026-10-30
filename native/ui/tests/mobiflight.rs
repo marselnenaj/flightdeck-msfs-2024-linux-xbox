@@ -66,6 +66,35 @@ fn bilingual_card_opens_app_and_marks_simulator_connection_unconfirmed()
 }
 
 #[test]
+fn incomplete_module_offers_repair_without_reinstalling_app()
+-> Result<(), Box<dyn std::error::Error>> {
+    for language in [Language::De, Language::En] {
+        for missing in ["wasm_installed", "wasm_events_ready"] {
+            let mut app = fixture(language);
+            app.snapshot.get_mut("mobiflight").expect("fixture")[missing] = json!(false);
+            let mut ui =
+                iced_test::Simulator::with_size(settings(), Size::new(1280.0, 2200.0), app.view());
+            ui.find(if language == Language::De {
+                "App vorhanden · Einrichtung unvollständig"
+            } else {
+                "App detected · setup incomplete"
+            })?;
+            ui.click(if language == Language::De {
+                "MobiFlight vorbereiten / reparieren"
+            } else {
+                "Prepare / repair MobiFlight"
+            })?;
+            assert!(matches!(
+                ui.into_messages().next(),
+                Some(Message::Action(Action::Mobiflight("prepare")))
+            ));
+            assert!(app.request(&Action::Mobiflight("install")).is_none());
+        }
+    }
+    Ok(())
+}
+
+#[test]
 #[ignore = "writes MobiFlight screenshots with the production software renderer"]
 fn capture_mobiflight() -> Result<(), Box<dyn std::error::Error>> {
     let directory = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../build/native-ui");

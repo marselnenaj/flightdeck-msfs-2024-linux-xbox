@@ -47,6 +47,8 @@ repair, bounded X11 startup checks and a repair for the native-only CLR override
 behind the Fenix loader failure in #10. Hardware connections and full-flight
 addon behavior remain experimental. The loader correction was reproduced in an
 account-free Wine profile; full Fenix installer validation remains outstanding.
+MobiFlight uses its public portable ZIP automatically; if WASM/event setup is
+interrupted, **Prepare / repair MobiFlight** resumes without another app download.
 
 **New in 0.3.4:** verify that video decoders and Wine's post-processing elements
 actually load before selecting a Proton media stack. This fixes a cached-factory

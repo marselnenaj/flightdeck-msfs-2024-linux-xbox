@@ -1,5 +1,18 @@
 # Changes and release status
 
+## Unreleased
+
+- Use HubHop's current export endpoint directly. Its former URL redirects, which
+  prevented missing MobiFlight WASM events from downloading. Resume interrupted
+  setup without reinstalling the app and offer repair as the primary action when
+  the app exists but its WASM module or events are missing. Report WASM setup as a
+  separate phase from publishing the portable app.
+  Accept legitimate long HubHop event scripts while keeping the complete export
+  bounded to 4 MiB and validating its UTF-8/comment/record format.
+- Retain an interrupted MobiFlight journal and its stage files when Fenix or
+  Proton has replaced the Windows profile. A new attempt uses the current
+  profile without treating the old journal as permission to remove its files.
+
 ## 0.3.7 — 30 October 2026
 
 - Finish Proton switch recovery independently of optional backup reclamation.

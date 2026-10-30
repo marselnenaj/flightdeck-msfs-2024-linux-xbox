@@ -31,7 +31,8 @@ const EXE: &str = "MFConnector.exe";
 const RECEIPT: &str = ".flightdeck-mobiflight.json";
 const JOURNAL: &str = "private/mobiflight-install.json";
 const MODULE: &str = "mobiflight-event-module";
-const EVENTS_URL: &str = "https://hubhop-api-mgtm.azure-api.net/api/v1/export/presets?type=wasm";
+const EVENTS_LIMIT: usize = 4 * 1024 * 1024;
+const EVENTS_ERROR: &str = "Die offiziellen MobiFlight-HubHop-Ereignisse konnten nicht vollständig geladen werden. Vorhandene Ereignisse bleiben unverändert; Vorbereitung erneut versuchen.";
 pub const STARTUP: &str = "private/mobiflight-startup.json";
 pub const PROCESSES: &[&str] = &["mfconnector.exe"];
 pub const WINWING_UDEV_RULE: &str = "# WinWing HID access for the active local desktop session.\nSUBSYSTEM==\"hidraw\", ATTRS{idVendor}==\"4098\", TAG+=\"uaccess\"\n";
@@ -161,9 +162,25 @@ fn recover(profile: &Profile) -> Result<()> {
     }
     let record = runtime::value(&journal)?;
     require(
-        record["format"] == 1 && record["prefix_id"] == fenix::identity(&profile.prefix)?,
-        "Die MobiFlight-Einrichtungssicherung gehört zu einem anderen Windows-Profil.",
+        record["format"] == 1,
+        "Ungültige MobiFlight-Einrichtungssicherung.",
     )?;
+    let previous_prefix: [u64; 2] = serde_json::from_value(record["prefix_id"].clone())?;
+    if json!(previous_prefix) != fenix::identity(&profile.prefix)? {
+        // Fenix/Proton can replace a profile after an interrupted add-on setup.
+        // Its journal cannot authorize deletion in the replacement profile.
+        // Preserve the journal and every old/copied stage, then start afresh
+        // using only the currently selected profile's identity and new paths.
+        tx::owned_file(&profile.root, &journal)?;
+        tx::publish(
+            &journal,
+            &profile.root.join("private").join(format!(
+                "mobiflight-install-before-profile-change-{}.json",
+                uuid::Uuid::new_v4().simple()
+            )),
+        )?;
+        return Ok(());
+    }
     let parent = match record["kind"].as_str() {
         Some("program") => profile.prefix.join("drive_c"),
         Some("module") => community(profile)?,
@@ -282,20 +299,23 @@ fn extract_zip<R: Read + Seek>(source: R, target: &Path, cancel: &AtomicBool) ->
     Ok(())
 }
 fn wasm_events(cancel: &AtomicBool) -> Result<Vec<u8>> {
-    let invalid = "Die offiziellen MobiFlight-HubHop-Ereignisse konnten nicht vollständig geladen werden. Vorhandene Ereignisse bleiben unverändert; Vorbereitung erneut versuchen.";
+    let invalid = EVENTS_ERROR;
     tx::interrupted(cancel)?;
+    // Use HubHop's current endpoint directly. Its former /v1/export alias
+    // now returns 301; redirects remain disabled for this text-data source.
+    let spec = lock()?;
     let mut response = crate::http_client::builder(Duration::from_secs(30))
         .redirect(reqwest::redirect::Policy::none())
         .build()
         .map_err(|_| Error::Invalid(invalid))?
-        .get(EVENTS_URL)
+        .get(string(&spec, "events_url")?)
         .send()
         .map_err(|_| Error::Invalid(invalid))?;
     require(
         response.status().is_success()
             && response
                 .content_length()
-                .is_none_or(|n| n <= 4 * 1024 * 1024),
+                .is_none_or(|n| n <= EVENTS_LIMIT as u64),
         invalid,
     )?;
     let mut bytes = Vec::new();
@@ -308,10 +328,17 @@ fn wasm_events(cancel: &AtomicBool) -> Result<Vec<u8>> {
         if count == 0 {
             break;
         }
-        require(bytes.len() + count <= 4 * 1024 * 1024, invalid)?;
+        require(bytes.len() + count <= EVENTS_LIMIT, invalid)?;
         bytes.extend_from_slice(&buffer[..count]);
     }
-    let text = std::str::from_utf8(&bytes).map_err(|_| Error::Invalid(invalid))?;
+    validate_wasm_events(&bytes)?;
+    Ok(bytes)
+}
+fn validate_wasm_events(bytes: &[u8]) -> Result<()> {
+    // HubHop includes valid event scripts longer than 128 KiB. The entire
+    // response is bounded instead of imposing a second, incompatible line cap.
+    require(bytes.len() <= EVENTS_LIMIT, EVENTS_ERROR)?;
+    let text = std::str::from_utf8(bytes).map_err(|_| Error::Invalid(EVENTS_ERROR))?;
     require(
         !text.contains('\0')
             && text.trim_start().starts_with("//")
@@ -319,11 +346,9 @@ fn wasm_events(cancel: &AtomicBool) -> Result<Vec<u8>> {
                 .lines()
                 .filter(|l| !l.starts_with("//") && l.contains('#'))
                 .count()
-                >= 100
-            && text.lines().all(|l| l.len() <= 128 * 1024),
-        invalid,
-    )?;
-    Ok(bytes)
+                >= 100,
+        EVENTS_ERROR,
+    )
 }
 fn missing_events(target: &Path, cancel: &AtomicBool) -> Result<()> {
     let path = target.join("modules/events.txt");
@@ -409,8 +434,13 @@ fn prepare(profile: &Profile, ctx: &Context) -> Result<()> {
         &profile.root.join("private/mobiflight-hid-backup"),
         &ctx.cancel,
     )?;
-    prepare_wasm(profile, &program, &ctx.cancel)?;
+    finish_preparation(profile, &program, ctx)
+}
+fn finish_preparation(profile: &Profile, program: &Path, ctx: &Context) -> Result<()> {
+    ctx.update(json!({"phase":"wasm","message":"Die MobiFlight-App ist vorhanden. WASM-Modul und fehlende HubHop-Ereignisse werden vorbereitet …"}));
+    prepare_wasm(profile, program, &ctx.cancel)?;
     if winebus::snapshot(profile)["state"] == "required" {
+        ctx.update(json!({"phase":"hid"}));
         winebus::configure(ctx, profile)?;
     }
     Ok(())
@@ -485,11 +515,7 @@ fn install(ctx: &Context, profile: &Profile) -> Result<()> {
     )?;
     tx::publish(&stage, &target)?;
     fs::remove_file(profile.root.join(JOURNAL))?;
-    prepare_wasm(profile, &target, &ctx.cancel)?;
-    if winebus::snapshot(profile)["state"] == "required" {
-        winebus::configure(ctx, profile)?;
-    }
-    Ok(())
+    finish_preparation(profile, &target, ctx)
 }
 fn is_entry(element: &Element) -> bool {
     element.named("Launch.Addon")
@@ -747,8 +773,8 @@ pub fn snapshot(app: &Launcher) -> Value {
             "WinWing-HID ist durch eine vorhandene Geräte-Einstellung deaktiviert. Flightdeck erhält diese Auswahl; ändere sie bewusst, wenn du WinWing mit MobiFlight verwenden möchtest."
         } else if hid == "unsupported" {
             "Diese HidSharp-Version wird nicht automatisch geändert. MobiFlight und vorhandene Konfigurationen bleiben erhalten."
-        } else if wasm && !events {
-            "Das WASM-Modul ist vorhanden. Vorbereitung lädt fehlende offizielle HubHop-Ereignisse; bestehende und eigene Ereignisse bleiben erhalten."
+        } else if program.is_some() && (!wasm || !events) {
+            "Die MobiFlight-App ist vorhanden, aber WASM-Modul oder offizielle Ereignisse fehlen noch. Mit Vorbereitung / Reparatur wird die Einrichtung ohne erneuten App-Download fortgesetzt."
         } else if value["winebus"]["state"] == "unsupported_runner" {
             "MobiFlight ist verfügbar. WinWing-HID ist mit diesem Runner noch nicht geprüft; vorhandene Geräte-Einstellungen bleiben erhalten."
         } else {
@@ -848,6 +874,24 @@ mod tests {
         (temp, profile)
     }
     #[test]
+    fn hubhop_long_event_scripts_are_valid_but_invalid_or_unbounded_exports_are_rejected() {
+        let mut events = String::from("//Synthetic HubHop export\n");
+        for index in 0..100 {
+            events.push_str(&format!("Test_{index}#1 (>L:Test, Number)\n"));
+        }
+        // The real 2026-10-30 export contains a 138,367-byte event line.
+        events.push_str("Long_Event#");
+        events.push_str(&"1 ".repeat(70_000));
+        validate_wasm_events(events.as_bytes()).expect("official-sized long event");
+        assert!(validate_wasm_events(b"<html>Service unavailable</html>").is_err());
+        assert!(validate_wasm_events(b"//Invalid UTF-8\n\xff").is_err());
+        let mut nul = events.clone().into_bytes();
+        nul.push(0);
+        assert!(validate_wasm_events(&nul).is_err());
+        events.push_str(&"x".repeat(EVENTS_LIMIT));
+        assert!(validate_wasm_events(events.as_bytes()).is_err());
+    }
+    #[test]
     fn interrupted_stage_recovery_checks_identity_and_preserves_published_and_foreign_files() {
         let (_temp, profile) = fixture();
         let parent = profile.prefix.join("drive_c");
@@ -864,8 +908,31 @@ mod tests {
         let mut record = runtime::value(&profile.root.join(JOURNAL)).expect("journal");
         record["prefix_id"] = json!([0, 0]);
         files::atomic_json(&profile.root.join(JOURNAL), &record).expect("stale journal");
-        assert!(recover(&profile).is_err());
+        recover(&profile).expect("preserve journal from a replaced profile");
         assert!(stage.is_dir());
+        assert!(!profile.root.join(JOURNAL).exists());
+        let archived = fs::read_dir(profile.root.join("private"))
+            .expect("metadata")
+            .map(|entry| entry.expect("entry").path())
+            .find(|path| {
+                path.file_name()
+                    .expect("name")
+                    .to_string_lossy()
+                    .starts_with("mobiflight-install-before-profile-change-")
+            })
+            .expect("original journal preserved");
+        assert_eq!(
+            runtime::value(&archived).expect("preserved journal"),
+            record
+        );
+        // A new attempt uses a different stage and never reuses/deletes the
+        // old profile's paths merely because their names still exist.
+        let next = new_stage(&profile, &parent, "program").expect("new attempt");
+        assert_ne!(next, stage);
+        recover(&profile).expect("recover current attempt");
+        assert!(stage.is_dir());
+        assert!(!next.exists());
+        assert!(archived.is_file());
     }
     #[test]
     fn existing_module_and_user_events_are_preserved_without_downloading() {
@@ -905,6 +972,80 @@ mod tests {
         assert_eq!(
             files::read(&module.join("modules/MobiFlightWasmModule.wasm"), 100).expect("module"),
             b"newer user module"
+        );
+    }
+    #[test]
+    #[ignore = "requires network and FLIGHTDECK_MOBIFLIGHT_ARCHIVE pointing to the official ZIP"]
+    fn official_hubhop_export_completes_interrupted_wasm_setup() {
+        let archive = PathBuf::from(
+            std::env::var_os("FLIGHTDECK_MOBIFLIGHT_ARCHIVE")
+                .expect("explicit official archive fixture"),
+        );
+        let spec = lock().expect("pins");
+        assert_eq!(
+            tx::digest(&archive).expect("archive hash"),
+            spec["archive_sha256"]
+        );
+        let (_temp, profile) = fixture();
+        let program = profile.prefix.join(PROGRAM);
+        files::private_dir(&program).expect("program");
+        extract_zip(
+            files::open_at(rustix::fs::CWD, &archive, false, false).expect("archive"),
+            &program,
+            &AtomicBool::new(false),
+        )
+        .expect("official archive");
+        let community = profile.prefix.join("drive_c/Actual Packages/Community");
+        files::private_dir(&community).expect("community");
+        files::atomic_json(
+            &profile.root.join("private/runtime.json"),
+            &json!({"game_id":"msfs2024","community_path":community}),
+        )
+        .expect("actual community");
+        let interrupted = new_stage(&profile, &community, "module").expect("interrupted setup");
+        files::atomic(&interrupted.join("partial"), b"incomplete download").expect("partial");
+        files::atomic(&community.join("keep.txt"), b"unrelated add-on").expect("unrelated");
+        recover(&profile).expect("resume interrupted setup");
+        assert!(!interrupted.exists());
+
+        prepare_wasm(&profile, &program, &AtomicBool::new(false)).expect("live HubHop export");
+        let module = community.join(MODULE);
+        let events = module.join("modules/events.txt");
+        let expected_events = tx::digest(&events).expect("published official events");
+        let layout = runtime::value(&module.join("layout.json")).expect("layout");
+        let entry = layout["content"]
+            .as_array()
+            .expect("content")
+            .iter()
+            .find(|entry| entry["path"] == "modules/events.txt")
+            .expect("events entry");
+        assert_eq!(
+            entry["size"],
+            fs::metadata(&events).expect("events metadata").len()
+        );
+        assert!(!profile.root.join(JOURNAL).exists());
+        assert!(program.join(EXE).is_file());
+        files::atomic(&module.join("modules/events.user.txt"), b"my events")
+            .expect("custom events");
+        // With a published module, repair needs neither the source package nor a
+        // second HubHop download and must retain the user's event definitions.
+        prepare_wasm(
+            &profile,
+            Path::new("/unused-program"),
+            &AtomicBool::new(false),
+        )
+        .expect("repair again");
+        assert_eq!(
+            tx::digest(&events).expect("retained events"),
+            expected_events
+        );
+        assert_eq!(
+            files::read(&module.join("modules/events.user.txt"), 100).expect("user events"),
+            b"my events"
+        );
+        assert_eq!(
+            files::read(&community.join("keep.txt"), 100).expect("unrelated"),
+            b"unrelated add-on"
         );
     }
     #[test]

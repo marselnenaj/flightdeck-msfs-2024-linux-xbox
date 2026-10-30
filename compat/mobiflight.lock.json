@@ -31,7 +31,7 @@
     "license": "MIT"
   },
   "wasm_sha256": "3b0bae23d0f12e6504c15b29b524aaf9f50dbac391eb70d921e5525e1b3f7416",
-  "events_url": "https://hubhop-api-mgtm.azure-api.net/api/v1/export/presets?type=wasm",
+  "events_url": "https://hubhop-api-mgtm.azure-api.net/api/v1/msfs2020/export/presets?type=wasm",
   "winebus": {
     "bytes": 105520,
     "sha256": "bb8e46a8b9b182f4aca1436fb620f68e52743826a674aafa39810f28f738e8f8",

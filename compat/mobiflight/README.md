@@ -43,13 +43,15 @@ actual Community folder when no module exists. The official 11.3.1 updater
 (`SimConnectMSFS/WasmModuleUpdater.cs`, lines 101–117 and 151–166) uses this same
 module for MSFS 2020 and 2024. Existing modules and event/user configuration are
 preserved. The portable archive lacks the generated `modules/events.txt`.
-Flightdeck fetches this text data from the same official HubHop HTTPS endpoint
-used by MobiFlight (updater lines 320–328), with no redirects, a 4 MiB bound and
+Flightdeck fetches this text data from the official HubHop HTTPS endpoint
+`/api/v1/msfs2020/export/presets?type=wasm`, with no redirects, a 4 MiB bound and
 text/record validation. These event definitions change over time and are not
 treated as a hash-pinned executable. Only missing events in the exact known
 module may be added; existing events and `events.user.txt` are never replaced.
 The new module's layout size is updated before atomic publication. Unknown or
 symlinked existing modules remain under the user's control.
+The former `/api/v1/export/presets` alias returns HTTP 301 to this endpoint;
+using the destination directly also works with Flightdeck's no-redirect policy.
 
 WinWing's four tested VID:PID pairs are merged into `EnableHidraw` only when
 the selected runner has the exact supported `winebus.sys` hash in the lock.
