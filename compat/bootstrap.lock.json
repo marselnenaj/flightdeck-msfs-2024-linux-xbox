@@ -222,7 +222,7 @@
         "runtime/xgameruntime.dll": "fe414ad798b82f43fc4d5af7b6a926a2052b9b256121af2b57fe35ab067fcc1e"
       }
     ],
-    "notice_sha256": "620897a09d80bdbd0a71aee97e84c30edf8c01cd743723ff4537ac150ed1d2ef",
+    "notice_sha256": "d4aa550b6ca1ea2642f0fb9d69a3b66ff9c921c98fef47f7ad2999dc87d7ad83",
     "cli_features": [
       "streaming-resume-files-v1",
       "package-info-json-v1",
