@@ -305,9 +305,7 @@ impl Client {
         let private = fs::child(&root, "private", false)?;
         fs::lease(&private, lease)?;
         let paths = paths(runtime, true, false)?;
-        eprintln!("DIAG paths ok");
         let (binding, libraries) = material(&paths)?;
-        eprintln!("DIAG material ok");
         let mut config = config(runtime)?;
         if let Some(seed) = fs::optional(&private, "connected-storage-device.seed", 32)? {
             require(seed.len() == 32, "local_storage")?;
@@ -319,10 +317,23 @@ impl Client {
                 .display()
         ));
         let prefix = Prefix::new(runtime, &binding, libraries)?;
-        eprintln!("DIAG prefix ok");
         let socket = SocketDirectory::new()?;
-        eprintln!("DIAG socketdir ok");
         let mut env: BTreeMap<_, _> = std::env::vars_os().collect();
+        // Forward the session-bus address: the broker initializes the Xbox
+        // credential keychain through D-Bus, and its environment is cleared
+        // below; XDG_RUNTIME_DIR is also repointed to the socket dir, so the
+        // service would otherwise panic with "Failed to init keychain".
+        if let Some(value) = std::env::var_os("DBUS_SESSION_BUS_ADDRESS") {
+            env.insert("DBUS_SESSION_BUS_ADDRESS".into(), value);
+        } else {
+            let bus = format!("/run/user/{}/bus", files::uid());
+            if std::path::Path::new(&bus).exists() {
+                env.insert(
+                    "DBUS_SESSION_BUS_ADDRESS".into(),
+                    format!("unix:path={bus}").into(),
+                );
+            }
+        }
         for key in [
             "WINE_DLL_FILE_MAP",
             "XODUS_KEYRING_FILE",
@@ -363,20 +374,6 @@ impl Client {
                 runtime.join("private/xdg").join(category).into_os_string(),
             );
         }
-        // The broker inits the OS keychain over D-Bus; env_clear strips the
-        // session-bus address and XDG_RUNTIME_DIR is repointed at the socket
-        // dir, so without this the service panics before binding the socket.
-        if let Some(value) = std::env::var_os("DBUS_SESSION_BUS_ADDRESS") {
-            env.insert("DBUS_SESSION_BUS_ADDRESS".into(), value);
-        } else {
-            let bus = format!("/run/user/{}/bus", files::uid());
-            if std::path::Path::new(&bus).exists() {
-                env.insert(
-                    "DBUS_SESSION_BUS_ADDRESS".into(),
-                    format!("unix:path={bus}").into(),
-                );
-            }
-        }
         let mut client = Self {
             lease: lease.try_clone()?,
             private,
@@ -393,7 +390,6 @@ impl Client {
             closed: false,
         };
         cloud::check(&client.cancel)?;
-        eprintln!("DIAG client built, reusable={}", client.prefix.reusable);
         if !client.prefix.reusable {
             client.run(
                 &client.wine,
@@ -407,7 +403,6 @@ impl Client {
             &mut client.command(&paths.native.join("bin/xodus-service")),
             None,
         )?;
-        eprintln!("DIAG broker spawned");
         client.broker = Some(broker);
         let started = Instant::now();
         loop {
@@ -431,7 +426,6 @@ impl Client {
             )?;
             std::thread::sleep(Duration::from_millis(50));
         }
-        eprintln!("DIAG sock bound");
         let child = process::spawn(
             client
                 .command(&client.wine)
@@ -440,15 +434,11 @@ impl Client {
                 .stdout(Stdio::piped()),
             None,
         )?;
-        eprintln!("DIAG helper spawned");
         client.pipe = Some(Pipe::new(child, Arc::clone(&client.cancel))?);
         let (answer, body) =
             client
                 .pipe()?
                 .exchange(&config, &[], 0, Duration::from_secs(120), false)?;
-        if !(matches!(answer["protocol"].as_u64(), Some(1 | 2)) && body.is_empty()) {
-            eprintln!("DIAG init exchange bad: answer={} body_len={}", answer, body.len());
-        }
         require(
             matches!(answer["protocol"].as_u64(), Some(1 | 2)) && body.is_empty(),
             "invalid_response",
@@ -519,9 +509,6 @@ impl Client {
                 .pipe()?
                 .exchange(request, body, maximum, timeout, cleanup)?;
             let status = cloud::number(&answer["status"], 599)? as u16;
-            if status < 100 {
-                eprintln!("DIAG bad status: req={} answer={} body_len={}", request, answer, body.len());
-            }
             require(status >= 100, "invalid_response")?;
             let headers: BTreeMap<String, String> =
                 serde_json::from_value(answer["headers"].clone())?;
@@ -562,11 +549,10 @@ impl Client {
                 quota_bytes: 0,
             });
         }
-        let value = cloud::json(&response.body).map_err(|e| {eprintln!("DIAG lease json fail: body={}", String::from_utf8_lossy(&response.body[..response.body.len().min(500)]));e})?;
-        let owner = cloud::text(&value["owner_change_id"], 1024, false).map_err(|e| {eprintln!("DIAG owner fail: {}", value);e})?.to_owned();
+        let value = cloud::json(&response.body)?;
+        let owner = cloud::text(&value["owner_change_id"], 1024, false)?.to_owned();
         require(owner.chars().count() <= 256, "invalid_response")?;
         let quota = cloud::number(&value["quota_bytes"], u64::MAX)?;
-        if quota == 0 {eprintln!("DIAG quota zero: {}", value);}
         require(quota > 0, "invalid_response")?;
         Ok(LeaseReply {
             status: response.status,
@@ -678,11 +664,10 @@ impl Operations for Client {
             })
             .status(response.status));
         }
-        let value = cloud::json(&response.body).map_err(|e| {eprintln!("DIAG atom json fail: body={}", String::from_utf8_lossy(&response.body[..response.body.len().min(500)]));e})?;
+        let value = cloud::json(&response.body)?;
         let atom = value["atom"]
             .as_str()
             .ok_or_else(|| Failure::new("invalid_response"))?;
-        if !cloud::guid(atom) {eprintln!("DIAG bad guid: {}", value);}
         require(cloud::guid(atom), "invalid_response")?;
         Ok(atom.into())
     }

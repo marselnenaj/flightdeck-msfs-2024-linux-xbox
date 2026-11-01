@@ -21,11 +21,7 @@ pub struct Failure {
     pub detail: Option<Value>,
 }
 impl Failure {
-    #[track_caller]
     pub fn new(code: &'static str) -> Self {
-        if code == "invalid_response" {
-            eprintln!("DIAG ir-src: {}", std::panic::Location::caller());
-        }
         Self {
             code,
             committed_containers: 0,
@@ -72,7 +68,6 @@ impl From<rustix::io::Errno> for Failure {
     }
 }
 impl From<serde_json::Error> for Failure {
-    #[track_caller]
     fn from(_: serde_json::Error) -> Self {
         Self::new("invalid_response")
     }
@@ -86,7 +81,6 @@ impl From<crate::Error> for Failure {
         }
     }
 }
-#[track_caller]
 pub fn require(ok: bool, code: &'static str) -> Result<()> {
     if ok { Ok(()) } else { Err(Failure::new(code)) }
 }
@@ -106,24 +100,13 @@ pub fn json(bytes: &[u8]) -> Result<Value> {
     require(value.is_object(), "invalid_response")?;
     Ok(value)
 }
-#[track_caller]
 pub fn decode<T: serde::de::DeserializeOwned>(bytes: &[u8]) -> Result<T> {
-    match serde_json::from_value(json(bytes)?) {
-        Ok(v) => Ok(v),
-        Err(e) => {
-            eprintln!("DIAG decode fail at {}: err={} body={}", std::panic::Location::caller(), e, String::from_utf8_lossy(&bytes[..bytes.len().min(400)]));
-            Err(e.into())
-        }
-    }
+    Ok(serde_json::from_value(json(bytes)?)?)
 }
-#[track_caller]
 pub fn text(value: &Value, maximum: usize, empty: bool) -> Result<&str> {
     let v = value
         .as_str()
         .ok_or_else(|| Failure::new("invalid_response"))?;
-    if !((empty || !v.is_empty()) && !v.chars().any(|c| c < ' ' || c == '\u{7f}')) {
-        eprintln!("DIAG text reject at {}: value={}", std::panic::Location::caller(), value);
-    }
     require(
         (empty || !v.is_empty()) && !v.chars().any(|c| c < ' ' || c == '\u{7f}'),
         "invalid_response",
