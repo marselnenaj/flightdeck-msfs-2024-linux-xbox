@@ -53,7 +53,7 @@ jobs:
           build/flightdeck-tools package --binary target/release/flightdeck-rust --cargo-metadata build/cargo-metadata.json --rust-notices "$(rustc +1.98.0 --print sysroot)/share/doc/rust/COPYRIGHT-library.html" --launcher-only --output build/native-launcher-package
           build/flightdeck-tools source-release --output build/flightdeck-source.tar.gz
       - name: Retain native development packages
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: flightdeck-native-development
           path: |
@@ -97,7 +97,7 @@ jobs:
             --output "build/linux-check-$DISTRIBUTION"
       - name: Retain distribution and desktop evidence
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: linux-${{ matrix.distribution }}
           path: build/linux-check-${{ matrix.distribution }}/*
