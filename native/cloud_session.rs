@@ -22,6 +22,7 @@ pub enum Phase {
     Playing,
     Uploading,
     Pending,
+    AfterExit,
 }
 #[derive(Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
