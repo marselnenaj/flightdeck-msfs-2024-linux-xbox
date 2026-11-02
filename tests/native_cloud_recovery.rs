@@ -4,6 +4,7 @@ mod programs;
 use flightdeck::{cloud_process_guard as guard, files};
 use std::{
     fs,
+    os::unix::process::CommandExt,
     path::Path,
     process::{Child, Command},
     time::{Duration, Instant},
@@ -90,6 +91,7 @@ fn interrupted_session_recovers_only_after_writers_exit_and_backup_is_durable() 
         };
         let mut writer = Process(
             Command::new("sleep")
+                .arg0("wineserver")
                 .arg("30")
                 .env(key, path)
                 .spawn()
@@ -116,6 +118,7 @@ fn interrupted_session_recovers_only_after_writers_exit_and_backup_is_durable() 
     }
     let straggler = Process(
         Command::new("sleep")
+            .arg0("wineserver")
             .arg("30")
             .env("WINEPREFIX", root.join("local/msfs-prefix"))
             .spawn()
@@ -163,7 +166,7 @@ fn interrupted_session_recovers_only_after_writers_exit_and_backup_is_durable() 
     guard::mark(root, &lease.0).expect("next session fence");
 
     // An empty binding cannot be attributed: it blocks but is never signalled.
-    let mut unbound = windows("sleep", Path::new(""));
+    let mut unbound = windows("wineserver", Path::new(""));
     let error = guard::recover(root, &lease.0).expect_err("unresolved binding");
     let blocking = &error.detail.expect("blocker detail")["blocking_process"];
     assert_eq!(blocking["pid"], unbound.0.id());
@@ -174,6 +177,39 @@ fn interrupted_session_recovers_only_after_writers_exit_and_backup_is_durable() 
     let _absent = windows("sleep", &root.join("local/absent-prefix"));
     guard::clear(root, &lease.0).expect("a missing prefix is not this runtime");
     guard::mark(root, &lease.0).expect("next session fence");
+
+    // A bound process that does not look like a session member is not one:
+    // the binding variables are inherited, so a desktop's browser-integration
+    // host keeps an exported WINEPREFIX while having nothing to do with the
+    // ended session. It must neither block the fence nor be signalled.
+    let mut bystander = {
+        use std::os::unix::process::CommandExt;
+        Process(
+            Command::new("sleep")
+                .arg0("plasma-browser-integration-host")
+                .arg("30")
+                .env("WINEPREFIX", root.join("local/msfs-prefix"))
+                .spawn()
+                .expect("env-inheriting bystander"),
+        )
+    };
+    let deadline = Instant::now() + Duration::from_secs(5);
+    while !fs::read(format!("/proc/{}/environ", bystander.0.id())).is_ok_and(|env| {
+        env.split(|b| *b == 0)
+            .any(|e| e.starts_with(b"WINEPREFIX="))
+    }) {
+        assert!(Instant::now() < deadline);
+        std::thread::sleep(Duration::from_millis(10));
+    }
+    guard::clear(root, &lease.0)
+        .expect("a process that only inherited the binding is not a session writer");
+    assert!(
+        bystander.0.try_wait().expect("reap").is_none(),
+        "bystander must never be signalled"
+    );
+    drop(bystander);
+    guard::mark(root, &lease.0).expect("next session fence");
+
     let ready = root.join("protected.ready");
     let mut writer = Process(
         programs::peer("undumpable")

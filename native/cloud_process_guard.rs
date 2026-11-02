@@ -303,14 +303,29 @@ fn scan(runtime: &Path) -> Result<Vec<Writer>> {
         if !bound && !unresolved {
             continue;
         }
+        let command = files::read_public(&entry.path().join("cmdline"), 1024 * 1024);
+        if !process_alive(&fd)? {
+            continue;
+        }
+        // A bound or unresolvable environment alone does not prove session
+        // membership: the variables are inherited, so any descendant of a
+        // context that carried them — a sign-in browser, its desktop
+        // integration host, a terminal — would block the fence without ever
+        // being part of the session, and would even be signalled. Count only
+        // a process that also looks like a session member, exactly as for a
+        // process whose environment cannot be read: its command line names
+        // this runtime, or it is a Wine, Xodus or Flightdeck program by name.
+        // A command line that cannot be read rules nothing out.
+        if command
+            .as_ref()
+            .map_or(false, |value| !unattributed_writer(value, &name, &root))
+        {
+            continue;
+        }
         // Report Windows processes by executable; the kernel name is truncated.
         let mut name = name;
         let mut application = false;
         if bound && windows {
-            let command = files::read_public(&entry.path().join("cmdline"), 1024 * 1024);
-            if !process_alive(&fd)? {
-                continue;
-            }
             let arguments: Vec<_> = command
                 .unwrap_or_default()
                 .split(|byte| *byte == 0)
