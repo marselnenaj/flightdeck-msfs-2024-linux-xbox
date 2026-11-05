@@ -345,6 +345,10 @@ impl Client {
             env.insert(key.into(), value.into());
         }
         env.insert("WINEPREFIX".into(), prefix.path().into_os_string());
+        // XDG_RUNTIME_DIR is repointed below; keep the broker's keychain bus.
+        if let Some(address) = files::session_bus_address() {
+            env.insert("DBUS_SESSION_BUS_ADDRESS".into(), address.into());
+        }
         env.insert(
             "XDG_RUNTIME_DIR".into(),
             socket.path.clone().into_os_string(),
