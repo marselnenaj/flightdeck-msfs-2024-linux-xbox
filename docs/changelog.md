@@ -1,5 +1,16 @@
 # Changes and release status
 
+## 0.3.9 — 5 November 2026
+
+- Keep Xbox cloud sync working when the launcher starts without
+  `DBUS_SESSION_BUS_ADDRESS`. The cloud client and the launch supervisor give
+  the Xodus service a private `XDG_RUNTIME_DIR`, so libdbus could not find the
+  session bus there and the keychain failed as "Xbox cloud storage is currently
+  unreachable". Flightdeck now passes the session bus explicitly, using the
+  original `$XDG_RUNTIME_DIR/bus` or `/run/user/<uid>/bus` when it is the user's
+  own socket. Reported in #22.
+- Update the release workflow's artifact and .NET setup actions.
+
 ## 0.3.8 — 30 October 2026
 
 - Download the exact pinned Proton runner from a durable Flightdeck component
