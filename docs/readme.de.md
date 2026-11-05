@@ -32,6 +32,9 @@ erneuten App-Download fort.
 **Lade die [neueste stabile Version](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/latest).**
 Launcher, Installer und Updater benötigen kein Python.
 
+**Neu in 0.3.9:** Die Xbox-Cloud-Synchronisierung scheitert nicht mehr als
+„nicht erreichbar“, wenn Flightdeck ohne D-Bus-Sitzungsadresse gestartet wird.
+
 **Neu in 0.3.8:** dauerhafter Download des geprüften Proton-Runners, reparierte
 MobiFlight-WASM-/Ereignis-Einrichtung, weniger Abhängigkeiten, XZ-Dekodierung in Rust ohne native
 liblzma und Diagnoseprüfungen außerhalb der zentralen Launcher-Sperre.
