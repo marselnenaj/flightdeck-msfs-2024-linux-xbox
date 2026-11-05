@@ -55,6 +55,10 @@ pub fn environment(root: &Path) -> Result<(Environment, PathBuf)> {
             path.to_string_lossy().into_owned(),
         );
     }
+    // The service runs with XDG_RUNTIME_DIR set to the socket directory.
+    if let Some(address) = files::session_bus_address() {
+        env.insert("DBUS_SESSION_BUS_ADDRESS".into(), address);
+    }
     env.insert("RUST_LOG".into(), "warn".into());
     env.insert("XODUS_LOG".into(), "warn".into());
     // The Xodus service opens the in-game Store purchase window from this session.

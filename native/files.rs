@@ -10,7 +10,7 @@ use std::{
     io::{Read, Write},
     os::{
         fd::AsFd,
-        unix::fs::{DirBuilderExt, MetadataExt},
+        unix::fs::{DirBuilderExt, FileTypeExt, MetadataExt},
     },
     path::{Component, Path, PathBuf},
 };
@@ -19,6 +19,42 @@ const INVALID: &str = "Datei oder Ordner ist nicht sicher zugänglich.";
 
 pub fn uid() -> u32 {
     rustix::process::getuid().as_raw()
+}
+/// Session-bus address for helpers whose `XDG_RUNTIME_DIR` is repointed to a
+/// private socket directory. Without `DBUS_SESSION_BUS_ADDRESS`, libdbus looks
+/// for `bus` in that directory, and the broker cannot reach the keychain.
+pub fn session_bus_address() -> Option<String> {
+    bus_address(
+        env::var("DBUS_SESSION_BUS_ADDRESS").ok(),
+        env::var_os("XDG_RUNTIME_DIR").map(PathBuf::from),
+        uid(),
+        |bus| {
+            fs::symlink_metadata(bus).is_ok_and(|m| m.file_type().is_socket() && m.uid() == uid())
+        },
+    )
+}
+fn bus_address(
+    configured: Option<String>,
+    runtime_dir: Option<PathBuf>,
+    uid: u32,
+    owned_socket: impl Fn(&Path) -> bool,
+) -> Option<String> {
+    if let Some(address) = configured.filter(|a| !a.is_empty()) {
+        return Some(address);
+    }
+    runtime_dir
+        .filter(|dir| dir.is_absolute())
+        .into_iter()
+        .chain([PathBuf::from(format!("/run/user/{uid}"))])
+        .map(|dir| dir.join("bus"))
+        .filter_map(|bus| bus.to_str().map(str::to_owned))
+        // D-Bus addresses would need escaping for other bytes; skip such paths.
+        .filter(|bus| {
+            bus.bytes()
+                .all(|b| b.is_ascii_alphanumeric() || b"-_/.".contains(&b))
+        })
+        .find(|bus| owned_socket(Path::new(bus)))
+        .map(|bus| format!("unix:path={bus}"))
 }
 pub fn home() -> PathBuf {
     env::var_os("HOME")
@@ -247,5 +283,57 @@ impl Lease {
             INVALID,
         )?;
         Ok(Self(file))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::bus_address;
+    use std::path::{Path, PathBuf};
+
+    #[test]
+    fn session_bus_prefers_configured_address() {
+        let any = |_: &Path| true;
+        assert_eq!(
+            bus_address(Some("unix:path=/tmp/custom".into()), None, 1000, any).as_deref(),
+            Some("unix:path=/tmp/custom")
+        );
+    }
+
+    #[test]
+    fn session_bus_falls_back_to_runtime_then_default_socket() {
+        let runtime = Some(PathBuf::from("/run/user/1000/session"));
+        let only = |wanted: &'static str| move |bus: &Path| bus == Path::new(wanted);
+        assert_eq!(
+            bus_address(
+                None,
+                runtime.clone(),
+                1000,
+                only("/run/user/1000/session/bus")
+            )
+            .as_deref(),
+            Some("unix:path=/run/user/1000/session/bus")
+        );
+        assert_eq!(
+            bus_address(
+                Some(String::new()),
+                runtime,
+                1000,
+                only("/run/user/1000/bus")
+            )
+            .as_deref(),
+            Some("unix:path=/run/user/1000/bus")
+        );
+        assert_eq!(bus_address(None, None, 1000, |_| false), None);
+    }
+
+    #[test]
+    fn session_bus_skips_paths_that_need_escaping() {
+        let runtime = Some(PathBuf::from("/run/user/1000/a;b"));
+        assert_eq!(
+            bus_address(None, runtime, 1000, |bus| bus
+                != Path::new("/run/user/1000/bus")),
+            None
+        );
     }
 }
