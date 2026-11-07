@@ -118,6 +118,10 @@ the next normal launch reconciles pending local and cloud changes.
 This check also protects the normal exit path: if another Windows application
 is still using that profile, close it or end it with **Check session**.
 
+**Unreleased:** browser and desktop processes that only inherited runtime
+variables are ignored during session cleanup. They are neither stopped nor
+allowed to block another launch solely because of those variables.
+
 ## Advanced tools
 
 **Saves → Advanced options** contains manual comparison, import, upload and

@@ -27,6 +27,10 @@ downloads, updates and account sign-in.
 **Download the [latest stable release](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/latest).**
 The launcher, installer and updater need no Python.
 
+**Unreleased:** session cleanup ignores browser and desktop processes that only
+inherited runtime variables, preventing unrelated processes from being stopped
+or blocking the next launch. [Details](docs/changelog.md#unreleased).
+
 **New in 0.3.9:** Xbox cloud sync no longer fails as "unreachable" when
 Flightdeck is started without a D-Bus session address in its environment.
 

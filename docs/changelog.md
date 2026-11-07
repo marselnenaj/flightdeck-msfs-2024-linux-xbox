@@ -1,5 +1,16 @@
 # Changes and release status
 
+## Unreleased
+
+- Ignore browser and desktop processes that only inherited runtime environment
+  variables when releasing or recovering a game session. Also require a
+  session-related process name or a command line referring to the runtime, so
+  unrelated processes are neither stopped nor held against the next launch.
+  Preserve the handling of Wine processes, other Windows applications and
+  inaccessible potential writers. Thanks to stratte89 for the fix.
+  Synthetic regression tests cover all three runtime binding variables;
+  simulator validation remains separate.
+
 ## 0.3.9 — 5 November 2026
 
 - Keep Xbox cloud sync working when the launcher starts without

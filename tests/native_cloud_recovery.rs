@@ -47,7 +47,6 @@ fn fixture() -> (tempfile::TempDir, files::Lease) {
 }
 /// A process named like a Windows executable and bound to a Wine prefix.
 fn windows(name: &str, prefix: &Path) -> Process {
-    use std::os::unix::process::CommandExt;
     let process = Process(
         Command::new("sleep")
             .arg0(name)
@@ -180,35 +179,39 @@ fn interrupted_session_recovers_only_after_writers_exit_and_backup_is_durable() 
 
     // A bound process that does not look like a session member is not one:
     // the binding variables are inherited, so a desktop's browser-integration
-    // host keeps an exported WINEPREFIX while having nothing to do with the
+    // host keeps exported runtime variables while having nothing to do with the
     // ended session. It must neither block the fence nor be signalled.
-    let mut bystander = {
-        use std::os::unix::process::CommandExt;
-        Process(
+    for key in ["WINEPREFIX", "MSFS_LINUX_ROOT", "FLIGHTDECK_HELPER_RUNTIME"] {
+        let path = if key == "WINEPREFIX" {
+            root.join("local/msfs-prefix")
+        } else {
+            root.to_path_buf()
+        };
+        let mut bystander = Process(
             Command::new("sleep")
                 .arg0("plasma-browser-integration-host")
                 .arg("30")
-                .env("WINEPREFIX", root.join("local/msfs-prefix"))
+                .env(key, path)
                 .spawn()
                 .expect("env-inheriting bystander"),
-        )
-    };
-    let deadline = Instant::now() + Duration::from_secs(5);
-    while !fs::read(format!("/proc/{}/environ", bystander.0.id())).is_ok_and(|env| {
-        env.split(|b| *b == 0)
-            .any(|e| e.starts_with(b"WINEPREFIX="))
-    }) {
-        assert!(Instant::now() < deadline);
-        std::thread::sleep(Duration::from_millis(10));
+        );
+        let deadline = Instant::now() + Duration::from_secs(5);
+        let marker = format!("{key}=").into_bytes();
+        while !fs::read(format!("/proc/{}/environ", bystander.0.id()))
+            .is_ok_and(|env| env.split(|b| *b == 0).any(|e| e.starts_with(&marker)))
+        {
+            assert!(Instant::now() < deadline);
+            std::thread::sleep(Duration::from_millis(10));
+        }
+        guard::clear(root, &lease.0)
+            .expect("a process that only inherited the binding is not a session writer");
+        assert!(
+            bystander.0.try_wait().expect("reap").is_none(),
+            "{key} bystander must never be signalled"
+        );
+        drop(bystander);
+        guard::mark(root, &lease.0).expect("next session fence");
     }
-    guard::clear(root, &lease.0)
-        .expect("a process that only inherited the binding is not a session writer");
-    assert!(
-        bystander.0.try_wait().expect("reap").is_none(),
-        "bystander must never be signalled"
-    );
-    drop(bystander);
-    guard::mark(root, &lease.0).expect("next session fence");
 
     let ready = root.join("protected.ready");
     let mut writer = Process(
@@ -243,7 +246,6 @@ fn interrupted_session_recovers_only_after_writers_exit_and_backup_is_durable() 
     // or no profile on such a desktop could be released again before a reboot.
     let elsewhere = tempfile::tempdir().expect("elsewhere");
     let protected = |name: &str| {
-        use std::os::unix::process::CommandExt;
         let ready = elsewhere
             .path()
             .join(name.rsplit('/').next().expect("name"));

@@ -113,14 +113,11 @@ fn process_alive(fd: &std::os::fd::OwnedFd) -> Result<bool> {
     )? == 0)
 }
 
-/// Whether a process that hides its environment is held against the session.
-/// Without the environment it cannot be attributed to a runtime, so it counts
-/// when its command line refers to this runtime, or when it is by its name a
-/// Wine, Xodus or Flightdeck process of some runtime. Everything else that
-/// protects itself this way is a service of the desktop: authentication and
-/// key agents, password stores, a running `sudo`. Those never write saves,
-/// and holding them against the session would fence the profile until the
-/// next boot on every desktop that runs one.
+/// Whether a process looks like a possible writer of this session. Runtime
+/// variables may be inherited, so also require a command line referring to this
+/// runtime or a Wine, Xodus or Flightdeck program name. The same check applies
+/// when the environment is unreadable: desktop authentication agents, key
+/// stores and `sudo` must not hold the session merely by hiding their environment.
 fn unattributed_writer(command: &[u8], kernel_name: &str, runtime: &Path) -> bool {
     let root = runtime.as_os_str().as_bytes();
     if command.windows(root.len()).any(|part| part == root) {
@@ -318,7 +315,7 @@ fn scan(runtime: &Path) -> Result<Vec<Writer>> {
         // A command line that cannot be read rules nothing out.
         if command
             .as_ref()
-            .map_or(false, |value| !unattributed_writer(value, &name, &root))
+            .is_ok_and(|value| !unattributed_writer(value, &name, &root))
         {
             continue;
         }
