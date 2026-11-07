@@ -135,7 +135,7 @@ Die Prüfung schützt auch den normalen Beendigungspfad. Verwendet noch eine
 andere Windows-Anwendung dasselbe Profil, schließe sie oder beende sie mit
 **Sitzung prüfen**.
 
-**Noch unveröffentlicht:** Browser- und Desktop-Prozesse, die nur Runtime-Variablen
+**Seit 0.3.10:** Browser- und Desktop-Prozesse, die nur Runtime-Variablen
 geerbt haben, werden bei der Sitzungsbereinigung ignoriert. Allein diese Variablen
 führen weder zu ihrem Beenden noch zu einer Sperre des nächsten Starts.
 

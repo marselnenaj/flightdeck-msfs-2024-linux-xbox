@@ -1,6 +1,6 @@
 # Changes and release status
 
-## Unreleased
+## 0.3.10 — 7 November 2026
 
 - Ignore browser and desktop processes that only inherited runtime environment
   variables when releasing or recovering a game session. Also require a

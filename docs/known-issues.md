@@ -2,8 +2,8 @@
 
 [Deutsch](known-issues.de.md) · [Documentation](index.md)
 
-Status: 5 November 2026, current published launcher **0.3.9**.
-See the [release changes](changelog.md#039--5-november-2026).
+Status: 7 November 2026, current published launcher **0.3.10**.
+See the [release changes](changelog.md#0310--7-november-2026).
 
 - **MobiFlight setup in 0.3.7:** App installation can finish while WASM/event
   preparation fails because HubHop redirects its old address and now includes
