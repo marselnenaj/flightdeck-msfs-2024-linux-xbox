@@ -217,9 +217,12 @@ pub fn obtain(cache: &Path, supplied: Option<&str>, ctx: &Context) -> Result<Pat
         return verify_with(&path, lock);
     }
     files::private_dir(cache)?;
-    let target = cache.join(string(lock, "version")?);
+    let version = string(lock, "version")?;
+    let target = cache.join(version);
     if files::exists(&target) {
-        return verify_with(&target, lock);
+        let verified = verify_with(&target, lock)?;
+        prune_cache(cache, version);
+        return Ok(verified);
     }
     ctx.progress("Das geprüfte Fenix-Paket wird heruntergeladen …");
     let archive = crate::fenix_update::download(
@@ -280,8 +283,69 @@ pub fn obtain(cache: &Path, supplied: Option<&str>, ctx: &Context) -> Result<Pat
     })();
     if result.is_err() {
         let _ = fs::remove_dir_all(&stage);
+    } else {
+        prune_cache(cache, version);
     }
     result
+}
+/// Keep only the extracted releases that can still be used: the selected one,
+/// the one embedded in this launcher and those Steam installations run from.
+/// A downloaded archive is no longer needed once it has been extracted.
+pub(crate) fn prune_cache(cache: &Path, selected: &str) {
+    let mut keep = vec![selected.to_string()];
+    if let Ok(embedded) = manifest(None)
+        && let Some(version) = embedded["version"].as_str()
+    {
+        keep.push(version.to_string());
+    }
+    if let Some(steam) = cache.parent().map(|state| state.join("steam"))
+        && let Ok(entries) = fs::read_dir(steam)
+    {
+        for entry in entries.flatten() {
+            let path = entry.path().join("private/fenix-patch-release.json");
+            if !files::exists(&path) {
+                continue;
+            }
+            match files::json::<Value>(&path, 2 * 1024 * 1024) {
+                Ok(recorded) => {
+                    if let Some(version) = recorded["version"].as_str() {
+                        keep.push(version.to_string());
+                    }
+                }
+                // An unreadable record could name any release; keep them all.
+                Err(_) => return,
+            }
+        }
+    }
+    let Ok(release) = regex::Regex::new(r"^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$") else {
+        return;
+    };
+    let Ok(entries) = fs::read_dir(cache) else {
+        return;
+    };
+    for entry in entries.flatten() {
+        let Some(name) = entry.file_name().to_str().map(str::to_string) else {
+            continue;
+        };
+        let Ok(kind) = entry.file_type() else {
+            continue;
+        };
+        let removed = if let Some(version) = name.strip_suffix(".zip") {
+            if !kind.is_file() || !release.is_match(version) {
+                continue;
+            }
+            fs::remove_file(entry.path()).map_err(Error::from)
+        } else {
+            if !kind.is_dir() || !release.is_match(&name) || keep.contains(&name) {
+                continue;
+            }
+            crate::owned_tree::identity(&entry.path())
+                .and_then(|id| crate::owned_tree::remove(&entry.path(), id))
+        };
+        if let Err(error) = removed {
+            eprintln!("Cached Fenix release data was kept: {name}: {error}");
+        }
+    }
 }
 pub fn script(name: &str) -> Result<&'static [u8]> {
     require(LAUNCH_FILES.contains(&name), "Unknown launch script.")?;
@@ -442,5 +506,56 @@ mod renderer_tests {
         put(&payload.join(name), b"tampered DXGI");
         assert!(overlay_payload(&prefix, &runner, &bundle, &payload, &lock, &|| Ok(())).is_err());
         assert_eq!(fs::read(&native).expect("retained verified DXGI"), bytes);
+    }
+}
+
+#[cfg(test)]
+mod cache_tests {
+    use super::*;
+
+    #[test]
+    fn cache_keeps_only_usable_releases_and_no_archives() {
+        let temp = tempfile::tempdir().expect("fixture");
+        let state = temp.path();
+        let cache = state.join("fenix-bundles");
+        let embedded = manifest(None).expect("embedded")["version"]
+            .as_str()
+            .expect("version")
+            .to_string();
+        for name in ["0.1.0", "0.1.1", "0.1.4", "0.1.9", &embedded, "notes"] {
+            files::private_dir(&cache.join(name)).expect("release");
+        }
+        for name in ["0.1.1.zip", "0.1.9.zip", "other.zip"] {
+            files::atomic(&cache.join(name), b"zip").expect("archive");
+        }
+        let steam = state.join("steam/game-1/private");
+        files::private_dir(&steam).expect("steam");
+        files::atomic_json(
+            &steam.join("fenix-patch-release.json"),
+            &serde_json::json!({"version": "0.1.1"}),
+        )
+        .expect("recorded");
+        prune_cache(&cache, "0.1.9");
+        let mut left: Vec<String> = fs::read_dir(&cache)
+            .expect("cache")
+            .map(|entry| {
+                entry
+                    .expect("entry")
+                    .file_name()
+                    .into_string()
+                    .expect("name")
+            })
+            .collect();
+        left.sort();
+        let mut expected = vec![
+            "0.1.1".to_string(),
+            "0.1.9".to_string(),
+            embedded,
+            "notes".to_string(),
+            "other.zip".to_string(),
+        ];
+        expected.sort();
+        expected.dedup();
+        assert_eq!(left, expected);
     }
 }

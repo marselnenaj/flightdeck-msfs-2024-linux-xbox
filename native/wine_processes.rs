@@ -374,6 +374,15 @@ pub(crate) fn path_in_use(path: &Path) -> Result<bool> {
             {
                 continue;
             }
+            // Non-dumpable processes, such as the user's systemd instance or
+            // sandboxed helpers, never expose their environment. Wine processes
+            // are dumpable; still count an unreadable one that looks like Wine.
+            Err(error) if error.kind() == std::io::ErrorKind::PermissionDenied => {
+                if unreadable_wine(&proc, &path) && alive(&handle) {
+                    return Ok(true);
+                }
+                continue;
+            }
             Err(error) => return Err(error.into()),
         };
         for item in bytes.split(|b| *b == 0) {
@@ -399,6 +408,25 @@ pub(crate) fn path_in_use(path: &Path) -> Result<bool> {
         }
     }
     Ok(false)
+}
+/// Whether a process whose environment cannot be read may be Wine using `path`:
+/// its command line names the path or a Windows program, or its name is Wine's.
+fn unreadable_wine(proc: &Path, path: &Path) -> bool {
+    use std::os::unix::ffi::OsStrExt;
+    let comm = std::fs::read(proc.join("comm")).unwrap_or_default();
+    let comm = String::from_utf8_lossy(&comm)
+        .trim_end()
+        .to_ascii_lowercase();
+    if comm.starts_with("wine") || comm.ends_with(".exe") {
+        return true;
+    }
+    let Ok(cmdline) = std::fs::read(proc.join("cmdline")) else {
+        return true;
+    };
+    cmdline.split(|b| *b == 0).any(|arg| {
+        Path::new(std::ffi::OsStr::from_bytes(arg)).starts_with(path)
+            || arg.to_ascii_lowercase().ends_with(b".exe")
+    })
 }
 pub fn status(prefix: &Path) -> (bool, bool) {
     Processes::new(prefix)

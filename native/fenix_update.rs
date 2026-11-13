@@ -533,8 +533,14 @@ pub fn ensure(ctx: &Context) -> Result<bool> {
     if state["state"] != "installed" {
         return Ok(false);
     }
+    // Also reclaims what earlier launchers left after updates and failed attempts.
+    fenix::prune_superseded(root);
     let target = selected(ctx)?;
     let target_version = string(&target["bundle"], "version")?.to_string();
+    bundle::prune_cache(
+        &ctx.launcher.state_dir.join("fenix-bundles"),
+        &target_version,
+    );
     if version(&target_version)? <= version(string(&state, "version")?)? {
         return Ok(false);
     }
