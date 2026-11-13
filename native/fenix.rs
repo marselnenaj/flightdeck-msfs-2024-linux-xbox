@@ -588,7 +588,7 @@ pub fn install(ctx: &Context, payload: &Path) -> Result<()> {
         crate::fenix_legacy::resume_automatic(root)?;
     }
     if upgrade.is_some() {
-        prune_update_copies(root, &state);
+        prune_superseded(root);
     }
     Ok(())
 }
@@ -609,55 +609,93 @@ fn abandon(root: &Path, pending: &Value, work: &Path, ctx: &Context) {
         eprintln!("The unused Fenix staging copy could not be removed.");
     }
 }
-/// Profile copies taken before a patch update are never used by Restore, which
-/// returns to the profile from before the first patch. Remove the copies of
-/// updates that completed: this one and those named by earlier installed
-/// states in the update backups. A copy left by an interrupted commit holds
-/// the newer profile and is kept. The Fenix 0.1.6 installer does the same.
-fn prune_update_copies(root: &Path, state: &Value) {
-    let mut done: Vec<String> = state["upgrade_previous_prefix"]
-        .as_str()
-        .map(str::to_string)
-        .into_iter()
-        .collect();
-    if let Ok(entries) = fs::read_dir(root.join("private")) {
-        for entry in entries.flatten() {
-            if !entry
-                .file_name()
-                .to_str()
-                .is_some_and(|name| name.starts_with("fenix-patch-backup-"))
-            {
-                continue;
-            }
-            let previous = optional(&entry.path().join("previous-patch.json")).unwrap_or_default();
-            if previous["state"] == "installed"
-                && let Some(copy) = previous["upgrade_previous_prefix"].as_str()
-            {
-                done.push(copy.to_string());
-            }
-        }
+/// Remove what completed patch updates left behind: the previous patch runners,
+/// staging copies of failed attempts and the profile copies taken before each
+/// update. Restore never uses them, as it returns to the profile and runner
+/// from before the first patch, and each costs a full runner or profile.
+/// Profile copies are removed only for completed updates, found through the
+/// installed states in the update backups. A copy left by an interrupted commit
+/// holds the newer profile and is kept. The Fenix 0.1.6 installer does the same.
+pub fn prune_superseded(root: &Path) {
+    let Ok(state) = optional(&root.join(MARKER)) else {
+        return;
+    };
+    if state["state"] != "installed" {
+        return;
     }
-    for copy in done {
-        if !matches(
-            r"^local/msfs-prefix\.before-fenix-update-[0-9]{8}T[0-9]{6}-[0-9a-f]{8}$",
-            &json!(copy),
-        ) {
+    let mut copies = Vec::new();
+    let mut current = state.clone();
+    for _ in 0..256 {
+        let Some(backup) = current["upgrade_backup"].as_str() else {
+            break;
+        };
+        if let Some(copy) = current["upgrade_previous_prefix"].as_str() {
+            copies.push(copy.to_string());
+        }
+        let Ok(backup) = bundle::contained(root, backup) else {
+            break;
+        };
+        let previous = optional(&backup.join("previous-patch.json")).unwrap_or_default();
+        if previous["state"] != "installed" {
+            break;
+        }
+        current = previous;
+    }
+    let selection = optional(&root.join("private/proton-selection.json")).unwrap_or_default();
+    let runners: Vec<PathBuf> = [
+        Some(root.join("runner")),
+        state["previous_runner"]
+            .as_str()
+            .map(|path| root.join(path)),
+        selection["runner"].as_str().map(|path| root.join(path)),
+    ]
+    .into_iter()
+    .flatten()
+    .filter_map(|path| path.canonicalize().ok())
+    .collect();
+    let Ok(entries) = fs::read_dir(root.join("local")) else {
+        return;
+    };
+    for entry in entries.flatten() {
+        let Some(name) = entry.file_name().to_str().map(str::to_string) else {
+            continue;
+        };
+        let relative = format!("local/{name}");
+        let work = matches(
+            r"^local/fenix-patch-[0-9]{8}T[0-9]{6}-[0-9a-f]{8}$",
+            &json!(relative),
+        ) && state["work"] != relative.as_str();
+        let copy = copies.contains(&relative)
+            && matches(
+                r"^local/msfs-prefix\.before-fenix-update-[0-9]{8}T[0-9]{6}-[0-9a-f]{8}$",
+                &json!(relative),
+            );
+        if !work && !copy {
             continue;
         }
-        let path = root.join(&copy);
+        let path = entry.path();
+        // Still the active, selected or restore runner.
+        if path
+            .canonicalize()
+            .is_ok_and(|canonical| runners.iter().any(|runner| runner.starts_with(&canonical)))
+        {
+            continue;
+        }
         let removed = (|| -> Result<()> {
-            if !files::exists(&path) {
-                return Ok(());
-            }
             require(
-                fs::symlink_metadata(&path)?.is_dir(),
-                "Unexpected Fenix update profile copy.",
+                entry.file_type()?.is_dir(),
+                "Unexpected Fenix patch folder.",
             )?;
             wine_processes::idle(&path)?;
+            wine_processes::idle(&path.join("prefix"))?;
+            require(
+                !wine_processes::path_in_use(&path)?,
+                "This Fenix patch folder is in use.",
+            )?;
             crate::owned_tree::remove(&path, crate::owned_tree::identity(&path)?)
         })();
-        if removed.is_err() {
-            eprintln!("An earlier Fenix update profile copy could not be removed: {copy}");
+        if let Err(error) = removed {
+            eprintln!("Unused Fenix patch data was kept: {name}: {error}");
         }
     }
 }
