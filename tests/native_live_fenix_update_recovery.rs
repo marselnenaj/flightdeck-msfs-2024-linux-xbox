@@ -6,7 +6,8 @@
 //! Inputs: REPRO_ROOT (new directory), REPRO_BUNDLE_014 (extracted 0.1.4 patch),
 //! REPRO_ZIP_015 and REPRO_DESCRIPTOR_015 (0.1.5 release ZIP and
 //! flightdeck-update.json), REPRO_RUNNER_ARCHIVE (pinned runner tar.xz) and
-//! optionally REPRO_CACHE (public .NET installers). A stand-in Wine program
+//! optionally REPRO_CACHE (public .NET installers). fenix_016_update_chain also
+//! needs REPRO_ZIP_016 and REPRO_DESCRIPTOR_016 for the next release. A stand-in Wine program
 //! replaces the licensed Fenix app; MSFS itself is not started.
 use flightdeck::{backend::Launcher, bootstrap, fenix, fenix_update as update, files, resources};
 use serde_json::{Value, json};
@@ -152,13 +153,22 @@ fn setup(key: &str) -> Setup {
     }
 }
 
-fn candidate015(x: &Setup) {
-    let bytes = fs::read(&x.descriptor015).unwrap();
-    let meta = json!({"size":bytes.len(),"sha256":files::sha256(&bytes),"version":"0.1.5"});
+/// Offer a release exactly as discovery finds it on GitHub.
+fn candidate(x: &Setup, zip: &Path, descriptor: &Path, version: &str) {
+    let bytes = fs::read(descriptor).unwrap();
+    let meta = json!({"size":bytes.len(),"sha256":files::sha256(&bytes),"version":version});
     let candidate = update::descriptor(&bytes, &meta).unwrap();
     x.app.lock().fenix_updates.candidate = candidate;
     files::private_dir(&x.state_dir.join("fenix-bundles")).unwrap();
-    fs::copy(&x.zip015, x.state_dir.join("fenix-bundles/0.1.5.zip")).unwrap();
+    fs::copy(
+        zip,
+        x.state_dir.join(format!("fenix-bundles/{version}.zip")),
+    )
+    .unwrap();
+}
+
+fn candidate015(x: &Setup) {
+    candidate(x, &x.zip015, &x.descriptor015, "0.1.5");
 }
 
 fn install014(x: &Setup) {
@@ -383,11 +393,20 @@ fn fenix_015_recovery() {
     files::atomic_json(&root.join(fenix::MARKER), &pending).unwrap();
     report(root, "b0-stuck", json!({}), &x.app);
     assert_eq!(fenix::snapshot(&x.app)["installed"], false);
-    // An old pre-update copy left by an earlier successful update.
-    files::private_dir(
-        &root.join("local/msfs-prefix.before-fenix-update-20261030T120000-abcdef12/drive_c"),
+    // An old pre-update copy left by an earlier successful update, named by
+    // the installed state that update started from.
+    let old = "local/msfs-prefix.before-fenix-update-20261030T120000-abcdef12";
+    files::private_dir(&root.join(old).join("drive_c")).unwrap();
+    let earlier = root.join("private/fenix-patch-backup-20261101T120000-abcdef34");
+    files::private_dir(&earlier).unwrap();
+    files::atomic_json(
+        &earlier.join("previous-patch.json"),
+        &json!({"state": "installed", "upgrade_previous_prefix": old}),
     )
     .unwrap();
+    // A copy of an interrupted commit holds the newer profile and is kept.
+    let kept = "msfs-prefix.before-fenix-update-20261102T120000-abcdef56";
+    files::private_dir(&root.join("local").join(kept).join("drive_c")).unwrap();
 
     let check = update::check(&x.app, true);
     eprintln!("[repro] forced check: {check:?}");
@@ -411,14 +430,62 @@ fn fenix_015_recovery() {
     assert_eq!(marker["version"], "0.1.5");
     assert_eq!(marker["configured"], true);
     fenix::verify_installed(root, &marker).unwrap();
-    assert!(
+    assert_eq!(
         staging_dirs(root)
-            .iter()
-            .all(|n| !n.starts_with("msfs-prefix.before-fenix-update-")),
-        "{:?}",
-        staging_dirs(root)
+            .into_iter()
+            .filter(|n| n.starts_with("msfs-prefix.before-fenix-update-"))
+            .collect::<Vec<_>>(),
+        vec![kept.to_string()]
     );
     assert!(!root.join(work).exists(), "abandoned staging copy removed");
     let open = job(&x.app, "open", json!({}));
     assert_eq!(open["state"], "complete", "{open}");
+}
+
+#[test]
+#[ignore = "requires the pinned runner, public Fenix payloads and Wine; creates new prefixes"]
+fn fenix_016_update_chain() {
+    let x = setup("chain");
+    install014(&x);
+    signed_in_fenix(&x);
+    let configure = job(&x.app, "configure", json!({}));
+    assert_eq!(configure["state"], "complete", "{configure}");
+    let installed = |version: &str| {
+        let marker: Value = files::json(&x.root.join(fenix::MARKER), 4 << 20).unwrap();
+        assert_eq!(marker["state"], "installed");
+        assert_eq!(marker["version"], version);
+        assert_eq!(marker["configured"], true);
+        fenix::verify_installed(&x.root, &marker).unwrap();
+    };
+    for (version, zip, descriptor) in [
+        ("0.1.5", x.zip015.clone(), x.descriptor015.clone()),
+        (
+            "0.1.6",
+            input("REPRO_ZIP_016"),
+            input("REPRO_DESCRIPTOR_016"),
+        ),
+    ] {
+        candidate(&x, &zip, &descriptor, version);
+        let open = job(&x.app, "open", json!({}));
+        report(
+            &x.root,
+            &format!("c-open-{version}"),
+            json!({"job": open, "staging": staging_dirs(&x.root), "status": x.app.lock().fenix_updates.status.clone()}),
+            &x.app,
+        );
+        assert_eq!(open["state"], "complete", "{open}");
+        installed(version);
+        assert!(
+            staging_dirs(&x.root)
+                .iter()
+                .all(|n| !n.starts_with("msfs-prefix.before-fenix-update-")),
+            "{:?}",
+            staging_dirs(&x.root)
+        );
+    }
+    let open = job(&x.app, "open", json!({}));
+    assert_eq!(open["state"], "complete", "{open}");
+    let configure = job(&x.app, "configure", json!({}));
+    assert_eq!(configure["state"], "complete", "{configure}");
+    installed("0.1.6");
 }

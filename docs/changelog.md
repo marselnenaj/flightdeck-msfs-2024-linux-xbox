@@ -1,5 +1,14 @@
 # Changes and release status
 
+## Unreleased
+
+- Install Fenix patch 0.1.6 directly in new setups. Its standalone installer
+  recovers failed patch updates the same way Flightdeck 0.3.11 does. Existing
+  installations already receive 0.1.6 as an automatic patch update.
+- Keep the profile copy of an update whose final switch was interrupted. That
+  copy holds the newer profile. Only copies of completed updates are removed now,
+  the same rule the Fenix 0.1.6 installer uses.
+
 ## 0.3.11 — 13 November 2026
 
 - Keep Fenix usable when an automatic patch update fails. Flightdeck applies a

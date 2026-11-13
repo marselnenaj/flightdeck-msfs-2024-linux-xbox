@@ -588,7 +588,7 @@ pub fn install(ctx: &Context, payload: &Path) -> Result<()> {
         crate::fenix_legacy::resume_automatic(root)?;
     }
     if upgrade.is_some() {
-        prune_update_copies(root);
+        prune_update_copies(root, &state);
     }
     Ok(())
 }
@@ -610,34 +610,54 @@ fn abandon(root: &Path, pending: &Value, work: &Path, ctx: &Context) {
     }
 }
 /// Profile copies taken before a patch update are never used by Restore, which
-/// returns to the profile from before the first patch. Remove them once the
-/// update is committed, including those left by earlier launcher versions.
-fn prune_update_copies(root: &Path) {
-    let Ok(entries) = fs::read_dir(root.join("local")) else {
-        return;
-    };
-    for entry in entries.flatten() {
-        let name = entry.file_name();
-        let Some(name) = name.to_str() else {
-            continue;
-        };
+/// returns to the profile from before the first patch. Remove the copies of
+/// updates that completed: this one and those named by earlier installed
+/// states in the update backups. A copy left by an interrupted commit holds
+/// the newer profile and is kept. The Fenix 0.1.6 installer does the same.
+fn prune_update_copies(root: &Path, state: &Value) {
+    let mut done: Vec<String> = state["upgrade_previous_prefix"]
+        .as_str()
+        .map(str::to_string)
+        .into_iter()
+        .collect();
+    if let Ok(entries) = fs::read_dir(root.join("private")) {
+        for entry in entries.flatten() {
+            if !entry
+                .file_name()
+                .to_str()
+                .is_some_and(|name| name.starts_with("fenix-patch-backup-"))
+            {
+                continue;
+            }
+            let previous = optional(&entry.path().join("previous-patch.json")).unwrap_or_default();
+            if previous["state"] == "installed"
+                && let Some(copy) = previous["upgrade_previous_prefix"].as_str()
+            {
+                done.push(copy.to_string());
+            }
+        }
+    }
+    for copy in done {
         if !matches(
-            r"^msfs-prefix\.before-fenix-update-[0-9]{8}T[0-9]{6}-[0-9a-f]{8}$",
-            &json!(name),
+            r"^local/msfs-prefix\.before-fenix-update-[0-9]{8}T[0-9]{6}-[0-9a-f]{8}$",
+            &json!(copy),
         ) {
             continue;
         }
-        let path = entry.path();
+        let path = root.join(&copy);
         let removed = (|| -> Result<()> {
+            if !files::exists(&path) {
+                return Ok(());
+            }
             require(
-                entry.file_type()?.is_dir(),
+                fs::symlink_metadata(&path)?.is_dir(),
                 "Unexpected Fenix update profile copy.",
             )?;
             wine_processes::idle(&path)?;
             crate::owned_tree::remove(&path, crate::owned_tree::identity(&path)?)
         })();
         if removed.is_err() {
-            eprintln!("An earlier Fenix update profile copy could not be removed: {name}");
+            eprintln!("An earlier Fenix update profile copy could not be removed: {copy}");
         }
     }
 }

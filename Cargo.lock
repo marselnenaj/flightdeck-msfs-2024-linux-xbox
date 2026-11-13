@@ -875,8 +875,8 @@ dependencies = [
 
 [[package]]
 name = "fenix-patch"
-version = "0.1.4"
-source = "git+https://github.com/marselnenaj/fenix-a320-linux-patch?rev=0c8079c61337e5699d0568ec9ffc66354b86708d#0c8079c61337e5699d0568ec9ffc66354b86708d"
+version = "0.1.6"
+source = "git+https://github.com/marselnenaj/fenix-a320-linux-patch?rev=4b2a862682d55ce787825bdebbaf64d86db6b8fb#4b2a862682d55ce787825bdebbaf64d86db6b8fb"
 dependencies = [
  "clap",
  "lzma-rust2 0.22.0",
