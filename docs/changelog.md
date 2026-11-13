@@ -1,5 +1,30 @@
 # Changes and release status
 
+## 0.3.11 — 13 November 2026
+
+- Keep Fenix usable when an automatic patch update fails. Flightdeck applies a
+  newly published patch, such as Fenix patch 0.1.5, before the next Fenix or
+  MSFS start. Until now, a failure after the update had started left the
+  installation in its preparation stage. Every later **Open Fenix** then showed
+  "Last operation failed", the Mods page no longer showed Fenix as configured,
+  and only **Restore original profile** helped, which returns to the profile from
+  before the first patch. Flightdeck now reinstates the verified previous patch
+  immediately, removes the unpublished profile copy and opens Fenix with the
+  installed patch. The update failure is shown under **Updates** and is retried
+  after an update check or a launcher restart.
+- Recover installations that earlier launchers left in this state automatically
+  at the next Fenix or MSFS start, then apply the update normally.
+- Do not require a simulator settings folder when updating a patch whose display
+  settings were not applied yet. That case stopped the update before the
+  official Fenix sign-in.
+- Remove the profile copies taken before each patch update once the update is
+  committed, including those left by earlier versions. Restore never used them;
+  it returns to the profile from before the first patch. This frees the size of
+  one simulator profile per past update.
+- Reproduced and verified with real Wine, the pinned runner and the public
+  0.1.4/0.1.5 payloads in new account-free runtimes: a failed update, a profile
+  left by 0.3.10, restore and set-up again. Simulator validation remains separate.
+
 ## 0.3.10 — 7 November 2026
 
 - Ignore browser and desktop processes that only inherited runtime environment

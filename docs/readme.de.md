@@ -32,6 +32,11 @@ erneuten App-Download fort.
 **Lade die [neueste stabile Version](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/latest).**
 Launcher, Installer und Updater benötigen kein Python.
 
+**Neu in 0.3.11:** Ein fehlgeschlagenes automatisches Fenix-Patch-Update
+blockiert Fenix nicht mehr mit „Letzter Vorgang fehlgeschlagen“. Flightdeck
+behält den installierten Patch, repariert so hängengebliebene Installationen und
+entfernt nicht mehr benötigte Profilkopien. [Details](changelog.md#0311--13-november-2026).
+
 **Neu in 0.3.10:** Die Sitzungsbereinigung ignoriert Browser- und
 Desktop-Prozesse, die nur Runtime-Variablen geerbt haben. Diese werden dadurch
 nicht mehr beendet und blockieren keinen weiteren Start. [Details](changelog.md#0310--7-november-2026).
