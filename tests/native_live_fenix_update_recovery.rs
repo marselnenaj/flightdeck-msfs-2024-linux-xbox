@@ -6,7 +6,9 @@
 //! Inputs: REPRO_ROOT (new directory), REPRO_BUNDLE_014 (extracted 0.1.4 patch),
 //! REPRO_ZIP_015 and REPRO_DESCRIPTOR_015 (0.1.5 release ZIP and
 //! flightdeck-update.json), REPRO_RUNNER_ARCHIVE (pinned runner tar.xz) and
-//! optionally REPRO_CACHE (public .NET installers). A stand-in Wine program
+//! optionally REPRO_CACHE (public .NET installers). The 0.1.6 cleanup check
+//! also needs REPRO_ZIP_016. The 0.1.4 based checks need a launcher that still
+//! embeds 0.1.4 (Flightdeck 0.3.11); they passed there before 0.1.6 was pinned. A stand-in Wine program
 //! replaces the licensed Fenix app; MSFS itself is not started.
 use flightdeck::{backend::Launcher, bootstrap, fenix, fenix_update as update, files, resources};
 use serde_json::{Value, json};
@@ -152,13 +154,22 @@ fn setup(key: &str) -> Setup {
     }
 }
 
-fn candidate015(x: &Setup) {
-    let bytes = fs::read(&x.descriptor015).unwrap();
-    let meta = json!({"size":bytes.len(),"sha256":files::sha256(&bytes),"version":"0.1.5"});
+/// Offer a release exactly as discovery finds it on GitHub.
+fn candidate(x: &Setup, zip: &Path, descriptor: &Path, version: &str) {
+    let bytes = fs::read(descriptor).unwrap();
+    let meta = json!({"size":bytes.len(),"sha256":files::sha256(&bytes),"version":version});
     let candidate = update::descriptor(&bytes, &meta).unwrap();
     x.app.lock().fenix_updates.candidate = candidate;
     files::private_dir(&x.state_dir.join("fenix-bundles")).unwrap();
-    fs::copy(&x.zip015, x.state_dir.join("fenix-bundles/0.1.5.zip")).unwrap();
+    fs::copy(
+        zip,
+        x.state_dir.join(format!("fenix-bundles/{version}.zip")),
+    )
+    .unwrap();
+}
+
+fn candidate015(x: &Setup) {
+    candidate(x, &x.zip015, &x.descriptor015, "0.1.5");
 }
 
 fn install014(x: &Setup) {
@@ -383,11 +394,20 @@ fn fenix_015_recovery() {
     files::atomic_json(&root.join(fenix::MARKER), &pending).unwrap();
     report(root, "b0-stuck", json!({}), &x.app);
     assert_eq!(fenix::snapshot(&x.app)["installed"], false);
-    // An old pre-update copy left by an earlier successful update.
-    files::private_dir(
-        &root.join("local/msfs-prefix.before-fenix-update-20261030T120000-abcdef12/drive_c"),
+    // An old pre-update copy left by an earlier successful update, named by
+    // the installed state that update started from.
+    let old = "local/msfs-prefix.before-fenix-update-20261030T120000-abcdef12";
+    files::private_dir(&root.join(old).join("drive_c")).unwrap();
+    let earlier = root.join("private/fenix-patch-backup-20261101T120000-abcdef34");
+    files::private_dir(&earlier).unwrap();
+    files::atomic_json(
+        &earlier.join("previous-patch.json"),
+        &json!({"state": "installed", "upgrade_previous_prefix": old}),
     )
     .unwrap();
+    // A copy of an interrupted commit holds the newer profile and is kept.
+    let kept = "msfs-prefix.before-fenix-update-20261102T120000-abcdef56";
+    files::private_dir(&root.join("local").join(kept).join("drive_c")).unwrap();
 
     let check = update::check(&x.app, true);
     eprintln!("[repro] forced check: {check:?}");
@@ -411,14 +431,124 @@ fn fenix_015_recovery() {
     assert_eq!(marker["version"], "0.1.5");
     assert_eq!(marker["configured"], true);
     fenix::verify_installed(root, &marker).unwrap();
-    assert!(
+    assert_eq!(
         staging_dirs(root)
-            .iter()
-            .all(|n| !n.starts_with("msfs-prefix.before-fenix-update-")),
-        "{:?}",
-        staging_dirs(root)
+            .into_iter()
+            .filter(|n| n.starts_with("msfs-prefix.before-fenix-update-"))
+            .collect::<Vec<_>>(),
+        vec![kept.to_string()]
     );
     assert!(!root.join(work).exists(), "abandoned staging copy removed");
     let open = job(&x.app, "open", json!({}));
     assert_eq!(open["state"], "complete", "{open}");
+}
+
+#[test]
+#[ignore = "requires the pinned runner, public Fenix payloads and Wine; creates new prefixes"]
+fn fenix_016_reclaims_what_earlier_updates_left() {
+    let x = setup("cleanup");
+    // A new setup installs the embedded release from its cached archive.
+    let embedded = flightdeck::fenix_bundle::manifest(None).unwrap()["version"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    let cache = x.state_dir.join("fenix-bundles");
+    files::private_dir(&cache).unwrap();
+    fs::copy(
+        input("REPRO_ZIP_016"),
+        cache.join(format!("{embedded}.zip")),
+    )
+    .unwrap();
+    let ctx = x.app.reserve("fenix", "install", true).unwrap();
+    let installed = flightdeck::fenix_bundle::obtain(&cache, None, &ctx)
+        .and_then(|payload| fenix::install(&ctx, &payload))
+        .map_err(|e| e.to_string());
+    ctx.launcher
+        .finish(&ctx, Ok(json!({"state":"complete"})), false);
+    assert!(installed.is_ok(), "{installed:?}");
+    assert!(
+        !cache.join(format!("{embedded}.zip")).exists(),
+        "archive kept after extraction"
+    );
+    signed_in_fenix(&x);
+    let configure = job(&x.app, "configure", json!({}));
+    assert_eq!(configure["state"], "complete", "{configure}");
+
+    // What earlier launchers left: two superseded patch runners, the staging
+    // copy of a failed attempt and older cached releases with their archives.
+    let cancel = AtomicBool::new(false);
+    let old = |stamp: &str| x.root.join(format!("local/fenix-patch-{stamp}"));
+    for stamp in ["20261030T120000-00000001", "20261030T120000-00000002"] {
+        files::private_dir(&old(stamp)).unwrap();
+        flightdeck::process::copy_tree(&x.runner, &old(stamp).join("runner"), &cancel).unwrap();
+    }
+    let staging = old("20261109T090000-00000003");
+    files::private_dir(&staging).unwrap();
+    flightdeck::process::copy_tree(&x.prefix, &staging.join("prefix"), &cancel).unwrap();
+    flightdeck::process::copy_tree(&x.runner, &staging.join("runner"), &cancel).unwrap();
+    flightdeck::process::copy_tree(&x.bundle014, &cache.join("0.1.4"), &cancel).unwrap();
+    for name in ["0.1.4.zip", "0.1.5.zip"] {
+        fs::copy(&x.zip015, cache.join(name)).unwrap();
+    }
+    // A Wine server still runs from one superseded runner, for another prefix.
+    let busy = old("20261030T120000-00000002");
+    let other = x.root.join("private/other-prefix");
+    files::private_dir(&other).unwrap();
+    struct Server(std::process::Child);
+    impl Drop for Server {
+        // A failed assertion must not leave the server running.
+        fn drop(&mut self) {
+            let _ = self.0.kill();
+            let _ = self.0.wait();
+        }
+    }
+    let mut server = Server(
+        std::process::Command::new(busy.join("runner/files/bin/wineserver"))
+            .args(["-p", "-f"])
+            .env("WINEPREFIX", &other)
+            .spawn()
+            .unwrap(),
+    );
+    std::thread::sleep(Duration::from_secs(2));
+    assert!(
+        server.0.try_wait().unwrap().is_none(),
+        "wineserver did not start"
+    );
+
+    let open = job(&x.app, "open", json!({}));
+    report(
+        &x.root,
+        "r-open-reclaims",
+        json!({"job": open, "staging": staging_dirs(&x.root)}),
+        &x.app,
+    );
+    assert_eq!(open["state"], "complete", "{open}");
+    let marker: Value = files::json(&x.root.join(fenix::MARKER), 4 << 20).unwrap();
+    let work = marker["work"]
+        .as_str()
+        .unwrap()
+        .trim_start_matches("local/")
+        .to_string();
+    let mut expected = vec![
+        work.clone(),
+        "fenix-patch-20261030T120000-00000002".to_string(),
+    ];
+    expected.sort();
+    assert_eq!(
+        staging_dirs(&x.root),
+        expected,
+        "only the active and the busy runner remain"
+    );
+    let mut left: Vec<String> = fs::read_dir(&cache)
+        .unwrap()
+        .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
+        .collect();
+    left.sort();
+    assert_eq!(left, vec![embedded.clone()]);
+    fenix::verify_installed(&x.root, &marker).unwrap();
+
+    drop(server);
+    let open = job(&x.app, "open", json!({}));
+    assert_eq!(open["state"], "complete", "{open}");
+    assert_eq!(staging_dirs(&x.root), vec![work]);
 }

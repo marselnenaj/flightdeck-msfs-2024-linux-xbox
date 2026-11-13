@@ -1,5 +1,26 @@
 # Changes and release status
 
+## Unreleased
+
+- Install Fenix patch 0.1.6 directly in new setups. Its standalone installer
+  recovers failed patch updates the same way Flightdeck 0.3.11 does. Existing
+  installations already receive 0.1.6 as an automatic patch update.
+- Reclaim the disk space Fenix patch updates used up. Every update so far left
+  the previous patch runner (about 1.4 GB) and the downloaded release archive
+  (about 270 MB) behind, and failed attempts of earlier launchers left whole
+  staging copies. Flightdeck now removes these after an update and at the next
+  Fenix or MSFS start, including what earlier versions left. It keeps the active
+  runner, the profile and runner Restore returns to, and older extracted
+  releases only while a Steam installation uses them.
+- Keep the profile copy of an update whose final switch was interrupted. That
+  copy holds the newer profile. Only copies of completed updates are removed now,
+  the same rule the Fenix 0.1.6 installer uses.
+- Do not give up checking whether Wine still uses a folder when the user's
+  systemd instance or another non-dumpable process hides its environment. The
+  check stopped there on typical desktops, so unused Proton builds and Fenix
+  data could not be reclaimed. Such a process now counts as Wine when its name
+  or command line looks like Wine.
+
 ## 0.3.11 — 13 November 2026
 
 - Keep Fenix usable when an automatic patch update fails. Flightdeck applies a
