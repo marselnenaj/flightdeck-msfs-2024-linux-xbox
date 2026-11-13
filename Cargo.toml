@@ -21,7 +21,7 @@ name = "flightdeck-rust"
 path = "native/main.rs"
 
 [dependencies]
-fenix-patch = { git = "https://github.com/marselnenaj/fenix-a320-linux-patch", rev = "0c8079c61337e5699d0568ec9ffc66354b86708d" }
+fenix-patch = { git = "https://github.com/marselnenaj/fenix-a320-linux-patch", rev = "4b2a862682d55ce787825bdebbaf64d86db6b8fb" }
 flightdeck-ui = { path = "native/ui" }
 tar = "0.4"
 flate2 = "1"
