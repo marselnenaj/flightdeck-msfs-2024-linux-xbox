@@ -38,6 +38,10 @@ pub struct State {
     pub worker: Option<Arc<AtomicBool>>,
     pub status: Value,
     pub candidate: Value,
+    /// A release whose automatic update failed in this session. Launching Fenix
+    /// or MSFS keeps the installed patch instead of retrying every start;
+    /// an explicit update check or installation tries again.
+    pub deferred: Option<String>,
 }
 
 /// Release ordering includes numbered previews; a stable version always wins
@@ -474,6 +478,9 @@ pub fn check(app: &Arc<Launcher>, force: bool) -> Result<Value> {
     s.fenix_updates.worker = Some(Arc::clone(&cancel));
     s.fenix_updates.attempted = Some(Instant::now());
     s.fenix_updates.status = json!({"state":"checking"});
+    if force {
+        s.fenix_updates.deferred = None;
+    }
     drop(s);
     let app = Arc::clone(app);
     std::thread::spawn(move || {
@@ -504,6 +511,9 @@ pub fn ensure(ctx: &Context) -> Result<bool> {
     let Some(root) = &ctx.runtime else {
         return Ok(false);
     };
+    // Earlier launchers left a failed update in its preparation journal, which
+    // blocked every later Fenix and MSFS start until the profile was restored.
+    fenix::recover_preparation(ctx)?;
     if !files::exists(&root.join(fenix::MARKER)) {
         if files::exists(&root.join(crate::fenix_legacy::MARKER))
             && crate::fenix_legacy::automatic_allowed(root)
@@ -524,23 +534,48 @@ pub fn ensure(ctx: &Context) -> Result<bool> {
         return Ok(false);
     }
     let target = selected(ctx)?;
-    if version(string(&target["bundle"], "version")?)? <= version(string(&state, "version")?)? {
+    let target_version = string(&target["bundle"], "version")?.to_string();
+    if version(&target_version)? <= version(string(&state, "version")?)? {
         return Ok(false);
     }
+    if ctx.launcher.lock().fenix_updates.deferred.as_deref() == Some(target_version.as_str()) {
+        return Ok(false);
+    }
+    match apply(ctx, &state, &target) {
+        Err(Error::Cancelled) => Err(Error::Cancelled),
+        Err(error) => {
+            // The installation transaction already reinstated the previous
+            // patch. Keep using it when it still verifies; the update stays
+            // available from Updates or Mods.
+            let current = runtime::value(&root.join(fenix::MARKER))?;
+            if current["state"] != "installed" || fenix::verify_installed(root, &current).is_err() {
+                return Err(error);
+            }
+            eprintln!("Automatic Fenix patch update {target_version} failed: {error}");
+            let mut s = ctx.launcher.lock();
+            s.fenix_updates.deferred = Some(target_version);
+            s.fenix_updates.status = json!({"state":"failed","requires_launcher_update":matches!(error, Error::Invalid(UPGRADE)),"error":error.to_string(),"checked_at":files::now()});
+            Ok(false)
+        }
+        updated => updated,
+    }
+}
+
+fn apply(ctx: &Context, state: &Value, target: &Value) -> Result<bool> {
     let lock = bundle::select_variant(target["bundle"].clone(), state["variant"].as_str())?;
     require(
         lock["previous_releases"]
-            .get(string(&state, "version")?)
+            .get(string(state, "version")?)
             .is_some(),
         UPGRADE,
     )?;
-    let installed = installed_manifest(&state, state["variant"].as_str())?;
+    let installed = installed_manifest(state, state["variant"].as_str())?;
     let previous = if installed["version"] == state["version"] {
         &installed
     } else {
-        &installed["previous_releases"][string(&state, "version")?]
+        &installed["previous_releases"][string(state, "version")?]
     };
-    let accepted = &lock["previous_releases"][string(&state, "version")?];
+    let accepted = &lock["previous_releases"][string(state, "version")?];
     require(
         accepted["files"] == previous["files"]
             && accepted["integration"] == previous["integration"],

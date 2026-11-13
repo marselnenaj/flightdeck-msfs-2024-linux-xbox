@@ -89,6 +89,10 @@ Siehe [Änderungsübersicht](changelog.md#0310--7-november-2026).
   erhält Flugzeuge, Einstellungen und Wiederherstellungspunkte; der geprüfte
   Download wird wiederverwendet. Geänderte Dateien oder eine bereits begonnene
   Aktivierung erfordern eine Wiederherstellung unter **Mods**.
+  Seit 0.3.11 setzt ein fehlgeschlagenes automatisches Update den bisherigen
+  Patch sofort wieder ein, und Fenix öffnet weiter damit; von 0.3.10 oder älter
+  hängengebliebene Vorbereitungen werden beim nächsten Start von Fenix oder MSFS
+  repariert.
 - **Fenix-Installation:** Bei „application install hook failed“ können bereits
   FenixApp-Dateien vorhanden sein, obwohl die Einrichtung nicht abgeschlossen ist.
   Ein reproduzierter ICU-/.NET-Fall ist reparierbar; die allgemeine Meldung allein

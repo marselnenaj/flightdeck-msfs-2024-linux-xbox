@@ -97,6 +97,9 @@ See the [release changes](changelog.md#0310--7-november-2026).
   Fenix first. The retry verifies the preceding patch and retains its aircraft,
   settings and restore chain; it reuses the verified download. Changed files or
   a transaction already publishing its profile require recovery under **Mods**.
+  Since 0.3.11, a failed automatic update reinstates the previous patch at once
+  and Fenix keeps opening with it; installations left in the preparation stage
+  by 0.3.10 or earlier are recovered at the next Fenix or MSFS start.
 - **Fenix installation:** The message “application install hook failed” can
   leave FenixApp files present without completing setup. A reproduced ICU/.NET
   case is repairable; the generic warning alone does not identify the cause.

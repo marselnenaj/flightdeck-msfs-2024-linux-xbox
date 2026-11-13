@@ -253,6 +253,22 @@ fn retry(root: &Path, state: &Value, ctx: &Context) -> Result<()> {
     files::directory(&root.join("private"), false)?.sync_all()?;
     Ok(())
 }
+/// Reinstate the verified state of an interrupted or failed preparation, as the
+/// explicit Retry action does. Nothing of a preparation was published yet.
+pub fn recover_preparation(ctx: &Context) -> Result<bool> {
+    let root = ctx.root()?;
+    let marker = root.join(MARKER);
+    if !files::exists(&marker) {
+        return Ok(false);
+    }
+    let state = runtime::value(&marker)?;
+    if !retryable(root, &state) {
+        return Ok(false);
+    }
+    let work = bundle::contained(root, string(&state, "work")?)?;
+    abandon(root, &state, &work, ctx);
+    Ok(!files::exists(&marker) || runtime::value(&marker)?["state"] != "preparing")
+}
 pub fn verify_installed(root: &Path, state: &Value) -> Result<()> {
     let current = crate::fenix_update::installed_manifest(state, state["variant"].as_str())?;
     let lock = if state["version"] == current["version"] {
@@ -459,74 +475,86 @@ pub fn install(ctx: &Context, payload: &Path) -> Result<()> {
     files::atomic_json(&marker, &state)?;
     let staged = work.join("prefix");
     let runner = work.join("runner");
-    ctx.update(json!({"phase":"copy_profile","transfer":null}));
-    ctx.progress(if upgrade.is_some() {
-        "Updating the Fenix patch; installed aircraft and settings are retained …"
-    } else {
-        "Copying Wine profile and runner; the original profile remains available …"
-    });
-    process::copy_tree(&prefix, &staged, &ctx.cancel)?;
-    tx::relocate_prefix_links(&prefix, &staged, &ctx.cancel)?;
-    let drive = bundle::contained(&staged, "dosdevices/c:").or_else(|_| {
-        let path = staged.join("dosdevices/c:");
-        files::directory(&staged.join("dosdevices"), false)?;
-        Ok::<_, Error>(path)
-    })?;
-    require(
-        !files::exists(&drive) || drive.symlink_metadata()?.is_symlink(),
-        "The staged C: drive is not a Wine link.",
-    )?;
-    if files::exists(&drive) {
-        fs::remove_file(&drive)?;
-    }
-    symlink("../drive_c", &drive)?;
-    process::copy_tree(&original_runner, &runner, &ctx.cancel)?;
-    ctx.update(json!({"phase":"prepare_windows","transfer":null}));
-    ctx.progress("Checking Windows dependencies in the copied Fenix profile …");
-    let mut wine = StagedWine::new(root, &staged, &runner, &backup.join("setup.log"), ctx)?;
-    let setup_result = (|| {
-        framework_repair::prepare(
-            &mut wine,
-            |name, url, hash| {
-                bootstrap::download(
-                    url,
-                    hash,
-                    &root.join("private/fenix-downloads").join(name),
-                    &ctx.cancel,
-                    |_| {},
-                )
-            },
-            |message| ctx.progress(message),
+    let pending = state.clone();
+    let prepared = (|| -> Result<()> {
+        ctx.update(json!({"phase":"copy_profile","transfer":null}));
+        ctx.progress(if upgrade.is_some() {
+            "Updating the Fenix patch; installed aircraft and settings are retained …"
+        } else {
+            "Copying Wine profile and runner; the original profile remains available …"
+        });
+        process::copy_tree(&prefix, &staged, &ctx.cancel)?;
+        tx::relocate_prefix_links(&prefix, &staged, &ctx.cancel)?;
+        let drive = bundle::contained(&staged, "dosdevices/c:").or_else(|_| {
+            let path = staged.join("dosdevices/c:");
+            files::directory(&staged.join("dosdevices"), false)?;
+            Ok::<_, Error>(path)
+        })?;
+        require(
+            !files::exists(&drive) || drive.symlink_metadata()?.is_symlink(),
+            "The staged C: drive is not a Wine link.",
         )?;
-        crate::fenix_installer::prepare(&wine.wine)?;
-        if upgrade.is_none() && legacy.is_none() {
-            ctx.progress("Preparing fonts, graphics dependencies and Fenix settings …");
-            setup::graphics_fonts(&wine)?;
+        if files::exists(&drive) {
+            fs::remove_file(&drive)?;
         }
-        setup::geometry(&wine, &root.join("private/fenix-downloads"), payload, ctx)?;
-        crate::fenix_desktop::ensure(&wine.wine, &root.join("private/fenix-downloads"), ctx)
+        symlink("../drive_c", &drive)?;
+        process::copy_tree(&original_runner, &runner, &ctx.cancel)?;
+        ctx.update(json!({"phase":"prepare_windows","transfer":null}));
+        ctx.progress("Checking Windows dependencies in the copied Fenix profile …");
+        let mut wine = StagedWine::new(root, &staged, &runner, &backup.join("setup.log"), ctx)?;
+        let setup_result = (|| {
+            framework_repair::prepare(
+                &mut wine,
+                |name, url, hash| {
+                    bootstrap::download(
+                        url,
+                        hash,
+                        &root.join("private/fenix-downloads").join(name),
+                        &ctx.cancel,
+                        |_| {},
+                    )
+                },
+                |message| ctx.progress(message),
+            )?;
+            crate::fenix_installer::prepare(&wine.wine)?;
+            if upgrade.is_none() && legacy.is_none() {
+                ctx.progress("Preparing fonts, graphics dependencies and Fenix settings …");
+                setup::graphics_fonts(&wine)?;
+            }
+            setup::geometry(&wine, &root.join("private/fenix-downloads"), payload, ctx)?;
+            crate::fenix_desktop::ensure(&wine.wine, &root.join("private/fenix-downloads"), ctx)
+        })();
+        let stopped = wine.stop();
+        setup_result.and(stopped)?;
+        bundle::overlay(&staged, &runner, payload, variant.as_deref(), ctx)?;
+        if let Some(legacy) = &legacy {
+            setup::configure_autostart(&staged)?;
+            state["configured"] = json!(legacy.configured);
+            state["readouts"] = json!(legacy.readouts);
+            state["display_renderer"] = json!(legacy.renderer.as_str());
+            legacy.revalidate(root, &state["bundle_manifest"])?;
+        } else if upgrade.is_none() {
+            setup::apply_settings(&mut state, &staged, renderer)?;
+        } else if state["configured"] == true
+            && setup::migrate_renderer(
+                &mut state,
+                &staged,
+                &backup.join("settings-before-update"),
+                renderer,
+                &ctx.cancel,
+            )?
+        {
+            // Unconfigured profiles have no applied display settings to migrate;
+            // the later Configure step writes them for the current renderer.
+            ctx.progress("Updating the display renderer for this Proton build …");
+        }
+        wine_processes::idle(&prefix)?;
+        Ok(())
     })();
-    let stopped = wine.stop();
-    setup_result.and(stopped)?;
-    bundle::overlay(&staged, &runner, payload, variant.as_deref(), ctx)?;
-    if let Some(legacy) = &legacy {
-        setup::configure_autostart(&staged)?;
-        state["configured"] = json!(legacy.configured);
-        state["readouts"] = json!(legacy.readouts);
-        state["display_renderer"] = json!(legacy.renderer.as_str());
-        legacy.revalidate(root, &state["bundle_manifest"])?;
-    } else if upgrade.is_none() {
-        setup::apply_settings(&mut state, &staged, renderer)?;
-    } else if setup::migrate_renderer(
-        &mut state,
-        &staged,
-        &backup.join("settings-before-update"),
-        renderer,
-        &ctx.cancel,
-    )? {
-        ctx.progress("Updating the display renderer for this Proton build …");
+    if let Err(error) = prepared {
+        abandon(root, &pending, &work, ctx);
+        return Err(error);
     }
-    wine_processes::idle(&prefix)?;
     ctx.begin_commit(
         "publish_runtime",
         "Die geprüfte Fenix-Umgebung wird aktiviert …",
@@ -559,7 +587,59 @@ pub fn install(ctx: &Context, payload: &Path) -> Result<()> {
     if legacy.is_some() {
         crate::fenix_legacy::resume_automatic(root)?;
     }
+    if upgrade.is_some() {
+        prune_update_copies(root);
+    }
     Ok(())
+}
+/// Preparation never publishes its staged profile, runner or scripts. A failed
+/// attempt therefore reinstates the verified previous state at once: an
+/// update keeps the installed patch usable, a new setup returns to "available".
+/// The unpublished staging copy is removed so repeated attempts cannot fill the disk.
+fn abandon(root: &Path, pending: &Value, work: &Path, ctx: &Context) {
+    if retry(root, pending, ctx).is_err() {
+        // Keep the journal for an explicit retry or restore from the UI.
+        return;
+    }
+    let current = optional(&root.join(MARKER)).unwrap_or(Value::Null);
+    if current["work"] != pending["work"]
+        && let Ok(id) = crate::owned_tree::identity(work)
+        && crate::owned_tree::remove(work, id).is_err()
+    {
+        eprintln!("The unused Fenix staging copy could not be removed.");
+    }
+}
+/// Profile copies taken before a patch update are never used by Restore, which
+/// returns to the profile from before the first patch. Remove them once the
+/// update is committed, including those left by earlier launcher versions.
+fn prune_update_copies(root: &Path) {
+    let Ok(entries) = fs::read_dir(root.join("local")) else {
+        return;
+    };
+    for entry in entries.flatten() {
+        let name = entry.file_name();
+        let Some(name) = name.to_str() else {
+            continue;
+        };
+        if !matches(
+            r"^msfs-prefix\.before-fenix-update-[0-9]{8}T[0-9]{6}-[0-9a-f]{8}$",
+            &json!(name),
+        ) {
+            continue;
+        }
+        let path = entry.path();
+        let removed = (|| -> Result<()> {
+            require(
+                entry.file_type()?.is_dir(),
+                "Unexpected Fenix update profile copy.",
+            )?;
+            wine_processes::idle(&path)?;
+            crate::owned_tree::remove(&path, crate::owned_tree::identity(&path)?)
+        })();
+        if removed.is_err() {
+            eprintln!("An earlier Fenix update profile copy could not be removed: {name}");
+        }
+    }
 }
 pub fn update_script_manifest(root: &Path) -> Result<()> {
     let imported = root.join("private/import-manifest.json");
