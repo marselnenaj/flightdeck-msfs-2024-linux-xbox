@@ -27,6 +27,13 @@ downloads, updates and account sign-in.
 **Download the [latest stable release](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/latest).**
 The launcher, installer and updater need no Python.
 
+**New in 0.3.12:** Flightdeck checks the Fenix auto-start before every MSFS
+start and repairs a missing, disabled or outdated entry, so the Fenix companion
+opens with the aircraft again. The Fenix panel shows why it would not start and
+what the last session observed, and **Collect Fenix logs** saves the logs needed
+for a report. Fenix patch 0.1.6 is installed directly, and space left by earlier
+patch updates is reclaimed. [Details](docs/changelog.md#0312--15-november-2026).
+
 **New in 0.3.11:** a failed automatic Fenix patch update no longer blocks Fenix
 with "Last operation failed". Flightdeck keeps the installed patch, repairs
 installations left in that state and removes unused pre-update profile copies.
