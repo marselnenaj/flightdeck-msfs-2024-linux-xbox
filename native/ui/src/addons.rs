@@ -138,6 +138,71 @@ impl App {
         self.control(title, message, true)
     }
 
+    /// Why MSFS would not start the Fenix companion, and what the last
+    /// session observed. Shared by the Xbox and the Steam panel.
+    pub(crate) fn fenix_autostart_notice<'a>(&self, data: &Value) -> Option<Element<'a, Message>> {
+        let problem = match data["autostart"].as_str() {
+            Some("missing") => Some(self.tr(
+                "MSFS startet Fenix derzeit nicht: Der Autostart-Eintrag in exe.xml fehlt. Flightdeck trägt ihn beim nächsten MSFS-Start wieder ein, oder wähle „Einstellungen erneut anwenden“.",
+                "MSFS will not start Fenix right now: the auto-start entry in exe.xml is missing. Flightdeck adds it again at the next MSFS start, or choose “Reapply settings”.",
+            )),
+            Some("disabled") => Some(self.tr(
+                "MSFS startet Fenix derzeit nicht: Der Autostart-Eintrag in exe.xml ist ausgeschaltet. Flightdeck schaltet ihn beim nächsten MSFS-Start wieder ein, oder wähle „Einstellungen erneut anwenden“.",
+                "MSFS will not start Fenix right now: the auto-start entry in exe.xml is disabled. Flightdeck enables it again at the next MSFS start, or choose “Reapply settings”.",
+            )),
+            Some("wrong_path") => Some(self.tr(
+                "MSFS startet Fenix derzeit nicht: Der Autostart-Eintrag zeigt nicht auf den installierten Fenix-Bootstrapper. Flightdeck korrigiert ihn beim nächsten MSFS-Start, oder wähle „Einstellungen erneut anwenden“.",
+                "MSFS will not start Fenix right now: the auto-start entry does not point to the installed Fenix bootstrapper. Flightdeck corrects it at the next MSFS start, or choose “Reapply settings”.",
+            )),
+            Some("bootstrapper_missing") => Some(self.tr(
+                "MSFS kann Fenix nicht starten: FenixBootstrapper.exe fehlt im Fenix-Programmordner. Installiere das Flugzeug in der Fenix-App erneut.",
+                "MSFS cannot start Fenix: FenixBootstrapper.exe is missing from the Fenix program folder. Reinstall the aircraft in the Fenix app.",
+            )),
+            Some("no_settings_folder") => Some(self.tr(
+                "Der MSFS-Einstellungsordner mit exe.xml wurde nicht eindeutig gefunden. Starte MSFS einmal, beende es und wähle dann „Einstellungen erneut anwenden“.",
+                "The MSFS settings folder with exe.xml could not be identified. Start MSFS once, quit it, then choose “Reapply settings”.",
+            )),
+            Some("unreadable") => Some(self.tr(
+                "exe.xml im MSFS-Einstellungsordner ist ungültig, daher startet MSFS keine Add-ons. Sammle die Fenix-Logs und prüfe die Datei.",
+                "exe.xml in the MSFS settings folder is invalid, so MSFS starts no add-ons. Collect the Fenix logs and check the file.",
+            )),
+            _ => None,
+        };
+        let session = &data["autostart_record"]["session"];
+        let observed = (session.is_object() && session["ended_at"].is_string()).then(|| {
+            match (session["bootstrapper_seen"] == true, session["fenix_seen"] == true) {
+                (_, true) => self.tr(
+                    "Letzte MSFS-Sitzung: Fenix wurde gestartet.",
+                    "Last MSFS session: Fenix was started.",
+                ),
+                (true, false) => self.tr(
+                    "Letzte MSFS-Sitzung: Der Fenix-Bootstrapper lief, hat Fenix aber nicht gestartet. Falls du die Fenix geladen hattest, sammle die Fenix-Logs und schick sie mit.",
+                    "Last MSFS session: the Fenix bootstrapper ran but did not start Fenix. If you loaded the Fenix, collect the Fenix logs and include them in your report.",
+                ),
+                (false, false) => self.tr(
+                    "Letzte MSFS-Sitzung: MSFS hat den Fenix-Bootstrapper nicht gestartet. Sammle die Fenix-Logs und schick sie mit.",
+                    "Last MSFS session: MSFS did not start the Fenix bootstrapper. Collect the Fenix logs and include them in your report.",
+                ),
+            }
+        });
+        if problem.is_none() && observed.is_none() {
+            return None;
+        }
+        let mut notice = column![].spacing(8);
+        if let Some(problem) = problem {
+            notice = notice.push(label(
+                problem,
+                14.0,
+                Weight::Semibold,
+                iced::color!(0xff9199),
+            ));
+        }
+        if let Some(observed) = observed {
+            notice = notice.push(self.paragraph(observed));
+        }
+        Some(notice.into())
+    }
+
     fn addon_facts<'a>(&self, facts: &[(&str, bool)]) -> Element<'a, Message> {
         let mut items = row![].spacing(10);
         for (name, detected) in facts {
@@ -372,13 +437,17 @@ impl App {
                     ),
                     (
                         self.tr("Anzeigen & Autostart", "Displays & auto-start"),
-                        yes(data, "configured"),
+                        yes(data, "configured")
+                            && data["autostart"].as_str().is_none_or(|v| v == "ready"),
                     ),
                     (
                         self.tr("Legacy-FCU-Anzeigen", "Legacy FCU readouts"),
                         yes(data, "configured") && data["readouts"] != false,
                     ),
                 ]));
+            }
+            if let Some(notice) = self.fenix_autostart_notice(data) {
+                content = content.push(notice);
             }
             let display_note = match data["display_renderer"].as_str() {
                 Some("CPU") => self.tr(
@@ -424,6 +493,11 @@ impl App {
                         self.tr("Fenix-App neu installieren", "Reinstall the Fenix app"),
                     ))
                     .push(self.fenix_installer(true));
+            }
+            if yes(data, "installed") || data["state"] == "legacy" {
+                let action = Fenix("logs");
+                let message = self.request(&action).map(|_| Message::Action(action));
+                manage = manage.push(self.control("Fenix-Logs sammeln", message, false));
             }
             manage = manage.push(self.fenix_update_controls(data)).push(self.job("fenix"))
                 .push(self.disclosure(Disclosure::FenixAdvanced, "Lokales Patch-Paket und Wiederherstellung", "", column![

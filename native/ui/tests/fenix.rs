@@ -235,3 +235,46 @@ fn pending_readouts_keep_setup_complete_and_offer_to_reapply()
     }
     Ok(())
 }
+
+#[test]
+fn unstartable_companion_is_explained_and_logs_can_be_collected()
+-> Result<(), Box<dyn std::error::Error>> {
+    let mut app = manager_only(Language::En);
+    let fenix = app.snapshot.get_mut("fenix").expect("fenix");
+    for (key, value) in [
+        ("fenix_installed", json!(true)),
+        ("settings_ready", json!(true)),
+        ("configured", json!(true)),
+        ("job", json!(null)),
+        ("autostart", json!("wrong_path")),
+        (
+            "autostart_record",
+            json!({"session":{"ended_at":"2026-11-15T10:00:00+00:00","bootstrapper_seen":false,"fenix_seen":false}}),
+        ),
+    ] {
+        fenix[key] = value;
+    }
+    let mut ui = iced_test::Simulator::with_size(settings(), Size::new(960.0, 1400.0), app.view());
+    ui.find("MSFS will not start Fenix right now: the auto-start entry does not point to the installed Fenix bootstrapper. Flightdeck corrects it at the next MSFS start, or choose “Reapply settings”.")?;
+    ui.find("Last MSFS session: MSFS did not start the Fenix bootstrapper. Collect the Fenix logs and include them in your report.")?;
+    ui.find("– Displays & auto-start")?;
+    drop(ui);
+    let _ = app.update(Message::Toggle(Disclosure::FenixManage));
+    let mut ui = iced_test::Simulator::with_size(settings(), Size::new(960.0, 1600.0), app.view());
+    ui.click("Collect Fenix logs")?;
+    assert!(matches!(
+        ui.into_messages().next(),
+        Some(Message::Action(Action::Fenix("logs")))
+    ));
+    let request = app.request(&Action::Fenix("logs")).expect("logs enabled");
+    assert_eq!(request.path, "fenix/logs");
+    drop(request);
+
+    let fenix = app.snapshot.get_mut("fenix").expect("fenix");
+    fenix["autostart"] = json!("ready");
+    fenix["autostart_record"] = json!(null);
+    let mut ui = iced_test::Simulator::with_size(settings(), Size::new(960.0, 1400.0), app.view());
+    ui.find("✓ Displays & auto-start")?;
+    assert!(ui.find("Last MSFS session: Fenix was started.").is_err());
+    Ok(())
+}

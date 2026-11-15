@@ -130,6 +130,8 @@ pub fn launch(app: &Arc<Launcher>) -> Result<Value> {
         "Die GSX-Einrichtung ist unvollständig. Unter Mods wiederherstellen.",
     )?;
     require(!running(&item)?, "Dieser Simulator läuft bereits in Steam.")?;
+    // MSFS reads exe.xml at its start; a Fenix entry is checked before that.
+    crate::steam_fenix::ensure_autostart(&app.state_dir, &item);
     let child = process::spawn(&mut command(&item, false)?, None)?;
     s.steam_notice.clear();
     s.started = Some(Instant::now());

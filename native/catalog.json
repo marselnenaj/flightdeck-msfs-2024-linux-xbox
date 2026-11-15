@@ -484,6 +484,8 @@
   "Fenix-Einrichtung übernommen und Patch aktualisiert. Der vorherige Stand bleibt wiederherstellbar.": "Fenix setup adopted and patch updated. The previous state remains available for restoration.",
   "Fenix-Fenster geschlossen. Wende jetzt die Anzeige-Einstellungen an.": "Fenix window closed. Now apply the display settings.",
   "Fenix-Linux-Patch": "Fenix Linux patch",
+  "Fenix-Logs gespeichert unter ~/.local/state/flightdeck/fenix-logs. Prüfe die Dateien vor dem Teilen und entferne Konto- und Lizenzangaben.": "Fenix logs saved in ~/.local/state/flightdeck/fenix-logs. Review the files before sharing and remove account and license details.",
+  "Fenix-Logs gespeichert, der Ordner wird geöffnet. Prüfe die Dateien vor dem Teilen und entferne Konto- und Lizenzangaben.": "Fenix logs saved; opening the folder. Review the files before sharing and remove account and license details.",
   "Fenix-Manager geschlossen.": "Fenix manager closed.",
   "Fenix-Patch eingerichtet. Die nächsten Schritte stehen oben.": "Fenix patch ready. The next steps are shown above.",
   "Fenix-Reparatur fehlgeschlagen": "Fenix repair failed",

@@ -108,6 +108,9 @@ impl App {
         if !s(data, "message").is_empty() {
             content = content.push(self.paragraph(s(data, "message")));
         }
+        if let Some(notice) = self.fenix_autostart_notice(data) {
+            content = content.push(notice);
+        }
         if yes(data, "installed") && data["tool_selected"] != true {
             content = content.push(
                 self.control(
@@ -159,6 +162,12 @@ impl App {
                 yes(data, "settings_ready"),
             ),
             ("Fenix beenden", "Stop Fenix", "stop", yes(data, "can_stop")),
+            (
+                "Fenix-Logs sammeln",
+                "Collect Fenix logs",
+                "logs",
+                yes(data, "installed"),
+            ),
         ] {
             if show {
                 let action = Action::Fenix(op);

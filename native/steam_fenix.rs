@@ -337,6 +337,15 @@ pub fn snapshot(app: &Launcher) -> Value {
                 .join("fenixConfig.xml")
                 .is_file()
     );
+    value["autostart"] = if value["configured"] == true {
+        json!(crate::fenix_autostart::status(
+            &item.prefix(),
+            target.settings()
+        ))
+    } else {
+        Value::Null
+    };
+    value["autostart_record"] = autostart_record(&app.state_dir, &item);
     value["fenix_running"] = json!(wine_processes::status(&item.prefix()).0);
     value["can_stop"] = json!(
         !wine_processes::status(&item.prefix()).1
@@ -390,6 +399,40 @@ fn evidence_root_at(state_dir: &Path, item: &Installation) -> PathBuf {
         .join(&item.id)
         .join("profiles")
         .join(item.prefix_generation())
+}
+/// The Steam profile, its simulator settings folder and evidence folder, when
+/// Fenix is configured there; otherwise exe.xml stays untouched.
+pub(crate) fn autostart_target(
+    state_dir: &Path,
+    item: &Installation,
+) -> Option<(PathBuf, &'static str, PathBuf)> {
+    let system = engine(state_dir, item).ok()?;
+    let target = item.target().ok()?;
+    let state = steam::installed_state(&system, &target).ok()?;
+    let configured = state
+        .get("state")
+        .and_then(|v| v.as_str())
+        .is_some_and(|v| v == "installed")
+        && state
+            .get("configured")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
+    configured.then(|| {
+        (
+            item.prefix(),
+            target.settings(),
+            evidence_root_at(state_dir, item).join("private"),
+        )
+    })
+}
+/// Check and repair the entry before Steam starts the simulator.
+pub(crate) fn ensure_autostart(state_dir: &Path, item: &Installation) {
+    if let Some((prefix, folder, private)) = autostart_target(state_dir, item) {
+        crate::fenix_autostart::ensure(&prefix, folder, &private);
+    }
+}
+pub fn autostart_record(state_dir: &Path, item: &Installation) -> Value {
+    crate::fenix_autostart::load(&evidence_root_at(state_dir, item).join("private"))
 }
 pub fn latest_attempt(state_dir: &Path, item: &Installation) -> Value {
     crate::fenix_diagnostics::load(&evidence_root_at(state_dir, item))
@@ -645,6 +688,7 @@ pub fn start(app: &Arc<Launcher>, operation: &str, data: &Value) -> Result<Value
                 let result=perform(&system,&item,&operation,&payload,None,&|message|{ctx.progress(message);Ok(())});
                 if let Err(error)=&result{eprintln!("Steam Fenix operation failed: {}",error.to_string().chars().take(8192).collect::<String>());}
                 result.map_err(map_error)?;
+                if operation=="configure"{ensure_autostart(&ctx.launcher.state_dir,&item);}
             }
         }
         Ok(json!({"state":"complete","phase":"complete","message":"Steam-Fenix-Vorgang abgeschlossen.","detail":null}))

@@ -57,7 +57,7 @@ pub fn get(app: &Arc<Launcher>, path: &str) -> Option<Result<Value>> {
         "/api/diagnostics" => {
             let s = app.lock();
             let item = s.steam.as_ref()?;
-            json!({"source":"steam","installation":item.public(true),"summary":{"context":{"source":"steam","game_id":item.game.id(),"launcher_version":crate::VERSION},"fenix":steam_fenix::latest_attempt(&app.state_dir,item)},"beta":true})
+            json!({"source":"steam","installation":item.public(true),"summary":{"context":{"source":"steam","game_id":item.game.id(),"launcher_version":crate::VERSION},"fenix":steam_fenix::latest_attempt(&app.state_dir,item),"fenix_autostart":steam_fenix::autostart_record(&app.state_dir,item)},"beta":true})
         }
         "/api/problem-reports" => json!({"available":false,"source":"steam"}),
         _ => return None,
@@ -93,6 +93,7 @@ pub fn post(app: &Arc<Launcher>, path: &str, data: &Value) -> Option<Result<Valu
             crate::gsx::start(app, p.rsplit('/').next().unwrap_or(""), data)
         }
         "/api/fenix/pick" => crate::fenix::pick(app, data),
+        "/api/fenix/logs" => crate::fenix_logs::steam_export(app),
         "/api/fenix/check-update" => crate::fenix_update::check(app, true),
         p if p.starts_with("/api/fenix/") => {
             steam_fenix::start(app, p.rsplit('/').next().unwrap_or(""), data)

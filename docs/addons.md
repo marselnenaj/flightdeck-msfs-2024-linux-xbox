@@ -345,6 +345,30 @@ a game crash or **Stop**, with a bounded fallback for stuck processes. Since
 installation or livery download there before quitting MSFS. Other Wine profiles
 are excluded from that cleanup.
 
+### When the Fenix companion does not open
+
+MSFS, not Flightdeck, starts Fenix: it runs `FenixBootstrapper.exe` from the
+`exe.xml` in the simulator's settings folder, and the bootstrapper starts the
+Fenix companion once the aircraft loads. Since 0.3.12 Flightdeck checks that
+entry before every MSFS start, also for Steam: it must exist, be enabled and
+point to the bootstrapper actually installed in the Fenix program folder. A
+missing, disabled or outdated entry is repaired; other add-on entries are
+kept. A missing bootstrapper or settings folder is shown in **Mods → Fenix A320**
+with what to do next, because only a reinstall in the Fenix app or a first MSFS
+start can fix it.
+
+During a session Flightdeck also notes whether the bootstrapper and Fenix
+started. The panel shows the result of the last session, and problem reports
+include it as fixed values without paths or log text.
+
+**Manage & repair → Collect Fenix logs** saves one archive to
+`~/.local/state/flightdeck/fenix-logs/` and opens that folder. It contains
+`exe.xml`, Flightdeck's Fenix logs, the latest game log and the `.log`/`.txt`
+files Fenix writes below `C:\ProgramData\Fenix` and its app folders, plus a
+summary of the checks. Large files are cut to their last 4 MiB. Files named
+like license, activation or token files are left out, but logs can still
+contain your account name: review the archive before sharing it.
+
 Flightdeck 0.2.23 includes patch **0.1.0** as its verified fallback
 and independently checks GitHub for compatible Fenix patch releases at startup
 and every 30 minutes. Failed checks retry after five minutes and do not prevent

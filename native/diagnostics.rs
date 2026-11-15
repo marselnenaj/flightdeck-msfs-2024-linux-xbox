@@ -76,6 +76,9 @@ pub(crate) fn collect(captured: Captured) -> Value {
     summary["installation"] = captured.installation;
     summary["maintenance"] = captured.maintenance;
     summary["fenix"] = root.map(fenix_diagnostics::load).unwrap_or(Value::Null);
+    summary["fenix_autostart"] = root
+        .map(|root| crate::fenix_autostart::load(&root.join("private")))
+        .unwrap_or(Value::Null);
     let cloud = captured.cloud;
     summary["cloud_sync"] = ["state", "phase", "error_code", "error_details"]
         .into_iter()
