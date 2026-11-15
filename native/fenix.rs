@@ -1127,6 +1127,15 @@ pub fn snapshot(app: &Launcher) -> Value {
                 value["state"] = state["state"].clone();
                 value["installed"] = json!(state["state"] == "installed");
                 value["configured"] = json!(state["configured"] == true);
+                value["autostart"] = if state["configured"] == true {
+                    json!(crate::fenix_autostart::status(
+                        &prefix,
+                        crate::fenix_autostart::FOLDER_2024
+                    ))
+                } else {
+                    Value::Null
+                };
+                value["autostart_record"] = crate::fenix_autostart::load(&root.join("private"));
                 value["readouts"] = json!(readouts(&state));
                 value["readouts_preference_retained"] =
                     state["readouts_preference_retained"].clone();

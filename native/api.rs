@@ -90,6 +90,7 @@ pub fn post(app: &Arc<Launcher>, path: &str, data: &Value, locale: &str) -> Opti
             crate::cloud_sync::post(app, path.rsplit('/').next().unwrap_or(""), data)
         }
         "/api/fenix/pick" => crate::fenix::pick(app, data),
+        "/api/fenix/logs" => crate::fenix_logs::export(app),
         "/api/fenix/check-update" => crate::fenix_update::check(app, true),
         path if path.starts_with("/api/orbx/") => {
             crate::orbx::start(app, path.rsplit('/').next().unwrap_or(""), data)

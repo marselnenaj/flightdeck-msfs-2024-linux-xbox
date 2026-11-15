@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+- Check the Fenix auto-start before every MSFS start, for Xbox runtimes and
+  Steam. A user reported that the Fenix companion never opened after a
+  successful installation. Flightdeck recorded "configured" once and never
+  looked at `exe.xml` again, and it always wrote the bootstrapper's usual path,
+  even when it was missing there. It now repairs a missing, disabled or
+  outdated entry and points it at the bootstrapper actually installed. A
+  missing bootstrapper or settings folder is shown in the Fenix panel with the
+  next step.
+- Record whether a session started the Fenix bootstrapper and Fenix. The panel
+  shows the last session's result, and problem reports include it as fixed
+  values.
+- Add **Collect Fenix logs**: one local archive with `exe.xml`, Flightdeck's
+  Fenix logs, the latest game log and the logs Fenix writes in the profile.
 - Install Fenix patch 0.1.6 directly in new setups. Its standalone installer
   recovers failed patch updates the same way Flightdeck 0.3.11 does. Existing
   installations already receive 0.1.6 as an automatic patch update.

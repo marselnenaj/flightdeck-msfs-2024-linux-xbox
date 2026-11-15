@@ -566,6 +566,10 @@ impl App {
                             ("fenix/restore", change && yes(data, "can_restore"))
                         }
                         "stop" => ("fenix/stop", enabled && yes(data, "can_stop")),
+                        "logs" => (
+                            "fenix/logs",
+                            enabled && (yes(data, "installed") || data["state"] == "legacy"),
+                        ),
                         _ => return None,
                     }
                 } else {

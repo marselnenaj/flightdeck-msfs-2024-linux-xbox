@@ -393,6 +393,9 @@ pub fn run_with_state(root: &Path, lease: Option<i32>, state_dir: &Path) -> Resu
         &root.join("private"),
         &format!("run-{}-", chrono::Utc::now().format("%Y%m%d-%H%M%S")),
     )?;
+    // MSFS reads exe.xml at its start: check the Fenix entry before that and
+    // record which Fenix processes this session starts.
+    let mut fenix_watch = crate::fenix_autostart::runtime_session(&root);
     let mut session = Session {
         root: &root,
         service: None,
@@ -414,6 +417,7 @@ pub fn run_with_state(root: &Path, lease: Option<i32>, state_dir: &Path) -> Resu
             // The game and the service keep their logs open. What they write
             // beyond the kept start and end is given back every few seconds.
             if checked.elapsed()>=Duration::from_secs(10){checked=Instant::now();for log in &mut logs{log.enforce();}}
+            if let Some(watch)=fenix_watch.as_mut(){watch.poll();}
             let stop=tokio::select!{_ = term.recv()=>true,_ = interrupt.recv()=>true,_ = tokio::time::sleep(Duration::from_millis(50))=>false};if stop{stop_group(game)?;break game.wait()?;}};
         let code=status.code().unwrap_or_else(||128+status.signal().unwrap_or(1));println!("MSFS process ended with status {code}. Log: {}/game.log",run.display());Ok(code.clamp(0,255) as u8)
     })

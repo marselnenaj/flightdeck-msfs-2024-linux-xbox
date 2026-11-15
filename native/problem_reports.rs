@@ -18,7 +18,7 @@ const OBSERVATIONS: [&str; 4] = [
     "second_window_works",
     "second_window_crashes",
 ];
-const FIELDS: [&str; 23] = [
+const FIELDS: [&str; 24] = [
     "context",
     "vr",
     "run_found",
@@ -41,6 +41,7 @@ const FIELDS: [&str; 23] = [
     "summary_limited",
     "proton",
     "fenix",
+    "fenix_autostart",
     "installation",
 ];
 const UNREADABLE: &str =

@@ -7,7 +7,7 @@ use crate::{
     error::require,
     fenix_bundle as bundle, files, transaction as tx,
     wine::{StagedWine, Wine},
-    xml::{self, Element, Item},
+    xml,
 };
 use serde_json::{Value, json};
 use std::{
@@ -451,82 +451,7 @@ pub fn configure_prefix(prefix: &Path, renderer: DisplayRenderer) -> Result<(boo
     Ok((ready, ready && legacy))
 }
 pub fn configure_autostart(prefix: &Path) -> Result<()> {
-    let mut candidates = Vec::new();
-    for user in user_folders(prefix)? {
-        let path = user.join("AppData/Roaming/Microsoft Flight Simulator 2024");
-        if path.is_dir() {
-            require(
-                path.canonicalize()?.starts_with(prefix.canonicalize()?),
-                "The simulator settings folder escapes the profile.",
-            )?;
-            candidates.push(path);
-        }
-    }
-    require(
-        candidates.len() == 1,
-        "Could not identify one MSFS 2024 settings folder. Run the simulator once first.",
-    )?;
-    let path = candidates[0].join("exe.xml");
-    let mut root = if files::exists(&path) {
-        xml::parse(&files::read(&path, 2 * 1024 * 1024)?)?
-    } else {
-        let mut root = Element::new("SimBase.Document");
-        root.start.push_attribute(("Type", "Launch"));
-        root.start.push_attribute(("version", "1,0"));
-        for (key, value) in [
-            ("Descr", "Launch"),
-            ("Filename", "exe.xml"),
-            ("Disabled", "False"),
-        ] {
-            root.set(key, value);
-        }
-        root
-    };
-    let fenix = |v: &Element| {
-        v.named("Launch.Addon")
-            && ["Name", "Path"]
-                .iter()
-                .filter_map(|n| v.child(n))
-                .any(|v| v.text().to_lowercase().contains("fenix"))
-    };
-    let mut found = false;
-    root.items.retain(|v| {
-        if let Item::Element(v) = v
-            && fenix(v)
-        {
-            if found {
-                return false;
-            }
-            found = true;
-        }
-        true
-    });
-    if !found {
-        let mut node = Element::new("Launch.Addon");
-        node.set("Name", "FenixA320");
-        root.items.push(Item::Element(node));
-    }
-    let entry = root
-        .items
-        .iter_mut()
-        .find_map(|v| match v {
-            Item::Element(v) if fenix(v) => Some(v),
-            _ => None,
-        })
-        .ok_or(Error::Invalid("Invalid Fenix autostart entry."))?;
-    for (key, value) in [
-        ("Name", "FenixA320"),
-        ("Disabled", "False"),
-        ("ManualLoad", "False"),
-        (
-            "Path",
-            r"C:\Program Files\FenixSim A320\deps\FenixBootstrapper.exe",
-        ),
-    ] {
-        entry.set(key, value);
-    }
-    files::atomic(&path, &root.bytes()?)?;
-    Ok(())
+    crate::fenix_autostart::configure(prefix, crate::fenix_autostart::FOLDER_2024)
 }
 pub fn manager(prefix: &Path) -> Result<PathBuf> {
     let mut candidates = Vec::new();

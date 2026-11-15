@@ -67,6 +67,7 @@ impl Session {
         let done = Arc::new(AtomicBool::new(false));
         let completed = Arc::clone(&done);
         let item = item.clone();
+        let state = state_dir.to_path_buf();
         std::thread::spawn(move || {
             let _completed = Completion(completed);
             let _held = held;
@@ -99,8 +100,17 @@ impl Session {
                     .stderr(Stdio::null());
                 guard = process::spawn(&mut command, None).ok();
             }
+            // Started once the simulator runs, also for launches outside Flightdeck.
+            let mut watch = fenix.as_ref().and_then(|_| {
+                steam_fenix::autostart_target(&state, &item).map(|(prefix, _, private)| {
+                    crate::fenix_autostart::Watch::new(&prefix, &private)
+                })
+            });
             let mut ended = false;
             while !stopped.load(Ordering::Relaxed) {
+                if let Some(watch) = watch.as_mut() {
+                    watch.poll();
+                }
                 match steam_session::running(&item) {
                     Ok(false) => {
                         ended = true;

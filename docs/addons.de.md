@@ -367,6 +367,32 @@ Fenix-App, falls sie noch geöffnet ist; schließe Installationen oder
 Livery-Downloads dort ab, bevor du MSFS beendest. Andere Wine-Profile bleiben
 davon unberührt.
 
+### Wenn sich der Fenix-Companion nicht öffnet
+
+Fenix wird von MSFS gestartet, nicht von Flightdeck: MSFS führt
+`FenixBootstrapper.exe` aus der `exe.xml` im Einstellungsordner des Simulators
+aus, und der Bootstrapper startet den Fenix-Companion, sobald das Flugzeug lädt.
+Seit 0.3.12 prüft Flightdeck diesen Eintrag vor jedem MSFS-Start, auch bei
+Steam: Er muss vorhanden und eingeschaltet sein und auf den tatsächlich
+installierten Bootstrapper im Fenix-Programmordner zeigen. Ein fehlender,
+ausgeschalteter oder veralteter Eintrag wird repariert; Einträge anderer Add-ons
+bleiben erhalten. Fehlen der Bootstrapper oder der Einstellungsordner, zeigt
+**Mods → Fenix A320** das mit dem nächsten Schritt an, denn das lässt sich nur
+durch eine Neuinstallation in der Fenix-App oder einen ersten MSFS-Start beheben.
+
+Während einer Sitzung hält Flightdeck außerdem fest, ob der Bootstrapper und
+Fenix gestartet wurden. Das Panel zeigt das Ergebnis der letzten Sitzung, und
+Fehlerberichte enthalten es als feste Werte ohne Pfade oder Logtext.
+
+**Verwalten & reparieren → Fenix-Logs sammeln** speichert ein Archiv in
+`~/.local/state/flightdeck/fenix-logs/` und öffnet den Ordner. Es enthält
+`exe.xml`, Flightdecks Fenix-Logs, das letzte Spiel-Log und die `.log`/`.txt`-
+Dateien, die Fenix unter `C:\ProgramData\Fenix` und in seinen App-Ordnern
+schreibt, dazu eine Zusammenfassung der Prüfungen. Große Dateien werden auf
+ihre letzten 4 MiB gekürzt. Dateien, die nach Lizenz, Aktivierung oder Token
+benannt sind, bleiben draußen, Logs können aber trotzdem deinen Kontonamen
+enthalten: Prüfe das Archiv, bevor du es teilst.
+
 Flightdeck 0.2.23 enthält Patch **0.1.0** als geprüfte Ausgangsversion
 und sucht beim Start sowie alle 30 Minuten eigenständig auf GitHub nach
 kompatiblen Fenix-Patches. Fehlgeschlagene Prüfungen werden nach fünf Minuten
