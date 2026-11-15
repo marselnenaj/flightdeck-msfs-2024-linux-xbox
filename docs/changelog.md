@@ -1,6 +1,6 @@
 # Changes and release status
 
-## Unreleased
+## 0.3.12 — 15 November 2026
 
 - Check the Fenix auto-start before every MSFS start, for Xbox runtimes and
   Steam. A user reported that the Fenix companion never opened after a
