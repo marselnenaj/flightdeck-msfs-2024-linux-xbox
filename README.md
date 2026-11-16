@@ -27,6 +27,13 @@ downloads, updates and account sign-in.
 **Download the [latest stable release](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/latest).**
 The launcher, installer and updater need no Python.
 
+**New in 0.3.13:** if MSFS freezes while the Fenix loads or its displays stay
+black, **Manage & repair → Draw Fenix displays on the CPU** switches to CPU
+displays and keeps that choice across updates. **Collect Fenix logs** now
+includes the last three sessions with their start and end, and the Fenix panel
+keeps the result of the previous session after a short retry.
+[Details](docs/changelog.md#0313--16-november-2026).
+
 **New in 0.3.12:** Flightdeck checks the Fenix auto-start before every MSFS
 start and repairs a missing, disabled or outdated entry, so the Fenix companion
 opens with the aircraft again. The Fenix panel shows why it would not start and

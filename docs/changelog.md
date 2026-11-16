@@ -1,6 +1,6 @@
 # Changes and release status
 
-## Unreleased
+## 0.3.13 — 16 November 2026
 
 - Add a CPU/GPU choice for the Fenix displays on Xbox runtimes: **Manage &
   repair → Draw Fenix displays on the CPU**. A user on NVIDIA reported that

@@ -2,8 +2,8 @@
 
 [English](known-issues.md) · [Dokumentation](index.md)
 
-Stand: 15. November 2026, veröffentlichter Launcher **0.3.12**.
-Siehe [Änderungsübersicht](changelog.md#0312--15-november-2026).
+Stand: 16. November 2026, veröffentlichter Launcher **0.3.13**.
+Siehe [Änderungsübersicht](changelog.md#0313--16-november-2026).
 
 - **MobiFlight-Einrichtung in 0.3.7:** Die App kann installiert sein, während die
   WASM-/Ereignis-Einrichtung an HubHops alter, weitergeleiteter Adresse oder langen
