@@ -464,6 +464,8 @@
   "Fenix-Installer-Datei": "Fenix installer file",
   "Fenix-Linux-Patch": "Fenix Linux patch",
   "Fenix-Logs sammeln": "Collect Fenix logs",
+  "Fenix-Anzeigen auf der CPU zeichnen": "Draw Fenix displays on the CPU",
+  "Empfohlenen GPU-Renderer verwenden": "Use the recommended GPU renderer",
   "Fenix-Patch fehlt": "Fenix patch unavailable",
   "Fenix-Patch verwalten": "Manage Fenix patch",
   "Fenix-Reparatur fehlgeschlagen": "Fenix repair failed",

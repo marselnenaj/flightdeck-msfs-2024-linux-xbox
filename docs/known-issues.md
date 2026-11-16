@@ -77,6 +77,12 @@ See the [release changes](changelog.md#0312--15-november-2026).
   off**. Other runners have matching native module tests; this report does not
   establish full-flight stability.
   [Test sequence and limits](https://github.com/marselnenaj/fenix-a320-linux-patch/blob/v0.1.0/docs/fenix-v3.md).
+- **Fenix freeze at "Ready to fly" (NVIDIA, Xbox):** Reported on 0.3.12 with
+  an RTX 3080, driver 615.78.8, Fenix 3.0.0.7852 and GPU displays. The cause is
+  unverified: the collected logs held no record of the frozen session. GPU
+  displays share textures and fences with the simulator and are unverified on
+  NVIDIA beyond one setup. Try **Manage & repair → Draw Fenix displays on the
+  CPU**. **Collect Fenix logs** now includes the last three sessions.
 - **Fenix profile/runner copy:** Version 0.2.27 fixes an archive-metadata failure
   reproduced on a fixed-permission NTFS mount: all files were copied, but restoring
   Linux permissions caused setup to stop in its preparing stage. The new copy

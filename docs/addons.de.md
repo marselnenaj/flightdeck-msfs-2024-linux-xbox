@@ -381,15 +381,17 @@ bleiben erhalten. Fehlen der Bootstrapper oder der Einstellungsordner, zeigt
 durch eine Neuinstallation in der Fenix-App oder einen ersten MSFS-Start beheben.
 
 Während einer Sitzung hält Flightdeck außerdem fest, ob der Bootstrapper und
-Fenix gestartet wurden. Das Panel zeigt das Ergebnis der letzten Sitzung, und
-Fehlerberichte enthalten es als feste Werte ohne Pfade oder Logtext.
+Fenix gestartet wurden. Das Panel zeigt das Ergebnis der letzten beendeten
+Sitzung, und Fehlerberichte enthalten es und die Sitzung davor als feste Werte
+ohne Pfade oder Logtext.
 
 **Verwalten & reparieren → Fenix-Logs sammeln** speichert ein Archiv in
 `~/.local/state/flightdeck/fenix-logs/` und öffnet den Ordner. Es enthält
-`exe.xml`, Flightdecks Fenix-Logs, das letzte Spiel-Log und die `.log`/`.txt`-
-Dateien, die Fenix unter `C:\ProgramData\Fenix` und in seinen App-Ordnern
-schreibt, dazu eine Zusammenfassung der Prüfungen. Große Dateien werden auf
-ihre letzten 4 MiB gekürzt. Dateien, die nach Lizenz, Aktivierung oder Token
+`exe.xml`, Flightdecks Fenix-Logs, die Spiel-Logs der letzten drei Sitzungen
+und die `.log`/`.txt`-Dateien, die Fenix unter `C:\ProgramData\Fenix` und in
+seinen App-Ordnern schreibt, dazu eine Zusammenfassung der Prüfungen.
+Spiel-Logs behalten ihre ersten und letzten 2 MiB, andere große Dateien ihre
+letzten 4 MiB; die Zusammenfassung nennt, was gekürzt wurde. Dateien, die nach Lizenz, Aktivierung oder Token
 benannt sind, bleiben draußen, Logs können aber trotzdem deinen Kontonamen
 enthalten: Prüfe das Archiv, bevor du es teilst.
 
@@ -481,6 +483,9 @@ ND, ECAM und bewegter Geschwindigkeitsanzeige geprüft. NVIDIA außerhalb des ge
 sind noch nicht geprüft; im CPU-Modus ist Wetterradar nicht verfügbar.
 Eine bisher automatisch gesetzte CPU-Konfiguration wechselt auf unterstützten
 Versionen zu GPU. Eine gespeicherte CPU-Präferenz bleibt bei Updates erhalten.
+Friert MSFS beim Laden der Fenix ein oder bleiben ihre Anzeigen schwarz, wähle
+bei einer Xbox-Runtime **Verwalten & reparieren → Fenix-Anzeigen auf der CPU
+zeichnen**; **Empfohlenen GPU-Renderer verwenden** macht das rückgängig.
 [GPU-Prüfstand und CPU-Rückfall](https://github.com/marselnenaj/fenix-a320-linux-patch/blob/v0.1.0/docs/gpu-displays.md).
 Das Fenix-Binärpaket benötigt x86_64 Linux und glibc 2.38+; für Flightdecks
 vollständiges natives Paket gilt weiterhin glibc 2.39+. Ab 0.1.20 gibt es passende

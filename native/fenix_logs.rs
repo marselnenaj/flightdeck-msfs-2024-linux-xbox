@@ -19,6 +19,14 @@ const FILE_LIMIT: u64 = 4 * 1024 * 1024;
 const TOTAL_LIMIT: u64 = 64 * 1024 * 1024;
 const MAX_FILES: usize = 300;
 const KEPT: usize = 5;
+/// Game sessions whose logs are included, newest first. A frozen session is
+/// often followed by a short retry, so the newest alone can miss it.
+const RUNS: usize = 3;
+/// Game logs are archived as their start and their end: the start names the
+/// renderer and adapter, the end shows where the session stopped.
+const RUN_HEAD: u64 = 2 * 1024 * 1024;
+const RUN_TAIL: u64 = 2 * 1024 * 1024;
+const RUN_LOGS: &str = "flightdeck/runs/";
 const EXTENSIONS: &[&str] = &["log", "txt"];
 // Activation and account data stay out even when named like a log.
 const EXCLUDED: &[&str] = &["licen", "activation", "token", "credential", "password"];
@@ -71,8 +79,8 @@ fn walk(dir: &Path, extensions: &[&str], found: &mut Vec<(PathBuf, std::time::Sy
     }
 }
 
-/// The last `FILE_LIMIT` bytes of a regular file.
-fn tail(path: &Path) -> Option<Vec<u8>> {
+/// The last `FILE_LIMIT` bytes of a regular file, and whether it was cut.
+fn tail(path: &Path) -> Option<(Vec<u8>, bool)> {
     let meta = fs::symlink_metadata(path).ok()?;
     if !meta.is_file() {
         return None;
@@ -82,7 +90,32 @@ fn tail(path: &Path) -> Option<Vec<u8>> {
     file.seek(SeekFrom::Start(start)).ok()?;
     let mut bytes = Vec::new();
     file.take(FILE_LIMIT).read_to_end(&mut bytes).ok()?;
-    Some(bytes)
+    Some((bytes, start > 0))
+}
+
+/// The first `head` and last `tail` bytes of a regular file, with a marker
+/// where the middle was left out, and whether it was cut.
+fn ends(path: &Path, head: u64, tail: u64) -> Option<(Vec<u8>, bool)> {
+    let meta = fs::symlink_metadata(path).ok()?;
+    if !meta.is_file() {
+        return None;
+    }
+    let mut file = fs::File::open(path).ok()?;
+    let len = meta.len();
+    let mut bytes = Vec::new();
+    if len <= head + tail {
+        file.take(head + tail).read_to_end(&mut bytes).ok()?;
+        return Some((bytes, false));
+    }
+    (&mut file).take(head).read_to_end(&mut bytes).ok()?;
+    let left_out = len - head - tail;
+    bytes.extend_from_slice(
+        format!("\n[Flightdeck: {left_out} bytes in the middle of this log are left out]\n")
+            .as_bytes(),
+    );
+    file.seek(SeekFrom::Start(len - tail)).ok()?;
+    file.take(tail).read_to_end(&mut bytes).ok()?;
+    Some((bytes, true))
 }
 
 fn fenix_files(prefix: &Path) -> Vec<(PathBuf, String)> {
@@ -147,6 +180,7 @@ pub fn write(sources: &Sources, out: &Path) -> Result<PathBuf> {
     let mut archive = tar::Builder::new(GzEncoder::new(file, Compression::default()));
     let mut total = 0u64;
     let mut included = Vec::new();
+    let mut truncated = Vec::new();
     let settings = fenix_autostart::settings_folder(&sources.prefix, sources.folder).ok();
     let mut entries = sources.own.clone();
     if let Some(settings) = &settings {
@@ -157,9 +191,17 @@ pub fn write(sources: &Sources, out: &Path) -> Result<PathBuf> {
         if total >= TOTAL_LIMIT {
             break;
         }
-        if let Some(bytes) = tail(&path) {
+        let part = if name.starts_with(RUN_LOGS) {
+            ends(&path, RUN_HEAD, RUN_TAIL)
+        } else {
+            tail(&path)
+        };
+        if let Some((bytes, cut)) = part {
             total += bytes.len() as u64;
             add(&mut archive, &name, &bytes)?;
+            if cut {
+                truncated.push(name.clone());
+            }
             included.push(name);
         }
     }
@@ -170,6 +212,7 @@ pub fn write(sources: &Sources, out: &Path) -> Result<PathBuf> {
     summary["settings_folder_found"] = json!(settings.is_some());
     summary["bootstrapper_found"] = json!(fenix_autostart::bootstrapper(&sources.prefix).is_some());
     summary["files"] = json!(included);
+    summary["truncated"] = json!(truncated);
     summary["limited"] = json!(total >= TOTAL_LIMIT);
     add(
         &mut archive,
@@ -209,16 +252,29 @@ impl Private for fs::OpenOptions {
     }
 }
 
-fn newest_game_log(private: &Path) -> Option<PathBuf> {
-    let mut runs: Vec<_> = fs::read_dir(private)
-        .ok()?
+/// The game logs of the newest `RUNS` sessions, newest first, by the session
+/// names that `run_logs` keeps.
+fn recent_game_logs(private: &Path) -> Vec<(PathBuf, String)> {
+    let session = crate::log_reader::regex(r"^run-\d{8}-\d{6}-[A-Za-z0-9]+$");
+    let mut runs: Vec<String> = fs::read_dir(private)
+        .into_iter()
+        .flatten()
         .filter_map(|v| v.ok())
-        .filter(|v| v.file_name().to_string_lossy().starts_with("run-"))
         .filter(|v| v.file_type().is_ok_and(|t| t.is_dir()))
-        .map(|v| v.path())
+        .map(|v| v.file_name().to_string_lossy().into_owned())
+        .filter(|name| session.is_match(name))
         .collect();
     runs.sort();
-    runs.pop().map(|v| v.join("game.log"))
+    runs.into_iter()
+        .rev()
+        .take(RUNS)
+        .map(|name| {
+            (
+                private.join(&name).join("game.log"),
+                format!("{RUN_LOGS}{name}/game.log"),
+            )
+        })
+        .collect()
 }
 
 fn finish(app: &Launcher, sources: Sources) -> Result<Value> {
@@ -260,9 +316,7 @@ pub fn export(app: &Arc<Launcher>) -> Result<Value> {
             "flightdeck/fenix-linux-patch.json".to_string(),
         ),
     ];
-    if let Some(log) = newest_game_log(&private) {
-        own.push((log, "flightdeck/game.log".to_string()));
-    }
+    own.extend(recent_game_logs(&private));
     finish(
         app,
         Sources {
@@ -404,6 +458,70 @@ mod tests {
         assert_eq!(
             fs::metadata(&path).unwrap().permissions().mode() & 0o777,
             0o600
+        );
+    }
+
+    #[test]
+    fn the_last_sessions_keep_their_start_and_end() {
+        let temp = tempfile::tempdir().unwrap();
+        let private = temp.path().join("private");
+        for name in [
+            "run-20261115-180000-aaaa",
+            "run-20261115-181000-bbbb",
+            "run-20261115-182000-cccc",
+            "run-20261115-182730-dddd",
+        ] {
+            put(&private.join(name).join("game.log"), name.as_bytes());
+        }
+        // Not a session directory, although it sorts after them.
+        put(&private.join("run-zz/game.log"), b"other");
+        let mut frozen = b"adapter: NVIDIA\n".to_vec();
+        frozen.resize((RUN_HEAD + RUN_TAIL + 100) as usize, b'.');
+        frozen.extend_from_slice(b"\nlast line");
+        put(&private.join("run-20261115-182000-cccc/game.log"), &frozen);
+        let own = recent_game_logs(&private);
+        let names: Vec<_> = own.iter().map(|(_, name)| name.as_str()).collect();
+        assert_eq!(
+            names,
+            [
+                "flightdeck/runs/run-20261115-182730-dddd/game.log",
+                "flightdeck/runs/run-20261115-182000-cccc/game.log",
+                "flightdeck/runs/run-20261115-181000-bbbb/game.log",
+            ]
+        );
+        let sources = Sources {
+            prefix: temp.path().join("prefix"),
+            folder: fenix_autostart::FOLDER_2024,
+            own,
+            summary: json!({"source":"xbox"}),
+        };
+        let path = write(&sources, &temp.path().join("out")).unwrap();
+        let mut archive =
+            tar::Archive::new(flate2::read::GzDecoder::new(fs::File::open(&path).unwrap()));
+        let mut names = std::collections::BTreeMap::new();
+        for entry in archive.entries().unwrap() {
+            let mut entry = entry.unwrap();
+            let name = entry.path().unwrap().display().to_string();
+            let mut bytes = Vec::new();
+            entry.read_to_end(&mut bytes).unwrap();
+            names.insert(name, bytes);
+        }
+        let log = &names["fenix-logs/flightdeck/runs/run-20261115-182000-cccc/game.log"];
+        assert!(log.starts_with(b"adapter: NVIDIA"));
+        assert!(log.ends_with(b"last line"));
+        assert!(
+            String::from_utf8_lossy(log).contains("bytes in the middle of this log are left out")
+        );
+        assert!(log.len() < frozen.len());
+        let summary: Value = serde_json::from_slice(&names["fenix-logs/summary.json"]).unwrap();
+        assert_eq!(
+            summary["truncated"],
+            json!(["flightdeck/runs/run-20261115-182000-cccc/game.log"])
+        );
+        assert!(
+            !names
+                .keys()
+                .any(|v| v.contains("run-zz") || v.contains("180000"))
         );
     }
 

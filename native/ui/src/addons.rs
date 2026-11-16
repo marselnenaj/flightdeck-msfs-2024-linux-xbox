@@ -168,7 +168,14 @@ impl App {
             )),
             _ => None,
         };
-        let session = &data["autostart_record"]["session"];
+        // While MSFS runs, or after a check without a session, the finished
+        // session before it is the last one with a result.
+        let record = &data["autostart_record"];
+        let session = if record["session"]["ended_at"].is_string() {
+            &record["session"]
+        } else {
+            &record["previous_session"]
+        };
         let observed = (session.is_object() && session["ended_at"].is_string()).then(|| {
             match (session["bootstrapper_seen"] == true, session["fenix_seen"] == true) {
                 (_, true) => self.tr(
@@ -464,6 +471,19 @@ impl App {
                 ),
             };
             content = content.push(self.paragraph(display_note));
+            if !self.is_steam() && yes(data, "configured") && yes(data, "gpu_supported") {
+                content = content.push(self.paragraph(if data["display_renderer_override"] == "CPU" {
+                    self.tr(
+                        "Du hast CPU-Anzeigen gewählt. Die Wahl bleibt bei Updates und Proton-Wechseln erhalten.",
+                        "You chose CPU displays. The choice is kept across updates and Proton changes.",
+                    )
+                } else {
+                    self.tr(
+                        "Friert MSFS beim Laden der Fenix ein oder bleiben ihre Anzeigen schwarz, stelle unter „Verwalten & reparieren“ auf CPU-Anzeigen um. Sie sind langsamer und haben kein Wetterradar.",
+                        "If MSFS freezes while the Fenix loads or its displays stay black, switch to CPU displays under “Manage & repair”. They are slower and have no weather radar.",
+                    )
+                }));
+            }
             let mut manage = column![].spacing(14);
             let mut actions = vec![];
             if manager && !(progress.next == 2 && !offer_repair && !failed_repair && !active) {
@@ -477,6 +497,15 @@ impl App {
             }
             if yes(data, "configured") {
                 actions.push(("Einstellungen erneut anwenden", Fenix("configure")));
+            }
+            // GPU displays share textures with the simulator; on an unverified
+            // driver CPU displays are the slower fallback without that.
+            let renderer_choice =
+                !self.is_steam() && yes(data, "configured") && yes(data, "gpu_supported");
+            if renderer_choice && data["display_renderer_override"] == "CPU" {
+                actions.push(("Empfohlenen GPU-Renderer verwenden", Fenix("renderer-auto")));
+            } else if renderer_choice {
+                actions.push(("Fenix-Anzeigen auf der CPU zeichnen", Fenix("renderer-cpu")));
             }
             for (title, action) in actions {
                 let message = self.request(&action).map(|_| Message::Action(action));

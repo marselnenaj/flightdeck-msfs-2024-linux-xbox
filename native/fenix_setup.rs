@@ -21,7 +21,7 @@ pub const CONFIG: &str = "drive_c/ProgramData/Fenix/FenixSim A320";
 pub const GEOMETRY_HASH: &str = "663f1d59ec1c014b9ea47a6cef71b3d43579e9759a82f3ee2cbd80b8c6d9e85f";
 pub const GEOMETRY_PATH: &str = "drive_c/windows/system32/d2d1_geometry.dll";
 pub const DXGI_FILE: &str = "files/lib/wine/dxvk/x86_64-windows/dxgi.dll";
-const GPU_FILES: [&str; 8] = [
+pub(crate) const GPU_FILES: [&str; 8] = [
     "files/lib/wine/x86_64-windows/ntdll.dll",
     "files/lib/wine/x86_64-unix/ntdll.so",
     "files/bin/wineserver",

@@ -358,14 +358,16 @@ with what to do next, because only a reinstall in the Fenix app or a first MSFS
 start can fix it.
 
 During a session Flightdeck also notes whether the bootstrapper and Fenix
-started. The panel shows the result of the last session, and problem reports
-include it as fixed values without paths or log text.
+started. The panel shows the result of the last finished session, and problem
+reports include it and the session before it as fixed values without paths or
+log text.
 
 **Manage & repair → Collect Fenix logs** saves one archive to
 `~/.local/state/flightdeck/fenix-logs/` and opens that folder. It contains
-`exe.xml`, Flightdeck's Fenix logs, the latest game log and the `.log`/`.txt`
-files Fenix writes below `C:\ProgramData\Fenix` and its app folders, plus a
-summary of the checks. Large files are cut to their last 4 MiB. Files named
+`exe.xml`, Flightdeck's Fenix logs, the game logs of the last three sessions and
+the `.log`/`.txt` files Fenix writes below `C:\ProgramData\Fenix` and its app
+folders, plus a summary of the checks. Game logs keep their first and last
+2 MiB, other large files their last 4 MiB; the summary lists what was cut. Files named
 like license, activation or token files are left out, but logs can still
 contain your account name: review the archive before sharing it.
 
@@ -451,6 +453,9 @@ outstanding. The Xodus GPU path was checked with PFD, ND, ECAM and a moving
 airspeed tape on AMD. NVIDIA support beyond the reported setup and GPU weather radar remain unvalidated; weather
 radar is unavailable in the CPU renderer. Earlier automatic CPU settings migrate
 to GPU on capable overlays, while a saved CPU preference survives updates.
+If MSFS freezes while the Fenix loads or its displays stay black, choose
+**Manage & repair → Draw Fenix displays on the CPU** on an Xbox runtime; **Use
+the recommended GPU renderer** undoes it.
 See the patch's [GPU scope and fallback instructions](https://github.com/marselnenaj/fenix-a320-linux-patch/blob/v0.1.0/docs/gpu-displays.md).
 The binary patch
 requires x86_64 Linux and glibc 2.38+; Flightdeck's full native package still requires

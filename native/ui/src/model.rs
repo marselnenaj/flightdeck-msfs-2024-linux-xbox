@@ -559,6 +559,19 @@ impl App {
                                 && yes(data, "fenix_installed")
                                 && yes(data, "settings_ready"),
                         ),
+                        "renderer-cpu" | "renderer-auto" => {
+                            let cpu = *op == "renderer-cpu";
+                            body["renderer"] = json!(if cpu { "CPU" } else { "auto" });
+                            (
+                                "fenix/renderer",
+                                !self.is_steam()
+                                    && change
+                                    && yes(data, "installed")
+                                    && yes(data, "configured")
+                                    && yes(data, "gpu_supported")
+                                    && (data["display_renderer_override"] == "CPU") != cpu,
+                            )
+                        }
                         "restore" => {
                             confirmation = Some(
                                 "Runner und Windows-Profil auf den Stand vor dem Fenix-Patch zurücksetzen? Das aktuelle Profil bleibt als Sicherung erhalten.",

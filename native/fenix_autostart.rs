@@ -292,6 +292,12 @@ pub fn ensure(prefix: &Path, folder: &str, private: &Path) -> Value {
     value["before"] = json!(before);
     value["after"] = json!(after);
     value["repaired"] = json!(repairable && !failed && after == "ready");
+    // A session that froze or crashed is often followed by a short retry; keep
+    // its result instead of losing it to the next start. A check without a
+    // session (Steam configure) leaves the previous one in place.
+    if value["session"].is_object() {
+        value["previous_session"] = value["session"].take();
+    }
     value["session"] = Value::Null;
     save(private, &value);
     value
@@ -313,13 +319,8 @@ pub fn load(private: &Path) -> Value {
             .filter(|v| chrono::DateTime::parse_from_rfc3339(v).is_ok())
             .map_or(Value::Null, |v| json!(v))
     };
-    let session = &value["session"];
-    json!({
-        "checked_at": time(&value["checked_at"]),
-        "before": state(&value["before"]),
-        "after": state(&value["after"]),
-        "repaired": value["repaired"] == true,
-        "session": if session.is_object() {
+    let session = |session: &Value| {
+        if session.is_object() {
             json!({
                 "started_at": time(&session["started_at"]),
                 "ended_at": time(&session["ended_at"]),
@@ -330,7 +331,15 @@ pub fn load(private: &Path) -> Value {
             })
         } else {
             Value::Null
-        },
+        }
+    };
+    json!({
+        "checked_at": time(&value["checked_at"]),
+        "before": state(&value["before"]),
+        "after": state(&value["after"]),
+        "repaired": value["repaired"] == true,
+        "session": session(&value["session"]),
+        "previous_session": session(&value["previous_session"]),
     })
 }
 
@@ -528,6 +537,35 @@ mod tests {
         let loaded = load(&private);
         assert_eq!(loaded["session"]["bootstrapper_seen"], false);
         assert!(loaded["session"]["ended_at"].is_string());
+        assert!(loaded["previous_session"].is_null());
+    }
+
+    #[test]
+    fn the_next_start_keeps_the_previous_session() {
+        let (temp, prefix, exe) = profile();
+        let private = temp.path().join("private");
+        put(&exe, b"<SimBase.Document/>");
+        put(
+            &private.join(FILE),
+            br#"{"schema":1,"checked_at":"2026-11-15T10:00:00+00:00","after":"ready","session":{"started_at":"2026-11-15T10:00:00+00:00","ended_at":"2026-11-15T10:40:00+00:00","bootstrapper_seen":true,"bootstrapper_after_s":40,"fenix_seen":true,"fenix_after_s":95,"extra":"x"}}"#,
+        );
+        ensure(&prefix, FOLDER_2024, &private);
+        let loaded = load(&private);
+        assert!(loaded["session"].is_null());
+        let previous = &loaded["previous_session"];
+        assert_eq!(previous["ended_at"], "2026-11-15T10:40:00+00:00");
+        assert_eq!(previous["fenix_after_s"], 95);
+        assert!(previous.get("extra").is_none());
+        // A check without a session, as Steam configure does, keeps it.
+        ensure(&prefix, FOLDER_2024, &private);
+        assert_eq!(load(&private)["previous_session"]["fenix_after_s"], 95);
+        // The short retry that follows replaces it only once it ran.
+        drop(Watch::new(&prefix, &private));
+        ensure(&prefix, FOLDER_2024, &private);
+        assert_eq!(
+            load(&private)["previous_session"]["bootstrapper_seen"],
+            false
+        );
     }
 
     #[test]

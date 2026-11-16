@@ -270,11 +270,76 @@ fn unstartable_companion_is_explained_and_logs_can_be_collected()
     assert_eq!(request.path, "fenix/logs");
     drop(request);
 
+    // A running session shows the result of the finished one before it.
     let fenix = app.snapshot.get_mut("fenix").expect("fenix");
     fenix["autostart"] = json!("ready");
+    fenix["autostart_record"] = json!({
+        "session":{"started_at":"2026-11-15T11:00:00+00:00","ended_at":null,"bootstrapper_seen":false,"fenix_seen":false},
+        "previous_session":{"ended_at":"2026-11-15T10:00:00+00:00","bootstrapper_seen":true,"fenix_seen":true}
+    });
+    let mut ui = iced_test::Simulator::with_size(settings(), Size::new(960.0, 1400.0), app.view());
+    ui.find("Last MSFS session: Fenix was started.")?;
+    drop(ui);
+
+    let fenix = app.snapshot.get_mut("fenix").expect("fenix");
     fenix["autostart_record"] = json!(null);
     let mut ui = iced_test::Simulator::with_size(settings(), Size::new(960.0, 1400.0), app.view());
     ui.find("✓ Displays & auto-start")?;
     assert!(ui.find("Last MSFS session: Fenix was started.").is_err());
+    Ok(())
+}
+
+#[test]
+fn gpu_displays_can_be_switched_to_cpu_and_back() -> Result<(), Box<dyn std::error::Error>> {
+    let mut app = common::localized_fixture(Language::En);
+    app.page = Page::Mods;
+    let _ = app.update(Message::Toggle(Disclosure::Fenix));
+    let fenix = app.snapshot.get_mut("fenix").expect("fenix");
+    fenix["display_renderer"] = json!("GPU");
+    fenix["gpu_supported"] = json!(true);
+    fenix["idle"] = json!(true);
+    {
+        let mut ui =
+            iced_test::Simulator::with_size(settings(), Size::new(960.0, 1400.0), app.view());
+        ui.find("If MSFS freezes while the Fenix loads or its displays stay black, switch to CPU displays under “Manage & repair”. They are slower and have no weather radar.")?;
+    }
+    let _ = app.update(Message::Toggle(Disclosure::FenixManage));
+    let mut ui = iced_test::Simulator::with_size(settings(), Size::new(960.0, 1800.0), app.view());
+    ui.click("Draw Fenix displays on the CPU")?;
+    assert!(matches!(
+        ui.into_messages().next(),
+        Some(Message::Action(Action::Fenix("renderer-cpu")))
+    ));
+    let request = app
+        .request(&Action::Fenix("renderer-cpu"))
+        .expect("cpu enabled");
+    assert_eq!(request.path, "fenix/renderer");
+    assert_eq!(request.body["renderer"], "CPU");
+    drop(request);
+    assert!(app.request(&Action::Fenix("renderer-auto")).is_none());
+
+    let fenix = app.snapshot.get_mut("fenix").expect("fenix");
+    fenix["display_renderer"] = json!("CPU");
+    fenix["display_renderer_override"] = json!("CPU");
+    let mut ui = iced_test::Simulator::with_size(settings(), Size::new(960.0, 1800.0), app.view());
+    ui.find("You chose CPU displays. The choice is kept across updates and Proton changes.")?;
+    ui.click("Use the recommended GPU renderer")?;
+    assert!(matches!(
+        ui.into_messages().next(),
+        Some(Message::Action(Action::Fenix("renderer-auto")))
+    ));
+    let request = app
+        .request(&Action::Fenix("renderer-auto"))
+        .expect("auto enabled");
+    assert_eq!(request.body["renderer"], "auto");
+    drop(request);
+    assert!(app.request(&Action::Fenix("renderer-cpu")).is_none());
+
+    // A CPU-only overlay offers no choice.
+    let fenix = app.snapshot.get_mut("fenix").expect("fenix");
+    fenix["gpu_supported"] = json!(false);
+    assert!(app.request(&Action::Fenix("renderer-auto")).is_none());
+    let mut ui = iced_test::Simulator::with_size(settings(), Size::new(960.0, 1800.0), app.view());
+    assert!(ui.find("Use the recommended GPU renderer").is_err());
     Ok(())
 }

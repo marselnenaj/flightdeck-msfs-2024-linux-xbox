@@ -1,5 +1,22 @@
 # Changes and release status
 
+## Unreleased
+
+- Add a CPU/GPU choice for the Fenix displays on Xbox runtimes: **Manage &
+  repair → Draw Fenix displays on the CPU**. A user on NVIDIA reported that
+  MSFS froze at "Ready to fly" with the Fenix. GPU displays share textures and
+  fences with the simulator and are unverified on NVIDIA beyond one reported
+  setup. Until now the only way to CPU displays was editing `fenixConfig.xml`
+  by hand, which **Reapply settings** undid. The choice is saved and kept across
+  updates, Proton changes and reapplied settings; **Use the recommended GPU
+  renderer** returns to the overlay's default.
+- **Collect Fenix logs** now includes the game logs of the last three sessions,
+  each with its start and end, instead of only the newest one. A frozen session
+  is often followed by a short retry, which hid the session that mattered. The
+  summary lists the files that were cut.
+- Keep the result of the previous MSFS session when the next one starts. The
+  Fenix panel and problem reports showed nothing after a short retry.
+
 ## 0.3.12 — 15 November 2026
 
 - Check the Fenix auto-start before every MSFS start, for Xbox runtimes and
