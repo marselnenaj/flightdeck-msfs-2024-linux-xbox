@@ -800,7 +800,44 @@ pub fn restore(ctx: &Context) -> Result<()> {
     files::directory(&root.join("private"), false)?.sync_all()?;
     Ok(())
 }
+/// The display renderer a configure run saves before applying the settings.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum RendererChoice {
+    /// Keep the saved choice.
+    Keep,
+    /// The renderer the installed overlay supports.
+    Auto,
+    /// CPU displays, kept across updates and Proton changes.
+    Cpu,
+}
+impl RendererChoice {
+    fn parse(data: &Value) -> Result<Self> {
+        match data["renderer"].as_str() {
+            Some("auto") => Ok(Self::Auto),
+            Some("CPU") => Ok(Self::Cpu),
+            _ => Err(Error::Invalid("Unbekannte Fenix-Anzeigedarstellung.")),
+        }
+    }
+    fn save(self, state: &mut Value) {
+        match self {
+            Self::Keep => {}
+            Self::Auto => {
+                if let Some(state) = state.as_object_mut() {
+                    state.remove("display_renderer_override");
+                }
+            }
+            Self::Cpu => {
+                state["display_renderer_override"] = json!(setup::DisplayRenderer::Cpu.as_str());
+            }
+        }
+    }
+}
 pub fn configure(ctx: &Context) -> Result<()> {
+    configure_with(ctx, RendererChoice::Keep)
+}
+/// Only CPU can be chosen: a saved GPU preference would stop a later switch
+/// to a CPU-only overlay, and on a GPU overlay it equals the automatic choice.
+fn configure_with(ctx: &Context, choice: RendererChoice) -> Result<()> {
     let root = ctx.root()?;
     validate(root, false)?;
     let prefix = root.join("local/msfs-prefix");
@@ -812,6 +849,7 @@ pub fn configure(ctx: &Context) -> Result<()> {
     )?;
     verify_installed(root, &state)?;
     let lock = crate::fenix_update::installed_manifest(&state, state["variant"].as_str())?;
+    choice.save(&mut state);
     let renderer = setup::DisplayRenderer::for_state(&lock, &state)?;
     let backup = tx::new_directory(
         &bundle::contained(root, string(&state, "backup")?)?,
@@ -1145,6 +1183,15 @@ pub fn snapshot(app: &Launcher) -> Value {
                     Value::Null
                 };
                 value["display_renderer_override"] = state["display_renderer_override"].clone();
+                value["gpu_supported"] = json!(
+                    state["state"] == "installed"
+                        && crate::fenix_update::installed_manifest(
+                            &state,
+                            state["variant"].as_str()
+                        )
+                        .and_then(|lock| setup::DisplayRenderer::from_manifest(&lock))
+                        .is_ok_and(|renderer| renderer == setup::DisplayRenderer::Gpu)
+                );
                 value["can_restore"] = json!(state["migrated"] != true);
                 value["can_retry"] = json!(retryable(&root, &state));
                 value["installed_version"] = if state["state"] == "installed" {
@@ -1232,6 +1279,7 @@ pub fn start(app: &Arc<Launcher>, operation: &str, data: &Value) -> Result<Value
             "install",
             "migrate",
             "configure",
+            "renderer",
             "restore",
             "installer",
             "open",
@@ -1270,6 +1318,11 @@ pub fn start(app: &Arc<Launcher>, operation: &str, data: &Value) -> Result<Value
             return Ok(json!({"ok":true,"job_id":job["id"]}));
         }
     }
+    let choice = if operation == "renderer" {
+        RendererChoice::parse(data)?
+    } else {
+        RendererChoice::Keep
+    };
     let data = data.clone();
     let operation = operation.to_string();
     app.start_job("fenix",&operation.clone(),true,move|ctx|{
@@ -1278,9 +1331,9 @@ pub fn start(app: &Arc<Launcher>, operation: &str, data: &Value) -> Result<Value
             wine_processes::idle(&ctx.root()?.join("local/msfs-prefix"))?;
             crate::fenix_legacy::inspect(ctx.root()?,&crate::fenix_update::selected(ctx)?["bundle"])?;
         }
-        if ["configure","installer","open","manager"].contains(&operation.as_str()){crate::fenix_update::ensure(ctx)?;}
-        match operation.as_str(){"install"|"migrate"=>{let payload=bundle::obtain(&ctx.launcher.state_dir.join("fenix-bundles"),data["bundle_path"].as_str(),ctx)?;install(ctx,&payload)?;},"restore"=>restore(ctx)?,"configure"=>configure(ctx)?,"stop"=>{validate(ctx.root()?,true)?;wine_processes::stop(ctx.root()?,wine_processes::FENIX)?;},_=>windows_app(ctx,&operation,&data)?,}
-        Ok(json!({"state":"complete","stopping":false,"message":match operation.as_str(){"install"=>"Fenix-Patch eingerichtet. Die nächsten Schritte stehen oben.","migrate"=>"Fenix-Einrichtung übernommen und Patch aktualisiert. Der vorherige Stand bleibt wiederherstellbar.","configure"=>"Anzeigen und automatischer Fenix-Start sind eingerichtet.","restore"=>"Das Profil vor dem Patch wurde wiederhergestellt.","installer"=>"Installer beendet. Prüfe die nächsten Schritte oben; die Fenix-Einrichtung ist noch nicht automatisch abgeschlossen.","repair"=>"Der Fenix-Einrichtungsschritt wurde erfolgreich repariert. Öffne die Fenix-App, um die Flugzeuginstallation fortzusetzen.",_=>"Fenix wurde beendet."}}))
+        if ["configure","renderer","installer","open","manager"].contains(&operation.as_str()){crate::fenix_update::ensure(ctx)?;}
+        match operation.as_str(){"install"|"migrate"=>{let payload=bundle::obtain(&ctx.launcher.state_dir.join("fenix-bundles"),data["bundle_path"].as_str(),ctx)?;install(ctx,&payload)?;},"restore"=>restore(ctx)?,"configure"=>configure(ctx)?,"renderer"=>configure_with(ctx,choice)?,"stop"=>{validate(ctx.root()?,true)?;wine_processes::stop(ctx.root()?,wine_processes::FENIX)?;},_=>windows_app(ctx,&operation,&data)?,}
+        Ok(json!({"state":"complete","stopping":false,"message":match operation.as_str(){"install"=>"Fenix-Patch eingerichtet. Die nächsten Schritte stehen oben.","migrate"=>"Fenix-Einrichtung übernommen und Patch aktualisiert. Der vorherige Stand bleibt wiederherstellbar.","configure"=>"Anzeigen und automatischer Fenix-Start sind eingerichtet.","renderer" if choice==RendererChoice::Cpu=>"Fenix zeichnet seine Anzeigen jetzt auf der CPU. Die Wahl bleibt bei Updates erhalten.","renderer"=>"Fenix nutzt wieder den empfohlenen Renderer.","restore"=>"Das Profil vor dem Patch wurde wiederhergestellt.","installer"=>"Installer beendet. Prüfe die nächsten Schritte oben; die Fenix-Einrichtung ist noch nicht automatisch abgeschlossen.","repair"=>"Der Fenix-Einrichtungsschritt wurde erfolgreich repariert. Öffne die Fenix-App, um die Flugzeuginstallation fortzusetzen.",_=>"Fenix wurde beendet."}}))
     })
 }
 
@@ -1422,5 +1475,31 @@ mod invocation_log_tests {
         assert_eq!(evidence.failure.as_deref(), Some("log_too_large"));
         assert!(!evidence.evidence_complete);
         assert!(evidence.managed_exception_types.is_empty());
+    }
+
+    #[test]
+    fn a_chosen_cpu_renderer_is_saved_and_auto_returns_to_the_overlay() {
+        let gpu = json!({"display_renderer":"GPU","dxvk":{"x":"y"},"files":setup::GPU_FILES.iter().map(|name| (name.to_string(), json!("0"))).collect::<serde_json::Map<_, _>>()});
+        let mut state = json!({"configured":true,"display_renderer":"GPU"});
+        assert!(RendererChoice::parse(&json!({"renderer":"GPU"})).is_err());
+        assert!(RendererChoice::parse(&json!({})).is_err());
+        RendererChoice::parse(&json!({"renderer":"CPU"}))
+            .expect("choice")
+            .save(&mut state);
+        assert_eq!(state["display_renderer_override"], "CPU");
+        assert_eq!(
+            setup::DisplayRenderer::for_state(&gpu, &state).expect("renderer"),
+            setup::DisplayRenderer::Cpu
+        );
+        RendererChoice::Keep.save(&mut state);
+        assert_eq!(state["display_renderer_override"], "CPU");
+        RendererChoice::parse(&json!({"renderer":"auto"}))
+            .expect("choice")
+            .save(&mut state);
+        assert!(state.get("display_renderer_override").is_none());
+        assert_eq!(
+            setup::DisplayRenderer::for_state(&gpu, &state).expect("renderer"),
+            setup::DisplayRenderer::Gpu
+        );
     }
 }

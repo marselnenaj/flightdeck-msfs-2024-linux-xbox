@@ -362,3 +362,29 @@ fn fenix_restore_keeps_the_newer_profile_and_restores_original_scripts() {
         b"original launcher"
     );
 }
+
+#[test]
+fn fenix_renderer_choice_is_validated_and_runs_as_a_fenix_job() {
+    use std::time::{Duration, Instant};
+    let temp = tempfile::tempdir().unwrap();
+    let (root, app) = fixture(temp.path());
+    for invalid in [
+        json!({}),
+        json!({"renderer":"GPU"}),
+        json!({"renderer":"cpu"}),
+    ] {
+        assert!(fenix::start(&app, "renderer", &invalid).is_err());
+    }
+    assert!(app.job("fenix").is_null());
+    // Without an installed patch the job fails before it writes anything.
+    fenix::start(&app, "renderer", &json!({"renderer":"CPU"})).unwrap();
+    let deadline = Instant::now() + Duration::from_secs(10);
+    while app.job("fenix")["state"] == "running" {
+        assert!(Instant::now() < deadline, "renderer job did not finish");
+        std::thread::sleep(Duration::from_millis(20));
+    }
+    let job = app.job("fenix");
+    assert_eq!(job["operation"], "renderer", "{job}");
+    assert_eq!(job["state"], "failed", "{job}");
+    assert!(!root.join(fenix::MARKER).exists());
+}

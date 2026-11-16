@@ -82,6 +82,13 @@ Siehe [Änderungsübersicht](changelog.md#0312--15-november-2026).
   Andere Runner bestehen passende native Modultests; die Rückmeldung bestätigt
   keine Stabilität über vollständige Flüge.
   [Prüfablauf und Grenzen](https://github.com/marselnenaj/fenix-a320-linux-patch/blob/v0.1.0/docs/fenix-v3.md).
+- **Fenix friert bei „Ready to fly“ ein (NVIDIA, Xbox):** Gemeldet mit 0.3.12,
+  RTX 3080, Treiber 615.78.8, Fenix 3.0.0.7852 und GPU-Anzeigen. Die Ursache ist
+  nicht geprüft: Die gesammelten Logs enthielten die eingefrorene Sitzung nicht.
+  GPU-Anzeigen teilen Texturen und Fences mit dem Simulator und sind auf NVIDIA
+  über ein System hinaus nicht geprüft. Versuche **Verwalten & reparieren →
+  Fenix-Anzeigen auf der CPU zeichnen**. **Fenix-Logs sammeln** enthält jetzt
+  die letzten drei Sitzungen.
 - **Unterbrochene Fenix-Patch-Updates:** Flightdeck 0.2.29 zeigt Einrichtungsfehler
   unter **Updates** und bietet für eine unveränderte Vorbereitung
   **Fenix-Einrichtung erneut versuchen** an, auch nach einem Launcher-Neustart.
