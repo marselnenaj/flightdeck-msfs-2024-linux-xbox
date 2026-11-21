@@ -2,14 +2,23 @@
 
 ## Unreleased
 
+- Accept a Durable add-on license when Microsoft signs a pre-order SKU next
+  to the released SKU. Flightdeck rejected the whole Durable license
+  (`XStoreAcquireLicenseForDurablesAsync`) as soon as an ineligible pre-order
+  or trial grant appeared, instead of using the eligible grant beside it. The
+  ineligible grant is now skipped, as it already was for the game license.
+  MSFS 2024 tokens list the pre-order SKU `0017` next to `0010` for the game
+  (observed live); the MSFS 2024 Deluxe Upgrade has the same two SKUs. This may
+  fix reports of Deluxe content shown as an expired trial. That is not
+  confirmed: no Deluxe account was available for a live test.
+  [Details](marketplace-collections.md#durable-license-handles).
 - Keep the game's Store add-ons visible when the account owns a product that
   Microsoft has withdrawn from the catalog. One such product made the whole
   owned add-on query (`XStoreQueryEntitledProductsAsync`) fail, so the game
   saw no Durable add-ons at all. This was reproduced against a real MSFS 2020
   Premium Deluxe library. The withdrawn product is now left out and counted in
   the broker log. Timeouts, server errors and a missing listing for the game
-  itself still fail the query. This may be behind reports of Deluxe content
-  shown as an expired trial in MSFS 2024; that link is not yet confirmed.
+  itself still fail the query.
   [Details](marketplace-collections.md#title-inventory).
 
 ## 0.3.13 — 16 November 2026

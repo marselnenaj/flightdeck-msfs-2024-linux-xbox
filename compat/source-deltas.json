@@ -106,7 +106,7 @@
     "crates/xodus-service/src/store_events.rs": "85ebd796b85f9f290cba3bdc071ce59f245a8bb01d81cee0dc48ccc279256624",
     "crates/xodus-service/src/store_health.rs": "6d2b5c6b23ae47cec4bd25df3f7b73c9dfd25d0bd8c2e500c1080aea14f3aee1",
     "crates/xodus-service/src/store_inventory.rs": "91ec27362b1cf6ac730c652df28545410aa4e3ce400e40c0be52d02e63286396",
-    "crates/xodus-service/src/store_license.rs": "c2f6e4a78a7687efb82efe2ccecafdd7fa2c4fc03df1c08d3af5c97d766d09c2",
+    "crates/xodus-service/src/store_license.rs": "8dc97e2551449bff618cc9ec00031040121f4f3ab66551d1d330bdee7c60487a",
     "crates/xodus-service/src/store_license/verified_token.rs": "c0538a395cd66c32cab9f6b57c8b8bf92a583cdceacd90e9c3912dd580f46b48",
     "crates/xodus-service/src/store_license_token.rs": "fc1967005315f505d299ee151145532c9824f7c906e7bc1c28fde3ec9ed7201c",
     "crates/xodus-service/src/store_package_updates.rs": "dbe5723e84b794141ac4b325c8f2b98361d8f3487a02ef13c6bfc55fd6e866a4",
