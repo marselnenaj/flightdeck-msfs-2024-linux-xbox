@@ -1,6 +1,6 @@
 # Changes and release status
 
-## Unreleased
+## 0.3.14 — 21 November 2026
 
 - Accept a Durable add-on license when Microsoft signs a pre-order SKU next
   to the released SKU. Flightdeck rejected the whole Durable license

@@ -34,16 +34,16 @@ pub struct Pins {
 impl Pins {
     pub fn current() -> Self {
         Self {
-            previous_base: "https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/download/v0.3.12/",
-            previous_sha: "6a497f65038a37802bd1de7de2ac2e53fc9a7ae98535089d4724dcb166b2cb68",
+            previous_base: "https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/download/v0.3.13/",
+            previous_sha: "6daacf690136038187d3454db85ca71a7c2b3e7c56db73e8e867e80f69cc8e9d",
             native_source_base: Some(
-                "https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/download/compat-v0.3.7/",
+                "https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/download/compat-v0.3.14/",
             ),
-            native_sha: "e324177f5af87378c2a84caacc71f28703247f579d83b8c545ca594767b1324b",
+            native_sha: "74589903fcc2ef1198992057ab3d35e0b51e537d2c00b159e9119f502e4b3a6d",
             sources: [
                 (
-                    "flightdeck-native-sources-0.3.7.tar.gz",
-                    "fd050bc1307118af3e73b4a9393f67ff7c91d8910b2d92f97d5e4c197edfb8b3",
+                    "flightdeck-native-sources-0.3.14.tar.gz",
+                    "d6035db9ef0fe91de4823d1766f5f31690dcb9235630c771de227dc4737de446",
                 ),
                 (
                     "flightdeck-dxvk-0.1.11-sources.tar.gz",
