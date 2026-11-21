@@ -32,6 +32,13 @@ erneuten App-Download fort.
 **Lade die [neueste stabile Version](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/latest).**
 Launcher, Installer und Updater benötigen kein Python.
 
+**Neu in 0.3.14:** Store-Erweiterungen wie das MSFS-2024-Deluxe-Upgrade
+werden wieder lizenziert, wenn Microsoft dafür auch eine Vorbesteller-SKU
+führt, und ein aus dem Microsoft-Katalog entferntes Produkt verdeckt nicht mehr
+alle besessenen Erweiterungen. Das kann Deluxe-Inhalte beheben, die als
+abgelaufene Testversion erscheinen; bestätigt ist das noch nicht.
+[Details](changelog.md#0314--21-november-2026).
+
 **Neu in 0.3.13:** Friert MSFS beim Laden der Fenix ein oder bleiben ihre
 Anzeigen schwarz, stellt **Verwalten & reparieren → Fenix-Anzeigen auf der CPU
 zeichnen** auf CPU-Anzeigen um und behält das bei Updates bei. **Fenix-Logs

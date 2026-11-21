@@ -314,6 +314,12 @@ hashes from the verified 0.3.1 compatibility archive. Only the two Linux broker
 programs are rebuilt for this update. Their shared source manifest records
 that provenance; the archive still includes complete sources for all six.
 
+For 0.3.14, only `bin/xodus-service` changes (Store license and inventory
+fixes). It was rebuilt with the same image and toolchain, from the staged
+sources with the 0.3.7 vendor directory; rebuilding the 0.3.7 sources there
+first reproduced both published 0.3.7 broker binaries bit for bit. The other
+five files keep their 0.3.7 hashes, which the source manifest records.
+
 ## Synthetic native checks
 
 To reproduce the automatic .NET repair with real Microsoft installers and a
