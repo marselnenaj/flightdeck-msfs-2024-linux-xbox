@@ -216,6 +216,14 @@ the signature, challenge, dates, SKU, Durable product kind and current game's
 `addOnParent` relationship. Public catalog or Collections ownership alone cannot
 create a license handle. Trials, ambiguous SKUs and bundle SKUs remain unsupported.
 
+Microsoft signs every SKU the account holds for a product, so a token for an
+MSFS 2024 product lists the pre-order SKU `0017` next to the released SKU
+`0010` (observed live for the game itself). Before Flightdeck 0.3.14 such an
+ineligible pre-order or trial grant failed the whole Durable request, even when
+the eligible grant was signed beside it; this hid the MSFS 2024 Deluxe Upgrade
+(`9MVNRJF4CCTB`, SKUs `0017` and `0010`). Ineligible grants are now skipped, as
+for the game license. The request still fails when no eligible grant remains.
+
 The implementation supports online licenses for Durables with or without a
 package. Observations expire no later than the signed grant, signed JWT or 60
 seconds. Held handles renew before that deadline; a temporary failed read retains

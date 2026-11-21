@@ -79,13 +79,14 @@ See the [release changes](changelog.md#0313--16-november-2026).
   [Test sequence and limits](https://github.com/marselnenaj/fenix-a320-linux-patch/blob/v0.1.0/docs/fenix-v3.md).
 - **MSFS 2024 Deluxe content shown as an expired trial (Xbox):** Several
   players report that Deluxe content is marked as an expired trial and cannot
-  be used. The cause is not confirmed. A related failure is fixed for the next
-  release: one product withdrawn from the Microsoft catalog made the game's
-  owned add-on query fail as a whole, which was reproduced with an MSFS 2020
-  Premium Deluxe library. If you are affected, include **Diagnostics** or the
-  game log; the line `EntitledProductsResult hr=` shows whether this query
-  failed. Also say whether you bought the Deluxe Edition, pre-ordered it, or
-  added the Deluxe Upgrade later.
+  be used. The cause is not confirmed. 0.3.14 fixes two candidates: a Durable
+  add-on license was rejected when Microsoft also signed a pre-order SKU, and
+  one product withdrawn from the Microsoft catalog made the owned add-on query
+  fail as a whole. No live test with a Deluxe account was possible, so please
+  report whether 0.3.14 helps. If not, include **Diagnostics** or the game log;
+  the line `EntitledProductsResult hr=` shows whether the add-on query failed.
+  Also say whether you bought the Deluxe Edition, pre-ordered it, or added the
+  Deluxe Upgrade later.
 - **Fenix freeze at "Ready to fly" (NVIDIA, Xbox):** Reported on 0.3.12 with
   an RTX 3080, driver 615.78.8, Fenix 3.0.0.7852 and GPU displays. The cause is
   unverified: the collected logs held no record of the frozen session. GPU

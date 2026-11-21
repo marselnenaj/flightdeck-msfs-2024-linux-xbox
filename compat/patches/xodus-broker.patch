@@ -17655,10 +17655,10 @@ index 0000000..0bd0b12
 +}
 diff --git c/crates/xodus-service/src/store_license.rs w/crates/xodus-service/src/store_license.rs
 new file mode 100644
-index 0000000..689fc8a
+index 0000000..f080bfc
 --- /dev/null
 +++ w/crates/xodus-service/src/store_license.rs
-@@ -0,0 +1,349 @@
+@@ -0,0 +1,364 @@
 +//! Genuine PC full-game licenses from Microsoft-signed v8 tokens. No inventory,
 +//! trial emulation, offline fallback, token refresh writes or purchase operations.
 +#[path="store_license/verified_token.rs"]pub(crate) mod verified_token;
@@ -17846,19 +17846,23 @@ index 0000000..689fc8a
 +        r["RelationshipType"].as_str()==Some("addOnParent") && r["RelatedProductId"].as_str()==Some(&request.store_id)))) {return Err(Status::Unsupported);}
 +    if verified.products.iter().any(|p|p.product_id!=*target && p.product_id!=request.store_id) {return Err(Status::Error);}
 +    let skus=p["DisplaySkuAvailabilities"].as_array().ok_or(Status::Unsupported)?;
-+    let mut candidates=Vec::new();
++    let mut candidates=Vec::new();let mut ineligible=false;
 +    for grant in verified.products.iter().filter(|p|p.product_id==*target && p.ends_at>now) {
 +        let matching=skus.iter().filter(|s|s["Sku"]["SkuId"].as_str()==Some(&grant.sku_id)).collect::<Vec<_>>();
 +        if matching.len()!=1 {return Err(Status::Unsupported);}
 +        let sku=&matching[0]["Sku"];let props=&sku["Properties"];
++        // Microsoft signs every SKU the account holds for a product, so a
++        // pre-order SKU arrives next to the released one (MSFS 2024: 0017
++        // and 0010). Such a grant is skipped, as for the game itself; it
++        // must not hide the eligible grant beside it.
 +        if sku["SkuType"].as_str()!=Some("full") || props["IsTrial"].as_bool()!=Some(false)
-+            || props["IsPreOrder"].as_bool()!=Some(false) || props["IsBundle"].as_bool()!=Some(false) {return Err(Status::Unsupported);}
++            || props["IsPreOrder"].as_bool()!=Some(false) || props["IsBundle"].as_bool()!=Some(false) {ineligible=true;continue;}
 +        candidates.push(grant);
 +    }
 +    candidates.sort_by(|a,b|b.ends_at.cmp(&a.ends_at).then_with(||a.sku_id.cmp(&b.sku_id)));
 +    // Absence is not a claim about device-shared rights. No usable online
 +    // license is returned unless Microsoft signed a current exact grant.
-+    let selected=candidates.first().ok_or(Status::Unavailable)?;
++    let selected=candidates.first().ok_or(if ineligible{Status::Unsupported}else{Status::Unavailable})?;
 +    let sku_store_id=format!("{}/{}",selected.product_id,selected.sku_id);
 +    // A native handle must renew this online observation. It is never an
 +    // offline license and cannot outlive the signed JWT or product grant.
@@ -17990,6 +17994,17 @@ index 0000000..689fc8a
 +        v.products[0].ends_at=500;c["Product"]["ProductKind"]=json!("UnmanagedConsumable");
 +        assert!(matches!(map_verified_license(&v,&c,&r,100),Err(Status::Unsupported)));
 +        let (_,mut c,_)=durable_fixture();c["Product"]["DisplaySkuAvailabilities"][0]["Sku"]["Properties"]["IsTrial"]=json!(true);
++        assert!(matches!(map_verified_license(&v,&c,&r,100),Err(Status::Unsupported)));
++    }
++    #[test]
++    fn durable_pre_order_grant_does_not_hide_the_released_grant() {
++        // Shape of a real MSFS 2024 token: both SKUs signed, pre-order first.
++        let (r,mut c,mut v)=durable_fixture();
++        c["Product"]["DisplaySkuAvailabilities"][1]["Sku"]["Properties"]["IsPreOrder"]=json!(true);
++        v.products=vec![verified_token::Product{product_id:"OTHER1234567".into(),sku_id:"0002".into(),ends_at:500},
++            verified_token::Product{product_id:"OTHER1234567".into(),sku_id:"0001".into(),ends_at:500}];
++        assert_eq!(map_verified_license(&v,&c,&r,100).unwrap().sku_store_id,"OTHER1234567/0001");
++        v.products.retain(|p|p.sku_id=="0002");
 +        assert!(matches!(map_verified_license(&v,&c,&r,100),Err(Status::Unsupported)));
 +    }
 +    #[test]
