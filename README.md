@@ -27,94 +27,22 @@ downloads, updates and account sign-in.
 **Download the [latest stable release](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/releases/latest).**
 The launcher, installer and updater need no Python.
 
-**New in 0.3.14:** Store add-ons such as the MSFS 2024 Deluxe Upgrade are
-licensed again when Microsoft also lists a pre-order SKU for them, and one
-product withdrawn from the Microsoft catalog no longer hides all owned add-ons.
-This may fix Deluxe content shown as an expired trial; that is not yet
-confirmed. [Details](docs/changelog.md#0314--21-november-2026).
+## What's new
 
-**New in 0.3.13:** if MSFS freezes while the Fenix loads or its displays stay
-black, **Manage & repair → Draw Fenix displays on the CPU** switches to CPU
-displays and keeps that choice across updates. **Collect Fenix logs** now
-includes the last three sessions with their start and end, and the Fenix panel
-keeps the result of the previous session after a short retry.
-[Details](docs/changelog.md#0313--16-november-2026).
+- **0.3.14:** MSFS 2024 Deluxe content that showed as an expired trial works
+  again; a player confirmed the fix. Store add-ons are licensed when Microsoft
+  also lists a pre-order SKU for them, and a product withdrawn from the
+  Microsoft catalog no longer hides all owned add-ons.
+  [Details](docs/changelog.md#0314--21-november-2026)
+- **0.3.13:** if MSFS freezes while the Fenix loads or its displays stay black,
+  **Manage & repair → Draw Fenix displays on the CPU** switches to CPU displays.
+  **Collect Fenix logs** includes the last three sessions.
+  [Details](docs/changelog.md#0313--16-november-2026)
+- **0.3.12:** Flightdeck repairs the Fenix auto-start before every MSFS start,
+  so the Fenix companion opens with the aircraft again.
+  [Details](docs/changelog.md#0312--15-november-2026)
 
-**New in 0.3.12:** Flightdeck checks the Fenix auto-start before every MSFS
-start and repairs a missing, disabled or outdated entry, so the Fenix companion
-opens with the aircraft again. The Fenix panel shows why it would not start and
-what the last session observed, and **Collect Fenix logs** saves the logs needed
-for a report. Fenix patch 0.1.6 is installed directly, and space left by earlier
-patch updates is reclaimed. [Details](docs/changelog.md#0312--15-november-2026).
-
-**New in 0.3.11:** a failed automatic Fenix patch update no longer blocks Fenix
-with "Last operation failed". Flightdeck keeps the installed patch, repairs
-installations left in that state and removes unused pre-update profile copies.
-[Details](docs/changelog.md#0311--13-november-2026).
-
-**New in 0.3.10:** session cleanup ignores browser and desktop processes that only
-inherited runtime variables, preventing unrelated processes from being stopped
-or blocking the next launch. [Details](docs/changelog.md#0310--7-november-2026).
-
-**New in 0.3.9:** Xbox cloud sync no longer fails as "unreachable" when
-Flightdeck is started without a D-Bus session address in its environment.
-
-**New in 0.3.8:** a durable download for the pinned Proton runner, repaired
-MobiFlight WASM/events setup, a smaller dependency graph, Rust-only XZ decoding without
-native liblzma, and diagnostic collection that releases the launcher coordinator
-before scanning logs or running probes. [Review and validation](docs/performance.md#codebase-review--30-october-2026-038).
-
-**New in 0.3.7:** Complete Proton switching and recovery even when an old
-profile cannot be safely reclaimed. Keep that backup and allow returning to the
-default runner. Update ZIP/TLS/async dependencies and native authentication
-cryptography, enable ZIP header consistency checks and integrate Fenix 0.1.4.
-
-**Since 0.3.6:** validate the same GStreamer registry that Wine uses for Xbox
-game launches.
-A stale plugin blacklist is rebuilt once when a required video element fails,
-without resetting the game profile. The reproduced false-positive probe and
-failed 4K decode now recover in the same isolated profile. Diagnostics retain
-cache recovery, missing-plugin architecture and maintenance-preview failure
-phase/errno. The reporter now confirms reaching the main menu with the default
-runner in 0.3.6; full flights remain unqualified.
-[Reproduction and tested scope](docs/media-validation.md)
-
-**New in 0.3.5:** [MobiFlight / WinWing setup](docs/mobiflight.md), GSX engine
-repair, bounded X11 startup checks and a repair for the native-only CLR override
-behind the Fenix loader failure in #10. Hardware connections and full-flight
-addon behavior remain experimental. The loader correction was reproduced in an
-account-free Wine profile; full Fenix installer validation remains outstanding.
-MobiFlight uses its public portable ZIP automatically; if WASM/event setup is
-interrupted, **Prepare / repair MobiFlight** resumes without another app download.
-
-**New in 0.3.4:** verify that video decoders and Wine's post-processing elements
-actually load before selecting a Proton media stack. This fixes a cached-factory
-validation defect and improves safe diagnostics for missing codecs. The corrected
-CachyOS 20261015 fallback passed the real 4K loading-video test, including rewind
-and completed shutdown. The reporter has since confirmed the default-runner
-main-menu launch with 0.3.6; alternate-runner recovery is addressed in 0.3.7. [Reproduction and tested scope](docs/media-validation.md)
-
-**New in 0.3.3:** optional Orbx Central, Navigraph Hub and Simlink setup, plus
-GSX preparation for the selected **Xbox or Steam** MSFS 2020/2024 profile. These
-experimental integrations use the game's existing Wine profile and selected
-Proton. Navigraph browser sign-in returns to the waiting app; Orbx avoids the
-failing web updater and Wine tray window. Full-flight add-on compatibility still
-needs tester validation. [Setup and tested scope](docs/addons.md)
-
-Xbox downloads retain the SISU authentication and content-licensing fixes from
-0.3.2, verified with a complete isolated MSFS 2024 download of all 28,621 files.
-
-**Steam support:** Select Steam MSFS 2020/2024 alongside Xbox installations and
-manage Fenix through the shared standalone Rust engine. Steam support is beta;
-actual simulator flights still need tester qualification. See the
-[Steam guide](docs/steam.md) and [changelog](docs/changelog.md).
-
-Join the [Flightdeck Discord community](https://discord.gg/fAhHR2DkqN) to ask
-questions, share your Linux setup and help develop Flightdeck. For reproducible
-bugs, use [GitHub Issues](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/issues).
-
-[Credits and acknowledgements](docs/credits.md) name the collaborators and
-projects behind Flightdeck. The launcher also has a **Credits** page.
+Earlier versions are listed in the [changelog](docs/changelog.md).
 
 ## Get started
 
@@ -140,7 +68,7 @@ versions. The displayed base-game download size is only part of that storage.
 The binary package requires Linux x86-64 with **glibc 2.39+**, Vulkan drivers,
 a Wayland or X11 desktop and a Linux Secret Service keyring. The full runtime
 also needs GTK 3, WebKitGTK 4.1, OpenSSL 3 and GStreamer Good/Bad/Libav plugins;
-the launcher also needs liblzma, libgcc_s and libxkbcommon, plus the selected
+the launcher also needs libgcc_s and libxkbcommon, plus the selected
 Wayland/X11 libraries. Setup checks missing prerequisites.
 Launcher checks passed on Ubuntu 24.04, Debian 13, Fedora 44, Arch Linux and
 openSUSE Tumbleweed on 8 October 2026. See the
@@ -171,25 +99,35 @@ not yet supported. [Pause/resume limits](docs/download-pause.md)
 
 ## Compatibility
 
-**Experimental.** MSFS 2024 cockpit access and takeoff have been tested on AMD.
-**NVIDIA rendering is confirmed by user testing**, with remaining minor issues
-such as missing startup video. This does not establish support for every GPU or driver.
-A user reports reaching the rendered MSFS 2024 menu and scene with CachyOS
-11.0-20261015 on 0.2.20 after waiting through a black loading screen. Startup
-video and the 48-FPS VSync limit remain open. [Reported scope](docs/known-issues.md).
-MSFS 2020 installation and license checks are implemented; successful simulator
-startup and complete-flight compatibility remain unconfirmed.
+Flightdeck is **experimental**. Confirmed so far:
 
-Fenix cockpit rendering has been tested, while complete-flight coverage, GSX
-operation, physical VR headsets and cross-device cloud-save gameplay still need
-validation. Marketplace session errors and incomplete DLC/purchase coverage
-remain documented separately. Installed files alone do not prove activation or
-working aircraft systems.
-Fenix 0.1.0 retains GPU display sharing for the pinned Xodus and Proton 11
-runners, with a CPU fallback, and includes the Direct2D memory-leak fix.
-Fenix v3 remains experimental; see the [tested scope](docs/addons.md#compatibility-and-recovery).
-[Known issues](docs/known-issues.md) · [Add-on scope](docs/addons.md) ·
+- **MSFS 2024, Xbox PC:** installation, licensing and launch to the cockpit and
+  takeoff on AMD; players confirm NVIDIA rendering. A complete isolated download
+  of all 28,621 game files passed, and Deluxe content is licensed since 0.3.14.
+- **MSFS 2020, Xbox PC:** installation and license checks are implemented;
+  simulator startup and complete flights are not yet confirmed.
+- **Steam MSFS 2020/2024:** beta. Steam handles downloads, updates and sign-in;
+  complete flights still need tester confirmation. [Steam guide](docs/steam.md)
+- **Add-ons:** Fenix, GSX, Navigraph Hub/Simlink, Orbx Central and MobiFlight
+  setup are experimental. Fenix cockpit displays have been tested; complete
+  flights, GSX operation and hardware connections need validation.
+  [Add-on scope](docs/addons.md#compatibility-and-recovery) ·
+  [MobiFlight / WinWing](docs/mobiflight.md)
+
+Not yet validated: every GPU and driver, physical VR headsets and cloud saves
+across devices. Open issues include a missing or black startup video and a
+VSync frame limit. Installed files alone do not prove activation or working
+aircraft systems. [Known issues](docs/known-issues.md) ·
 [Marketplace scope](docs/marketplace-collections.md)
+
+## Community
+
+Join the [Flightdeck Discord community](https://discord.gg/fAhHR2DkqN) to ask
+questions, share your Linux setup and help develop Flightdeck. For reproducible
+bugs, use [GitHub Issues](https://github.com/marselnenaj/flightdeck-msfs-2024-linux-xbox/issues).
+
+[Credits and acknowledgements](docs/credits.md) name the collaborators and
+projects behind Flightdeck. The launcher also has a **Credits** page.
 
 ## Local by design
 

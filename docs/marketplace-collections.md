@@ -223,6 +223,8 @@ ineligible pre-order or trial grant failed the whole Durable request, even when
 the eligible grant was signed beside it; this hid the MSFS 2024 Deluxe Upgrade
 (`9MVNRJF4CCTB`, SKUs `0017` and `0010`). Ineligible grants are now skipped, as
 for the game license. The request still fails when no eligible grant remains.
+Together with the [inventory fix](#title-inventory), this restored Deluxe
+content that players saw as an expired trial; a reporter confirmed it on 0.3.14.
 
 The implementation supports online licenses for Durables with or without a
 package. Observations expire no later than the signed grant, signed JWT or 60

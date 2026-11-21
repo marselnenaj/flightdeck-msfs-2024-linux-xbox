@@ -8,9 +8,9 @@
   or trial grant appeared, instead of using the eligible grant beside it. The
   ineligible grant is now skipped, as it already was for the game license.
   MSFS 2024 tokens list the pre-order SKU `0017` next to `0010` for the game
-  (observed live); the MSFS 2024 Deluxe Upgrade has the same two SKUs. This may
-  fix reports of Deluxe content shown as an expired trial. That is not
-  confirmed: no Deluxe account was available for a live test.
+  (observed live); the MSFS 2024 Deluxe Upgrade has the same two SKUs.
+  Together with the fix below, this restores Deluxe content that players saw
+  as an expired trial; a reporter confirmed this on 0.3.14.
   [Details](marketplace-collections.md#durable-license-handles).
 - Keep the game's Store add-ons visible when the account owns a product that
   Microsoft has withdrawn from the catalog. One such product made the whole
