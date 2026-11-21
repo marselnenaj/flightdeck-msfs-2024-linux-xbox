@@ -273,7 +273,23 @@ configuration. MSFS 2020 uses the older format. See Microsoft's
 [title identity configuration](https://learn.microsoft.com/en-us/gaming/gdk/docs/services/fundamentals/portal-config/live-setup-partner-center-partners).
 
 Catalog metadata must be available for every returned entitlement. Unavailable
-metadata returns an error rather than silently dropping owned content.
+metadata returns an error rather than silently dropping owned content. The one
+exception is a library product that Microsoft no longer lists in the selected
+market: the catalog answers it with HTTP 404. Such a product cannot be associated
+with the game or mapped to a Store product, so the inventory leaves it out
+and the broker log counts it (`[store-inventory] stage=catalog withdrawn=N`).
+Before Flightdeck 0.3.14 one withdrawn product made the whole
+`XStoreQueryEntitledProductsAsync` call fail, hiding every other add-on of the
+game. This was reproduced with an MSFS 2020 Premium Deluxe library. A 404 for
+the game itself, timeouts and server errors still return errors.
+
+MSFS editions above Standard are Store bundles. For MSFS 2024 the Deluxe
+Edition (`9N7MNF1QC3X4`) contains the game, a Durable and an
+`UnmanagedConsumable`, both named "Deluxe Upgrade" (`9MVNRJF4CCTB`,
+`9MWH9G66M26L`). Collections returns the Durable as a satisfying entitlement
+of the bundle; the bundle row itself is not an add-on of the game. MSFS 2020's
+Deluxe and Premium Deluxe upgrades are `UnmanagedConsumable` products
+that the game redeems; after redemption they no longer appear in Collections.
 
 The publicly listed Aviator Upgrade (`9MTWMVDJ01FF`) is classified as an
 `UnmanagedConsumable`, not a Durable. Durable inventory support therefore does

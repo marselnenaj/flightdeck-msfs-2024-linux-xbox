@@ -1,5 +1,17 @@
 # Changes and release status
 
+## Unreleased
+
+- Keep the game's Store add-ons visible when the account owns a product that
+  Microsoft has withdrawn from the catalog. One such product made the whole
+  owned add-on query (`XStoreQueryEntitledProductsAsync`) fail, so the game
+  saw no Durable add-ons at all. This was reproduced against a real MSFS 2020
+  Premium Deluxe library. The withdrawn product is now left out and counted in
+  the broker log. Timeouts, server errors and a missing listing for the game
+  itself still fail the query. This may be behind reports of Deluxe content
+  shown as an expired trial in MSFS 2024; that link is not yet confirmed.
+  [Details](marketplace-collections.md#title-inventory).
+
 ## 0.3.13 — 16 November 2026
 
 - Add a CPU/GPU choice for the Fenix displays on Xbox runtimes: **Manage &

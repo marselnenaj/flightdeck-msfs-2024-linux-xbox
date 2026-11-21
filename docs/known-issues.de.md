@@ -82,6 +82,16 @@ Siehe [Änderungsübersicht](changelog.md#0313--16-november-2026).
   Andere Runner bestehen passende native Modultests; die Rückmeldung bestätigt
   keine Stabilität über vollständige Flüge.
   [Prüfablauf und Grenzen](https://github.com/marselnenaj/fenix-a320-linux-patch/blob/v0.1.0/docs/fenix-v3.md).
+- **MSFS 2024 Deluxe-Inhalte als abgelaufene Testversion (Xbox):** Mehrere
+  Spieler melden, dass Deluxe-Inhalte als abgelaufene Testversion markiert und
+  nicht nutzbar sind. Die Ursache ist nicht bestätigt. Ein verwandter Fehler
+  ist für die nächste Version behoben: Ein einziges aus dem Microsoft-Katalog
+  entferntes Produkt ließ die Abfrage der besessenen Erweiterungen komplett
+  scheitern; nachgestellt mit einer MSFS 2020 Premium-Deluxe-Bibliothek.
+  Betroffene schicken bitte **Diagnose** oder das Spielprotokoll mit; die Zeile
+  `EntitledProductsResult hr=` zeigt, ob diese Abfrage scheiterte. Dazu bitte
+  angeben, ob die Deluxe Edition gekauft, vorbestellt oder das Deluxe-Upgrade
+  später ergänzt wurde.
 - **Fenix friert bei „Ready to fly“ ein (NVIDIA, Xbox):** Gemeldet mit 0.3.12,
   RTX 3080, Treiber 615.78.8, Fenix 3.0.0.7852 und GPU-Anzeigen. Die Ursache ist
   nicht geprüft: Die gesammelten Logs enthielten die eingefrorene Sitzung nicht.

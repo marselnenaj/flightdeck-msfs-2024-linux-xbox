@@ -17080,10 +17080,10 @@ index 0000000..22b04fa
 +}
 diff --git c/crates/xodus-service/src/store_inventory.rs w/crates/xodus-service/src/store_inventory.rs
 new file mode 100644
-index 0000000..b7ce1e2
+index 0000000..0bd0b12
 --- /dev/null
 +++ w/crates/xodus-service/src/store_inventory.rs
-@@ -0,0 +1,533 @@
+@@ -0,0 +1,569 @@
 +//! Current Store account's direct and satisfying entitlements for this title.
 +//! Exhaust the authenticated library before filtering; catalog visibility is
 +//! never evidence of ownership. Device-shared entitlements are not covered.
@@ -17341,6 +17341,22 @@ index 0000000..b7ce1e2
 +    }
 +    Ok(false)
 +}
++#[derive(Debug, PartialEq, Eq)]
++enum Scope {
++    Title,
++    Other,
++    /// Microsoft no longer lists the product in this market. Without catalogue
++    /// metadata it cannot be associated with the title or mapped to a Store
++    /// product, so it is left out instead of failing the whole inventory.
++    /// Rights are never inferred for it.
++    Withdrawn,
++}
++fn scope(value: Option<&Value>, product: &str, parent: &str) -> Result<Scope, Status> {
++    let Some(value) = value else {
++        return if product == parent { Err(Status::Unsupported) } else { Ok(Scope::Withdrawn) };
++    };
++    Ok(if associated(value, product, parent)? { Scope::Title } else { Scope::Other })
++}
 +fn page_envelope(raw: &Value) -> Result<(BTreeSet<String>, Option<String>, usize), Status> {
 +    let rows = raw["items"].as_array().filter(|v| v.len() <= 100).ok_or(Status::Unsupported)?;
 +    let mut ids = BTreeSet::new();
@@ -17394,6 +17410,7 @@ index 0000000..b7ce1e2
 +        .build()
 +        .map_err(|_| Status::Error)?;
 +    let mut allowed = BTreeSet::new();
++    let mut withdrawn = 0usize;
 +    let mut workers = tokio::task::JoinSet::new();
 +    let mut roots = roots.into_iter();
 +    loop {
@@ -17405,19 +17422,26 @@ index 0000000..b7ce1e2
 +            let market = r.market.clone();
 +            let parent = r.store_id.clone();
 +            workers.spawn(async move {
-+                let value = store_license::fetch_catalogue(&client, &product, &market).await?;
-+                Ok::<_, Status>((product.clone(), associated(&value, &product, &parent)?))
++                let value = store_license::fetch_listed_catalogue(&client, &product, &market).await?;
++                Ok::<_, Status>((product.clone(), scope(value.as_ref(), &product, &parent)?))
 +            });
 +        }
 +        match workers.join_next().await {
 +            Some(result) => {
-+                let (id, yes) = result.map_err(|_| Status::Error)??;
-+                if yes {
-+                    allowed.insert(id);
++                let (id, scope) = result.map_err(|_| Status::Error)??;
++                match scope {
++                    Scope::Title => {
++                        allowed.insert(id);
++                    }
++                    Scope::Withdrawn => withdrawn += 1,
++                    Scope::Other => {}
 +                }
 +            }
 +            None => break,
 +        }
++    }
++    if withdrawn > 0 {
++        eprintln!("[store-inventory] stage=catalog withdrawn={withdrawn}");
 +    }
 +    let now = chrono::Utc::now().timestamp();
 +    let mut pages = model::BatchPages::default();
@@ -17562,6 +17586,18 @@ index 0000000..b7ce1e2
 +        assert!(associated(&v, "OTHR1234EFGH", "GAME1234EFGH").is_err());
 +    }
 +    #[test]
++    fn withdrawn_library_product_is_left_out_without_failing_the_title() {
++        let v = json!({"Product":{"ProductId":"ADDN1234EFGH","MarketProperties":[{"RelatedProducts":[{"RelationshipType":"addOnParent","RelatedProductId":"GAME1234EFGH"}]}]}});
++        assert_eq!(scope(Some(&v), "ADDN1234EFGH", "GAME1234EFGH").unwrap(), Scope::Title);
++        assert_eq!(scope(Some(&v), "ADDN1234EFGH", "OTHR1234EFGH").unwrap(), Scope::Other);
++        // A delisted product cannot be associated or mapped; it never becomes
++        // a title entitlement and no longer hides every other right.
++        assert_eq!(scope(None, "GONE1234EFGH", "GAME1234EFGH").unwrap(), Scope::Withdrawn);
++        // The current game itself must stay listed; that remains an error.
++        assert!(scope(None, "GAME1234EFGH", "GAME1234EFGH").is_err());
++        assert!(scope(Some(&v), "OTHR1234EFGH", "GAME1234EFGH").is_err());
++    }
++    #[test]
 +    fn pages_keep_product_skus_together_and_expire() {
 +        let now = chrono::Utc::now().timestamp();
 +        let mut p = Pending {
@@ -17619,10 +17655,10 @@ index 0000000..b7ce1e2
 +}
 diff --git c/crates/xodus-service/src/store_license.rs w/crates/xodus-service/src/store_license.rs
 new file mode 100644
-index 0000000..6897f08
+index 0000000..689fc8a
 --- /dev/null
 +++ w/crates/xodus-service/src/store_license.rs
-@@ -0,0 +1,342 @@
+@@ -0,0 +1,349 @@
 +//! Genuine PC full-game licenses from Microsoft-signed v8 tokens. No inventory,
 +//! trial emulation, offline fallback, token refresh writes or purchase operations.
 +#[path="store_license/verified_token.rs"]pub(crate) mod verified_token;
@@ -17832,14 +17868,21 @@ index 0000000..6897f08
 +}
 +
 +pub(crate) async fn fetch_catalogue(client:&reqwest::Client,product:&str,market:&str)->Result<Value,Status> {
++    fetch_listed_catalogue(client,product,market).await?.ok_or(Status::Error)
++}
++
++/// `None` only for Microsoft's definitive 404: the product is not listed in
++/// this market (for example withdrawn). Every other failure stays an error.
++pub(crate) async fn fetch_listed_catalogue(client:&reqwest::Client,product:&str,market:&str)->Result<Option<Value>,Status> {
 +    let response=client.get(format!("https://displaycatalog.mp.microsoft.com/v7.0/products/{product}?market={market}&languages=en-US")).send().await.map_err(|_|Status::Error)?;
 +    if std::env::var_os("XODUS_COLLECTIONS_DIAGNOSTICS").is_some() {
 +        eprintln!("[collections-broker] stage=catalog http={}",response.status().as_u16());
 +    }
++    if response.status()==reqwest::StatusCode::NOT_FOUND {return Ok(None);}
 +    let mut response=response.error_for_status().map_err(|_|Status::Error)?;
 +    let mut bytes=Vec::new();
 +    while let Some(chunk)=response.chunk().await.map_err(|_|Status::Error)? {if bytes.len()+chunk.len()>4*1024*1024{return Err(Status::Error);}bytes.extend_from_slice(&chunk);}
-+    serde_json::from_slice(&bytes).map_err(|_|Status::Error)
++    serde_json::from_slice(&bytes).map(Some).map_err(|_|Status::Error)
 +}
 +
 +fn map_full_license(products:&[verified_token::Product],catalogue:&Value,request:&Request,now:i64)->Result<GameLicense,Status> {
